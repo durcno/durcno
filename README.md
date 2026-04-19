@@ -17,7 +17,7 @@
 
 ---
 
-## ✨ Features
+## Features
 
 - **🔗 Relation Mapping** — Intuitive `many`, `one`, and `fk` relations with full type inference.
 - **🦾 Robust Migrations** — Auto-generated, reversible, and squashable migrations for production applications.
@@ -25,7 +25,7 @@
 - **🔌 Multiple Drivers** — Support for `pg`, `postgres`, `bun`, and `pglite` drivers.
 - **🌍 PostGIS Support** — First-class geographic column types for spatial queries.
 
-## 📦 Setup
+## Setup
 
 ```bash
 npm install durcno
@@ -35,7 +35,7 @@ npm install durcno
 npx durcno init
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 Get started with Durcno by following our comprehensive documentation.
 
@@ -45,11 +45,11 @@ Get started with Durcno by following our comprehensive documentation.
 > Durcno is currently in the alpha stage.
 > Avoid using it in any critical or large project until it reaches beta. Expect bugs and breaking changes. However, your feedback is invaluable to help us shape the future of Durcno!
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting PRs.
 
-## 📄 License
+## License
 
 Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
