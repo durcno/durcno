@@ -3,6 +3,25 @@
  * and scoped locally.
  */
 
+/* ===========================
+   Shared
+   =========================== */
+
+.sectionTitle {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--ifm-color-primary) 0%, #61dafb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===========================
+   1. Hero Banner (HomepageHeader)
+   =========================== */
+
 .heroBanner {
   padding: 4rem 0;
   text-align: center;
@@ -15,33 +34,19 @@
   background: radial-gradient(circle at 50% -20%, #f8f9fa 0%, #ffffff 100%);
 }
 
+/* Hero > Container */
+
 .heroContainer {
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2rem;
-  max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
 }
 
-@media (min-width: 997px) {
-  .heroContainer {
-    flex-direction: row;
-    text-align: left;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .heroContent {
-    max-width: 50%;
-  }
-
-  .heroCode {
-    max-width: 45%;
-    width: 100%;
-  }
-}
+/* Hero > Content */
 
 .heroBadge {
   display: inline-block;
@@ -82,20 +87,21 @@
   gap: 1rem;
 }
 
-@media (min-width: 997px) {
-  .buttons {
-    justify-content: flex-start;
-  }
-}
+/* Hero > Code Block */
 
 .codeBlockContainer {
+  max-width: 550px;
   text-align: left;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   border-radius: 12px;
-  overflow: hidden;
   font-size: 0.9rem;
   background: #1e1e1e;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.codeBlockContainer :global(pre) {
+  margin-bottom: 0;
+  border-radius: 0;
 }
 
 .codeHeader {
@@ -119,26 +125,186 @@
   display: inline-block;
 }
 
-.codeBlockContainer :global(pre) {
-  margin-bottom: 0;
-  border-radius: 0;
+/* Hero > Responsive */
+
+@media (min-width: 997px) {
+  .heroContainer {
+    max-width: 1200px;
+    flex-direction: row;
+    text-align: left;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .heroCode {
+    width: 100%;
+  }
+
+  .heroContent {
+    max-width: 50%;
+  }
+
+  .buttons {
+    justify-content: flex-start;
+  }
 }
 
-/* Reviews Section */
+@media (max-width: 996px) {
+  .codeBlockContainer {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .heroTitle {
+    font-size: 2rem;
+  }
+
+  .heroSubtitle {
+    font-size: 1rem;
+  }
+
+  .heroBadge {
+    font-size: 0.7rem;
+  }
+}
+
+/* ===========================
+   2. Supported Runtimes
+   =========================== */
+
+.supportedRuntimesSection {
+  padding: 3rem 0;
+  background: var(--ifm-background-surface-color);
+  text-align: center;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.runtimeIcon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 0.8rem;
+  fill: currentColor;
+}
+
+/* ===========================
+   3. Supported Databases
+   =========================== */
+
+.supportedDbSection {
+  padding: 4rem 0;
+  background: var(--ifm-background-color);
+  text-align: center;
+}
+
+.dbGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.dbCard {
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  height: 100%;
+}
+
+.dbCard:hover {
+  transform: translateY(-5px);
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.dbIcon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  fill: currentColor;
+}
+
+.dbName {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* ===========================
+   4. Feature Highlights
+   =========================== */
+
+.featuresSection {
+  padding: 5rem 0;
+  background: var(--ifm-background-surface-color);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 3rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.featureCard {
+  text-align: left;
+  padding: 2rem;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  height: 100%;
+}
+
+.featureCard:hover {
+  transform: translateY(-5px);
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.featureCard h3 {
+  font-size: 1.4rem;
+  margin-bottom: 0.8rem;
+  font-weight: 700;
+}
+
+.featureCard p {
+  opacity: 0.8;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.featureIconWrapper {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.featureIcon {
+  width: 30px;
+  height: 30px;
+}
+
+/* ===========================
+   5. Reviews
+   =========================== */
+
 .reviewsSection {
   padding: 6rem 0;
   background: var(--ifm-background-color);
-}
-
-.sectionTitle {
-  text-align: center;
-  font-size: 2.5rem;
-  margin-bottom: 3rem;
-  font-weight: 800;
-  background: linear-gradient(90deg, var(--ifm-color-primary) 0%, #61dafb 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .reviewsGrid {
@@ -213,7 +379,10 @@
   font-style: italic;
 }
 
-/* Sponsors Section */
+/* ===========================
+   6. Sponsors
+   =========================== */
+
 .sponsorsSection {
   padding: 6rem 0;
   background: var(--ifm-background-surface-color);
@@ -256,123 +425,4 @@
   background: var(--ifm-color-primary-lightest);
   color: var(--ifm-color-primary-darker);
   text-decoration: none;
-}
-
-/* Supported Databases Section */
-.supportedDbSection {
-  padding: 4rem 0;
-  background: var(--ifm-background-color);
-  text-align: center;
-}
-
-.dbGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 2rem;
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-.dbCard {
-  background: var(--ifm-card-background-color);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 12px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  height: 100%;
-}
-
-.dbCard:hover {
-  transform: translateY(-5px);
-  border-color: var(--ifm-color-primary);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.dbIcon {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 1rem;
-  fill: currentColor;
-}
-
-.dbName {
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.supportedRuntimesSection {
-  padding: 3rem 0;
-  background: var(--ifm-background-surface-color);
-  text-align: center;
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
-}
-
-.runtimeIcon {
-  width: 40px;
-  height: 40px;
-  margin-bottom: 0.8rem;
-  fill: currentColor;
-}
-
-/* Feature Highlights */
-.featuresSection {
-  padding: 5rem 0;
-  background: var(--ifm-background-surface-color);
-  border-bottom: 1px solid var(--ifm-color-emphasis-200);
-}
-
-.featuresGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 3rem;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.featureCard {
-  text-align: left;
-  padding: 2rem;
-  border-radius: 16px;
-  transition: all 0.3s ease;
-  background: var(--ifm-card-background-color);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  height: 100%;
-}
-
-.featureCard:hover {
-  transform: translateY(-5px);
-  border-color: var(--ifm-color-primary);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-.featureCard h3 {
-  font-size: 1.4rem;
-  margin-bottom: 0.8rem;
-  font-weight: 700;
-}
-
-.featureCard p {
-  opacity: 0.8;
-  line-height: 1.6;
-  margin-bottom: 0;
-}
-
-.featureIconWrapper {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.featureIcon {
-  width: 30px;
-  height: 30px;
 }
