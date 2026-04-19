@@ -105,7 +105,7 @@ const config: Config = {
         include: ["**/*.md"],
         sidebarPath: "./sidebarsReleases.ts",
         breadcrumbs: true,
-        editUrl: "https://github.com/durcno/durcno/edit/main/website/releases/",
+        editUrl: "https://github.com/durcno/durcno/edit/main/website/",
         async sidebarItemsGenerator({ defaultSidebarItemsGenerator, ...args }) {
           const items = await defaultSidebarItemsGenerator(args);
           return items.reverse();
