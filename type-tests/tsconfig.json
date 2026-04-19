@@ -1,0 +1,15 @@
+// Only for type-checking, not meant for runtime
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "durcno": ["./src/index"],
+      "durcno/migration": ["./src/migration"],
+      "durcno/connectors/pg": ["./src/connectors/pg"],
+      "durcno/validators/zod": ["./src/validators/zod"]
+    }
+  },
+  "include": ["./**/*.ts"]
+}

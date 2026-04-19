@@ -1,0 +1,12 @@
+packages:
+  - tests
+  - website
+
+onlyBuiltDependencies:
+  - "@swc/core"
+  - core-js
+  - core-js-pure
+  - cpu-features
+  - esbuild
+  - protobufjs
+  - ssh2

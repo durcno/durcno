@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@types/dockerode": "^4.0.1",
+    "dockerode": "^4.0.9",
+    "dotenv": "^17.3.1",
+    "durcno": "link:..",
+    "get-port": "^7.1.0",
+    "vitest": "^4.0.18"
+  }
+}

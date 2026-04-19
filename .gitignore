@@ -1,0 +1,35 @@
+node_modules
+
+# Build
+dist
+*.tgz
+
+# Project
+src/**/*.js
+src/**/*.js.map
+src/**/*.[cm]js
+src/**/*.[cm]js.map
+
+# Test
+tests/global-db.json
+*.test
+
+# Vscode
+.vscode/mcp.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Others
+.DS_Store
+*.temp

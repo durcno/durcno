@@ -1,0 +1,100 @@
+{
+  "name": "durcno",
+  "version": "1.0.0-alpha.0",
+  "description": "A PostgreSQL Query Builder and Migration Manager for TypeScript, from the future.",
+  "license": "Apache-2.0",
+  "homepage": "https://durcno.dev",
+  "keywords": [
+    "durcno",
+    "query",
+    "sql",
+    "ts",
+    "typescript",
+    "postgres",
+    "postgresql",
+    "pg",
+    "pglite",
+    "database",
+    "db",
+    "migration"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/durcno/durcno.git"
+  },
+  "bugs": {
+    "url": "https://github.com/durcno/durcno/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=25.8.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/src/index.d.mts",
+  "exports": {
+    ".": "./dist/src/index.mjs",
+    "./connectors/bun": "./dist/src/connectors/bun.mjs",
+    "./connectors/pg": "./dist/src/connectors/pg.mjs",
+    "./connectors/pglite": "./dist/src/connectors/pglite.mjs",
+    "./connectors/postgres": "./dist/src/connectors/postgres.mjs",
+    "./migration": "./dist/src/migration/index.mjs",
+    "./validators/zod": "./dist/src/validators/zod.mjs",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "durcno": "dist/bin.cjs"
+  },
+  "scripts": {
+    "format": "biome format --write && oxfmt '**/*.{md,yml,yaml,css}'",
+    "format:check": "biome format && oxfmt '**/*.{md,yml,yaml,css}' --check",
+    "lint": "biome lint",
+    "tsclint": "tsc --noEmit",
+    "tsclint-cli": "tsc --noEmit -p src/cli",
+    "tsclint-tests": "tsc --noEmit -p tests",
+    "test-types": "tsc --noEmit -p type-tests",
+    "tsclint-all": "pnpm run tsclint && pnpm run tsclint-cli && pnpm run test-types && pnpm run tsclint-tests",
+    "test": "pnpm run build && cd tests && pnpm test",
+    "build-src": "tsdown --exports",
+    "build-src:watch": "tsdown --exports --watch",
+    "build-src:test": "tsdown --out-dir durcno.test/dist/src",
+    "build-cli": "node scripts/build-cli.mjs",
+    "build-cli:watch": "node scripts/build-cli.mjs --watch",
+    "build-cli:test": "node scripts/build-cli.mjs --dest durcno.test/dist/bin.cjs",
+    "build": "pnpm run build-src && pnpm run build-cli",
+    "web": "cd website && pnpm start",
+    "build-web": "cd website && pnpm run build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "@electric-sql/pglite": "^0.3.15",
+    "@prettier/plugin-xml": "^3.4.2",
+    "@types/bun": "^1.3.12",
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^25.5.2",
+    "@types/pg": "^8.20.0",
+    "@types/prompts": "^2.4.9",
+    "@types/uuid": "^10.0.0",
+    "chalk": "^5.6.2",
+    "cngpac": "0.0.1",
+    "commander": "^14.0.3",
+    "esbuild": "^0.25.12",
+    "glob": "^13.0.6",
+    "oxfmt": "^0.44.0",
+    "pg": "^8.19.0",
+    "postgres": "^3.4.9",
+    "prettier": "^3.8.3",
+    "prompts": "^2.4.2",
+    "tsdown": "^0.21.8",
+    "typescript": "6.0.2",
+    "uuid": "^13.0.0",
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "zod": "^4.3.6"
+  },
+  "inlinedDependencies": {
+    "chalk": "5.6.2"
+  }
+}

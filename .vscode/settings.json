@@ -1,0 +1,16 @@
+{
+  "chat.useAgentsMdFile": true,
+  "js/ts.preferences.preferTypeOnlyAutoImports": true,
+  "js/ts.preferences.importModuleSpecifier": "relative",
+  "search.quickOpen.history.filterSortOrder": "recency",
+  "search.quickOpen.includeSymbols": true,
+  "[json][jsonc][javascript][typescript][typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[markdown][yaml][css]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "editor.codeActionsOnSave": {
+    "source.organizeImports.biome": "always"
+  }
+}

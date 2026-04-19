@@ -1,0 +1,30 @@
+name: Cngpac Version
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".changenotes/prepare.json"
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - run: npm install -g corepack
+      - run: corepack enable
+      - name: Setup runtime
+        uses: actions/setup-node@v6
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter='durcno'
+      - name: Build package
+        run: pnpm run build
+      - name: Version
+        run: pnpm exec cngpac version --commit --tag --push --publish --release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

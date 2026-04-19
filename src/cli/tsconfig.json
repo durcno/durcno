@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "lib": ["es2022"],
+    "module": "es2020",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "types": ["bun"],
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "durcno": ["../"],
+      "durcno/migration": ["../migration"]
+    }
+  },
+  "include": ["./**/*.ts"]
+}

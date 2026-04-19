@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "build-src:watch",
+      "group": "none",
+      "problemMatcher": [],
+      "label": "npm: build-src:watch",
+      "detail": "Start watching for changes in the src dir and compile them to the dist folder."
+    },
+    {
+      "type": "npm",
+      "script": "build-cli:watch",
+      "group": "none",
+      "problemMatcher": [],
+      "label": "npm: build-cli:watch",
+      "detail": "Start watching for changes in the srd dir and compile cli to the dist folder."
+    },
+    {
+      "type": "npm",
+      "script": "start",
+      "path": "website/",
+      "group": "none",
+      "problemMatcher": [],
+      "label": "npm: web:start",
+      "detail": "Start Docusaurus development server",
+      "isBackground": true
+    }
+  ]
+}
