@@ -123,10 +123,10 @@ export const Users = table("public", "users", {
 }
 
 function generateIndexFile(schemaPath: string): string {
-  const schemaImport = schemaPath.replace(/\.ts$/, "").replace(/^db\//, "./");
+  const schemaImport = schemaPath.replace(/^db\//, "./");
   return `import { database } from "durcno";
 import * as schema from "${schemaImport}";
-import setup from "../durcno.config";
+import setup from "../durcno.config.ts";
 
 export const db = database(schema, setup);
 `;
