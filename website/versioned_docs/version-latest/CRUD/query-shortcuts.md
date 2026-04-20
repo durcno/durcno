@@ -34,8 +34,8 @@ Use `db.$count()` to efficiently count rows in a table. This executes a `SELECT 
 ### Basic Usage
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 // Count all users
 const count = await db.$count(Users);
@@ -104,8 +104,8 @@ Use `db.$exists()` to efficiently check if any rows exist in a table. This is mo
 ### Basic Usage
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 // Check if any users exist
 const hasUsers = await db.$exists(Users);
@@ -202,8 +202,8 @@ Use `db.$first()` to retrieve the first matching row from a table. Returns `null
 ### Basic Usage
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 // Get the first user
 const user = await db.$first(Users);
@@ -322,8 +322,8 @@ Use `db.$distinct()` to get an array of unique values from a column.
 ### Basic Usage
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 // Get all unique usernames
 const usernames = await db.$distinct(Users, Users.username);
@@ -478,8 +478,8 @@ All aggregate functions return `number | null`:
 Calculate the sum of a numeric column.
 
 ```typescript
-import { db } from "./db";
-import { Posts } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Posts } from "./db/schema.ts";
 
 // Sum all view counts
 const totalViews = await db.$sum(Posts, Posts.viewCount);

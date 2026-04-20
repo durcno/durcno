@@ -17,7 +17,7 @@ Both functions automatically infer the correct schema based on your table's colu
 
 ```typescript
 import { createInsertSchema, createUpdateSchema } from "durcno/validators/zod";
-import { Users } from "./schema";
+import { Users } from "./schema.ts";
 
 // Generate schemas from your table definition
 const insertUserSchema = createInsertSchema(Users);
@@ -90,7 +90,7 @@ The `createUpdateSchema` function creates a Zod schema optimized for UPDATE oper
 
 ```typescript
 import { createUpdateSchema } from "durcno/validators/zod";
-import { Users } from "./schema";
+import { Users } from "./schema.ts";
 
 const updateSchema = createUpdateSchema(Users);
 
@@ -121,7 +121,7 @@ The refine object maps column names to functions that receive the column's base 
 
 ```typescript
 import { createInsertSchema } from "durcno/validators/zod";
-import { Users } from "./schema";
+import { Users } from "./schema.ts";
 
 const insertSchema = createInsertSchema(Users, {
   // Add email validation
@@ -156,7 +156,7 @@ The generated schemas are fully typed, allowing you to infer TypeScript types fr
 ```typescript
 import { z } from "zod";
 import { createInsertSchema, createUpdateSchema } from "durcno/validators/zod";
-import { Users } from "./schema";
+import { Users } from "./schema.ts";
 
 const insertSchema = createInsertSchema(Users);
 const updateSchema = createUpdateSchema(Users);
@@ -241,7 +241,7 @@ Always validate user input before passing it to database operations:
 
 ```typescript
 import { createInsertSchema } from "durcno/validators/zod";
-import { Users } from "./schema";
+import { Users } from "./schema.ts";
 
 const insertSchema = createInsertSchema(Users);
 

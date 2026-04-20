@@ -122,8 +122,8 @@ Create a database client instance:
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema";
-import setup from "../durcno.config";
+import * as schema from "./schema.ts";
+import setup from "../durcno.config.ts";
 
 export const db = database(schema, setup);
 ```
@@ -168,8 +168,8 @@ Now you can start querying your database with full type safety:
 ### Insert Queries
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 // Insert a single user
 await db.insert(Users).values({

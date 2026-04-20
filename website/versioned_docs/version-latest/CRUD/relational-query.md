@@ -41,8 +41,8 @@ export const PostsRelations = relations(Posts, () => ({
 Fetch multiple records with options:
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 const users = await db.query(Users).findMany({
   limit: 10,

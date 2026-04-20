@@ -254,8 +254,8 @@ Query your database with full type safety:
 
 ```typescript
 import { database } from "durcno";
-import * as schema from "./schema";
-import setup from "../durcno.config";
+import * as schema from "./schema.ts";
+import setup from "../durcno.config.ts";
 
 const db = database(schema, setup);
 

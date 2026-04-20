@@ -249,8 +249,8 @@ After creating your configuration, use it with the `database` function:
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema";
-import setup from "../durcno.config";
+import * as schema from "./schema.ts";
+import setup from "../durcno.config.ts";
 
 export const db = database(schema, setup);
 ```
@@ -258,8 +258,8 @@ export const db = database(schema, setup);
 The `db` instance is now ready for type-safe queries:
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 // Execute queries
 const users = await db.from(Users).select();

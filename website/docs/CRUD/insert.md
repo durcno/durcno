@@ -25,8 +25,8 @@ Use `db.insert()` to insert rows into a table. Durcno provides full type safety,
 ### Insert a Single Row
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 await db.insert(Users).values({
   username: "john_doe",
@@ -204,8 +204,8 @@ This is a shortcut for inserting a **single row** and returning the full object.
 ### Basic Usage
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 const newUser = await db.$insertReturning(Users, {
   username: "johndoe",

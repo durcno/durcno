@@ -33,8 +33,8 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 ### Select All Columns
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 // Select all columns from Users table
 const users = await db.from(Users).select();
@@ -132,7 +132,7 @@ When using joins, you can sort by columns from any joined table:
 
 ```typescript
 import { eq, asc, desc } from "durcno";
-import { Users, Posts } from "./db/schema";
+import { Users, Posts } from "./db/schema.ts";
 
 // Sort by username (Users), then by post creation date (Posts)
 const usersWithPosts = await db
@@ -163,7 +163,7 @@ Use `.innerJoin()` to join tables:
 
 ```typescript
 import { eq } from "durcno";
-import { Users, Posts } from "./db/schema";
+import { Users, Posts } from "./db/schema.ts";
 
 // Join Users with Posts
 const usersWithPosts = await db
@@ -181,7 +181,7 @@ const usersWithPosts = await db
 Chain multiple `.innerJoin()` calls for complex queries:
 
 ```typescript
-import { Users, Posts, Comments } from "./db/schema";
+import { Users, Posts, Comments } from "./db/schema.ts";
 
 const data = await db
   .from(Users)

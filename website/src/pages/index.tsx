@@ -28,7 +28,7 @@ export default function Home(): ReactNode {
 
 const codeExample = `import { asc, eq } from "durcno";
 import { db } from "./db/index";
-import { Users } from "./db/schema";
+import { Users } from "./db/schema.ts";
 
 // Fully typed result inferred from schema
 const admins = await db

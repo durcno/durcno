@@ -283,7 +283,7 @@ Relations must be exported and included when creating the database instance:
 ```typescript
 import { database } from "durcno";
 import setup from "./durcno.config";
-import * as schema from "./schema";
+import * as schema from "./schema.ts";
 
 export const db = database(schema, setup);
 ```
@@ -518,7 +518,7 @@ export const UsersRelations = relations(Users, () => ({
 
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema";
+import * as schema from "./schema.ts";
 
 export const db = database(schema, setup);
 ```

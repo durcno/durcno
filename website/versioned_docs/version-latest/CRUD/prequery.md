@@ -12,8 +12,8 @@ Use `prequery()` to create reusable, type-safe prepared statements that can be e
 
 ```typescript
 import { prequery, eq } from "durcno";
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 // Create a prepared query with a username parameter
 const findUserByUsername = prequery(
@@ -55,8 +55,8 @@ You can define multiple arguments in a single prepared query:
 
 ```typescript
 import { prequery, and, eq } from "durcno";
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 
 const findUser = prequery(
   {
@@ -176,7 +176,7 @@ const result = await complexQuery.run(db, {
 
 ```typescript
 import { prequery, eq } from "durcno";
-import { Posts } from "./db/schema";
+import { Posts } from "./db/schema.ts";
 
 const findPostsByUser = prequery({ userId: Posts.userId.arg() }, (args) => {
   return db.prepare().from(Posts).select().where(eq(Posts.userId, args.userId));

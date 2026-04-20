@@ -9,8 +9,8 @@ Use `db.transaction()` to execute multiple queries as a single atomic operation.
 ## Basic Usage
 
 ```typescript
-import { db } from "./db";
-import { Users, Posts } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users, Posts } from "./db/schema.ts";
 import { eq } from "durcno";
 
 const result = await db.transaction(async (tx) => {

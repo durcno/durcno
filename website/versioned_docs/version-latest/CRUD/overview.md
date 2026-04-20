@@ -13,7 +13,7 @@ After defining your schema and configuration, create a database instance:
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema";
+import * as schema from "./schema.ts";
 import setup from "./durcno.config";
 
 export const db = database(schema, setup);

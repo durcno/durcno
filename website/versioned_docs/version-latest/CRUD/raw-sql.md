@@ -9,7 +9,7 @@ While Durcno's query builder handles most use cases, sometimes you need to execu
 ## Basic Usage
 
 ```typescript
-import { db } from "./db";
+import { db } from "./db/index.ts";
 
 // Execute a raw SELECT query
 const result = await db.raw<{ id: number; username: string }[]>(

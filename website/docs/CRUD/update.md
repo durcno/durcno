@@ -28,8 +28,8 @@ Use `db.update()` to modify existing rows in a table. The update builder provide
 Always use `.where()` to specify which rows to update:
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 import { eq } from "durcno";
 
 // Update a specific user's email

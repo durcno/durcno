@@ -22,8 +22,8 @@ Use `db.delete()` to remove rows from a table. The delete builder supports filte
 Always use `.where()` to specify which rows to delete:
 
 ```typescript
-import { db } from "./db";
-import { Users } from "./db/schema";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
 import { eq } from "durcno";
 
 // Delete a specific user
