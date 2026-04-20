@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
 import { v4 as uuid } from "uuid";
+import { runDurcnoCommand } from "../helpers";
 
 import type { Users } from "./schema";
 
@@ -26,21 +26,12 @@ export function runDurcnoCli(
   containerInfo: TestContainerInfo,
   migrationsDirName: string,
 ) {
-  const result = spawnSync("durcno", [command, "--config", configPath], {
-    stdio: ["inherit", "inherit", "pipe"],
-    env: {
-      ...process.env,
-      DB_PORT: containerInfo.port.toString(),
-      DB_NAME: containerInfo.dbName,
-      MIGRATIONS_DIR: `./${migrationsDirName}`,
-    },
-  });
-  if (result.stderr?.length) {
-    console.error(result.stderr.toString());
-  }
-  if (result.status !== 0) {
-    throw new Error(`durcno ${command} failed with exit code ${result.status}`);
-  }
+  runDurcnoCommand([command, "--config", configPath], {
+    ...process.env,
+    DB_PORT: containerInfo.port.toString(),
+    DB_NAME: containerInfo.dbName,
+    MIGRATIONS_DIR: `./${migrationsDirName}`,
+  } as Record<string, string>);
 }
 
 /**
