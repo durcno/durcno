@@ -1,9 +1,10 @@
+import "dotenv/config";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     dir: "..",
-    maxWorkers: 4,
+    maxWorkers: process.env.VITEST_MAX_WORKERS ?? undefined,
     globalSetup: "./global-setup.ts",
   },
 });
