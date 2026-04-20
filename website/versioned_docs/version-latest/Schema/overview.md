@@ -139,10 +139,10 @@ Update your `durcno.config.ts` to point to your schema:
 
 ```typescript
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
 // Single file
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   // ...
 });

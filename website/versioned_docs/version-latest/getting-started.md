@@ -62,9 +62,9 @@ Create a `durcno.config.ts` file in your project root to define your database co
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts", // Path to your schema file
   out: "migrations", // Directory for migration files
   dbCredentials: {
@@ -77,7 +77,7 @@ export default defineConfig(PgConnector, {
 Use environment variables for sensitive credentials:
 
 ```typescript
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   dbCredentials: {
     url: process.env.DATABASE_URL,

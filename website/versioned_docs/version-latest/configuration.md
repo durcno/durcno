@@ -19,9 +19,9 @@ npx durcno generate --config ./config/durcno.config.ts
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
@@ -40,7 +40,7 @@ export default defineConfig(PgConnector, {
 The path to your database schema file, relative to the config file location.
 
 ```typescript
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   // ...
 });
@@ -54,7 +54,7 @@ export default defineConfig(PgConnector, {
 The output directory where generated migration files will be stored.
 
 ```typescript
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   out: "migrations",
   // ...
@@ -71,7 +71,7 @@ Database connection credentials. Can be specified either as a URL string or as i
 #### URL Format
 
 ```typescript
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   dbCredentials: {
     url: "postgresql://user:password@localhost:5432/database",
@@ -102,7 +102,7 @@ dbCredentials: {
 | `ssl`      | `boolean \| string \| ConnectionOptions` | No       | SSL/TLS configuration                |
 
 ```typescript
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   dbCredentials: {
     host: "localhost",
@@ -178,7 +178,7 @@ Connection pool configuration.
 | `max`    | `number` | `10`    | Maximum number of connections in the `db` pool |
 
 ```typescript
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   dbCredentials: {
     url: process.env.DATABASE_URL!,
@@ -196,9 +196,9 @@ Here's a complete configuration example with all options:
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   // Schema file location
   schema: "db/schema.ts",
 
@@ -229,11 +229,11 @@ You can create environment-specific configurations:
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: isDevelopment

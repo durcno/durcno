@@ -26,9 +26,9 @@ npm install postgres
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PostgresConnector } from "durcno/connectors/postgres";
+import { postgres } from "durcno/connectors/postgres";
 
-export default defineConfig(PostgresConnector, {
+export default defineConfig(postgres(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
@@ -52,9 +52,9 @@ npm install pg
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
@@ -74,9 +74,9 @@ The `bun` connector uses Bun's native [SQL API](https://bun.sh/docs/api/sql) for
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { BunConnector } from "durcno/connectors/bun";
+import { bun } from "durcno/connectors/bun";
 
-export default defineConfig(BunConnector, {
+export default defineConfig(bun(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
@@ -104,9 +104,9 @@ For testing or temporary data, use an in-memory database:
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PgLiteConnector } from "durcno/connectors/pglite";
+import { pglite } from "durcno/connectors/pglite";
 
-export default defineConfig(PgLiteConnector, {
+export default defineConfig(pglite(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
@@ -122,9 +122,9 @@ For persistent local storage, specify a file path:
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PgLiteConnector } from "durcno/connectors/pglite";
+import { pglite } from "durcno/connectors/pglite";
 
-export default defineConfig(PgLiteConnector, {
+export default defineConfig(pglite(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
@@ -147,9 +147,9 @@ All connectors accept the same configuration options:
 
 ```typescript
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   // Required: Path to your schema file
   schema: "db/schema.ts",
 
@@ -178,9 +178,9 @@ Instead of individual credentials, you can use a connection URL:
 
 ```typescript
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
@@ -195,9 +195,9 @@ For secure connections, configure SSL:
 
 ```typescript
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
@@ -226,9 +226,9 @@ For production, use environment variables for sensitive credentials:
 
 ```typescript
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {
