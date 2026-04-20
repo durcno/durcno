@@ -16,10 +16,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - run: npm install -g corepack
-      - run: corepack enable
+      - uses: pnpm/action-setup@v6
+        name: Install pnpm
+        with:
+          version: 10
       - name: Setup runtime
         uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter='durcno'
       - name: Build package
