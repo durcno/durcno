@@ -5,10 +5,10 @@
     "noEmit": true,
     "types": ["node"],
     "paths": {
-      "durcno": ["./src/index"],
-      "durcno/migration": ["./src/migration"],
-      "durcno/connectors/pg": ["./src/connectors/pg"],
-      "durcno/validators/zod": ["./src/validators/zod"]
+      "durcno": ["../src/index"],
+      "durcno/migration": ["../src/migration"],
+      "durcno/connectors/pg": ["../src/connectors/pg"],
+      "durcno/validators/zod": ["../src/validators/zod"]
     }
   },
   "include": ["./**/*.ts"]
