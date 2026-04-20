@@ -95,6 +95,7 @@ export async function runUpMigration(
 
   // Determine if transaction should be used
   const useTransaction = options.transaction ?? true;
+  const execution = options.execution ?? "joined";
 
   if (useTransaction) {
     await client.query("BEGIN;");
@@ -102,8 +103,14 @@ export async function runUpMigration(
 
   try {
     if (statements.length > 0) {
-      const sql = `${statements.map((st) => st.toSQL()).join(";\n")};`;
-      await client.query(sql);
+      if (execution === "sequential") {
+        for (const st of statements) {
+          await client.query(st.toSQL());
+        }
+      } else {
+        const sql = `${statements.map((st) => st.toSQL()).join("\n")}`;
+        await client.query(sql);
+      }
     }
 
     if (useTransaction) {

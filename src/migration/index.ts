@@ -56,4 +56,6 @@ export {
 export interface MigrationOptions {
   /** Whether to wrap statements in BEGIN...COMMIT (default: true) */
   transaction?: boolean;
+  /** How to execute statements: 'joined' runs all as a single query, 'sequential' runs one at a time (default: 'joined') */
+  execution?: "joined" | "sequential";
 }

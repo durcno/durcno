@@ -82,6 +82,22 @@ export const options: MigrationOptions = {
 If you forget this, PostgreSQL will raise an error at runtime.
 :::
 
+## Execution Mode
+
+When a migration contains multiple concurrent index operations, set `execution: "sequential"` so each statement is sent to the database individually rather than joined into a single query. This ensures each `CREATE INDEX CONCURRENTLY` (or `DROP INDEX CONCURRENTLY`) is an independent command, which is the safest approach for concurrent operations:
+
+```typescript
+export const options: MigrationOptions = {
+  transaction: false, // Required for concurrent operations
+  execution: "sequential", // Run each statement separately
+};
+```
+
+| Value                | Behavior                                                        |
+| -------------------- | --------------------------------------------------------------- |
+| `"joined"` (default) | All statements concatenated and sent as a single query          |
+| `"sequential"`       | Each statement sent to the database individually, one at a time |
+
 ## When to Use
 
 | Scenario                                 | Use Concurrent?                      |
