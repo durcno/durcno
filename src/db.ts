@@ -1,4 +1,3 @@
-import { getUrlFromDbCredentials } from "./cli/helpers";
 import type { $Pool, Connector, QueryExecutor } from "./connectors/common";
 import { is } from "./entity";
 import type { BuildFilterExpression } from "./filters/index";
@@ -56,7 +55,6 @@ class Base<
     tables: TTables;
     allRelations: TAllRelations;
     config: Config;
-    dbUrl: string;
     pre: TPrepare;
   };
 
@@ -76,7 +74,6 @@ class Base<
       tables,
       allRelations,
       config: connector.config,
-      dbUrl: getUrlFromDbCredentials(connector.config.dbCredentials),
       pre: prepare,
     };
   }
