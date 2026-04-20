@@ -8,15 +8,15 @@
   "files": {
     "includes": [
       "*.{ts,json}",
-      "src/*.{ts,json}",
+      "{src,type-tests,tests,website}/*.{ts,json}",
       "src/**/*.{ts,json}",
-      "{tests,type-tests,website}/*.{ts,json}",
       "tests/{cli,columns,qb}/**/*.{ts,json}",
       "!tests/**/migrations.test/**/*.{ts,mts}",
       "website/{docs,src}/**/*.{ts,tsx,js,cjs,json}",
       "!website/docs/api/**/*",
       "scripts/*.{js,cjs}",
-      ".vscode/*"
+      ".vscode/*",
+      ".changenotes/*.json"
     ]
   },
   "formatter": {
