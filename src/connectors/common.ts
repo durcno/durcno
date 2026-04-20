@@ -21,11 +21,12 @@ export const DEFAULT_POOL_MAX = 10;
  */
 export abstract class Connector {
   /** The configuration object containing file paths, database credentials, client configs etc. */
-  config: Config;
+  config!: Config;
   /** The PostgreSQL connection URL derived from the configuration. */
-  url: string;
+  url!: string;
 
-  constructor(config: Config) {
+  /** Injects the configuration and derives the connection URL. Called by `defineConfig`. */
+  _init(config: Config) {
     this.config = config;
     this.url = getUrlFromDbCredentials(config.dbCredentials);
   }

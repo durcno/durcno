@@ -1,8 +1,8 @@
 // @ts-check
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "schema.ts",
   out: "migrations.test",
   dbCredentials: {

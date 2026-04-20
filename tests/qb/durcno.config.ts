@@ -1,8 +1,8 @@
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
 // Read from environment variables for test flexibility
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "./schema.ts",
   out: process.env.MIGRATIONS_DIR,
   pool: { max: 5 },

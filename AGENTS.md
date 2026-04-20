@@ -41,9 +41,9 @@ A configuration file to define database connection and project settings:
 ```typescript
 // durcno.config.ts
 import { defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(PgConnector, {
+export default defineConfig(pg(), {
   schema: "db/schema.ts",
   out: "migrations",
   dbCredentials: {

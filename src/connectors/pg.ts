@@ -20,6 +20,11 @@ export class PgConnector extends Connector {
   }
 }
 
+/** Creates a pg (node-postgres) connector instance. */
+export function pg(): PgConnector {
+  return new PgConnector();
+}
+
 /**
  * Single-connection client wrapper for the `pg` library.
  *

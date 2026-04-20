@@ -40,7 +40,7 @@ describe("durcno init", () => {
     const configContent = fs.readFileSync(configPath, "utf8");
     expect(configContent).toContain('import { defineConfig } from "durcno"');
     expect(configContent).toContain(
-      'import { PgConnector } from "durcno/connectors/pg"',
+      'import { pg } from "durcno/connectors/pg"',
     );
     expect(configContent).toContain('schema: "db/schema.ts"');
     expect(configContent).toContain('out: "migrations"');

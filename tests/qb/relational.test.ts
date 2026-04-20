@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
 import { asc, database, defineConfig, desc, eq } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
@@ -39,7 +39,7 @@ describe("Relational queries", () => {
 
     db = database(
       schema,
-      defineConfig(PgConnector, {
+      defineConfig(pg(), {
         schema: "./schema.ts",
         pool: { max: 5 },
         dbCredentials: {

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { database, defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 import { Client } from "pg";
 import * as schema from "./schema";
 
@@ -36,7 +36,7 @@ export async function initTestContext(): Promise<TestContext> {
 
   const db = database(
     schema,
-    defineConfig(PgConnector, {
+    defineConfig(pg(), {
       schema: "./schema.ts",
       pool: { max: 2 },
       dbCredentials: {

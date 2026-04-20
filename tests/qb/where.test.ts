@@ -16,7 +16,7 @@ import {
   ne,
   or,
 } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
@@ -51,7 +51,7 @@ describe("WHERE clause operators", () => {
 
     db = database(
       schema,
-      defineConfig(PgConnector, {
+      defineConfig(pg(), {
         schema: "./schema.ts",
         pool: { max: 5 },
         dbCredentials: {

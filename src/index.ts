@@ -29,7 +29,7 @@ export { smallserial } from "./columns/smallserial";
 export { text } from "./columns/text";
 export { time } from "./columns/time";
 export { timestamp } from "./columns/timestamp";
-export { uuid, type UuidVersion } from "./columns/uuid";
+export { type UuidVersion, uuid } from "./columns/uuid";
 export { varchar } from "./columns/varchar";
 export {
   PrimaryKeyConstraint,
@@ -110,18 +110,18 @@ export type DurcnoSetup<T extends Connector = Connector> = {
  * Define a Durcno configuration.
  *
  * This is the recommended way to create your `durcno.config.ts` file.
- * Pass the connector class for your database driver and the configuration options.
+ * Pass a connector instance for your database driver and the configuration options.
  *
- * @param Connector - The connector class to use (e.g., `PgConnector`, `PostgresConnector`, `BunConnector`, `PgLiteConnector`).
+ * @param connector - The connector instance to use (e.g., `pg()`, `postgres()`, `bun()`, `pglite()`).
  * @param config - The database configuration including connection credentials and pool settings.
  * @returns A setup object containing the connector instance and the config options.
  *
  * @example
  * ```typescript
  * import { defineConfig } from "durcno";
- * import { PgConnector } from "durcno/connectors/pg";
+ * import { pg } from "durcno/connectors/pg";
  *
- * export default defineConfig(PgConnector, {
+ * export default defineConfig(pg(), {
  *   schema: "db/schema.ts",
  *   out: "migrations",
  *   dbCredentials: {
@@ -131,11 +131,12 @@ export type DurcnoSetup<T extends Connector = Connector> = {
  * ```
  */
 export function defineConfig<T extends Connector>(
-  ConnectorClass: new (config: Config) => T,
+  connector: T,
   config: Config,
 ): DurcnoSetup<T> {
+  connector._init(config);
   return {
-    connector: new ConnectorClass(config),
+    connector,
     config,
   };
 }

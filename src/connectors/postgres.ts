@@ -1,4 +1,4 @@
-import postgres from "postgres";
+import postgresLib from "postgres";
 
 import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
 
@@ -20,6 +20,11 @@ export class PostgresConnector extends Connector {
   }
 }
 
+/** Creates a postgres.js connector instance. */
+export function postgres(): PostgresConnector {
+  return new PostgresConnector();
+}
+
 /**
  * Single-connection client wrapper for postgres.js.
  *
@@ -29,10 +34,10 @@ export class PostgresConnector extends Connector {
  * @internal
  */
 class PostgresClient extends $Client {
-  #sql: ReturnType<typeof postgres>;
+  #sql: ReturnType<typeof postgresLib>;
   constructor(connectionString: string) {
     super();
-    this.#sql = postgres(connectionString, {
+    this.#sql = postgresLib(connectionString, {
       max: 1,
     });
     this.query = this.#sql.unsafe.bind(this.#sql);
@@ -56,10 +61,10 @@ class PostgresClient extends $Client {
  * @internal
  */
 class PostgresPool extends $Pool {
-  #sql: ReturnType<typeof postgres>;
+  #sql: ReturnType<typeof postgresLib>;
   constructor(connectionString: string, pool?: { max?: number }) {
     super();
-    this.#sql = postgres(connectionString, {
+    this.#sql = postgresLib(connectionString, {
       max: pool?.max ?? DEFAULT_POOL_MAX,
     });
     this.query = this.#sql.unsafe.bind(this.#sql);
@@ -85,8 +90,8 @@ class PostgresPool extends $Pool {
  * @internal
  */
 class PostgresPoolClient extends $Client {
-  #sql: ReturnType<typeof postgres>;
-  constructor(sql: ReturnType<typeof postgres>) {
+  #sql: ReturnType<typeof postgresLib>;
+  constructor(sql: ReturnType<typeof postgresLib>) {
     super();
     this.#sql = sql;
     this.query = this.#sql.unsafe.bind(this.#sql);

@@ -20,6 +20,11 @@ export class BunConnector extends Connector {
   }
 }
 
+/** Creates a Bun SQL connector instance. */
+export function bun(): BunConnector {
+  return new BunConnector();
+}
+
 /**
  * Single-connection client wrapper for Bun's SQL API.
  *

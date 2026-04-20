@@ -1,4 +1,4 @@
-import { PGlite } from "@electric-sql/pglite";
+import { PGlite, type PGliteOptions } from "@electric-sql/pglite";
 
 import { $Client, $Pool, Connector } from "./common";
 
@@ -13,12 +13,24 @@ import { $Client, $Pool, Connector } from "./common";
  * @see https://www.npmjs.com/package/@electric-sql/pglite
  */
 export class PgLiteConnector extends Connector {
+  #options?: PGliteOptions;
+
+  constructor(options?: PGliteOptions) {
+    super();
+    this.#options = options;
+  }
+
   getClient() {
-    return new PgLiteClient(this.url);
+    return new PgLiteClient(this.url, this.#options);
   }
   getPool() {
-    return new PgLitePool(this.url, this.config.pool);
+    return new PgLitePool(this.url, this.config.pool, this.#options);
   }
+}
+
+/** Creates a PgLite connector instance, optionally accepting PGlite options (e.g., extensions). */
+export function pglite(options?: PGliteOptions): PgLiteConnector {
+  return new PgLiteConnector(options);
 }
 
 /**
@@ -31,9 +43,9 @@ export class PgLiteConnector extends Connector {
  */
 class PgLiteClient extends $Client {
   #client: PGlite;
-  constructor(connectionString: string) {
+  constructor(connectionString: string, options?: PGliteOptions) {
     super();
-    this.#client = new PGlite(connectionString);
+    this.#client = new PGlite(connectionString, options);
     this.query = this.#client.query.bind(this.#client);
   }
 
@@ -57,9 +69,13 @@ class PgLiteClient extends $Client {
  */
 class PgLitePool extends $Pool {
   #pool: PGlite;
-  constructor(connectionString: string, pool?: { max?: number }) {
+  constructor(
+    connectionString: string,
+    pool?: { max?: number },
+    options?: PGliteOptions,
+  ) {
     super();
-    this.#pool = new PGlite(connectionString);
+    this.#pool = new PGlite(connectionString, options);
     this.query = this.#pool.query.bind(this.#pool);
   }
   async connect(): Promise<void> {}

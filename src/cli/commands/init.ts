@@ -48,11 +48,11 @@ const CONNECTOR_PACKAGES: Record<Connector, string[]> = {
   bun: [], // Built-in
 };
 
-const CONNECTOR_CLASS_NAMES: Record<Connector, string> = {
-  pg: "PgConnector",
-  postgres: "PostgresConnector",
-  bun: "BunConnector",
-  pglite: "PgLiteConnector",
+const CONNECTOR_FUNCTION_NAMES: Record<Connector, string> = {
+  pg: "pg",
+  postgres: "postgres",
+  bun: "bun",
+  pglite: "pglite",
 };
 
 const LOADER_PACKAGES: Record<Runtime, string[]> = {
@@ -81,7 +81,7 @@ const pm: PackageManager = (() => {
 
 function generateConfigFile(config: InitConfig): string {
   const { connector, connectionUrl, schemaPath, migrationsDir } = config;
-  const className = CONNECTOR_CLASS_NAMES[connector];
+  const funcName = CONNECTOR_FUNCTION_NAMES[connector];
 
   const urlValue =
     connectionUrl === "" ? "process.env.DATABASE_URL!" : `"${connectionUrl}"`;
@@ -95,9 +95,9 @@ function generateConfigFile(config: InitConfig): string {
       : "";
 
   return `${envLoader}import { defineConfig } from "durcno";
-import { ${className} } from "durcno/connectors/${connector}";
+import { ${funcName} } from "durcno/connectors/${connector}";
 
-export default defineConfig(${className}, {
+export default defineConfig(${funcName}(), {
   schema: "${schemaPath}",
   out: "${migrationsDir}",
   dbCredentials: {

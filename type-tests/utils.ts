@@ -1,5 +1,5 @@
 import { type Config, defineConfig } from "durcno";
-import { PgConnector } from "durcno/connectors/pg";
+import { pg } from "durcno/connectors/pg";
 
 // biome-ignore lint/correctness/noUnusedVariables: <>
 export function Expect<T extends true>() {}
@@ -20,4 +20,4 @@ export const testConfig: Config = {
   },
 };
 
-export const testSetup = defineConfig(PgConnector, testConfig);
+export const testSetup = defineConfig(pg(), testConfig);
