@@ -1,8 +1,12 @@
 import type { Options } from "@docusaurus/plugin-content-docs";
 import type * as Preset from "@docusaurus/preset-classic";
 import type { Config } from "@docusaurus/types";
+import dotenv from "dotenv";
 import { themes as prismThemes } from "prism-react-renderer";
 import versionsInfo from "./versionsInfo.json";
+import "dotenv/config";
+
+dotenv.config({ path: [".env.local"] });
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -160,6 +164,32 @@ const config: Config = {
           position: "right",
         },
       ],
+    },
+    algolia: {
+      appId: process.env.ALGO_APP_ID || "",
+      apiKey: process.env.ALGO_SEARCH_API_KEY || "",
+      indexName: process.env.ALGO_INDEX_NAME || "",
+
+      // Optional: see doc section below
+      contextualSearch: true,
+
+      // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
+      // externalUrlRegex: "external\\.com|domain\\.com",
+
+      // Optional: Replace parts of the item URLs from Algolia. Useful when using the same search index for multiple deployments using a different baseUrl. You can use regexp or string in the `from` param. For example: localhost:3000 vs myCompany.com/docs
+      // replaceSearchResultPathname: {
+      //   from: "/docs/", // or as RegExp: /\/docs\//
+      //   to: "/",
+      // },
+
+      // Optional: Algolia search parameters
+      searchParameters: {},
+
+      // Optional: path for search page that enabled by default (`false` to disable it)
+      // searchPagePath: "search",
+
+      // Optional: whether the insights feature is enabled or not on Docsearch (`false` by default)
+      insights: false,
     },
     footer: {
       links: [
