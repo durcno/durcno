@@ -340,11 +340,11 @@ export async function init(options: InitOptions): Promise<void> {
   console.log(dim("Next steps:"));
   const execCmd =
     pm === "npm"
-      ? "npx"
+      ? "npm exec"
       : pm === "pnpm"
         ? "pnpm exec"
         : pm === "bun"
-          ? "bun x"
+          ? "bunx"
           : pm;
 
   const nextSteps: string[][] = [
