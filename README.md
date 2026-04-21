@@ -32,7 +32,7 @@ npm install durcno
 ```
 
 ```bash
-npx durcno init
+npm exec durcno init
 ```
 
 ## Getting Started

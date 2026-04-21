@@ -9,7 +9,7 @@ Apply pending migrations to your configured database.
 Usage
 
 ```bash npm2yarn
-npx durcno migrate [--config path/to/durcno.config.ts]
+npm exec durcno migrate [--config path/to/durcno.config.ts]
 ```
 
 What it does
@@ -26,7 +26,7 @@ Before you run
 Example
 
 ```bash npm2yarn
-npx durcno migrate
+npm exec durcno migrate
 ```
 
 Troubleshooting
@@ -34,4 +34,4 @@ Troubleshooting
 - If a migration fails mid-apply, check the database state and the migration SQL. You may need to roll back the partial changes manually, fix the SQL, then re-run.
 - If a migration was applied outside Durcno or manually altered, `status` can help diagnose mismatches.
 
-Next: check migration status with `npx durcno status` or roll back with `npx durcno down`.
+Next: check migration status with `durcno status` or roll back with `durcno down`.

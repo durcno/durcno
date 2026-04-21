@@ -228,7 +228,7 @@ export const Users = table("public", "users", {
 Generate DDL migration statements by diffing the current schema against the last state.
 
 ```bash npm2yarn
-npx durcno generate
+npm exec durcno generate
 ```
 
 This creates:
@@ -245,7 +245,7 @@ migrations/
 Apply the migration to your database:
 
 ```bash npm2yarn
-npx durcno migrate
+npm exec durcno migrate
 ```
 
 ### 4. Use in Queries

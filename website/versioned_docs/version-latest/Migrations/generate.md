@@ -9,7 +9,7 @@ Generate a new migration that represents the difference between your current sch
 Usage
 
 ```bash npm2yarn
-npx durcno generate [--config path/to/durcno.config.ts]
+npm exec durcno generate [--config path/to/durcno.config.ts]
 ```
 
 Common options
@@ -29,7 +29,7 @@ Example
 2. Run:
 
 ```bash npm2yarn
-npx durcno generate
+npm exec durcno generate
 ```
 
 3. Review the generated `up.ts` and `down.ts` in the new migration folder. Edit the generated DDL statements if you need to tweak or add data migrations.
@@ -39,4 +39,4 @@ Tips
 - Review `up.ts` and `down.ts` carefully before applying to production.
 - If a generated migration contains undesired changes, adjust the DDL statements or fix your schema and re-run `generate`.
 
-Next: apply the migration with `npx durcno migrate`.
+Next: apply the migration with `durcno migrate`.

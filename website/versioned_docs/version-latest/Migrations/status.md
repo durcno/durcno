@@ -9,7 +9,7 @@ List migrations and show which ones have been applied.
 Usage
 
 ```bash npm2yarn
-npx durcno status [--config path/to/durcno.config.ts]
+npm exec durcno status [--config path/to/durcno.config.ts]
 ```
 
 What it shows
@@ -25,11 +25,11 @@ When to use
 Example
 
 ```bash npm2yarn
-npx durcno status
+npm exec durcno status
 ```
 
 Troubleshooting
 
 - If a migration appears applied but you don't find a corresponding record, verify your `durcno.config.ts` database settings and check for multiple environments or databases.
 
-Next: apply or roll back migrations using `npx durcno migrate` or `npx durcno down`.
+Next: apply or roll back migrations using `durcno migrate` or `durcno down`.

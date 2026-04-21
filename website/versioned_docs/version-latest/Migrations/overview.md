@@ -8,12 +8,12 @@ Durcno's migration system helps you track, generate, apply and rollback schema c
 
 This section covers the CLI commands you need to manage migrations:
 
-- `npx durcno generate` — create a new migration for schema changes. [See more](./generate)
-- `npx durcno migrate` — apply pending migrations to database. [See more](./migrate)
-- `npx durcno push` — generate and apply a migration in one step. [See more](./push)
-- `npx durcno down <migration>` — rollback a specific migration. [See more](./down)
-- `npx durcno squash <start> <end>` — squash a range of migrations into one. [See more](./squash)
-- `npx durcno status` — view the status of migrations. [See more](./status)
+- `durcno generate` — create a new migration for schema changes. [See more](./generate)
+- `durcno migrate` — apply pending migrations to database. [See more](./migrate)
+- `durcno push` — generate and apply a migration in one step. [See more](./push)
+- `durcno down <migration>` — rollback a specific migration. [See more](./down)
+- `durcno squash <start> <end>` — squash a range of migrations into one. [See more](./squash)
+- `durcno status` — view the status of migrations. [See more](./status)
 
 Durcno tracks your schema changes automatically, so you can focus on building features instead of writing SQL migration scripts by hand.
 

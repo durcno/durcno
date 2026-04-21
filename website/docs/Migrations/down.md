@@ -9,12 +9,12 @@ Roll back a specific migration.
 Usage
 
 ```bash npm2yarn
-npx durcno down <migration-name> [--config path/to/durcno.config.ts]
+npm exec durcno down <migration-name> [--config path/to/durcno.config.ts]
 ```
 
 Arguments
 
-- `<migration-name>` — the folder name (or identifier) of the migration to roll back. Use `npx durcno status` to find the identifier.
+- `<migration-name>` — the folder name (or identifier) of the migration to roll back. Use `durcno status` to find the identifier.
 
 What it does
 
@@ -30,11 +30,11 @@ Example
 
 ```bash npm2yarn
 # Rollback a migration named 2025-10-01-add-users
-npx durcno down 2025-10-01-add-users
+npm exec durcno down 2025-10-01-add-users
 ```
 
 If the `down.ts` is missing or incomplete
 
 - You may need to write a manual rollback DDL or a new migration that safely reverses the previous change.
 
-Next: verify the result with `npx durcno status`.
+Next: verify the result with `durcno status`.

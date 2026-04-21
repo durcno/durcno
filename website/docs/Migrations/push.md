@@ -11,7 +11,7 @@ Generate and migrate in a single step.
 ## Usage
 
 ```bash npm2yarn
-npx durcno push [--config path/to/durcno.config.ts]
+npm exec durcno push [--config path/to/durcno.config.ts]
 ```
 
 ### Common options
@@ -26,7 +26,7 @@ npx durcno push [--config path/to/durcno.config.ts]
 ## Example
 
 ```bash npm2yarn
-npx durcno push
+npm exec durcno push
 ```
 
 When there are schema changes:
@@ -47,4 +47,4 @@ No changes detected. Skipping migration creation.
 - Use `push` during **local development** for a fast generate-and-apply workflow.
 - For **production**, prefer running `generate` and `migrate` separately so you can review the generated `up.ts` and `down.ts` before applying.
 
-Next: roll back a migration with `npx durcno down`.
+Next: roll back a migration with `durcno down`.

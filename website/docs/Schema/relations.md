@@ -572,10 +572,10 @@ export const Posts = table("public", "posts", {
 });
 
 // 2. Generate migration
-// $ npx durcno generate
+// $ npm exec durcno generate
 
 // 3. Apply migration
-// $ npx durcno migrate
+// $ npm exec durcno migrate
 ```
 
 ## Next Steps

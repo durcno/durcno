@@ -7,7 +7,7 @@ sidebar_position: 4.5
 Durcno ships a command-line interface for project scaffolding, database interaction, and migration management.
 
 ```bash npm2yarn
-npx durcno <command> [options]
+npm exec durcno <command> [options]
 ```
 
 ## Commands
@@ -32,7 +32,7 @@ Migration commands (`generate`, `migrate`, `push`, `down`, `squash`, `status`) a
 Initialize a new Durcno project with an interactive setup wizard.
 
 ```bash npm2yarn
-npx durcno init [--force]
+npm exec durcno init [--force]
 ```
 
 ### Options
@@ -64,7 +64,7 @@ After completion, the following files are created:
 ### Example
 
 ```bash npm2yarn
-npx durcno init
+npm exec durcno init
 ```
 
 ```
@@ -98,7 +98,7 @@ In non-interactive environments (CI, piped input), `init` uses default values au
 Open an interactive SQL REPL connected to your database.
 
 ```bash npm2yarn
-npx durcno shell [--config path/to/durcno.config.ts]
+npm exec durcno shell [--config path/to/durcno.config.ts]
 ```
 
 ### Options
@@ -128,7 +128,7 @@ The shell supports psql-style meta commands:
 ### Example
 
 ```bash npm2yarn
-npx durcno shell
+npm exec durcno shell
 ```
 
 ```

@@ -11,7 +11,7 @@ Durcno uses a configuration file (`durcno.config.ts`) to define your database co
 By default, Durcno looks for `durcno.config.ts` in your project root. You can specify a custom path using the `--config` flag:
 
 ```bash npm2yarns
-npx durcno generate --config ./config/durcno.config.ts
+npm exec durcno generate --config ./config/durcno.config.ts
 ```
 
 ## Basic Structure

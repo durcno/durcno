@@ -28,7 +28,7 @@ npm install durcno
 The fastest way to get started is using the interactive `init` command:
 
 ```bash npm2yarn
-npx durcno init
+npm exec durcno init
 ```
 
 This command will prompt you to:
@@ -137,7 +137,7 @@ export const db = database(schema, setup);
 After defining your schema, generate your first migration:
 
 ```bash npm2yarn
-npx durcno generate
+npm exec durcno generate
 ```
 
 This creates a migration folder with:
@@ -150,7 +150,7 @@ This creates a migration folder with:
 Apply the migration to your database:
 
 ```bash npm2yarn
-npx durcno migrate
+npm exec durcno migrate
 ```
 
 ### Check Migration Status
@@ -158,7 +158,7 @@ npx durcno migrate
 View the status of all migrations:
 
 ```bash npm2yarn
-npx durcno status
+npm exec durcno status
 ```
 
 ## Writing Your First Queries

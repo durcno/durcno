@@ -15,12 +15,12 @@ Why use it
 Usage
 
 ```bash npm2yarn
-npx durcno squash <start> <end> [--config path/to/durcno.config.ts] [--force]
+npm exec durcno squash <start> <end> [--config path/to/durcno.config.ts] [--force]
 ```
 
 Arguments
 
-- `<start>` — the folder name of the first migration in the range. Use `npx durcno status` to find migration identifiers.
+- `<start>` — the folder name of the first migration in the range. Use `durcno status` to find migration identifiers.
 - `<end>` — the folder name of the last migration in the range.
 
 Common options
@@ -50,7 +50,7 @@ migrations/
 Squash them into one:
 
 ```bash npm2yarn
-npx durcno squash 2025-10-01T10-00-00.000Z 2025-10-03T09-15-00.000Z
+npm exec durcno squash 2025-10-01T10-00-00.000Z 2025-10-03T09-15-00.000Z
 ```
 
 Result:
@@ -68,4 +68,4 @@ Important notes
 - **Only unapplied migrations**: Squash operates on migration files only. If the migrations in the range have already been applied to a database, the squashed result will be equivalent but the migration history in that database will still reference the original individual migrations.
 - **Single migration range**: If the range contains only one migration, the command exits early with no changes.
 
-Next: verify the result with `npx durcno status`.
+Next: verify the result with `durcno status`.
