@@ -998,7 +998,7 @@ export class AlterTableBuilder extends DDLStatement {
           break;
         case "setDefault":
           statements.push(
-            `ALTER TABLE ${relation} ALTER COLUMN "${action.column}" SET DEFAULT '${action.defaultValue}';`,
+            `ALTER TABLE ${relation} ALTER COLUMN "${action.column}" SET DEFAULT ${action.defaultValue};`,
           );
           break;
         case "dropDefault":
