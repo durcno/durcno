@@ -179,8 +179,8 @@ class InsertQuery<
 
       rowPlaceholders.push(`(${rowValues.join(", ")})`);
     }
-
     query.sql += rowPlaceholders.join(",\n  ");
+
     if (this.#$returning) {
       query.sql += " RETURNING ";
       const returningFields = Object.keys(this.#$returning).filter(
@@ -190,6 +190,7 @@ class InsertQuery<
         .map((field) => `"${this.#table._.columns[field].nameSnake}"`)
         .join(", ");
     }
+
     query.sql += ";";
     return query;
   }
