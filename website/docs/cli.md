@@ -51,7 +51,6 @@ The `init` command walks you through an interactive prompt to configure your pro
 2. **Enter a connection URL** — Your PostgreSQL connection string, or leave empty to use `process.env.DATABASE_URL!`
 3. **Schema file path** — Where to create your schema file (default: `db/schema.ts`)
 4. **Migrations directory** — Where to store migration files (default: `migrations`)
-5. **Set `"type": "module"`** — Optionally update your `package.json` (required for migration files)
 
 ### Generated files
 
@@ -74,7 +73,6 @@ npm exec durcno init
 ? Connection URL (leave empty to use process.env.DATABASE_URL!):
 ? Schema file: db/schema.ts
 ? Migrations directory: migrations
-? Set "type": "module" in package.json? Yes
 
 📄 Creating files ...
 

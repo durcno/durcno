@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import chalk from "chalk";
 import prompts from "prompts";
@@ -132,37 +132,6 @@ export const db = database(schema, setup);
 `;
 }
 
-function setTypeModule(): void {
-  const pkgPath = resolve(process.cwd(), "package.json");
-
-  if (!existsSync(pkgPath)) {
-    writeFileSync(pkgPath, `${JSON.stringify({ type: "module" }, null, 2)}\n`);
-    console.log(
-      bold(
-        `${green("✔")} Created ${cyan("package.json")} with "type": "module"`,
-      ),
-    );
-    return;
-  }
-
-  try {
-    const pkgContent = readFileSync(pkgPath, "utf-8");
-    const pkg = JSON.parse(pkgContent);
-
-    if (pkg.type !== "module") {
-      pkg.type = "module";
-      writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-      console.log(
-        bold(
-          `${green("✔")} Updated ${cyan("package.json")} with "type": "module"`,
-        ),
-      );
-    }
-  } catch (err) {
-    console.log(yellow(`Warning: Failed to update package.json: ${err}`));
-  }
-}
-
 async function promptConfig(): Promise<InitConfig> {
   const response = await prompts(
     [
@@ -274,8 +243,6 @@ export async function init(options: InitOptions): Promise<void> {
   }
 
   await writeFiles(config, options);
-
-  setTypeModule();
 
   console.log(green.bold("\n📦 Setup dependencies\n"));
 
