@@ -18,7 +18,7 @@ Before you begin, ensure you have:
 Install Durcno using any package manager
 
 ```bash npm2yarn
-npm install durcno
+npm install durcno@latest
 ```
 
 ## Setup
