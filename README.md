@@ -1,8 +1,11 @@
 <p align="center">
-  <img src="https://img.shields.io/npm/v/durcno?style=flat&color=blue" alt="npm version" />
+  <a href="https://npmjs.com/package/durcno" target="_blank">
+    <img src="https://img.shields.io/npm/v/durcno?style=flat&logo=npm&color=339933" alt="npm version" />
+  </a>
+  <img src="https://img.shields.io/badge/Node.js-24%2B-339933?style=flat&logo=node.js&logoColor=white" alt="Node.js 24+" />
   <img src="https://img.shields.io/badge/PostgreSQL-14%2B-336791?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL 14+" />
-  <img src="https://img.shields.io/badge/Node.js-25%2B-339933?style=flat&logo=node.js&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat" alt="License" />
+  <img src="https://img.shields.io/badge/vitest--green?logo=vitest" alt="License" />
 </p>
 
 <h1 align="center">Durcno</h1>
