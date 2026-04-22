@@ -10,7 +10,7 @@ This guide will walk you through setting up Durcno in your TypeScript project an
 
 Before you begin, ensure you have:
 
-- **Node.js** => **24.12.0** / **Bun** => **1.2.0**
+- **Node.js** => **24.12.0** / **Bun** => **1.2.0** / **Deno** => **2.7.0**
 - A **PostgreSQL** database (Optional)
 
 ## Installation
