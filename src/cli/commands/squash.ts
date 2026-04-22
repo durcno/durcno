@@ -21,7 +21,7 @@ export async function squash(
   options: SquashOptions,
 ): Promise<void> {
   const configPath = resolveConfigPath(options.config);
-  const { config } = getSetup(configPath);
+  const { config } = await getSetup(configPath);
   const migrationsDir = resolve(
     dirname(configPath),
     config.out || DEFAULT_MIGRATIONS_DIR,
@@ -81,7 +81,7 @@ export async function squash(
   let hasCustomStatements = false;
   for (const migrationDirName of range) {
     const upPath = join(migrationsDir, migrationDirName, "up.ts");
-    const upModule = require(upPath);
+    const upModule = await import(upPath);
     const statements: DDLStatement[] = upModule.statements;
     if (statements.some((st) => st.isCustom)) {
       hasCustomStatements = true;
@@ -108,7 +108,7 @@ export async function squash(
   const beforeSnapshot = createEmptySnapshot();
   for (const migrationDirName of before) {
     const upPath = join(migrationsDir, migrationDirName, "up.ts");
-    const upModule = require(upPath);
+    const upModule = await import(upPath);
     const statements: DDLStatement[] = upModule.statements;
     for (const statement of statements) {
       statement.applyToSnapshot(beforeSnapshot);
@@ -119,7 +119,7 @@ export async function squash(
   const afterRangeSnapshot = createEmptySnapshot();
   for (const migrationDirName of [...before, ...range]) {
     const upPath = join(migrationsDir, migrationDirName, "up.ts");
-    const upModule = require(upPath);
+    const upModule = await import(upPath);
     const statements: DDLStatement[] = upModule.statements;
     for (const statement of statements) {
       statement.applyToSnapshot(afterRangeSnapshot);

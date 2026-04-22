@@ -51,9 +51,9 @@ export function resolveConfigPath(argPath?: string): string {
   return resolve(process.cwd(), DURCNO_CONFIG_NAME);
 }
 
-export function getSetup(argPath?: string): DurcnoSetup {
+export async function getSetup(argPath?: string): Promise<DurcnoSetup> {
   const absPath = resolveConfigPath(argPath);
-  const mod = require(absPath) as { default: DurcnoSetup<Connector> };
+  const mod = (await import(absPath)) as { default: DurcnoSetup<Connector> };
   const { default: setup } = mod;
   return setup;
 }

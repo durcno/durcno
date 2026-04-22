@@ -178,7 +178,7 @@ async function promptColumnRenames(
 
 export async function generate(options: Options) {
   const configPath = resolveConfigPath(options.config);
-  const { config } = getSetup(configPath);
+  const { config } = await getSetup(configPath);
 
   const migrationsDir = resolve(
     dirname(configPath),
@@ -194,7 +194,7 @@ export async function generate(options: Options) {
   // Apply all existing migrations to build the previous snapshot
   for (const migrationFolder of migrationFolderNames.sort()) {
     const upTsPath = resolve(migrationsDir, migrationFolder, "up.ts");
-    const upModule = require(upTsPath);
+    const upModule = await import(upTsPath);
     const statements: DDLStatement[] = upModule.statements;
     for (const statement of statements) {
       statement.applyToSnapshot(ssPrevious);
@@ -205,7 +205,7 @@ export async function generate(options: Options) {
     configPath ? dirname(configPath) : process.cwd(),
     config.schema,
   );
-  const exports = require(schemaFile);
+  const exports = await import(schemaFile);
   ensureNoEntityCollisions(exports);
   const entities = Object.values(exports);
   const ssCurrent = snapshot(entities);

@@ -19,7 +19,7 @@ const { bgGreen, bgYellow, dim, gray, yellow, green, cyan } = chalk;
 export async function migrate(options: Options): Promise<void> {
   // normalize configuration file path so we can reuse it multiple times
   const configPath = resolveConfigPath(options.config);
-  const { connector, config } = getSetup(configPath);
+  const { connector, config } = await getSetup(configPath);
   config.pool = { ...config.pool, max: 1 };
   const migrationsDir = resolve(
     dirname(configPath),

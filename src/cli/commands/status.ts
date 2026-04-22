@@ -15,7 +15,7 @@ const { dim, cyan, yellow, green } = chalk;
 
 export async function status(options: Options): Promise<void> {
   const configPath = resolveConfigPath(options.config);
-  const { connector, config } = getSetup(configPath);
+  const { connector, config } = await getSetup(configPath);
   config.pool = { ...config.pool, max: 1 };
   const migrationsDir = resolve(
     dirname(configPath),
