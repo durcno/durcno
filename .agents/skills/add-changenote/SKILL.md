@@ -98,11 +98,12 @@ bump: <bump>
 
 ### 4. Add a description body
 
-Create a body summarizing what the staged changes do — derived from the diff in step 2(Review staged changes).
+Create a body summarizing what the staged changes do - derived from the diff in step 2(Review staged changes).
 
-Keep it concise but informative: what changed, why, and any notable details.
-Don't write sentences in a single paragraph. Break it up into paragraphs for readability.
-Add small code snippets to illustrate the new behavior or API changes, if applicable.
+- Keep it concise but informative: what changed, why, and any notable details.
+- Don't write sentences in a single paragraph. Break it up into paragraphs for readability.
+- Add small code snippets to illustrate the new behavior or API changes, if applicable.
+- No need to mention about /website/docs/ changes in the changenote body.
 
 Then append the body below the title heading of the newly created changenote file.
 
