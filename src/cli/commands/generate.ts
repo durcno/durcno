@@ -655,6 +655,23 @@ function generateAlterTableStmts(
           alterStatements.push(`.dropDefault("${colName}")`);
         }
       }
+      // Handle foreign key reference changes
+      const prevRefJson = JSON.stringify(prevCol.references ?? null);
+      const currRefJson = JSON.stringify(currCol.references ?? null);
+      if (prevRefJson !== currRefJson) {
+        if (prevCol.references) {
+          const constraintName = `${currTable.name}_${colName}_fkey`;
+          alterStatements.push(
+            `.dropForeignKey("${constraintName}", "${colName}")`,
+          );
+        }
+        if (currCol.references) {
+          const constraintName = `${currTable.name}_${colName}_fkey`;
+          alterStatements.push(
+            `.addForeignKey("${constraintName}", "${colName}", ${JSON.stringify(currCol.references)})`,
+          );
+        }
+      }
     }
   }
 

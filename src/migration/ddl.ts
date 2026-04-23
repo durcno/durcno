@@ -763,7 +763,14 @@ type AlterTableAction =
   | { type: "dropDefault"; column: string }
   | { type: "addCheck"; name: string; expr: SnapshotCheckExpr }
   | { type: "addUniqueConstraint"; name: string; columns: string[] }
-  | { type: "addPrimaryKeyConstraint"; name: string; columns: string[] };
+  | { type: "addPrimaryKeyConstraint"; name: string; columns: string[] }
+  | {
+      type: "addForeignKey";
+      constraintName: string;
+      column: string;
+      references: ColumnReference;
+    }
+  | { type: "dropForeignKey"; constraintName: string; column: string };
 
 /**
  * Chainable builder that constructs `ALTER TABLE` DDL statements.
@@ -949,6 +956,40 @@ export class AlterTableBuilder extends DDLStatement {
     return this;
   }
 
+  /**
+   * Add a foreign key constraint to an existing column.
+   *
+   * @param constraintName - The explicit constraint name.
+   * @param column - The column name.
+   * @param references - The foreign key reference target.
+   * @returns `this` for chaining.
+   */
+  addForeignKey(
+    constraintName: string,
+    column: string,
+    references: ColumnReference,
+  ): this {
+    this.actions.push({
+      type: "addForeignKey",
+      constraintName,
+      column,
+      references,
+    });
+    return this;
+  }
+
+  /**
+   * Drop a foreign key constraint from a column.
+   *
+   * @param constraintName - The constraint name to drop.
+   * @param column - The column whose FK is being dropped.
+   * @returns `this` for chaining.
+   */
+  dropForeignKey(constraintName: string, column: string): this {
+    this.actions.push({ type: "dropForeignKey", constraintName, column });
+    return this;
+  }
+
   toSQL(): string {
     const relation = buildRelation(this.schema, this.name);
 
@@ -1022,6 +1063,19 @@ export class AlterTableBuilder extends DDLStatement {
           const cols = action.columns.map((c) => `"${c}"`).join(", ");
           statements.push(
             `ALTER TABLE ${relation} ADD CONSTRAINT ${action.name} PRIMARY KEY (${cols});`,
+          );
+          break;
+        }
+        case "addForeignKey": {
+          const refTable = `"${action.references.schema}"."${action.references.table}"`;
+          statements.push(
+            `ALTER TABLE ${relation} ADD CONSTRAINT ${action.constraintName} FOREIGN KEY ("${action.column}") REFERENCES ${refTable}("${action.references.column}") ON DELETE ${action.references.onDelete};`,
+          );
+          break;
+        }
+        case "dropForeignKey": {
+          statements.push(
+            `ALTER TABLE ${relation} DROP CONSTRAINT ${action.constraintName};`,
           );
           break;
         }
@@ -1153,6 +1207,23 @@ export class AlterTableBuilder extends DDLStatement {
             table: tableKey,
             columns: [...action.columns],
           };
+          break;
+        }
+        case "addForeignKey": {
+          if (table.columns[action.column]) {
+            table.columns[action.column].references = {
+              schema: action.references.schema,
+              table: action.references.table,
+              column: action.references.column,
+              onDelete: action.references.onDelete,
+            };
+          }
+          break;
+        }
+        case "dropForeignKey": {
+          if (table.columns[action.column]) {
+            delete table.columns[action.column].references;
+          }
           break;
         }
       }

@@ -15,6 +15,7 @@ import {
 export { Migrations };
 
 const isFirstMigration = process.env.FIRST_MIGRATION !== "false";
+const hasReference = process.env.HAS_REFERENCE === "true";
 
 // Base table that always exists
 export const Users = table("public", "users", {
@@ -29,16 +30,19 @@ export const Users = table("public", "users", {
   }),
 });
 
-// Conditionally create and export new table
-// When FIRST_MIGRATION is true, export null which will be filtered out by the CLI
+// Conditionally create and export new table.
+// When FIRST_MIGRATION is true, export undefined which will be filtered out by the CLI.
+// userId starts without a FK reference; HAS_REFERENCE=true adds it in a subsequent migration.
 export const Posts = !isFirstMigration
   ? table("public", "posts", {
       id: pk(),
       title: varchar({ length: 500, notNull }),
       content: text({ notNull }),
-      userId: bigint({
-        notNull,
-      }).references({ column: () => Users.id, onDelete: "CASCADE" }),
+      userId: hasReference
+        ? bigint({
+            notNull,
+          }).references({ column: () => Users.id, onDelete: "CASCADE" })
+        : bigint({ notNull }),
       publishedAt: timestamp({}),
       createdAt: timestamp({ notNull, default: now() }),
     })

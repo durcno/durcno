@@ -52,7 +52,10 @@ describe("durcno generate - table changes", () => {
     return `postgres://testuser:testpass@localhost:${port}/testdb`;
   }
 
-  function runGenerate(isFirstMigration: boolean): {
+  function runGenerate(
+    isFirstMigration: boolean,
+    hasReference = false,
+  ): {
     success: boolean;
     output: string;
   } {
@@ -62,6 +65,7 @@ describe("durcno generate - table changes", () => {
       env: {
         ...process.env,
         FIRST_MIGRATION: isFirstMigration ? "true" : "false",
+        HAS_REFERENCE: hasReference ? "true" : "false",
       },
     });
     return {
@@ -173,8 +177,8 @@ describe("durcno generate - table changes", () => {
     // Wait to ensure different timestamp
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Generate subsequent migration
-    const genResult = runGenerate(false);
+    // Generate subsequent migration (Posts table without FK yet)
+    const genResult = runGenerate(false, false);
     expect(genResult.success).toBe(true);
 
     const folders = getMigrationFolders();
@@ -244,7 +248,33 @@ describe("durcno generate - table changes", () => {
     expect(postsColumns.published_at).toBeDefined();
     expect(postsColumns.created_at).toBeDefined();
 
-    // Verify posts table foreign key to users
+    // At this stage, user_id has no FK yet
+    const fkResult = await client.query(`
+      SELECT constraint_name
+      FROM information_schema.table_constraints
+      WHERE constraint_type = 'FOREIGN KEY'
+      AND table_schema = 'public'
+      AND table_name = 'posts';
+    `);
+    expect(fkResult.rows.length).toBe(0);
+  });
+
+  it("should generate and apply migration adding FK reference to existing column", async () => {
+    // Wait to ensure different timestamp
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Generate migration that adds FK to posts.user_id
+    const genResult = runGenerate(false, true);
+    expect(genResult.success).toBe(true);
+
+    const folders = getMigrationFolders();
+    expect(folders).toHaveLength(3);
+
+    // Run migrate
+    const migrateResult = runMigrate();
+    expect(migrateResult.success).toBe(true);
+
+    // Verify posts table foreign key to users now exists
     const fkResult = await client.query(`
       SELECT
         kcu.column_name,
@@ -269,17 +299,17 @@ describe("durcno generate - table changes", () => {
   });
 
   it("should detect no changes when schema is unchanged", () => {
-    const result = runGenerate(false);
+    const result = runGenerate(false, true);
     expect(result.output).toContain("No changes detected");
 
     // Should not create a new migration folder
     const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
+    expect(folders).toHaveLength(3);
   });
 
   it("should verify migration folders follow ISO timestamp naming", () => {
     const folders = getMigrationFolders();
-    expect(folders.length).toBeGreaterThanOrEqual(2);
+    expect(folders.length).toBeGreaterThanOrEqual(3);
 
     for (const folder of folders) {
       expect(MIGRATION_NAME_REGEX.test(folder)).toBe(true);
