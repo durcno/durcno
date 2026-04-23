@@ -50,6 +50,10 @@ export class JsonbColumn<TConfig extends JsonbConfig> extends Column<
     return "jsonb";
   }
 
+  get sqlCastScalar() {
+    return "jsonb";
+  }
+
   get zodTypeScaler() {
     // JSONB columns can contain any valid JSON value
     return z.unknown();

@@ -3,7 +3,7 @@ import type { Config } from "../index";
 import type { AnyColumn, TableWithColumns } from "../table";
 import { snakeToCamel } from "../utils";
 
-import { Query } from "./query";
+import { InsertQuery } from "./insert";
 import { QueryPromise } from "./query-promise";
 
 export class InsertReturningQuery<
@@ -31,51 +31,23 @@ export class InsertReturningQuery<
   }
 
   toQuery() {
-    const query = new Query("INSERT INTO ", this.handleRows.bind(this));
-    query.sql += this.#$table._.fullName;
+    // Build an all-columns-true returning object to replicate RETURNING * behaviour
+    const returningAll = Object.fromEntries(
+      Object.keys(this.#$table._.columns).map((k) => [k, true as const]),
+    );
 
-    // Get fields from values and add default insertFn fields
-    const allFields = new Set<string>();
-    for (const field of Object.keys(this.#$values)) {
-      allFields.add(field);
-    }
+    const insertQuery = new InsertQuery(
+      this.#$table,
+      this.#$values,
+      returningAll as never,
+      this.#$config,
+      this.#$executor,
+      false,
+    );
 
-    // Add default fields that are missing
-    for (const col in this.#$table._.columns) {
-      const column = this.#$table._.columns[col];
-      if (!allFields.has(col) && column.hasInsertFn) {
-        allFields.add(column.name);
-      }
-    }
-
-    const fields = Array.from(allFields);
-    query.sql += " ( ";
-    query.sql += fields
-      .map((field) => `"${this.#$table._.columns[field].nameSnake}"`)
-      .join(", ");
-    query.sql += " ) VALUES ( ";
-
-    const rowValues: string[] = [];
-    for (const field of fields) {
-      let value = this.#$values[field];
-
-      // Handle missing values with defaults
-      if (value === undefined) {
-        const column = this.#$table._.columns[field];
-        if (column?.hasInsertFn) {
-          value = column.getInsertFnVal();
-        }
-      }
-
-      const driverValue = this.#$table._.columns[field]?.toDriver(
-        value as never,
-      );
-      query.arguments.push(driverValue);
-      rowValues.push(`$${query.arguments.length}`);
-    }
-
-    query.sql += rowValues.join(", ");
-    query.sql += " ) RETURNING *;";
+    const query = insertQuery.toQuery();
+    // biome-ignore lint/suspicious/noExplicitAny: rowsHandler cast needed due to never inference from returningAll as never
+    (query as any).rowsHandler = this.handleRows.bind(this);
     return query;
   }
 

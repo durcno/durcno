@@ -52,6 +52,10 @@ export class MultiPointColumn<TConfig extends MultiPointConfig> extends Column<
     return `geography(MULTIPOINT, ${this.#srid})`;
   }
 
+  get sqlCastScalar() {
+    return "geography";
+  }
+
   get zodTypeScaler(): GetZodType<TConfig["format"]> {
     const pointTuple = z.tuple(
       this.#as

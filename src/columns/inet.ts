@@ -16,6 +16,10 @@ export class InetColumn<TConfig extends InetConfig> extends Column<
     return "inet";
   }
 
+  get sqlCastScalar() {
+    return "inet";
+  }
+
   get zodTypeScaler() {
     return z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
   }

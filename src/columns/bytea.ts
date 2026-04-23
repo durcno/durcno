@@ -16,6 +16,10 @@ export class ByteaColumn<TConfig extends ByteaConfig> extends Column<
     return "bytea";
   }
 
+  get sqlCastScalar() {
+    return "bytea";
+  }
+
   get zodTypeScaler() {
     return z.instanceof(Buffer);
   }

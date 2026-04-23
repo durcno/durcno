@@ -1,21 +1,31 @@
 import type { QueryExecutor } from "../connectors/common";
+import { is } from "../entity";
 import type { Config } from "../index";
 import type { AnyColumn, TableWithColumns } from "../table";
 import { snakeToCamel } from "../utils";
 
+import { Arg } from "./pre";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class InsertBuilder<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean,
 > {
   readonly #table: TTableWC;
   readonly #config: Config;
   readonly #executor: QueryExecutor;
-  constructor(table: TTableWC, config: Config, executor: QueryExecutor) {
+  readonly #prepare: TPrepare;
+  constructor(
+    table: TTableWC,
+    config: Config,
+    executor: QueryExecutor,
+    prepare: TPrepare,
+  ) {
     this.#table = table;
     this.#config = config;
     this.#executor = executor;
+    this.#prepare = prepare;
   }
   values(
     values: {
@@ -53,12 +63,14 @@ export class InsertBuilder<
       undefined,
       this.#config,
       this.#executor,
+      this.#prepare,
     );
   }
 }
 
-class InsertQuery<
+export class InsertQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean,
   TReturning extends
     | {
         [ColName in keyof TTableWC["_"]["columns"]]?: true;
@@ -88,6 +100,7 @@ class InsertQuery<
   readonly #$returning: TReturning;
   readonly #config: Config;
   readonly #executor: QueryExecutor;
+  readonly #prepare: TPrepare;
 
   constructor(
     table: TTableWC,
@@ -95,6 +108,7 @@ class InsertQuery<
     returnings: TReturning,
     config: Config,
     executor: QueryExecutor,
+    prepare: TPrepare,
   ) {
     super();
     this.#table = table;
@@ -102,6 +116,7 @@ class InsertQuery<
     this.#$returning = returnings;
     this.#config = config;
     this.#executor = executor;
+    this.#prepare = prepare;
   }
 
   returning<
@@ -119,6 +134,7 @@ class InsertQuery<
       returnings,
       this.#config,
       this.#executor,
+      this.#prepare,
     );
   }
 
@@ -152,8 +168,7 @@ class InsertQuery<
       .join(", ");
     query.sql += " ) VALUES";
 
-    // Build values array and placeholders for all rows
-    const rowPlaceholders: string[] = [];
+    const rowsValue: string[] = [];
 
     for (let rowIndex = 0; rowIndex < valuesArray.length; rowIndex++) {
       const row = valuesArray[rowIndex];
@@ -161,25 +176,31 @@ class InsertQuery<
 
       for (const field of fields) {
         let value = row[field];
+        const column = this.#table._.columns[field];
 
-        // Handle missing values with defaults
+        // Handle missing values
         if (value === undefined) {
-          const column = this.#table._.columns[field];
           if (column?.hasInsertFn) {
             value = column.getInsertFnVal();
+          } else {
+            rowValues.push("NULL");
+            continue;
           }
         }
 
-        const driverValue = this.#table._.columns[field]?.toDriver(
-          value as never,
-        );
-        query.arguments.push(driverValue);
-        rowValues.push(`$${query.arguments.length}`);
+        if (this.#prepare && is(value, Arg)) {
+          const cast = value.cast ?? column?.sqlCast ?? null;
+          const castSuffix = cast ? `::${cast}` : "";
+          rowValues.push(`$${value.index}${castSuffix}`);
+          query.arguments.push(value.key);
+        } else {
+          rowValues.push(column?.toSQL(value, { cast: true }));
+        }
       }
 
-      rowPlaceholders.push(`(${rowValues.join(", ")})`);
+      rowsValue.push(`(${rowValues.join(", ")})`);
     }
-    query.sql += rowPlaceholders.join(",\n  ");
+    query.sql += rowsValue.join(",\n  ");
 
     if (this.#$returning) {
       query.sql += " RETURNING ";

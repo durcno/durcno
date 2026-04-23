@@ -171,26 +171,12 @@ class UpdateQuery<
       }
     }
 
-    if (this.#prepare) {
-      // In prepare mode, inline SET values to avoid parameter index conflicts
-      // with WHERE clause Arg parameters
-      query.sql += allFields
-        .map(
-          (field, index) =>
-            `"${field}" = ${this.#table._.columns[field].toSQL(allValues[index] as never)}`,
-        )
-        .join(", ");
-    } else {
-      query.arguments = allFields.map((field, index) =>
-        this.#table._.columns[field].toDriver(allValues[index] as never),
-      );
-      query.sql += allFields
-        .map(
-          (field, index) =>
-            `"${this.#table._.columns[field].nameSnake}" = $${index + 1}`,
-        )
-        .join(", ");
-    }
+    query.sql += allFields
+      .map(
+        (field, index) =>
+          `"${this.#table._.columns[field].nameSnake}" = ${this.#table._.columns[field].toSQL(allValues[index], { cast: true })}`,
+      )
+      .join(", ");
 
     if (this.#$where) {
       query.sql += ` WHERE `;

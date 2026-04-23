@@ -16,6 +16,10 @@ export class DateColumn<TConfig extends DateConfig> extends Column<
     return "date";
   }
 
+  get sqlCastScalar() {
+    return "date";
+  }
+
   get zodTypeScaler() {
     return z.date();
   }

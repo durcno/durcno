@@ -48,6 +48,10 @@ export class PointColumn<TConfig extends PointConfig> extends Column<
     return `geography(POINT, ${this.#srid})`;
   }
 
+  get sqlCastScalar() {
+    return "geography";
+  }
+
   get zodTypeScaler(): GetZodType<TConfig["format"]> {
     return z.tuple(
       this.#format

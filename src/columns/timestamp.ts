@@ -40,6 +40,10 @@ export class TimestampColumn<TConfig extends TimestampConfig> extends Column<
     return `timestamp${precision}${tz}`;
   }
 
+  get sqlCastScalar() {
+    return this.sqlTypeScalar;
+  }
+
   get zodTypeScaler() {
     return z.iso.datetime({
       precision: this.#precision,

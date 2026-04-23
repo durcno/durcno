@@ -25,6 +25,10 @@ export class UuidColumn<TConfig extends UuidConfig> extends Column<
     return "uuid";
   }
 
+  get sqlCastScalar() {
+    return "uuid";
+  }
+
   get zodTypeScaler() {
     const version = this.config.version ?? "v7";
     return z.uuid({ version });

@@ -41,6 +41,10 @@ export class NumericColumn<TConfig extends NumericConfig> extends Column<
     return "numeric";
   }
 
+  get sqlCastScalar() {
+    return this.sqlTypeScalar;
+  }
+
   get zodTypeScaler() {
     return z.string().refine(
       (val) => {

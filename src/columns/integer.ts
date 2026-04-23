@@ -16,6 +16,10 @@ export class IntegerColumn<TConfig extends IntegerConfig> extends Column<
     return "integer";
   }
 
+  get sqlCastScalar() {
+    return null;
+  }
+
   get zodTypeScaler() {
     return z.coerce.number();
   }

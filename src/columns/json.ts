@@ -49,6 +49,10 @@ export class JsonColumn<TConfig extends JsonConfig> extends Column<
     return "json";
   }
 
+  get sqlCastScalar() {
+    return "json";
+  }
+
   get zodTypeScaler() {
     // JSON columns can contain any valid JSON value
     return z.unknown();

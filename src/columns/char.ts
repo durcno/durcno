@@ -25,6 +25,10 @@ export class CharColumn<TConfig extends CharConfig> extends Column<
     return `char(${this.#length})`;
   }
 
+  get sqlCastScalar() {
+    return null;
+  }
+
   get zodTypeScaler() {
     return z.string().length(this.#length);
   }

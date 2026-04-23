@@ -16,6 +16,10 @@ export class TextColumn<TConfig extends TextConfig> extends Column<
     return "text";
   }
 
+  get sqlCastScalar() {
+    return null;
+  }
+
   get zodTypeScaler() {
     return z.string();
   }

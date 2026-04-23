@@ -301,6 +301,21 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
     return `${base}${suffix}`;
   }
 
+  /** Returns the PostgreSQL cast type for this column's scalar value, or `null` if no cast is needed. */
+  abstract get sqlCastScalar(): string | null;
+
+  /** Returns the full PostgreSQL cast type including array dimensions, or `null` if no cast is needed. */
+  get sqlCast(): string | null {
+    const base = this.sqlCastScalar;
+    if (base === null) return null;
+    if (!this.config.dimension) return base;
+
+    const suffix = this.config.dimension
+      .map((d) => (d === null ? "[]" : `[${d}]`))
+      .join("");
+    return `${base}${suffix}`;
+  }
+
   abstract get zodTypeScaler(): z.ZodType;
   get zodType() {
     let schema: z.ZodType = this.zodTypeScaler;
@@ -370,21 +385,30 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
    * Converts a JavaScript value to SQL string literal.
    * Handles array dimensions with ARRAY[...] syntax if configured.
    */
-  toSQL(value: this["ValType"] | Sql | null): string {
+  toSQL(
+    value: this["ValType"] | Sql | null,
+    options?: { cast?: boolean },
+  ): string {
+    if (value === null) return "NULL";
     if (value instanceof Sql) return value.string;
 
     if (!this.config.dimension) {
-      return this.toSQLScalar(value);
+      if (!options?.cast || !this.sqlCastScalar) return this.toSQLScalar(value);
+      return `${this.toSQLScalar(value)}::${this.sqlCastScalar}`;
     }
 
     // Handle array with ARRAY[...] syntax
-    return this.#toSQLArray(value as unknown[], 0);
+    return this.#toSQLArray(value as unknown[], 0, options);
   }
 
   /**
    * Helper to recursively process multi-dimensional arrays for toSQL.
    */
-  #toSQLArray(arr: unknown[], dimIndex: number): string {
+  #toSQLArray(
+    arr: unknown[],
+    dimIndex: number,
+    options?: { cast?: boolean },
+  ): string {
     const dimensions = this.config.dimension as unknown as (number | null)[];
     if (arr.length === 0) {
       return "'{}'";
@@ -392,15 +416,17 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
 
     if (dimIndex >= dimensions.length - 1) {
       // Innermost dimension - elements are scalars
-      const elements = arr.map((item) =>
-        this.toSQLScalar(item as TColVal | Sql),
-      );
+      const elements = arr.map((item) => {
+        if (!options?.cast || !this.sqlCastScalar)
+          return this.toSQLScalar(item as TColVal | Sql);
+        return `${this.toSQLScalar(item as TColVal | Sql)}::${this.sqlCastScalar}`;
+      });
       return `ARRAY[${elements.join(", ")}]`;
     }
 
     // Not at innermost - elements are arrays
     const elements = arr.map((item) =>
-      this.#toSQLArray(item as unknown[], dimIndex + 1),
+      this.#toSQLArray(item as unknown[], dimIndex + 1, options),
     );
     return `ARRAY[${elements.join(", ")}]`;
   }
@@ -605,7 +631,9 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
    * @returns an `Arg` instance with the type of this column
    */
   arg() {
-    return new Arg(this.toDriver.bind(this)) as Arg<this["ValType"]>;
+    return new Arg(this.toDriver.bind(this), this.sqlCast) as Arg<
+      this["ValType"]
+    >;
   }
 }
 

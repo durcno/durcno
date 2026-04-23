@@ -29,6 +29,10 @@ export class SerialColumn<TConfig extends SerialConfig> extends Column<
     return "serial";
   }
 
+  get sqlCastScalar() {
+    return null;
+  }
+
   get zodTypeScaler() {
     return z.coerce.number();
   }

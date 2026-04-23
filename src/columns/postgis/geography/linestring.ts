@@ -52,6 +52,10 @@ export class LineStringColumn<TConfig extends LineStringConfig> extends Column<
     return `geography(LINESTRING, ${this.#srid})`;
   }
 
+  get sqlCastScalar() {
+    return "geography";
+  }
+
   get zodTypeScaler(): GetZodType<TConfig["format"]> {
     const pointTuple = z.tuple(
       this.#as

@@ -11,8 +11,14 @@ export class Arg<TType> {
   index: number = 0;
   key: string = "";
   readonly handler: (val: TType) => string | number | null;
-  constructor(handler: (val: TType) => string | number | null) {
+  /** PostgreSQL cast type suffix (e.g. `"boolean"`, `"geography"`), or `null` if no cast needed. */
+  readonly cast: string | null = null;
+  constructor(
+    handler: (val: TType) => string | number | null,
+    cast: string | null = null,
+  ) {
     this.handler = handler;
+    this.cast = cast;
   }
 }
 

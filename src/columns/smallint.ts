@@ -16,6 +16,10 @@ export class SmallintColumn<TConfig extends SmallintConfig> extends Column<
     return "smallint";
   }
 
+  get sqlCastScalar() {
+    return null;
+  }
+
   get zodTypeScaler() {
     return z.coerce.number();
   }

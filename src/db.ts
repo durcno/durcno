@@ -93,7 +93,12 @@ class Base<
    * @returns An InsertBuilder instance to chain `.values()` and execute the insert
    */
   insert<TTable extends TTables[keyof TTables]>(table: TTable) {
-    return new InsertBuilder(table, this.#config, this.#getExecutor());
+    return new InsertBuilder(
+      table,
+      this.#config,
+      this.#getExecutor(),
+      this.$.pre,
+    );
   }
 
   /**

@@ -28,6 +28,10 @@ export class SmallserialColumn<
     return "smallserial";
   }
 
+  get sqlCastScalar() {
+    return null;
+  }
+
   get zodTypeScaler() {
     return z.coerce.number();
   }

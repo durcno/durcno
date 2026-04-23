@@ -21,6 +21,10 @@ export class EnumedColumn<
     return `"${this.#enum.schema}"."${this.#enum.name}"`;
   }
 
+  get sqlCastScalar() {
+    return this.sqlTypeScalar;
+  }
+
   get zodTypeScaler() {
     return z.enum(this.#enum.values);
   }

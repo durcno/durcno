@@ -57,6 +57,10 @@ export class PolygonColumn<TConfig extends PolygonConfig> extends Column<
     return `geography(POLYGON, ${this.#srid})`;
   }
 
+  get sqlCastScalar() {
+    return "geography";
+  }
+
   get zodTypeScaler(): GetZodType<TConfig["format"]> {
     const pointTuple = z.tuple(
       this.#as

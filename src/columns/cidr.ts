@@ -16,6 +16,10 @@ export class CidrColumn<TConfig extends CidrConfig> extends Column<
     return "cidr";
   }
 
+  get sqlCastScalar() {
+    return "cidr";
+  }
+
   get zodTypeScaler() {
     return z.union([z.cidrv4(), z.cidrv6()]);
   }

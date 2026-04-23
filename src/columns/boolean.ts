@@ -15,6 +15,10 @@ export class BooleanColumn<TConfig extends BooleanConfig> extends Column<
   get sqlTypeScalar() {
     return "boolean";
   }
+
+  get sqlCastScalar() {
+    return "boolean";
+  }
   get zodTypeScaler() {
     return z.boolean();
   }

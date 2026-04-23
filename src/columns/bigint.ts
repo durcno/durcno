@@ -15,6 +15,10 @@ export class BigintColumn<TConfig extends BigintConfig> extends Column<
   get sqlTypeScalar() {
     return "bigint";
   }
+
+  get sqlCastScalar() {
+    return null;
+  }
   get zodTypeScaler() {
     return z.coerce.number();
   }

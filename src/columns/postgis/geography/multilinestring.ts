@@ -55,6 +55,10 @@ export class MultiLineStringColumn<
     return `geography(MULTILINESTRING, ${this.#srid})`;
   }
 
+  get sqlCastScalar() {
+    return "geography";
+  }
+
   get zodTypeScaler(): GetZodType<TConfig["format"]> {
     const pointTuple = z.tuple(
       this.#as

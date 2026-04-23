@@ -25,6 +25,10 @@ export class VarcharColumn<TConfig extends VarcharConfig> extends Column<
     return `varchar(${this.#length})`;
   }
 
+  get sqlCastScalar() {
+    return null;
+  }
+
   get zodTypeScaler() {
     return z.string().max(this.#length);
   }

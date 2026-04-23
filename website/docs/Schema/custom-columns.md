@@ -51,6 +51,15 @@ export class MyColumn<TConfig extends MyColumnConfig> extends Column<
     return "text";
   }
 
+  // PostgreSQL cast type appended to prepared-statement placeholders (e.g. $1::text).
+  // Return null when PostgreSQL can infer the type without an explicit cast
+  // (e.g. integer, numeric, varchar). Return a type string when an explicit cast
+  // is required (e.g. 'uuid', 'boolean', 'jsonb', 'citext').
+  // If the cast type is the same as your SQL type, you can simply return this.sqlTypeScalar.
+  get sqlCastScalar(): string | null {
+    return null; // 'text' infers fine; change to 'text' if you need an explicit cast
+  }
+
   // Zod schema for a single scalar value. Column.zodType composes arrays
   // automatically when `config.dimension` is set.
   get zodTypeScaler() {
@@ -94,6 +103,9 @@ Durcno's `Column` now exposes _scalar_ abstract methods and helpers. The `Column
 - `get sqlTypeScalar(): string`
   - Return the PostgreSQL type name for a single scalar value (e.g. `varchar(255)`, `jsonb`, `uuid`). The `Column` class will append array suffixes (like `[]` or `[N]`) automatically when `config.dimension` is present.
 
+- `get sqlCastScalar(): string | null`
+  - Return the PostgreSQL type to use as a cast suffix on prepared-statement placeholders (e.g. `$1::uuid`), or `null` if PostgreSQL can infer the type without an explicit cast. The derived `sqlCast` property on `Column` applies array suffixes automatically when `config.dimension` is set. Return `null` for plain numeric and string-compatible types (`integer`, `numeric`, `varchar`, `text`, `char`); return a type string for types that require an explicit hint (`boolean`, `uuid`, `bytea`, `json`, `jsonb`, `date`, `timestamp`, `cidr`, `inet`, `macaddr`, enum types, PostGIS geography, etc.). When the cast type is the same as your SQL type, you can simply `return this.sqlTypeScalar`.
+
 - `get zodTypeScaler(): z.ZodType`
   - Return a Zod schema for a single scalar value. `Column.zodType` will wrap this in tuples/arrays according to `config.dimension`.
 
@@ -111,7 +123,7 @@ Additional helpers available on every `Column` instance:
 - `default(value)` and `hasDefault` — set and inspect column defaults. Use `defaultToSQL()` to get a SQL literal for the default.
 - `$insertFn(fn)` / `$updateFn(fn)` and the corresponding `hasInsertFn` / `hasUpdateFn` / `insertFnVal()` / `updateFnVal()` helpers.
 - `$type<T>()` — a compile-time only helper to override the TypeScript value type for the column.
-- `arg()` — returns an `Arg` helper that binds the column's driver conversion (useful for prepared statements).
+- `arg()` — returns an `Arg` helper that binds the column's driver conversion and its `sqlCast` type (useful for prepared statements). The generated placeholder is automatically suffixed with `::type` when `sqlCastScalar` is non-null.
 - `fullName` — returns the quoted `"schema"."column"` style name when the column is attached to a table.
 
 Note: the `Column` generic order is `Column<TConfig extends ColumnConfig, TColVal>` (first is config type, second is the value type). For examples see the built-in `varchar` and `json` column implementations.
@@ -135,6 +147,11 @@ export class CitextColumn<TConfig extends CitextConfig> extends Column<
 > {
   get sqlTypeScalar(): string {
     return "citext"; // requires the citext extension in the DB
+  }
+
+  // citext requires an explicit cast so Postgres knows the parameter type
+  get sqlCastScalar(): string | null {
+    return "citext";
   }
 
   get zodTypeScaler(): z.ZodType {
@@ -201,6 +218,11 @@ export class CsvTextColumn<TConfig extends CsvTextConfig> extends Column<
 > {
   get sqlTypeScalar(): string {
     return "text";
+  }
+
+  // text infers fine from a string parameter; no cast needed
+  get sqlCastScalar(): string | null {
+    return null;
   }
 
   get zodTypeScaler(): z.ZodType {

@@ -29,6 +29,10 @@ export class BigserialColumn<TConfig extends BigserialConfig> extends Column<
     return "bigserial";
   }
 
+  get sqlCastScalar() {
+    return null;
+  }
+
   get zodTypeScaler() {
     return z.coerce.number();
   }

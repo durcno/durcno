@@ -16,6 +16,10 @@ export class MacaddrColumn<TConfig extends MacaddrConfig> extends Column<
     return "macaddr";
   }
 
+  get sqlCastScalar() {
+    return "macaddr";
+  }
+
   get zodTypeScaler() {
     return z.mac();
   }
