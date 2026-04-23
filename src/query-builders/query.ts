@@ -25,4 +25,14 @@ export class Query<T = unknown> {
     const idx = this.arguments.length;
     return cast && value !== null ? `$${idx}::${cast}` : `$${idx}`;
   }
+
+  /** Returns a human-readable representation of the query for debugging. */
+  prettify(): string {
+    const args = this.arguments
+      .map((v, i) => `  $${i + 1} = ${v === null ? "NULL" : JSON.stringify(v)}`)
+      .join("\n");
+    return args.length > 0
+      ? `SQL:\n  ${this.sql}\nArguments:\n${args}`
+      : `SQL:\n  ${this.sql}`;
+  }
 }
