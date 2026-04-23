@@ -2,8 +2,8 @@ import type { QueryExecutor } from "../connectors/common";
 import type { Config } from "../index";
 import type { AnyColumn, TableWithColumns } from "../table";
 import { snakeToCamel } from "../utils";
-
 import { InsertQuery } from "./insert";
+import type { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class InsertReturningQuery<
@@ -48,7 +48,7 @@ export class InsertReturningQuery<
     const query = insertQuery.toQuery();
     // biome-ignore lint/suspicious/noExplicitAny: rowsHandler cast needed due to never inference from returningAll as never
     (query as any).rowsHandler = this.handleRows.bind(this);
-    return query;
+    return query as Query<TReturn>;
   }
 
   async execute(): Promise<TReturn> {

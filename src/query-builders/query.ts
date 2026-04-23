@@ -1,13 +1,13 @@
 import type { Arg } from "./pre";
 
-type SqlArgType = string | number | null;
+export type SqlArgType = string | number | null;
 
-export class Query<T = unknown> {
-  readonly returnType!: T;
+export class Query<TReturn = unknown> {
+  readonly returnType!: TReturn;
   sql: string;
   arguments: SqlArgType[] = [];
-  rowsHandler: (rows: any[]) => T;
-  constructor(sql: string, rowsHandler: (rows: any[]) => T) {
+  rowsHandler: (rows: any[]) => TReturn;
+  constructor(sql: string, rowsHandler: (rows: any[]) => TReturn) {
     this.sql = sql;
     this.rowsHandler = rowsHandler;
   }
