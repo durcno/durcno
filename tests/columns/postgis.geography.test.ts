@@ -35,8 +35,8 @@ describe("Geography Point Column Type (PostGIS)", () => {
 
       const [row] = await db.from(schema.GeographyPointTests).select();
       expect(row.requiredPoint).toBeDefined();
-      expect(row.requiredPoint?.[0]).toBeCloseTo(pointA[0], 4);
-      expect(row.requiredPoint?.[1]).toBeCloseTo(pointA[1], 4);
+      expect(String(row.requiredPoint?.[0])).toBe(String(pointA[0]));
+      expect(String(row.requiredPoint?.[1])).toBe(String(pointA[1]));
     });
 
     it("should allow null for optional point", async () => {
@@ -58,8 +58,8 @@ describe("Geography Point Column Type (PostGIS)", () => {
       });
 
       const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(row.requiredPoint?.[0]).toBeCloseTo(pointB[0], 4);
-      expect(row.requiredPoint?.[1]).toBeCloseTo(pointB[1], 4);
+      expect(String(row.requiredPoint?.[0])).toBe(String(pointB[0]));
+      expect(String(row.requiredPoint?.[1])).toBe(String(pointB[1]));
     });
 
     it("should handle origin point", async () => {
@@ -70,8 +70,8 @@ describe("Geography Point Column Type (PostGIS)", () => {
       });
 
       const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(row.requiredPoint?.[0]).toBeCloseTo(0, 4);
-      expect(row.requiredPoint?.[1]).toBeCloseTo(0, 4);
+      expect(String(row.requiredPoint?.[0])).toBe(String(0));
+      expect(String(row.requiredPoint?.[1])).toBe(String(0));
     });
 
     it("should handle negative coordinates", async () => {
@@ -82,8 +82,8 @@ describe("Geography Point Column Type (PostGIS)", () => {
       });
 
       const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(row.requiredPoint?.[0]).toBeCloseTo(-180, 4);
-      expect(row.requiredPoint?.[1]).toBeCloseTo(-90, 4);
+      expect(String(row.requiredPoint?.[0])).toBe(String(-180));
+      expect(String(row.requiredPoint?.[1])).toBe(String(-90));
     });
 
     it("should store optional point when provided", async () => {
@@ -95,8 +95,8 @@ describe("Geography Point Column Type (PostGIS)", () => {
 
       const [row] = await db.from(schema.GeographyPointTests).select();
       expect(row.optionalPoint).toBeDefined();
-      expect(row.optionalPoint?.[0]).toBeCloseTo(pointC[0], 4);
-      expect(row.optionalPoint?.[1]).toBeCloseTo(pointC[1], 4);
+      expect(String(row.optionalPoint?.[0])).toBe(String(pointC[0]));
+      expect(String(row.optionalPoint?.[1])).toBe(String(pointC[1]));
     });
   });
 
@@ -166,8 +166,12 @@ describe("Geography MultiPoint Column Type (PostGIS)", () => {
       const [row] = await db.from(schema.GeographyMultiPointTests).select();
       expect(row.requiredMultiPoint).toBeDefined();
       expect(row.requiredMultiPoint?.length).toBe(2);
-      expect(row.requiredMultiPoint?.[0][0]).toBeCloseTo(multiPointA[0][0], 4);
-      expect(row.requiredMultiPoint?.[0][1]).toBeCloseTo(multiPointA[0][1], 4);
+      expect(String(row.requiredMultiPoint?.[0][0])).toBe(
+        String(multiPointA[0][0]),
+      );
+      expect(String(row.requiredMultiPoint?.[0][1])).toBe(
+        String(multiPointA[0][1]),
+      );
     });
 
     it("should allow null for optional multipoint", async () => {
@@ -190,8 +194,12 @@ describe("Geography MultiPoint Column Type (PostGIS)", () => {
 
       const [row] = await db.from(schema.GeographyMultiPointTests).select();
       expect(row.requiredMultiPoint?.length).toBe(3);
-      expect(row.requiredMultiPoint?.[2][0]).toBeCloseTo(multiPointB[2][0], 4);
-      expect(row.requiredMultiPoint?.[2][1]).toBeCloseTo(multiPointB[2][1], 4);
+      expect(String(row.requiredMultiPoint?.[2][0])).toBe(
+        String(multiPointB[2][0]),
+      );
+      expect(String(row.requiredMultiPoint?.[2][1])).toBe(
+        String(multiPointB[2][1]),
+      );
     });
 
     it("should handle single point in multipoint", async () => {
@@ -274,8 +282,12 @@ describe("Geography LineString Column Type (PostGIS)", () => {
       const [row] = await db.from(schema.GeographyLineStringTests).select();
       expect(row.requiredLineString).toBeDefined();
       expect(row.requiredLineString?.length).toBe(3);
-      expect(row.requiredLineString?.[0][0]).toBeCloseTo(lineStringA[0][0], 4);
-      expect(row.requiredLineString?.[0][1]).toBeCloseTo(lineStringA[0][1], 4);
+      expect(String(row.requiredLineString?.[0][0])).toBe(
+        String(lineStringA[0][0]),
+      );
+      expect(String(row.requiredLineString?.[0][1])).toBe(
+        String(lineStringA[0][1]),
+      );
     });
 
     it("should allow null for optional linestring", async () => {
@@ -298,8 +310,12 @@ describe("Geography LineString Column Type (PostGIS)", () => {
 
       const [row] = await db.from(schema.GeographyLineStringTests).select();
       expect(row.requiredLineString?.length).toBe(3);
-      expect(row.requiredLineString?.[1][0]).toBeCloseTo(lineStringB[1][0], 4);
-      expect(row.requiredLineString?.[1][1]).toBeCloseTo(lineStringB[1][1], 4);
+      expect(String(row.requiredLineString?.[1][0])).toBe(
+        String(lineStringB[1][0]),
+      );
+      expect(String(row.requiredLineString?.[1][1])).toBe(
+        String(lineStringB[1][1]),
+      );
     });
 
     it("should handle simple two-point linestring", async () => {
@@ -400,9 +416,8 @@ describe("Geography MultiLineString Column Type (PostGIS)", () => {
         .select();
       expect(row.requiredMultiLineString).toBeDefined();
       expect(row.requiredMultiLineString?.length).toBe(2);
-      expect(row.requiredMultiLineString?.[0][0][0]).toBeCloseTo(
-        multiLineStringA[0][0][0],
-        4,
+      expect(String(row.requiredMultiLineString?.[0][0][0])).toBe(
+        String(multiLineStringA[0][0][0]),
       );
     });
 
@@ -560,8 +575,8 @@ describe("Geography Polygon Column Type (PostGIS)", () => {
       });
 
       const [row] = await db.from(schema.GeographyPolygonTests).select();
-      expect(row.requiredPolygon?.[0][1][0]).toBeCloseTo(10, 4);
-      expect(row.requiredPolygon?.[0][1][1]).toBeCloseTo(0, 4);
+      expect(String(row.requiredPolygon?.[0][1][0])).toBe(String(10));
+      expect(String(row.requiredPolygon?.[0][1][1])).toBe(String(0));
     });
   });
 
@@ -704,8 +719,8 @@ describe("Geography MultiPolygon Column Type (PostGIS)", () => {
 
       const [row] = await db.from(schema.GeographyMultiPolygonTests).select();
       // multiPolygonA[1][0][1] = [30, 20]
-      expect(row.requiredMultiPolygon?.[1][0][1][0]).toBeCloseTo(30, 4);
-      expect(row.requiredMultiPolygon?.[1][0][1][1]).toBeCloseTo(20, 4);
+      expect(String(row.requiredMultiPolygon?.[1][0][1][0])).toBe(String(30));
+      expect(String(row.requiredMultiPolygon?.[1][0][1][1])).toBe(String(20));
     });
   });
 
