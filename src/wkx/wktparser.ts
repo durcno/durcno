@@ -1,4 +1,4 @@
-import type { Point } from "./point";
+import { Point } from "./point";
 import { Types } from "./types";
 
 export interface WktDimension {
@@ -102,11 +102,6 @@ export class WktParser {
   }
 
   matchCoordinate(options: WktParseOptions): Point {
-    // Import Point dynamically to avoid circular dependency
-    const { Point } = require("./point") as {
-      Point: typeof import("./point").Point;
-    };
-
     let match: RegExpMatchArray | null;
 
     if (options.hasZ && options.hasM)
