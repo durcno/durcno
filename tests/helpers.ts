@@ -9,7 +9,7 @@ export function runDurcnoCommand(
   const result = spawnSync("pnpm", ["exec", "durcno", ...args], {
     stdio: ["inherit", "inherit", "pipe"],
     env: env,
-    cwd: cwd ?? process.cwd(),
+    cwd: cwd ?? __dirname,
   });
   if (result.stderr?.length) {
     console.error(result.stderr.toString());
