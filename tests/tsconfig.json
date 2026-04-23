@@ -18,8 +18,16 @@
     "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
     "noEmit": true /* Disable emitting files from a compilation. */,
     "strict": true /* Enable all strict type-checking options. */,
-    "skipLibCheck": true /* Skip type checking all .d.ts files. */
+    "skipLibCheck": true /* Skip type checking all .d.ts files. */,
+    "types": ["node"]
   },
-  "include": ["./*.ts", "./cli/**/*.ts", "./columns/**/*.ts", "./qb/**/*.ts"],
+  "include": [
+    "./*.ts",
+    "./cli/**/*.ts",
+    "./columns/**/*.ts",
+    "./qb/**/*.ts",
+    "../tsdown.config.ts",
+    "../cngpac.config.ts"
+  ],
   "exclude": ["./**/migrations.test/**/*.ts"]
 }

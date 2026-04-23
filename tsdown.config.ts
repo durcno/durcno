@@ -1,3 +1,5 @@
+import "dotenv/config";
+import process from "node:process";
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
@@ -13,6 +15,7 @@ export default defineConfig({
   dts: true,
   unbundle: true,
   clean: true,
+  sourcemap: process.env.ENV === "development",
   deps: {
     onlyBundle: ["chalk"],
     neverBundle: ["bun", "pg", "postgres", "@electric-sql/pglite", "zod"],

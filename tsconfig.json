@@ -19,6 +19,6 @@
     "skipLibCheck": true /* Skip type checking all .d.ts files. */,
     "stripInternal": true /* Disable emitting declarations that have @internal in their JSDoc comments. */
   },
-  "include": ["src/**/*.ts", "cngpac.config.ts"],
+  "include": ["src/*.ts", "src/**/*.ts"],
   "exclude": ["src/cli/**/*.ts"]
 }
