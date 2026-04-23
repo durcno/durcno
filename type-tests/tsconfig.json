@@ -8,7 +8,8 @@
       "durcno": ["../src/index"],
       "durcno/migration": ["../src/migration"],
       "durcno/connectors/pg": ["../src/connectors/pg"],
-      "durcno/validators/zod": ["../src/validators/zod"]
+      "durcno/validators/zod": ["../src/validators/zod"],
+      "durcno/logger": ["../src/logger"]
     }
   },
   "include": ["./**/*.ts"]

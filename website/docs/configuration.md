@@ -166,6 +166,27 @@ dbCredentials: {
 | `"prefer"`      | Prefer SSL, fall back to non-SSL                     |
 | `"verify-full"` | Require SSL with full certificate verification       |
 
+### `logger`
+
+**Type:** `DurcnoLogger`  
+**Optional**
+
+A logger instance that receives every SQL query before it is sent to the database. Any object with a compatible `info()` method can be used. Durcno ships a pre-configured Winston logger via `durcno/logger`.
+
+See [Query Logger](./Advanced/logger) for full details and examples.
+
+```typescript
+import { createDurcnoLogger } from "durcno/logger";
+
+export default defineConfig(pg(), {
+  schema: "db/schema.ts",
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+  logger: createDurcnoLogger(),
+});
+```
+
 ### `pool`
 
 **Type:** `object`  
@@ -282,5 +303,6 @@ type Config = {
   pool?: {
     max?: number;
   };
+  logger?: DurcnoLogger;
 };
 ```

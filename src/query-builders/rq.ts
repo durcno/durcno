@@ -342,7 +342,7 @@ class RelationQuery<
 
   async execute() {
     const query = this.toQuery();
-    const res = await this.#executor.query(query.sql, query.arguments);
+    const res = await this.#executor.execQuery(query);
     const rows = this.#executor.getRows(res);
     return this.handleRows(rows);
   }

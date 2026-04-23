@@ -1,5 +1,7 @@
 import { getUrlFromDbCredentials } from "../cli/helpers";
 import type { Config } from "../index";
+import type { DurcnoLogger } from "../logger";
+import type { Query } from "../query-builders/query";
 
 /**
  * Default maximum number of connections in the pool.
@@ -24,11 +26,14 @@ export abstract class Connector {
   config!: Config;
   /** The PostgreSQL connection URL derived from the configuration. */
   url!: string;
+  /** Optional logger instance for query logging. */
+  logger?: DurcnoLogger;
 
   /** Injects the configuration and derives the connection URL. Called by `defineConfig`. */
   _init(config: Config) {
     this.config = config;
     this.url = getUrlFromDbCredentials(config.dbCredentials);
+    this.logger = config.logger;
   }
 
   /**
@@ -62,6 +67,9 @@ export abstract class Connector {
  * @abstract
  */
 export abstract class $Client {
+  /** Optional logger instance for query logging. */
+  logger?: DurcnoLogger;
+
   /**
    * Executes a SQL query with optional parameterized arguments.
    *
@@ -73,6 +81,22 @@ export abstract class $Client {
     query: string,
     args?: (string | number | null)[],
   ) => Promise<unknown>;
+
+  /**
+   * Executes a {@link Query} object by forwarding its sql and arguments to {@link query}.
+   *
+   * @param q - The {@link Query} object to execute.
+   * @returns A promise that resolves with the raw query result.
+   */
+  execQuery(q: Query<any>): Promise<unknown> {
+    if (this.logger) {
+      this.logger.info("Query", {
+        sql: q.sql,
+        arguments: q.arguments,
+      });
+    }
+    return this.query(q.sql, q.arguments);
+  }
 
   /**
    * Establishes a connection to the database.
@@ -110,6 +134,9 @@ export abstract class $Client {
  * @abstract
  */
 export abstract class $Pool {
+  /** Optional logger instance for query logging. */
+  logger?: DurcnoLogger;
+
   /**
    * Executes a SQL query with optional parameterized arguments.
    *
@@ -124,6 +151,22 @@ export abstract class $Pool {
     query: string,
     args?: (string | number | null)[],
   ) => Promise<unknown>;
+
+  /**
+   * Executes a {@link Query} object by forwarding its sql and arguments to {@link query}.
+   *
+   * @param q - The {@link Query} object to execute.
+   * @returns A promise that resolves with the raw query result.
+   */
+  execQuery(q: Query<any>): Promise<unknown> {
+    if (this.logger) {
+      this.logger.info("Query", {
+        sql: q.sql,
+        arguments: q.arguments,
+      });
+    }
+    return this.query(q.sql, q.arguments);
+  }
 
   /**
    * Initializes the connection pool.

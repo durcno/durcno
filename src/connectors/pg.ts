@@ -13,10 +13,14 @@ import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
  */
 export class PgConnector extends Connector {
   getClient() {
-    return new PgClient(this.url);
+    const client = new PgClient(this.url);
+    client.logger = this.logger;
+    return client;
   }
   getPool() {
-    return new PgPool(this.url, this.config.pool);
+    const pool = new PgPool(this.url, this.config.pool);
+    pool.logger = this.logger;
+    return pool;
   }
 }
 
@@ -83,7 +87,9 @@ class PgPool extends $Pool {
   }
   async acquireClient(): Promise<$Client> {
     const client = await this.#pool.connect();
-    return new PgPoolClient(client);
+    const poolClient = new PgPoolClient(client);
+    poolClient.logger = this.logger;
+    return poolClient;
   }
 }
 

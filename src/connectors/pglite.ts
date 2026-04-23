@@ -21,10 +21,14 @@ export class PgLiteConnector extends Connector {
   }
 
   getClient() {
-    return new PgLiteClient(this.url, this.#options);
+    const client = new PgLiteClient(this.url, this.#options);
+    client.logger = this.logger;
+    return client;
   }
   getPool() {
-    return new PgLitePool(this.url, this.config.pool, this.#options);
+    const pool = new PgLitePool(this.url, this.config.pool, this.#options);
+    pool.logger = this.logger;
+    return pool;
   }
 }
 
@@ -86,7 +90,9 @@ class PgLitePool extends $Pool {
     await this.#pool.close();
   }
   async acquireClient(): Promise<$Client> {
-    return new PgLitePoolClient(this.#pool);
+    const poolClient = new PgLitePoolClient(this.#pool);
+    poolClient.logger = this.logger;
+    return poolClient;
   }
 }
 

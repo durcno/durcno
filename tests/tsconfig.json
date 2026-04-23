@@ -13,7 +13,8 @@
     "paths": {
       "durcno": ["../src/"],
       "durcno/migration": ["../src/migration"],
-      "durcno/connectors/pg": ["../src/connectors/pg"]
+      "durcno/connectors/pg": ["../src/connectors/pg"],
+      "durcno/logger": ["../src/logger"]
     } /* Specify a set of entries that re-map imports to additional lookup locations. */,
     "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
     "noEmit": true /* Disable emitting files from a compilation. */,
@@ -26,6 +27,7 @@
     "./cli/**/*.ts",
     "./columns/**/*.ts",
     "./qb/**/*.ts",
+    "./logger/**/*.ts",
     "../tsdown.config.ts",
     "../cngpac.config.ts"
   ],

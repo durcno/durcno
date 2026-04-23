@@ -40,6 +40,7 @@
     "./connectors/pg": "./dist/src/connectors/pg.mjs",
     "./connectors/pglite": "./dist/src/connectors/pglite.mjs",
     "./connectors/postgres": "./dist/src/connectors/postgres.mjs",
+    "./logger": "./dist/src/logger.mjs",
     "./migration": "./dist/src/migration/index.mjs",
     "./validators/zod": "./dist/src/validators/zod.mjs",
     "./package.json": "./package.json"
@@ -91,10 +92,12 @@
     "tsdown": "^0.21.8",
     "typescript": "6.0.2",
     "uuid": "^13.0.0",
+    "winston": "^3.19.0",
     "zod": "^4.3.6"
   },
   "peerDependencies": {
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "winston": "^3.17.0"
   },
   "inlinedDependencies": {
     "chalk": "5.6.2"

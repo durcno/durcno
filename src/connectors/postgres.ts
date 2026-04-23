@@ -13,10 +13,14 @@ import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
  */
 export class PostgresConnector extends Connector {
   getClient() {
-    return new PostgresClient(this.url);
+    const client = new PostgresClient(this.url);
+    client.logger = this.logger;
+    return client;
   }
   getPool() {
-    return new PostgresPool(this.url, this.config.pool);
+    const pool = new PostgresPool(this.url, this.config.pool);
+    pool.logger = this.logger;
+    return pool;
   }
 }
 
@@ -78,7 +82,9 @@ class PostgresPool extends $Pool {
   }
   async acquireClient(): Promise<$Client> {
     const reserved = await this.#sql.reserve();
-    return new PostgresPoolClient(reserved);
+    const poolClient = new PostgresPoolClient(reserved);
+    poolClient.logger = this.logger;
+    return poolClient;
   }
 }
 

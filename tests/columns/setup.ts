@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { database, defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
+import { createDurcnoLogger } from "durcno/logger";
 import { Client } from "pg";
 import * as schema from "./schema";
 
@@ -46,6 +47,7 @@ export async function initTestContext(): Promise<TestContext> {
         password: env.TEST_DB_PASSWORD,
         database: env.TEST_DB_NAME,
       },
+      logger: createDurcnoLogger(),
     }),
   );
 

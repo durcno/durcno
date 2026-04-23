@@ -38,6 +38,9 @@ describe("prequery (unit)", () => {
       query: async (_sql: string, _args?: (string | number | null)[]) => ({
         rows: [{ value: _args ? _args[0] : null }],
       }),
+      execQuery(q) {
+        return this.query(q.sql, q.arguments);
+      },
       getRows: (res: any) => res.rows,
       connect: async () => {},
       close: async () => {},
@@ -78,6 +81,9 @@ describe("prequery (unit)", () => {
       query: async (_sql: string, _args?: (string | number | null)[]) => ({
         rows: [],
       }),
+      execQuery(q) {
+        return this.query(q.sql, q.arguments);
+      },
       getRows: (res: any) => res.rows,
       connect: async () => {},
       close: async () => {},

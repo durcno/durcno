@@ -13,10 +13,14 @@ import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
  */
 export class BunConnector extends Connector {
   getClient() {
-    return new BunClient(this.url);
+    const client = new BunClient(this.url);
+    client.logger = this.logger;
+    return client;
   }
   getPool() {
-    return new BunPool(this.url, this.config.pool);
+    const pool = new BunPool(this.url, this.config.pool);
+    pool.logger = this.logger;
+    return pool;
   }
 }
 
@@ -82,7 +86,9 @@ class BunPool extends $Pool {
   }
   async acquireClient(): Promise<$Client> {
     const reserved = await this.#pool.reserve();
-    return new BunPoolClient(reserved);
+    const poolClient = new BunPoolClient(reserved);
+    poolClient.logger = this.logger;
+    return poolClient;
   }
 }
 

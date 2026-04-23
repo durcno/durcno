@@ -1,5 +1,6 @@
 import type { ConnectionOptions } from "node:tls";
 import type { Connector } from "./connectors/common";
+import type { DurcnoLogger } from "./logger";
 
 export { bigint } from "./columns/bigint";
 export { bigserial } from "./columns/bigserial";
@@ -70,6 +71,7 @@ export { sequence } from "./sequence";
 import { is } from "./entity";
 
 export { Sql, sql } from "./sql";
+export type { DurcnoLogger } from "./logger";
 export type { AnyTableColumn } from "./table";
 export {
   type AnyColumn,
@@ -182,6 +184,13 @@ export type Config = {
      */
     max?: number;
   };
+  /**
+   * Optional logger instance for query logging.
+   * Pass a Winston logger or any object with a compatible `info()` method.
+   * When set, all executed queries will be logged at the `info` level with
+   * structured `{ sql, arguments }` metadata.
+   */
+  logger?: DurcnoLogger;
 };
 
 declare global {

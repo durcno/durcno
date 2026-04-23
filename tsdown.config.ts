@@ -9,6 +9,7 @@ export default defineConfig({
     "src/migration/index.ts",
     "src/connectors/{bun,pg,postgres,pglite}.ts",
     "src/validators/zod.ts",
+    "src/logger.ts",
   ],
   outDir: "dist/src",
   format: "esm",
@@ -18,6 +19,13 @@ export default defineConfig({
   sourcemap: process.env.ENV === "development",
   deps: {
     onlyBundle: ["chalk"],
-    neverBundle: ["bun", "pg", "postgres", "@electric-sql/pglite", "zod"],
+    neverBundle: [
+      "bun",
+      "pg",
+      "postgres",
+      "@electric-sql/pglite",
+      "zod",
+      "winston",
+    ],
   },
 });
