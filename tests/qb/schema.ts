@@ -84,7 +84,7 @@ export const UserProfiles = table("public", "user_profiles", {
 });
 
 export const UserProfilesRelations = relations(UserProfiles, () => ({
-  user: one(Users, Users.id),
+  user: fk(UserProfiles.userId, Users),
 }));
 
 // Posts table with foreign key relationships

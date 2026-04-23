@@ -733,6 +733,41 @@ describe("Relational queries", () => {
     });
   });
 
+  describe("one relation from FK-owning side (fk-style)", () => {
+    it("should load user from UserProfiles via fk relation", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "profile_user" }))
+        .returning({ id: true });
+
+      await db.insert(schema.UserProfiles).values({
+        userId: user.id,
+        bio: "My bio",
+        avatarUrl: "https://example.com/avatar.jpg",
+      });
+
+      const profiles = await db.query(schema.UserProfiles).findMany({
+        columns: {
+          id: true,
+          bio: true,
+        },
+        with: {
+          user: {
+            columns: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+      });
+
+      expect(profiles).toHaveLength(1);
+      expect(profiles[0].bio).toBe("My bio");
+      expect(profiles[0].user).toBeDefined();
+      expect(profiles[0].user?.username).toBe("profile_user");
+    });
+  });
+
   describe("Nested with relations", () => {
     it("should load 2-level nested with (posts -> comments -> author)", async () => {
       const [user1] = await db

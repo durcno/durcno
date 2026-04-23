@@ -494,7 +494,14 @@ function buildRelationSubquery(
   // For Many/One: relation.col is the FK column on the related table, references points to parent
   // For Fk: relation.col is the FK column on the parent table, table is the referenced table
   if (relation.t === "Many" || relation.t === "One") {
-    const referencedCol = relation.col.referencesCol as unknown as AnyColumn;
+    const referencedCol = relation.col
+      .referencesCol as unknown as AnyColumn | null;
+    if (!referencedCol) {
+      throw new Error(
+        `Relation column "${relation.col.name}" has no .references() definition. ` +
+          `Columns used in 'many' or 'one' relations must call .references() to define the join target.`,
+      );
+    }
     sql += ` WHERE "${aliasPath}"."${relation.col.nameSnake}" = "${parentTableAlias}"."${referencedCol.nameSnake}"`;
     if (relation.t === "One") {
       sql += ` LIMIT 1`;
@@ -502,7 +509,14 @@ function buildRelationSubquery(
   } else if (relation.t === "Fk") {
     // For Fk: relation.col is the FK column on the parent, relation.table is the referenced table
     // We need to find the primary key of the referenced table (relation.table)
-    const referencedCol = relation.col.referencesCol as unknown as AnyColumn;
+    const referencedCol = relation.col
+      .referencesCol as unknown as AnyColumn | null;
+    if (!referencedCol) {
+      throw new Error(
+        `Relation column "${relation.col.name}" has no .references() definition. ` +
+          `Columns used in 'fk' relations must call .references() to define the join target.`,
+      );
+    }
     sql += ` WHERE "${aliasPath}"."${referencedCol.nameSnake}" = "${parentTableAlias}"."${relation.col.nameSnake}"`;
     sql += ` LIMIT 1`;
   }
@@ -582,12 +596,28 @@ function buildNestedRelationSubquery(
 
   // WHERE clause with parent alias reference
   if (relation.t === "Many" || relation.t === "One") {
-    sql += ` WHERE "${aliasPath}"."${relation.col.nameSnake}" = "${parentAliasPath}"."${(relation.col.referencesCol as unknown as AnyColumn).nameSnake}"`;
+    const referencedCol = relation.col
+      .referencesCol as unknown as AnyColumn | null;
+    if (!referencedCol) {
+      throw new Error(
+        `Relation column "${relation.col.nameSnake}" has no .references() definition. ` +
+          `Columns used in 'many' or 'one' relations must call .references() to define the join target.`,
+      );
+    }
+    sql += ` WHERE "${aliasPath}"."${relation.col.nameSnake}" = "${parentAliasPath}"."${referencedCol.nameSnake}"`;
     if (relation.t === "One") {
       sql += ` LIMIT 1`;
     }
   } else if (relation.t === "Fk") {
-    sql += ` WHERE "${aliasPath}"."${(relation.col.referencesCol as unknown as AnyColumn).nameSnake}" = "${parentAliasPath}"."${relation.col.nameSnake}"`;
+    const referencedCol = relation.col
+      .referencesCol as unknown as AnyColumn | null;
+    if (!referencedCol) {
+      throw new Error(
+        `Relation column "${relation.col.nameSnake}" has no .references() definition. ` +
+          `Columns used in 'fk' relations must call .references() to define the join target.`,
+      );
+    }
+    sql += ` WHERE "${aliasPath}"."${referencedCol.nameSnake}" = "${parentAliasPath}"."${relation.col.nameSnake}"`;
     sql += ` LIMIT 1`;
   }
 
