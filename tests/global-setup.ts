@@ -7,11 +7,6 @@ import vitestConfig from "./vitest.config";
 
 let containerInfo: TestContainerInfo;
 
-function stripLineColumnSpecifier(arg: string): string {
-  // Vitest accepts file filters like path/to/file.test.ts:12:3.
-  return arg.replace(/:\d+(?::\d+)?$/, "");
-}
-
 function isSameOrInside(target: string, parent: string): boolean {
   const relative = path.relative(parent, target);
   return (
@@ -29,23 +24,22 @@ function safelyMatchesGlob(target: string, pattern: string): boolean {
 }
 
 function shouldStartGlobalDatabase(): boolean {
-  const args = process.argv
+  const files = process.argv
     .slice(2)
     .filter((arg) => arg.length > 0 && !arg.startsWith("-"));
 
-  if (args.length === 0) return true;
+  if (files.length === 0) return true;
 
   const dir = vitestConfig.test?.dir ?? ".";
   const absoluteDir = path.resolve(__dirname, dir);
   const columnsDir = path.resolve(__dirname, "columns");
-  const probeFileInColumns = path.join(columnsDir, "__probe__.test.ts");
   const resolveBases = [absoluteDir, __dirname, process.cwd()];
 
-  return args.some((arg) => {
-    const cleanedArg = stripLineColumnSpecifier(arg);
-    const candidates = path.isAbsolute(cleanedArg)
-      ? [path.resolve(cleanedArg)]
-      : resolveBases.map((base) => path.resolve(base, cleanedArg));
+  return files.some((file) => {
+    const cleanedPath = file.replace(/:\d+(?::\d+)?$/, "");
+    const candidates = path.isAbsolute(cleanedPath)
+      ? [path.resolve(cleanedPath)]
+      : resolveBases.map((base) => path.resolve(base, cleanedPath));
 
     return candidates.some((candidate) => {
       const matchesLiteralPath =
@@ -54,10 +48,7 @@ function shouldStartGlobalDatabase(): boolean {
 
       if (matchesLiteralPath) return true;
 
-      return (
-        safelyMatchesGlob(columnsDir, candidate) ||
-        safelyMatchesGlob(probeFileInColumns, candidate)
-      );
+      return safelyMatchesGlob(columnsDir, candidate);
     });
   });
 }
@@ -65,8 +56,8 @@ function shouldStartGlobalDatabase(): boolean {
 const globalDbFile = path.resolve(__dirname, "global-db.json");
 
 export async function setup() {
-  // const initializeGlobalDatabase = shouldStartGlobalDatabase();
-  // if (!initializeGlobalDatabase) return;
+  const initializeGlobalDatabase = shouldStartGlobalDatabase();
+  if (!initializeGlobalDatabase) return;
 
   console.log("Starting global PostgreSQL Database...");
 
