@@ -39,8 +39,8 @@ importers:
         specifier: ^5.6.2
         version: 5.6.2
       cngpac:
-        specifier: 0.0.1
-        version: 0.0.1
+        specifier: 1.0.0
+        version: 1.0.0
       commander:
         specifier: ^14.0.3
         version: 14.0.3
@@ -3572,8 +3572,8 @@ packages:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
 
-  cngpac@0.0.1:
-    resolution: {integrity: sha512-IBoaWznbGNDA1TThArFq/gZUV/inroG2UXkTpPNMI32fJvtpYhEGiURdMXOcB/NfzIDwmZNS6lGiv2o32u4ubQ==}
+  cngpac@1.0.0:
+    resolution: {integrity: sha512-k0faU2dSObCF40ytA5iRlPJV05Ep7T87Yl3/mnjRmMyEgCIrbXytCF4Wp+nQIGCThP0AwkAe0Ontk59+twiJVQ==}
     engines: {node: '>=24.14.0'}
     hasBin: true
 
@@ -11248,7 +11248,7 @@ snapshots:
 
   clsx@2.1.1: {}
 
-  cngpac@0.0.1:
+  cngpac@1.0.0:
     dependencies:
       semver: 7.7.4
 
