@@ -1,6 +1,12 @@
 import { PGlite, type PGliteOptions } from "@electric-sql/pglite";
 
-import { $Client, $Pool, Connector } from "./common";
+import {
+  $Client,
+  $Pool,
+  Connector,
+  type ConnectorOptions,
+  getUrlFromDbCredentials,
+} from "./common";
 
 /**
  * Connector implementation for the `@electric-sql/pglite` library.
@@ -13,28 +19,27 @@ import { $Client, $Pool, Connector } from "./common";
  * @see https://www.npmjs.com/package/@electric-sql/pglite
  */
 export class PgLiteConnector extends Connector {
-  #options?: PGliteOptions;
+  #driverOptions?: PGliteOptions;
 
-  constructor(options?: PGliteOptions) {
-    super();
-    this.#options = options;
+  constructor(options: ConnectorOptions, driverOptions?: PGliteOptions) {
+    super(options);
+    this.#driverOptions = driverOptions;
   }
 
   getClient() {
-    const client = new PgLiteClient(this.url, this.#options);
-    client.logger = this.logger;
-    return client;
+    return new PgLiteClient(this.options, this.#driverOptions);
   }
   getPool() {
-    const pool = new PgLitePool(this.url, this.config.pool, this.#options);
-    pool.logger = this.logger;
-    return pool;
+    return new PgLitePool(this.options, this.#driverOptions);
   }
 }
 
-/** Creates a PgLite connector instance, optionally accepting PGlite options (e.g., extensions). */
-export function pglite(options?: PGliteOptions): PgLiteConnector {
-  return new PgLiteConnector(options);
+/** Creates a PgLite connector instance, accepting connection options and optionally PGlite driver options (e.g., extensions). */
+export function pglite(
+  options: ConnectorOptions,
+  driverOptions?: PGliteOptions,
+): PgLiteConnector {
+  return new PgLiteConnector(options, driverOptions);
 }
 
 /**
@@ -47,9 +52,12 @@ export function pglite(options?: PGliteOptions): PgLiteConnector {
  */
 class PgLiteClient extends $Client {
   #client: PGlite;
-  constructor(connectionString: string, options?: PGliteOptions) {
-    super();
-    this.#client = new PGlite(connectionString, options);
+  constructor(options: ConnectorOptions, driverOptions?: PGliteOptions) {
+    super(options);
+    this.#client = new PGlite(
+      getUrlFromDbCredentials(options.dbCredentials),
+      driverOptions,
+    );
     this.query = this.#client.query.bind(this.#client);
   }
 
@@ -73,13 +81,12 @@ class PgLiteClient extends $Client {
  */
 class PgLitePool extends $Pool {
   #pool: PGlite;
-  constructor(
-    connectionString: string,
-    pool?: { max?: number },
-    options?: PGliteOptions,
-  ) {
-    super();
-    this.#pool = new PGlite(connectionString, options);
+  constructor(options: ConnectorOptions, driverOptions?: PGliteOptions) {
+    super(options);
+    this.#pool = new PGlite(
+      getUrlFromDbCredentials(options.dbCredentials),
+      driverOptions,
+    );
     this.query = this.#pool.query.bind(this.#pool);
   }
   async connect(): Promise<void> {}
@@ -90,9 +97,7 @@ class PgLitePool extends $Pool {
     await this.#pool.close();
   }
   async acquireClient(): Promise<$Client> {
-    const poolClient = new PgLitePoolClient(this.#pool);
-    poolClient.logger = this.logger;
-    return poolClient;
+    return Promise.resolve(new PgLitePoolClient(this.#pool, this.options));
   }
 }
 
@@ -106,8 +111,8 @@ class PgLitePool extends $Pool {
  */
 class PgLitePoolClient extends $Client {
   #client: PGlite;
-  constructor(client: PGlite) {
-    super();
+  constructor(client: PGlite, options: ConnectorOptions) {
+    super(options);
     this.#client = client;
     this.query = this.#client.query.bind(this.#client);
   }

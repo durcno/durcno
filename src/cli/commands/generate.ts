@@ -16,7 +16,7 @@ import type {
 import type { Options } from "..";
 import { ensureNoEntityCollisions, getMigrationFolderNames } from "../checks";
 import { DEFAULT_MIGRATIONS_DIR, POSTGRES_DEFAULT_SCHEMA } from "../consts";
-import { getSetup, resolveConfigPath } from "../helpers";
+import { loadConfig, resolveConfigPath } from "../helpers";
 import { getOrderedDependencies } from "../utils";
 
 const { cyan, yellow, red, gray, bgGreen } = chalk;
@@ -178,7 +178,7 @@ async function promptColumnRenames(
 
 export async function generate(options: Options) {
   const configPath = resolveConfigPath(options.config);
-  const { config } = await getSetup(configPath);
+  const config = await loadConfig(configPath);
 
   const migrationsDir = resolve(
     dirname(configPath),

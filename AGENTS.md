@@ -43,12 +43,14 @@ A configuration file to define database connection and project settings:
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-  },
+  connector: pg({
+    dbCredentials: {
+      url: process.env.DATABASE_URL!,
+    },
+  }),
 });
 ```
 
@@ -79,10 +81,10 @@ Setting up the query api:
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema";
-import setup from "../durcno.config";
+import * as schema from "./schema.ts";
+import config from "../durcno.config.ts";
 
-export const db = database(schema, setup);
+export const db = database(schema, config);
 ```
 
 ### Basic Queries

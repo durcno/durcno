@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { BuildFilterExpression, StdCondition } from "../filters/index";
-import type { Config } from "../index";
 import type {
   AnyColumn,
   AnyTableWithColumns,
@@ -38,7 +37,6 @@ export class SelectBuilder<
       ],
 > {
   readonly #table: TableWithColumns<TTSchema, TTName, TTColumns>;
-  readonly #config: Config;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
   readonly #$innerJoins: TInnerJoins;
@@ -48,14 +46,12 @@ export class SelectBuilder<
     table: TableWithColumns<TTSchema, TTName, TTColumns>,
     innerJoins: TInnerJoins,
     distinctOn: StdTableColumn[] | undefined,
-    config: Config,
     executor: QueryExecutor,
     prepare: TPrepare,
   ) {
     this.#table = table;
     this.#$innerJoins = innerJoins;
     this.#$distinctOn = distinctOn;
-    this.#config = config;
     this.#executor = executor;
     this.#prepare = prepare;
   }
@@ -104,7 +100,6 @@ export class SelectBuilder<
         ? [...this.#$innerJoins, { table, on }]
         : ([{ table, on }] as any),
       undefined,
-      this.#config,
       this.#executor,
       this.#prepare,
     );
@@ -125,7 +120,6 @@ export class SelectBuilder<
       this.#table,
       this.#$innerJoins,
       (Array.isArray(columns) ? columns : [columns]) as StdTableColumn[],
-      this.#config,
       this.#executor,
       this.#prepare,
     );
@@ -183,7 +177,6 @@ export class SelectBuilder<
       undefined,
       undefined,
       undefined,
-      this.#config,
       this.#executor,
       this.#prepare,
     );
@@ -264,7 +257,6 @@ export class SelectQuery<
   readonly #$orderBy: TOrderBy;
   #$limit: number | undefined;
   #$offset: number | undefined;
-  readonly #config: Config;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
 
@@ -277,7 +269,6 @@ export class SelectQuery<
     orderBy: TOrderBy,
     limit: number | undefined,
     offset: number | undefined,
-    config: Config,
     executor: QueryExecutor,
     prepare: TPrepare,
   ) {
@@ -290,7 +281,6 @@ export class SelectQuery<
     this.#$orderBy = orderBy;
     this.#$limit = limit;
     this.#$offset = offset;
-    this.#config = config;
     this.#executor = executor;
     this.#prepare = prepare;
   }
@@ -319,7 +309,6 @@ export class SelectQuery<
       this.#$orderBy,
       this.#$limit,
       this.#$offset,
-      this.#config,
       this.#executor,
       this.#prepare,
     );
@@ -349,7 +338,6 @@ export class SelectQuery<
       orderBy,
       this.#$limit,
       this.#$offset,
-      this.#config,
       this.#executor,
       this.#prepare,
     );
@@ -365,7 +353,6 @@ export class SelectQuery<
       this.#$orderBy,
       limit,
       this.#$offset,
-      this.#config,
       this.#executor,
       this.#prepare,
     ) as unknown as Omit<this, "limit">;
@@ -381,7 +368,6 @@ export class SelectQuery<
       this.#$orderBy,
       this.#$limit,
       offset,
-      this.#config,
       this.#executor,
       this.#prepare,
     ) as unknown as Omit<this, "offset">;

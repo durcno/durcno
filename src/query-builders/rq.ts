@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { BuildFilterExpression } from "../filters/index";
-import type { Config } from "../index";
 import type {
   AnyColumn,
   AnyRelation,
@@ -161,19 +160,16 @@ export class RelationQueryBuilder<
   readonly #table: TableWithColumns<TTSchema, TTName, TTColumns>;
   readonly #relations: TTRelations;
   readonly #allRelations: TAllRelations;
-  readonly #config: Config;
   readonly #executor: QueryExecutor;
   constructor(
     table: TableWithColumns<TTSchema, TTName, TTColumns>,
     relations: TTRelations,
     allRelations: TAllRelations,
-    config: Config,
     executor: QueryExecutor,
   ) {
     this.#table = table;
     this.#relations = relations;
     this.#allRelations = allRelations;
-    this.#config = config;
     this.#executor = executor;
   }
 
@@ -185,7 +181,6 @@ export class RelationQueryBuilder<
       this.#relations,
       this.#allRelations,
       options,
-      this.#config,
       this.#executor,
     );
   }
@@ -198,7 +193,6 @@ export class RelationQueryBuilder<
       this.#relations,
       this.#allRelations,
       { ...options, limit: 1 },
-      this.#config,
       this.#executor,
     );
     const result = await query;
@@ -242,7 +236,6 @@ class RelationQuery<
   readonly #relations: TTRelations;
   readonly #allRelations: TAllRelations;
   readonly #options: TOptions;
-  readonly #config: Config;
   readonly #executor: QueryExecutor;
 
   constructor(
@@ -250,7 +243,6 @@ class RelationQuery<
     relations: TTRelations,
     allRelations: TAllRelations,
     options: TOptions,
-    config: Config,
     executor: QueryExecutor,
   ) {
     super();
@@ -258,7 +250,6 @@ class RelationQuery<
     this.#relations = relations;
     this.#allRelations = allRelations;
     this.#options = options;
-    this.#config = config;
     this.#executor = executor;
   }
 
@@ -317,7 +308,6 @@ class RelationQuery<
               o as StdOptionsBase,
               relation,
               this.#allRelations,
-              this.#config,
             );
           }
         }
@@ -424,7 +414,6 @@ function getJsonBuildObjectSelects(
  * @param options - The options for this relation
  * @param relation - The relation definition (Many, One, or Fk)
  * @param allRelations - All relations in the schema
- * @param config - The database config
  */
 function buildRelationSubquery(
   aliasPath: string,
@@ -432,7 +421,6 @@ function buildRelationSubquery(
   options: StdOptionsBase,
   relation: AnyRelation,
   allRelations: Record<string, StdRelations>,
-  config: Config,
 ): string {
   let sql = " LEFT JOIN LATERAL (";
 
@@ -483,7 +471,6 @@ function buildRelationSubquery(
             nestedOptions,
             nestedRelation,
             allRelations,
-            config,
           );
         }
       }
@@ -537,7 +524,6 @@ function buildNestedRelationSubquery(
   options: StdOptionsBase,
   relation: AnyRelation,
   allRelations: Record<string, StdRelations>,
-  config: Config,
 ): string {
   let sql = " LEFT JOIN LATERAL (";
 
@@ -587,7 +573,6 @@ function buildNestedRelationSubquery(
             nestedOptions,
             nestedRelation,
             allRelations,
-            config,
           );
         }
       }

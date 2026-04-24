@@ -1,6 +1,4 @@
-import type { ConnectionOptions } from "node:tls";
 import type { Connector } from "./connectors/common";
-import type { DurcnoLogger } from "./logger";
 
 export { bigint } from "./columns/bigint";
 export { bigserial } from "./columns/bigserial";
@@ -32,6 +30,7 @@ export { time } from "./columns/time";
 export { timestamp } from "./columns/timestamp";
 export { type UuidVersion, uuid } from "./columns/uuid";
 export { varchar } from "./columns/varchar";
+export type { ConnectorOptions } from "./connectors/common";
 export {
   PrimaryKeyConstraint,
   primaryKeyConstraint,
@@ -65,13 +64,13 @@ export { index, uniqueIndex } from "./indexes";
 export { Migrations, pk } from "./models";
 export { asc, desc } from "./query-builders/orderby-clause";
 export { Arg, prequery } from "./query-builders/pre";
-export type { Query } from "./query-builders/query";
+export { Query } from "./query-builders/query";
 export { sequence } from "./sequence";
 
 import { is } from "./entity";
 
-export { Sql, sql } from "./sql";
 export type { DurcnoLogger } from "./logger";
+export { Sql, sql } from "./sql";
 export type { AnyTableColumn } from "./table";
 export {
   type AnyColumn,
@@ -96,54 +95,38 @@ export const $ = {
 };
 
 /**
- * A Durcno setup object containing the connector instance and configuration.
- *
- * Returned by `defineConfig()` and consumed by the `database()` function
- * and CLI commands.
- */
-export type DurcnoSetup<T extends Connector = Connector> = {
-  /** The connector instance for database operations. */
-  connector: T;
-  /** The configuration options passed to `defineConfig`. */
-  config: Config;
-};
-
-/**
  * Define a Durcno configuration.
  *
  * This is the recommended way to create your `durcno.config.ts` file.
- * Pass a connector instance for your database driver and the configuration options.
+ * Pass a configuration object that includes a connector instance for your
+ * database driver as well as the schema and migrations output path.
  *
- * @param connector - The connector instance to use (e.g., `pg()`, `postgres()`, `bun()`, `pglite()`).
- * @param config - The database configuration including connection credentials and pool settings.
- * @returns A setup object containing the connector instance and the config options.
+ * @param config - The configuration object including the connector instance,
+ *   schema file path, and optional migrations output directory.
+ * @returns The same configuration object, with the connector stamped with a
+ *   back-reference to the config.
  *
  * @example
  * ```typescript
  * import { defineConfig } from "durcno";
  * import { pg } from "durcno/connectors/pg";
  *
- * export default defineConfig(pg(), {
+ * export default defineConfig({
  *   schema: "db/schema.ts",
  *   out: "migrations",
- *   dbCredentials: {
- *     url: process.env.DATABASE_URL!,
- *   },
+ *   connector: pg({
+ *     dbCredentials: { url: process.env.DATABASE_URL! },
+ *   }),
  * });
  * ```
  */
 export function defineConfig<T extends Connector>(
-  connector: T,
-  config: Config,
-): DurcnoSetup<T> {
-  connector._init(config);
-  return {
-    connector,
-    config,
-  };
+  config: Config<T>,
+): Config<T> {
+  return config;
 }
 
-export type Config = {
+export type Config<T extends Connector = Connector> = {
   /**
    * The relative path to the database schema file.
    */
@@ -154,43 +137,11 @@ export type Config = {
    */
   out?: string;
   /**
-   * Database connection credentials.
+   * The connector instance to use for database operations.
+   * Pass the result of `pg()`, `postgres()`, `bun()`, or `pglite()`,
+   * each configured with connection credentials and pool/logger options.
    */
-  dbCredentials:
-    | ({
-        host: string;
-        port?: number;
-        user: string;
-        password?: string;
-        database: string;
-        ssl?:
-          | boolean
-          | "require"
-          | "allow"
-          | "prefer"
-          | "verify-full"
-          | ConnectionOptions;
-      } & {})
-    | {
-        url: string;
-      };
-  /**
-   * Connection pool configuration.
-   */
-  pool?: {
-    /**
-     * Maximum number of connections in the `db` pool.
-     * @default 10
-     */
-    max?: number;
-  };
-  /**
-   * Optional logger instance for query logging.
-   * Pass a Winston logger or any object with a compatible `info()` method.
-   * When set, all executed queries will be logged at the `info` level with
-   * structured `{ sql, arguments }` metadata.
-   */
-  logger?: DurcnoLogger;
+  connector: T;
 };
 
 declare global {

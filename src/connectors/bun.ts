@@ -1,6 +1,13 @@
-import { SQL } from "bun";
+import Bun from "bun";
 
-import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
+import {
+  $Client,
+  $Pool,
+  Connector,
+  type ConnectorOptions,
+  DEFAULT_POOL_MAX,
+  getUrlFromDbCredentials,
+} from "./common";
 
 /**
  * Connector implementation for the Bun built-in SQL client.
@@ -13,20 +20,16 @@ import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
  */
 export class BunConnector extends Connector {
   getClient() {
-    const client = new BunClient(this.url);
-    client.logger = this.logger;
-    return client;
+    return new BunClient(this.options);
   }
   getPool() {
-    const pool = new BunPool(this.url, this.config.pool);
-    pool.logger = this.logger;
-    return pool;
+    return new BunPool(this.options);
   }
 }
 
 /** Creates a Bun SQL connector instance. */
-export function bun(): BunConnector {
-  return new BunConnector();
+export function bun(options: ConnectorOptions): BunConnector {
+  return new BunConnector(options);
 }
 
 /**
@@ -38,10 +41,10 @@ export function bun(): BunConnector {
  * @internal
  */
 class BunClient extends $Client {
-  #client: SQL;
-  constructor(connectionString: string) {
-    super();
-    this.#client = new SQL(connectionString, {
+  #client: Bun.SQL;
+  constructor(options: ConnectorOptions) {
+    super(options);
+    this.#client = new Bun.SQL(getUrlFromDbCredentials(options.dbCredentials), {
       max: 1,
     });
     this.query = this.#client.unsafe.bind(this.#client);
@@ -67,11 +70,11 @@ class BunClient extends $Client {
  * @internal
  */
 class BunPool extends $Pool {
-  #pool: SQL;
-  constructor(connectionString: string, pool?: { max?: number }) {
-    super();
-    this.#pool = new SQL(connectionString, {
-      max: pool?.max ?? DEFAULT_POOL_MAX,
+  #pool: Bun.SQL;
+  constructor(options: ConnectorOptions) {
+    super(options);
+    this.#pool = new Bun.SQL(getUrlFromDbCredentials(options.dbCredentials), {
+      max: options.pool?.max ?? DEFAULT_POOL_MAX,
     });
     this.query = this.#pool.unsafe.bind(this.#pool);
   }
@@ -86,9 +89,7 @@ class BunPool extends $Pool {
   }
   async acquireClient(): Promise<$Client> {
     const reserved = await this.#pool.reserve();
-    const poolClient = new BunPoolClient(reserved);
-    poolClient.logger = this.logger;
-    return poolClient;
+    return new BunPoolClient(reserved, this.options);
   }
 }
 
@@ -100,9 +101,9 @@ class BunPool extends $Pool {
  * @internal
  */
 class BunPoolClient extends $Client {
-  #sql: SQL;
-  constructor(sql: SQL) {
-    super();
+  #sql: Bun.ReservedSQL;
+  constructor(sql: Bun.ReservedSQL, options: ConnectorOptions) {
+    super(options);
     this.#sql = sql;
     this.query = this.#sql.unsafe.bind(this.#sql);
   }
@@ -112,7 +113,6 @@ class BunPoolClient extends $Client {
     return response;
   }
   async close(): Promise<void> {
-    // @ts-expect-error - release is available on reserved connections
     this.#sql.release();
   }
 }

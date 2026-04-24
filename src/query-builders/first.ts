@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { BuildFilterExpression } from "../filters/index";
-import type { Config } from "../index";
 import type { AnyColumn, TableWithColumns, TColsToLeftRight } from "../table";
 import { snakeToCamel } from "../utils";
 import { Query } from "./query";
@@ -18,7 +17,6 @@ export class FirstQuery<
   readonly #$where:
     | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
     | undefined;
-  readonly #$config: Config;
   readonly #$executor: QueryExecutor;
 
   constructor(
@@ -26,13 +24,11 @@ export class FirstQuery<
     where:
       | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
       | undefined,
-    config: Config,
     executor: QueryExecutor,
   ) {
     super();
     this.#$table = table;
     this.#$where = where;
-    this.#$config = config;
     this.#$executor = executor;
   }
 

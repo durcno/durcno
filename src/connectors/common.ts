@@ -1,5 +1,4 @@
-import { getUrlFromDbCredentials } from "../cli/helpers";
-import type { Config } from "../index";
+import type { ConnectionOptions } from "node:tls";
 import type { DurcnoLogger } from "../logger";
 import type { Query } from "../query-builders/query";
 
@@ -12,6 +11,99 @@ import type { Query } from "../query-builders/query";
 export const DEFAULT_POOL_MAX = 10;
 
 /**
+ * Options passed to connector constructors containing database connection
+ * credentials, pool settings, and an optional logger.
+ *
+ * These options were previously part of the top-level `Config` type and are
+ * now scoped to the connector so that `Config` only contains schema/migration
+ * settings.
+ */
+export type ConnectorOptions = {
+  /**
+   * Database connection credentials — either a connection URL or individual
+   * host/user/password/database fields.
+   */
+  dbCredentials:
+    | ({
+        host: string;
+        port?: number;
+        user: string;
+        password?: string;
+        database: string;
+        ssl?:
+          | boolean
+          | "require"
+          | "allow"
+          | "prefer"
+          | "verify-full"
+          | ConnectionOptions;
+      } & {})
+    | {
+        url: string;
+      };
+  /**
+   * Connection pool configuration.
+   */
+  pool?: {
+    /**
+     * Maximum number of connections in the pool.
+     * @default 10
+     */
+    max?: number;
+  };
+  /**
+   * Optional logger instance for query logging.
+   * Pass a Winston logger or any object with a compatible `info()` method.
+   * When set, all executed queries will be logged at the `info` level with
+   * structured `{ sql, arguments }` metadata.
+   */
+  logger?: DurcnoLogger;
+};
+
+/**
+ * Derives a PostgreSQL connection URL string from `ConnectorOptions.dbCredentials`.
+ *
+ * Accepts either a plain `{ url }` object or an expanded
+ * `{ host, port, user, password, database, ssl }` object and builds a
+ * properly-encoded `postgresql://` URL.
+ */
+export function getUrlFromDbCredentials(
+  dbCredentials: ConnectorOptions["dbCredentials"],
+): string {
+  if ("url" in dbCredentials) {
+    return dbCredentials.url;
+  }
+
+  const { host, port, user, password, database, ssl } = dbCredentials;
+  const auth =
+    encodeURIComponent(user) +
+    (password ? `:${encodeURIComponent(password)}` : "");
+  const hostPort = port !== undefined ? `${host}:${port}` : host;
+  const url = `postgresql://${auth}@${hostPort}/${encodeURIComponent(database)}`;
+
+  const params: Record<string, string> = {};
+  if (ssl !== undefined) {
+    if (typeof ssl === "boolean") {
+      if (ssl) params.ssl = "true";
+    } else if (typeof ssl === "string") {
+      params.sslmode = ssl;
+    } else if (typeof ssl === "object") {
+      throw new Error(
+        "Cannot convert 'ssl' ConnectionOptions object into a URL. Provide dbCredentials.url or use a boolean/string ssl value (e.g. 'require').",
+      );
+    }
+  }
+
+  const qs = Object.keys(params).length
+    ? `?${Object.entries(params)
+        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+        .join("&")}`
+    : "";
+
+  return `${url}${qs}`;
+}
+
+/**
  * Abstract base class for all database connectors.
  *
  * Connectors provide a unified interface for creating database clients
@@ -22,18 +114,22 @@ export const DEFAULT_POOL_MAX = 10;
  * @abstract
  */
 export abstract class Connector {
-  /** The configuration object containing file paths, database credentials, client configs etc. */
-  config!: Config;
-  /** The PostgreSQL connection URL derived from the configuration. */
-  url!: string;
+  /**
+   * The original options passed to the connector constructor.
+   * Provides full access to `dbCredentials`, `pool`, and `logger`.
+   * Note: `pool` and `logger` may be mutated on the connector instance after
+   * construction (e.g. by CLI commands); use the instance fields for current values.
+   */
+  options: ConnectorOptions;
+  /** Connection pool size override (can be mutated by CLI commands before `getPool()` is called). */
+  pool?: ConnectorOptions["pool"];
   /** Optional logger instance for query logging. */
   logger?: DurcnoLogger;
 
-  /** Injects the configuration and derives the connection URL. Called by `defineConfig`. */
-  _init(config: Config) {
-    this.config = config;
-    this.url = getUrlFromDbCredentials(config.dbCredentials);
-    this.logger = config.logger;
+  constructor(options: ConnectorOptions) {
+    this.options = options;
+    this.pool = options.pool;
+    this.logger = options.logger;
   }
 
   /**
@@ -67,8 +163,15 @@ export abstract class Connector {
  * @abstract
  */
 export abstract class $Client {
+  /** The connector options used to create this client. */
+  options: ConnectorOptions;
   /** Optional logger instance for query logging. */
   logger?: DurcnoLogger;
+
+  constructor(options: ConnectorOptions) {
+    this.options = options;
+    this.logger = options.logger;
+  }
 
   /**
    * Executes a SQL query with optional parameterized arguments.
@@ -134,8 +237,15 @@ export abstract class $Client {
  * @abstract
  */
 export abstract class $Pool {
+  /** The connector options used to create this pool. */
+  options: ConnectorOptions;
   /** Optional logger instance for query logging. */
   logger?: DurcnoLogger;
+
+  constructor(options: ConnectorOptions) {
+    this.options = options;
+    this.logger = options.logger;
+  }
 
   /**
    * Executes a SQL query with optional parameterized arguments.

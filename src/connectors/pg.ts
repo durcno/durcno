@@ -1,6 +1,13 @@
 import { Client, Pool, type PoolClient } from "pg";
 
-import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
+import {
+  $Client,
+  $Pool,
+  Connector,
+  type ConnectorOptions,
+  DEFAULT_POOL_MAX,
+  getUrlFromDbCredentials,
+} from "./common";
 
 /**
  * Connector implementation for the `pg` (node-postgres) library.
@@ -12,21 +19,21 @@ import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
  * @see https://www.npmjs.com/package/pg
  */
 export class PgConnector extends Connector {
+  constructor(options: ConnectorOptions) {
+    super(options);
+  }
+
   getClient() {
-    const client = new PgClient(this.url);
-    client.logger = this.logger;
-    return client;
+    return new PgClient(this.options);
   }
   getPool() {
-    const pool = new PgPool(this.url, this.config.pool);
-    pool.logger = this.logger;
-    return pool;
+    return new PgPool(this.options);
   }
 }
 
 /** Creates a pg (node-postgres) connector instance. */
-export function pg(): PgConnector {
-  return new PgConnector();
+export function pg(options: ConnectorOptions): PgConnector {
+  return new PgConnector(options);
 }
 
 /**
@@ -40,9 +47,11 @@ export function pg(): PgConnector {
  */
 class PgClient extends $Client {
   #client: Client;
-  constructor(connectionString: string) {
-    super();
-    this.#client = new Client({ connectionString });
+  constructor(options: ConnectorOptions) {
+    super(options);
+    this.#client = new Client({
+      connectionString: getUrlFromDbCredentials(options.dbCredentials),
+    });
     this.query = this.#client.query.bind(this.#client);
   }
 
@@ -68,11 +77,11 @@ class PgClient extends $Client {
  */
 class PgPool extends $Pool {
   #pool: Pool;
-  constructor(connectionString: string, pool?: { max?: number }) {
-    super();
+  constructor(options: ConnectorOptions) {
+    super(options);
     this.#pool = new Pool({
-      connectionString: connectionString,
-      max: pool?.max ?? DEFAULT_POOL_MAX,
+      connectionString: getUrlFromDbCredentials(options.dbCredentials),
+      max: options.pool?.max ?? DEFAULT_POOL_MAX,
     });
     this.query = this.#pool.query.bind(this.#pool);
   }
@@ -87,9 +96,7 @@ class PgPool extends $Pool {
   }
   async acquireClient(): Promise<$Client> {
     const client = await this.#pool.connect();
-    const poolClient = new PgPoolClient(client);
-    poolClient.logger = this.logger;
-    return poolClient;
+    return new PgPoolClient(client, this.options);
   }
 }
 
@@ -103,8 +110,8 @@ class PgPool extends $Pool {
  */
 class PgPoolClient extends $Client {
   #client: PoolClient;
-  constructor(client: PoolClient) {
-    super();
+  constructor(client: PoolClient, options: ConnectorOptions) {
+    super(options);
     this.#client = client;
     this.query = this.#client.query.bind(this.#client);
   }

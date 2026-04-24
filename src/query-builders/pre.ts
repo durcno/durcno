@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyDBorTX } from "../db";
-import type { Config } from "../index";
 import { entityType } from "../symbols";
 import type { Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -38,22 +37,16 @@ export class PreparedStatement<TArgs extends Record<string, AnyArg>, TReturn> {
       args.push(this.#args[k as keyof TArgs].handler(values[k as keyof TArgs]));
     }
     this.#query.arguments = args;
-    return new PreparedQuery<TReturn>(
-      this.#query,
-      db.$.config,
-      db._.getExecutor(),
-    );
+    return new PreparedQuery<TReturn>(this.#query, db._.getExecutor());
   }
 }
 
 export class PreparedQuery<TReturn> extends QueryPromise<TReturn> {
   readonly query: Query;
-  readonly config: Config;
   readonly executor: QueryExecutor;
-  constructor(query: Query, config: Config, executor: QueryExecutor) {
+  constructor(query: Query, executor: QueryExecutor) {
     super();
     this.query = query;
-    this.config = config;
     this.executor = executor;
   }
 

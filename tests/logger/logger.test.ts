@@ -4,10 +4,12 @@ import { createDurcnoLogger } from "durcno/logger";
 import { Query } from "../../src/query-builders/query";
 import { $Client, $Pool } from "../../src/connectors/common";
 
+const minimalOptions = { dbCredentials: { url: "postgres://localhost/test" } };
+
 /** Minimal concrete $Client for testing. */
 class TestClient extends $Client {
 	constructor() {
-		super();
+		super(minimalOptions);
 		this.query = async (_sql: string, _args?: (string | number | null)[]) => ({
 			rows: [],
 		});
@@ -22,7 +24,7 @@ class TestClient extends $Client {
 /** Minimal concrete $Pool for testing. */
 class TestPool extends $Pool {
 	constructor() {
-		super();
+		super(minimalOptions);
 		this.query = async (_sql: string, _args?: (string | number | null)[]) => ({
 			rows: [],
 		});

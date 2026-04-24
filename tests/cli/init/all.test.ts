@@ -66,8 +66,10 @@ describe("durcno init", () => {
     const indexContent = fs.readFileSync(indexPath, "utf8");
     expect(indexContent).toContain('import { database } from "durcno"');
     expect(indexContent).toContain('import * as schema from "./schema.ts"');
-    expect(indexContent).toContain('import setup from "../durcno.config.ts"');
-    expect(indexContent).toContain("export const db = database(schema, setup)");
+    expect(indexContent).toContain('import config from "../durcno.config.ts"');
+    expect(indexContent).toContain(
+      "export const db = database(schema, config)",
+    );
   });
 });
 

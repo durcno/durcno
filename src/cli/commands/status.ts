@@ -9,14 +9,14 @@ import {
   migrationsTableExists,
 } from "../checks";
 import { DEFAULT_MIGRATIONS_DIR } from "../consts";
-import { getSetup, resolveConfigPath } from "../helpers";
+import { loadConfig, resolveConfigPath } from "../helpers";
 
 const { dim, cyan, yellow, green } = chalk;
 
 export async function status(options: Options): Promise<void> {
   const configPath = resolveConfigPath(options.config);
-  const { connector, config } = await getSetup(configPath);
-  config.pool = { ...config.pool, max: 1 };
+  const config = await loadConfig(configPath);
+  const { connector } = config;
   const migrationsDir = resolve(
     dirname(configPath),
     config.out || DEFAULT_MIGRATIONS_DIR,
@@ -29,7 +29,7 @@ export async function status(options: Options): Promise<void> {
     console.log(chalk.yellow("No migrations found."));
     process.exit(0);
   }
-  const db = database({ Migrations }, { connector, config });
+  const db = database({ Migrations }, config);
   const migrationsQuery = db.from(Migrations).select();
   let migrations: Awaited<typeof migrationsQuery>;
   const client = connector.getClient();

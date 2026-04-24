@@ -21,12 +21,14 @@ npm exec durcno generate --config ./config/durcno.config.ts
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-  },
+  connector: pg({
+    dbCredentials: {
+      url: process.env.DATABASE_URL!,
+    },
+  }),
 });
 ```
 
@@ -40,7 +42,7 @@ export default defineConfig(pg(), {
 The path to your database schema file, relative to the config file location.
 
 ```typescript
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   // ...
 });
@@ -54,28 +56,32 @@ export default defineConfig(pg(), {
 The output directory where generated migration files will be stored.
 
 ```typescript
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
   // ...
 });
 ```
 
-### `dbCredentials`
+### `connector`
 
-**Type:** `object`  
+**Type:** `Connector`  
 **Required:** Yes
 
-Database connection credentials. Can be specified either as a URL string or as individual connection parameters.
+The database connector instance. Pass the result of calling one of the connector factory functions (`pg()`, `postgres()`, `bun()`, `pglite()`), each configured with connection credentials and optional pool/logger settings.
+
+See [Connectors](./connectors) for the full list of available connectors.
 
 #### URL Format
 
 ```typescript
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
-  dbCredentials: {
-    url: "postgresql://user:password@localhost:5432/database",
-  },
+  connector: pg({
+    dbCredentials: {
+      url: "postgresql://user:password@localhost:5432/database",
+    },
+  }),
 });
 ```
 
@@ -83,9 +89,11 @@ export default defineConfig(pg(), {
 Use environment variables for database credentials:
 
 ```typescript
-dbCredentials: {
-  url: process.env.DATABASE_URL!,
-}
+connector: pg({
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+}),
 ```
 
 :::
@@ -102,15 +110,17 @@ dbCredentials: {
 | `ssl`      | `boolean \| string \| ConnectionOptions` | No       | SSL/TLS configuration                |
 
 ```typescript
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
-  dbCredentials: {
-    host: "localhost",
-    port: 5432,
-    user: "postgres",
-    password: "password",
-    database: "myapp",
-  },
+  connector: pg({
+    dbCredentials: {
+      host: "localhost",
+      port: 5432,
+      user: "postgres",
+      password: "password",
+      database: "myapp",
+    },
+  }),
 });
 ```
 
@@ -120,39 +130,47 @@ The `ssl` option supports multiple formats:
 
 ```typescript
 // Disable SSL
-dbCredentials: {
-  host: "localhost",
-  user: "postgres",
-  database: "myapp",
-  ssl: false,
-}
+connector: pg({
+  dbCredentials: {
+    host: "localhost",
+    user: "postgres",
+    database: "myapp",
+    ssl: false,
+  },
+}),
 
 // Require SSL (no certificate verification)
-dbCredentials: {
-  host: "db.example.com",
-  user: "postgres",
-  database: "myapp",
-  ssl: "require",
-}
+connector: pg({
+  dbCredentials: {
+    host: "db.example.com",
+    user: "postgres",
+    database: "myapp",
+    ssl: "require",
+  },
+}),
 
 // SSL with full certificate verification
-dbCredentials: {
-  host: "db.example.com",
-  user: "postgres",
-  database: "myapp",
-  ssl: "verify-full",
-}
+connector: pg({
+  dbCredentials: {
+    host: "db.example.com",
+    user: "postgres",
+    database: "myapp",
+    ssl: "verify-full",
+  },
+}),
 
 // Custom SSL options (Node.js TLS ConnectionOptions)
-dbCredentials: {
-  host: "db.example.com",
-  user: "postgres",
-  database: "myapp",
-  ssl: {
-    rejectUnauthorized: true,
-    ca: fs.readFileSync("/path/to/ca-cert.pem").toString(),
+connector: pg({
+  dbCredentials: {
+    host: "db.example.com",
+    user: "postgres",
+    database: "myapp",
+    ssl: {
+      rejectUnauthorized: true,
+      ca: fs.readFileSync("/path/to/ca-cert.pem").toString(),
+    },
   },
-}
+}),
 ```
 
 **SSL Mode Values:**
@@ -166,47 +184,51 @@ dbCredentials: {
 | `"prefer"`      | Prefer SSL, fall back to non-SSL                     |
 | `"verify-full"` | Require SSL with full certificate verification       |
 
-### `logger`
+#### `logger`
 
 **Type:** `DurcnoLogger`  
 **Optional**
 
 A logger instance that receives every SQL query before it is sent to the database. Any object with a compatible `info()` method can be used. Durcno ships a pre-configured Winston logger via `durcno/logger`.
 
-See [Query Logger](./Advanced/logger) for full details and examples.
+Pass `logger` inside the connector options. See [Query Logger](./Advanced/logger) for full details and examples.
 
 ```typescript
 import { createDurcnoLogger } from "durcno/logger";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-  },
-  logger: createDurcnoLogger(),
+  connector: pg({
+    dbCredentials: {
+      url: process.env.DATABASE_URL!,
+    },
+    logger: createDurcnoLogger(),
+  }),
 });
 ```
 
-### `pool`
+#### `pool`
 
 **Type:** `object`  
 **Optional**
 
-Connection pool configuration.
+Connection pool configuration. Pass `pool` inside the connector options.
 
 | Property | Type     | Default | Description                                    |
 | -------- | -------- | ------- | ---------------------------------------------- |
 | `max`    | `number` | `10`    | Maximum number of connections in the `db` pool |
 
 ```typescript
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-  },
-  pool: {
-    max: 20,
-  },
+  connector: pg({
+    dbCredentials: {
+      url: process.env.DATABASE_URL!,
+    },
+    pool: {
+      max: 20,
+    },
+  }),
 });
 ```
 
@@ -219,27 +241,29 @@ Here's a complete configuration example with all options:
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   // Schema file location
   schema: "db/schema.ts",
 
   // Migration output directory
   out: "migrations",
 
-  // Database connection
-  dbCredentials: {
-    host: process.env.DB_HOST ?? "localhost",
-    port: Number(process.env.DB_PORT) || 5432,
-    user: process.env.DB_USER ?? "postgres",
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME ?? "myapp",
-    ssl: process.env.NODE_ENV === "production" ? "require" : false,
-  },
+  connector: pg({
+    // Database connection
+    dbCredentials: {
+      host: process.env.DB_HOST ?? "localhost",
+      port: Number(process.env.DB_PORT) || 5432,
+      user: process.env.DB_USER ?? "postgres",
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME ?? "myapp",
+      ssl: process.env.NODE_ENV === "production" ? "require" : false,
+    },
 
-  // Connection pool settings
-  pool: {
-    max: 20,
-  },
+    // Connection pool settings
+    pool: {
+      max: 20,
+    },
+  }),
 });
 ```
 
@@ -254,34 +278,40 @@ import { pg } from "durcno/connectors/pg";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: isDevelopment
-    ? {
-        host: "localhost",
-        port: 5432,
-        user: "postgres",
-        password: "devpassword",
-        database: "myapp_dev",
-      }
-    : {
-        url: process.env.DATABASE_URL!,
-      },
-  pool: {
-    max: isDevelopment ? 5 : 20,
-  },
+  connector: pg({
+    dbCredentials: isDevelopment
+      ? {
+          host: "localhost",
+          port: 5432,
+          user: "postgres",
+          password: "devpassword",
+          database: "myapp_dev",
+        }
+      : {
+          url: process.env.DATABASE_URL!,
+        },
+    pool: {
+      max: isDevelopment ? 5 : 20,
+    },
+  }),
 });
 ```
 
 ## Type Reference
 
-The full TypeScript type for the configuration object:
+The full TypeScript types for the configuration:
 
 ```typescript
-type Config = {
+type Config<T extends Connector = Connector> = {
   schema: string;
   out?: string;
+  connector: T;
+};
+
+type ConnectorOptions = {
   dbCredentials:
     | {
         host: string;

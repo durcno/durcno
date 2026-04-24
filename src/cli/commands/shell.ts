@@ -3,7 +3,7 @@ import chalk from "chalk";
 
 import type { $Client } from "../../connectors/common";
 import type { Options } from "..";
-import { getSetup, resolveConfigPath } from "../helpers";
+import { loadConfig, resolveConfigPath } from "../helpers";
 
 const { cyan, green, red, yellow, gray, bgCyan, bold } = chalk;
 
@@ -16,7 +16,7 @@ const { cyan, green, red, yellow, gray, bgCyan, bold } = chalk;
  */
 export async function shell(options: Options): Promise<void> {
   const configPath = resolveConfigPath(options.config);
-  const { connector } = await getSetup(configPath);
+  const { connector } = await loadConfig(configPath);
   const client = connector.getClient();
 
   console.log(gray("Connecting to database..."));

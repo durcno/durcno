@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { BuildFilterExpression } from "../filters/index";
-import type { Config } from "../index";
 import type { AnyColumn, TableWithColumns, TColsToLeftRight } from "../table";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -40,7 +39,6 @@ export class DeleteQuery<
       >
     | undefined;
   readonly #$returning: TReturning;
-  readonly #$config: Config;
   readonly #$executor: QueryExecutor;
   readonly #$prepare: TPrepare;
 
@@ -53,7 +51,6 @@ export class DeleteQuery<
         >
       | undefined,
     returnings: TReturning,
-    config: Config,
     executor: QueryExecutor,
     prepare: TPrepare,
   ) {
@@ -61,7 +58,6 @@ export class DeleteQuery<
     this.#$table = table;
     this.#$where = where;
     this.#$returning = returnings;
-    this.#$config = config;
     this.#$executor = executor;
     this.#$prepare = prepare;
   }
@@ -76,7 +72,6 @@ export class DeleteQuery<
       this.#$table,
       where,
       this.#$returning,
-      this.#$config,
       this.#$executor,
       this.#$prepare,
     );
@@ -95,7 +90,6 @@ export class DeleteQuery<
       this.#$table,
       this.#$where,
       returnings,
-      this.#$config,
       this.#$executor,
       this.#$prepare,
     );

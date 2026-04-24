@@ -1,4 +1,4 @@
-import { type Config, defineConfig } from "durcno";
+import { type Config, type ConnectorOptions, defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
 // biome-ignore lint/correctness/noUnusedVariables: <>
@@ -9,8 +9,7 @@ export type Equal<X, Y extends X> =
     ? true
     : false;
 
-export const testConfig: Config = {
-  schema: "db/schema.ts",
+export const testConnectorOptions: ConnectorOptions = {
   dbCredentials: {
     host: "localhost",
     port: 5432,
@@ -20,4 +19,9 @@ export const testConfig: Config = {
   },
 };
 
-export const testSetup = defineConfig(pg(), testConfig);
+export const testConfig: Config<ReturnType<typeof pg>> = {
+  schema: "db/schema.ts",
+  connector: pg(testConnectorOptions),
+};
+
+export const testSetup = defineConfig(testConfig);

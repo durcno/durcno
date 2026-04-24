@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { BuildFilterExpression } from "../filters/index";
-import type { Config } from "../index";
 import type { AnyColumn, TableWithColumns, TColsToLeftRight } from "../table";
 import { snakeToCamel } from "../utils";
 import { Query } from "./query";
@@ -11,17 +10,10 @@ export class UpdateBuilder<
   TPrepare extends boolean,
 > {
   readonly #table: TTableWC;
-  readonly #config: Config;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
-  constructor(
-    table: TTableWC,
-    config: Config,
-    executor: QueryExecutor,
-    prepare: TPrepare,
-  ) {
+  constructor(table: TTableWC, executor: QueryExecutor, prepare: TPrepare) {
     this.#table = table;
-    this.#config = config;
     this.#executor = executor;
     this.#prepare = prepare;
   }
@@ -36,7 +28,6 @@ export class UpdateBuilder<
       values,
       undefined,
       undefined,
-      this.#config,
       this.#executor,
       this.#prepare,
     );
@@ -83,7 +74,6 @@ class UpdateQuery<
   readonly #values: TValues;
   readonly #$where: TWhere;
   readonly #$returning: TReturning;
-  readonly #config: Config;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
 
@@ -92,7 +82,6 @@ class UpdateQuery<
     values: TValues,
     where: TWhere,
     returnings: TReturning,
-    config: Config,
     executor: QueryExecutor,
     prepare: TPrepare,
   ) {
@@ -101,7 +90,6 @@ class UpdateQuery<
     this.#values = values;
     this.#$where = where;
     this.#$returning = returnings;
-    this.#config = config;
     this.#executor = executor;
     this.#prepare = prepare;
   }
@@ -117,7 +105,6 @@ class UpdateQuery<
       this.#values,
       where,
       this.#$returning,
-      this.#config,
       this.#executor,
       this.#prepare,
     );
@@ -137,7 +124,6 @@ class UpdateQuery<
       this.#values,
       this.#$where,
       returnings,
-      this.#config,
       this.#executor,
       this.#prepare,
     );

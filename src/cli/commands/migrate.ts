@@ -1,6 +1,6 @@
 import { dirname, join, resolve } from "node:path";
 import chalk from "chalk";
-import { type DurcnoSetup, database, Migrations } from "durcno";
+import { type Config, database, Migrations } from "durcno";
 
 import type { $Client } from "../../connectors/common";
 import type { DDLStatement, MigrationOptions } from "../../migration";
@@ -11,7 +11,7 @@ import {
   migrationsTableExists,
 } from "../checks";
 import { DEFAULT_MIGRATIONS_DIR } from "../consts";
-import { getSetup, resolveConfigPath } from "../helpers";
+import { loadConfig, resolveConfigPath } from "../helpers";
 import { runDownMigration } from "./down";
 
 const { bgGreen, bgYellow, dim, gray, yellow, green, cyan } = chalk;
@@ -19,8 +19,8 @@ const { bgGreen, bgYellow, dim, gray, yellow, green, cyan } = chalk;
 export async function migrate(options: Options): Promise<void> {
   // normalize configuration file path so we can reuse it multiple times
   const configPath = resolveConfigPath(options.config);
-  const { connector, config } = await getSetup(configPath);
-  config.pool = { ...config.pool, max: 1 };
+  const config = await loadConfig(configPath);
+  const { connector } = config;
   const migrationsDir = resolve(
     dirname(configPath),
     config.out || DEFAULT_MIGRATIONS_DIR,
@@ -37,17 +37,14 @@ export async function migrate(options: Options): Promise<void> {
   try {
     let previouslyApplied: string[] = [];
     if (await migrationsTableExists(client)) {
-      const db = database({ Migrations }, { connector, config });
+      const db = database({ Migrations }, config);
       const records = await db.from(Migrations).select();
       previouslyApplied = records.map((r) => r.name);
     }
 
     for (const migrationDirName of migrationDirNames.sort()) {
       if (!previouslyApplied.includes(migrationDirName)) {
-        await runUpMigration(migrationDirName, migrationsDir, client, {
-          connector,
-          config,
-        });
+        await runUpMigration(migrationDirName, migrationsDir, client, config);
         appliedMigrations.push(migrationDirName);
       }
     }
@@ -67,7 +64,7 @@ export async function migrate(options: Options): Promise<void> {
           migrationFolder,
           isFirstMigration,
           migrationsDir,
-          { connector, config },
+          config,
           client,
         );
       }
@@ -86,7 +83,7 @@ export async function runUpMigration(
   migrationDirName: string,
   migrationsDir: string,
   client: $Client,
-  setup: DurcnoSetup,
+  config: Config,
 ) {
   const upPath = join(migrationsDir, migrationDirName, "up.ts");
   const migrationModule = await import(upPath);
@@ -124,7 +121,9 @@ export async function runUpMigration(
         dim("."),
     );
 
-    const db = database({ Migrations }, setup);
+    config.connector.pool = { ...config.connector.pool, max: 1 };
+    config.connector.logger = undefined;
+    const db = database({ Migrations }, config);
     await db.insert(Migrations).values({
       name: migrationDirName,
       createdAt: new Date(),

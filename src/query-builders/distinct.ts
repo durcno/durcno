@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { BuildFilterExpression } from "../filters/index";
-import type { Config } from "../index";
 import type {
   AnyColumn,
   TableColumn,
@@ -20,7 +19,6 @@ export class DistinctQuery<
   readonly #$where:
     | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
     | undefined;
-  readonly #$config: Config;
   readonly #$executor: QueryExecutor;
 
   constructor(
@@ -29,14 +27,12 @@ export class DistinctQuery<
     where:
       | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
       | undefined,
-    config: Config,
     executor: QueryExecutor,
   ) {
     super();
     this.#$table = table;
     this.#$column = column;
     this.#$where = where;
-    this.#$config = config;
     this.#$executor = executor;
   }
 

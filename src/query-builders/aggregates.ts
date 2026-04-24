@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { BuildFilterExpression } from "../filters/index";
-import type { Config } from "../index";
 import type {
   AnyColumn,
   TableColumn,
@@ -23,7 +22,6 @@ export class AggregateQuery<
   readonly #$where:
     | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
     | undefined;
-  readonly #$config: Config;
   readonly #$executor: QueryExecutor;
 
   constructor(
@@ -33,7 +31,6 @@ export class AggregateQuery<
     where:
       | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
       | undefined,
-    config: Config,
     executor: QueryExecutor,
   ) {
     super();
@@ -41,7 +38,6 @@ export class AggregateQuery<
     this.#$column = column;
     this.#$fn = fn;
     this.#$where = where;
-    this.#$config = config;
     this.#$executor = executor;
   }
 

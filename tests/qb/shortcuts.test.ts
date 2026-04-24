@@ -38,16 +38,18 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
 
     db = database(
       schema,
-      defineConfig(pg(), {
+      defineConfig({
         schema: "./schema.ts",
-        pool: { max: 5 },
-        dbCredentials: {
-          host: "localhost",
-          port: containerInfo.port,
-          user: "testuser",
-          password: "testpassword",
-          database: containerInfo.dbName,
-        },
+        connector: pg({
+          pool: { max: 5 },
+          dbCredentials: {
+            host: "localhost",
+            port: containerInfo.port,
+            user: "testuser",
+            password: "testpassword",
+            database: containerInfo.dbName,
+          },
+        }),
       }),
     );
   }, 120000);

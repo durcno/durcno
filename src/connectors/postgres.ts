@@ -1,6 +1,13 @@
-import postgresLib from "postgres";
+import postgresLib, { type ReservedSql } from "postgres";
 
-import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
+import {
+  $Client,
+  $Pool,
+  Connector,
+  type ConnectorOptions,
+  DEFAULT_POOL_MAX,
+  getUrlFromDbCredentials,
+} from "./common";
 
 /**
  * Connector implementation for the `postgres` (postgres.js) library.
@@ -12,21 +19,21 @@ import { $Client, $Pool, Connector, DEFAULT_POOL_MAX } from "./common";
  * @see https://www.npmjs.com/package/postgres
  */
 export class PostgresConnector extends Connector {
+  constructor(options: ConnectorOptions) {
+    super(options);
+  }
+
   getClient() {
-    const client = new PostgresClient(this.url);
-    client.logger = this.logger;
-    return client;
+    return new PostgresClient(this.options);
   }
   getPool() {
-    const pool = new PostgresPool(this.url, this.config.pool);
-    pool.logger = this.logger;
-    return pool;
+    return new PostgresPool(this.options);
   }
 }
 
 /** Creates a postgres.js connector instance. */
-export function postgres(): PostgresConnector {
-  return new PostgresConnector();
+export function postgres(options: ConnectorOptions): PostgresConnector {
+  return new PostgresConnector(options);
 }
 
 /**
@@ -39,9 +46,9 @@ export function postgres(): PostgresConnector {
  */
 class PostgresClient extends $Client {
   #sql: ReturnType<typeof postgresLib>;
-  constructor(connectionString: string) {
-    super();
-    this.#sql = postgresLib(connectionString, {
+  constructor(options: ConnectorOptions) {
+    super(options);
+    this.#sql = postgresLib(getUrlFromDbCredentials(options.dbCredentials), {
       max: 1,
     });
     this.query = this.#sql.unsafe.bind(this.#sql);
@@ -66,10 +73,10 @@ class PostgresClient extends $Client {
  */
 class PostgresPool extends $Pool {
   #sql: ReturnType<typeof postgresLib>;
-  constructor(connectionString: string, pool?: { max?: number }) {
-    super();
-    this.#sql = postgresLib(connectionString, {
-      max: pool?.max ?? DEFAULT_POOL_MAX,
+  constructor(options: ConnectorOptions) {
+    super(options);
+    this.#sql = postgresLib(getUrlFromDbCredentials(options.dbCredentials), {
+      max: options.pool?.max ?? DEFAULT_POOL_MAX,
     });
     this.query = this.#sql.unsafe.bind(this.#sql);
   }
@@ -82,9 +89,7 @@ class PostgresPool extends $Pool {
   }
   async acquireClient(): Promise<$Client> {
     const reserved = await this.#sql.reserve();
-    const poolClient = new PostgresPoolClient(reserved);
-    poolClient.logger = this.logger;
-    return poolClient;
+    return new PostgresPoolClient(reserved, this.options);
   }
 }
 
@@ -96,9 +101,9 @@ class PostgresPool extends $Pool {
  * @internal
  */
 class PostgresPoolClient extends $Client {
-  #sql: ReturnType<typeof postgresLib>;
-  constructor(sql: ReturnType<typeof postgresLib>) {
-    super();
+  #sql: ReservedSql;
+  constructor(sql: ReservedSql, options: ConnectorOptions) {
+    super(options);
     this.#sql = sql;
     this.query = this.#sql.unsafe.bind(this.#sql);
   }
@@ -108,7 +113,6 @@ class PostgresPoolClient extends $Client {
     return response;
   }
   async close(): Promise<void> {
-    // @ts-expect-error - release is available on reserved connections
     this.#sql.release();
   }
 }

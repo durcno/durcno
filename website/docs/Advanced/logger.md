@@ -38,13 +38,15 @@ import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { createDurcnoLogger } from "durcno/logger";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-  },
-  logger: createDurcnoLogger(),
+  connector: pg({
+    dbCredentials: {
+      url: process.env.DATABASE_URL!,
+    },
+    logger: createDurcnoLogger(),
+  }),
 });
 ```
 
@@ -79,16 +81,18 @@ Pass any object with a compatible `info()` method. The metadata object will alwa
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
-  dbCredentials: {
-    url: process.env.DATABASE_URL!,
-  },
-  logger: {
-    info(message, meta) {
-      console.log(`[db] ${message}`, meta);
+  connector: pg({
+    dbCredentials: {
+      url: process.env.DATABASE_URL!,
     },
-  },
+    logger: {
+      info(message, meta) {
+        console.log(`[db] ${message}`, meta);
+      },
+    },
+  }),
 });
 ```
 
@@ -99,12 +103,14 @@ import pino from "pino";
 
 const log = pino();
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
-  dbCredentials: { url: process.env.DATABASE_URL! },
-  logger: {
-    info: (message, meta) => log.info(meta ?? {}, message),
-  },
+  connector: pg({
+    dbCredentials: { url: process.env.DATABASE_URL! },
+    logger: {
+      info: (message, meta) => log.info(meta ?? {}, message),
+    },
+  }),
 });
 ```
 

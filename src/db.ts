@@ -1,7 +1,7 @@
-import type { $Pool, Connector, QueryExecutor } from "./connectors/common";
+import type { $Pool, QueryExecutor } from "./connectors/common";
 import { is } from "./entity";
 import type { BuildFilterExpression } from "./filters/index";
-import type { Config, DurcnoSetup } from "./index";
+import type { Config } from "./index";
 import { AggregateQuery } from "./query-builders/aggregates";
 import { CountQuery } from "./query-builders/count";
 import { DeleteQuery } from "./query-builders/delete";
@@ -10,6 +10,7 @@ import { ExistsQuery } from "./query-builders/exists";
 import { FirstQuery } from "./query-builders/first";
 import { InsertBuilder } from "./query-builders/insert";
 import { InsertReturningQuery } from "./query-builders/insert-returning";
+import { Query } from "./query-builders/query";
 import { RawQuery } from "./query-builders/raw";
 import { RelationQueryBuilder } from "./query-builders/rq";
 import { SelectBuilder } from "./query-builders/select";
@@ -42,12 +43,9 @@ class Base<
   TPrepare extends boolean,
 > {
   #allRelations: TAllRelations;
-  #config: Config;
-  #connector: Connector;
   #executor: QueryExecutor | null;
 
   _ = {
-    getConnector: () => this.#connector,
     getExecutor: this.#getExecutor.bind(this),
   };
 
@@ -62,18 +60,16 @@ class Base<
     tables: TTables,
     allRelations: TAllRelations,
     executor: QueryExecutor | null,
-    connector: Connector,
+    config: Config,
     prepare: TPrepare,
   ) {
     this.#allRelations = allRelations;
-    this.#config = connector.config;
     this.#executor = executor;
-    this.#connector = connector;
 
     this.$ = {
       tables,
       allRelations,
-      config: connector.config,
+      config,
       pre: prepare,
     };
   }
@@ -93,12 +89,7 @@ class Base<
    * @returns An InsertBuilder instance to chain `.values()` and execute the insert
    */
   insert<TTable extends TTables[keyof TTables]>(table: TTable) {
-    return new InsertBuilder(
-      table,
-      this.#config,
-      this.#getExecutor(),
-      this.$.pre,
-    );
+    return new InsertBuilder(table, this.#getExecutor(), this.$.pre);
   }
 
   /**
@@ -115,7 +106,6 @@ class Base<
       table,
       null,
       undefined,
-      this.#config,
       this.#getExecutor(),
       this.$.pre,
     );
@@ -127,12 +117,7 @@ class Base<
    * @returns An UpdateBuilder instance to chain `.set()` and `.where()` clauses
    */
   update<TTable extends TTables[keyof TTables]>(table: TTable) {
-    return new UpdateBuilder(
-      table,
-      this.#config,
-      this.#getExecutor(),
-      this.$.pre,
-    );
+    return new UpdateBuilder(table, this.#getExecutor(), this.$.pre);
   }
 
   /**
@@ -145,7 +130,6 @@ class Base<
       table,
       undefined,
       undefined,
-      this.#config,
       this.#getExecutor(),
       this.$.pre,
     );
@@ -170,7 +154,7 @@ class Base<
     table: TTable,
     where?: BuildFilterExpression<TColsToLeftRight<TTable["_"]["columns"]>>,
   ) {
-    return new CountQuery(table, where, this.#config, this.#getExecutor());
+    return new CountQuery(table, where, this.#getExecutor());
   }
 
   /**
@@ -192,7 +176,7 @@ class Base<
     table: TTable,
     where?: BuildFilterExpression<TColsToLeftRight<TTable["_"]["columns"]>>,
   ) {
-    return new ExistsQuery(table, where, this.#config, this.#getExecutor());
+    return new ExistsQuery(table, where, this.#getExecutor());
   }
 
   /**
@@ -214,7 +198,7 @@ class Base<
     table: TTable,
     where?: BuildFilterExpression<TColsToLeftRight<TTable["_"]["columns"]>>,
   ) {
-    return new FirstQuery(table, where, this.#config, this.#getExecutor());
+    return new FirstQuery(table, where, this.#getExecutor());
   }
 
   /**
@@ -250,14 +234,7 @@ class Base<
     column: TColumn,
     where?: BuildFilterExpression<TColsToLeftRight<TTable["_"]["columns"]>>,
   ) {
-    return new AggregateQuery(
-      table,
-      column,
-      "SUM",
-      where,
-      this.#config,
-      this.#getExecutor(),
-    );
+    return new AggregateQuery(table, column, "SUM", where, this.#getExecutor());
   }
 
   /**
@@ -293,14 +270,7 @@ class Base<
     column: TColumn,
     where?: BuildFilterExpression<TColsToLeftRight<TTable["_"]["columns"]>>,
   ) {
-    return new AggregateQuery(
-      table,
-      column,
-      "AVG",
-      where,
-      this.#config,
-      this.#getExecutor(),
-    );
+    return new AggregateQuery(table, column, "AVG", where, this.#getExecutor());
   }
 
   /**
@@ -336,14 +306,7 @@ class Base<
     column: TColumn,
     where?: BuildFilterExpression<TColsToLeftRight<TTable["_"]["columns"]>>,
   ) {
-    return new AggregateQuery(
-      table,
-      column,
-      "MIN",
-      where,
-      this.#config,
-      this.#getExecutor(),
-    );
+    return new AggregateQuery(table, column, "MIN", where, this.#getExecutor());
   }
 
   /**
@@ -379,14 +342,7 @@ class Base<
     column: TColumn,
     where?: BuildFilterExpression<TColsToLeftRight<TTable["_"]["columns"]>>,
   ) {
-    return new AggregateQuery(
-      table,
-      column,
-      "MAX",
-      where,
-      this.#config,
-      this.#getExecutor(),
-    );
+    return new AggregateQuery(table, column, "MAX", where, this.#getExecutor());
   }
 
   /**
@@ -422,13 +378,7 @@ class Base<
     column: TColumn,
     where?: BuildFilterExpression<TColsToLeftRight<TTable["_"]["columns"]>>,
   ) {
-    return new DistinctQuery(
-      table,
-      column,
-      where,
-      this.#config,
-      this.#getExecutor(),
-    );
+    return new DistinctQuery(table, column, where, this.#getExecutor());
   }
 
   /**
@@ -464,7 +414,6 @@ class Base<
     return new InsertReturningQuery(
       table,
       values as Record<string, unknown>,
-      this.#config,
       this.#getExecutor(),
     );
   }
@@ -495,7 +444,6 @@ class Base<
       table,
       this.#allRelations[table._.fullName],
       this.#allRelations,
-      this.#config,
       this.#getExecutor(),
     );
   }
@@ -530,18 +478,14 @@ class DB<
     tables: TTables,
     allRelations: TAllRelations,
     pool: $Pool,
-    connector: Connector,
+    config: Config,
   ) {
-    super(tables, allRelations, pool, connector, false);
+    super(tables, allRelations, pool, config, false);
     this.#pool = pool;
   }
 
   prepare() {
-    return new Preparer(
-      this.$.tables,
-      this.$.allRelations,
-      this._.getConnector(),
-    );
+    return new Preparer(this.$.tables, this.$.allRelations, this.$.config);
   }
 
   /**
@@ -557,21 +501,21 @@ class DB<
     const client = await this.#pool.acquireClient();
 
     try {
-      await client.query("BEGIN;");
+      await client.execQuery(new Query("BEGIN;", () => null));
       const tx = new Transaction(
         this.$.tables,
         this.$.allRelations,
         client,
-        this._.getConnector(),
+        this.$.config,
         false,
       );
       const result = await callback(tx);
-      await client.query("COMMIT;");
+      await client.execQuery(new Query("COMMIT;", () => null));
       await client.close();
 
       return result;
     } catch (error) {
-      await client.query("ROLLBACK;");
+      await client.execQuery(new Query("ROLLBACK;", () => null));
       await client.close();
       throw error;
     }
@@ -600,24 +544,19 @@ class Preparer<
   >,
   TAllRelations extends Record<StdTableFullName, AnyRelations>,
 > extends Base<TTNames, TTables, TAllRelations, true> {
-  constructor(
-    tables: TTables,
-    allRelations: TAllRelations,
-    connector: Connector,
-  ) {
-    super(tables, allRelations, null, connector, true);
+  constructor(tables: TTables, allRelations: TAllRelations, config: Config) {
+    super(tables, allRelations, null, config, true);
   }
 }
 
 export function database<TEntities extends Record<string, unknown>>(
   entities: TEntities,
-  setup: DurcnoSetup,
+  config: Config,
 ) {
   const tables = Object.fromEntries(
     Object.entries(entities)
       .map(([name, entity]) => {
         if (is(entity, Table)) {
-          entity._.config = setup.config;
           return [name, entity] as [string, StdTableWithColumns];
         }
         return undefined;
@@ -643,8 +582,8 @@ export function database<TEntities extends Record<string, unknown>>(
   return new DB(
     tables,
     allRelations,
-    setup.connector.getPool(),
-    setup.connector,
+    config.connector.getPool(),
+    config,
   ) as unknown as DB<
     string,
     {

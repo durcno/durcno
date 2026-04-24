@@ -8,7 +8,6 @@ import type {
   UniqueConstraint,
   UniqueConstraintFn,
 } from "./constraints/unique";
-import type { Config } from "./index";
 import type { Index } from "./indexes";
 import { entityType } from "./symbols";
 import type { CamelToSnake } from "./types";
@@ -83,7 +82,6 @@ type TableConfig<
     >;
   };
   readonly extra: TableExtra<TSchema, TName, TColumns>;
-  config?: Config;
 };
 
 export type TableColumn<

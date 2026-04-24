@@ -1,5 +1,4 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { Config } from "../index";
 import type { AnyColumn, TableWithColumns } from "../table";
 import { snakeToCamel } from "../utils";
 import { InsertQuery } from "./insert";
@@ -14,19 +13,16 @@ export class InsertReturningQuery<
 > extends QueryPromise<TReturn> {
   readonly #$table: TTableWC;
   readonly #$values: Record<string, unknown>;
-  readonly #$config: Config;
   readonly #$executor: QueryExecutor;
 
   constructor(
     table: TTableWC,
     values: Record<string, unknown>,
-    config: Config,
     executor: QueryExecutor,
   ) {
     super();
     this.#$table = table;
     this.#$values = values;
-    this.#$config = config;
     this.#$executor = executor;
   }
 
@@ -40,7 +36,6 @@ export class InsertReturningQuery<
       this.#$table,
       this.#$values,
       returningAll as never,
-      this.#$config,
       this.#$executor,
       false,
     );

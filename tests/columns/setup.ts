@@ -37,17 +37,19 @@ export async function initTestContext(): Promise<TestContext> {
 
   const db = database(
     schema,
-    defineConfig(pg(), {
+    defineConfig({
       schema: "./schema.ts",
-      pool: { max: 2 },
-      dbCredentials: {
-        host: env.TEST_DB_HOST,
-        port: parseInt(env.TEST_DB_PORT, 10),
-        user: env.TEST_DB_USER,
-        password: env.TEST_DB_PASSWORD,
-        database: env.TEST_DB_NAME,
-      },
-      logger: createDurcnoLogger(),
+      connector: pg({
+        pool: { max: 2 },
+        dbCredentials: {
+          host: env.TEST_DB_HOST,
+          port: parseInt(env.TEST_DB_PORT, 10),
+          user: env.TEST_DB_USER,
+          password: env.TEST_DB_PASSWORD,
+          database: env.TEST_DB_NAME,
+        },
+        logger: createDurcnoLogger(),
+      }),
     }),
   );
 

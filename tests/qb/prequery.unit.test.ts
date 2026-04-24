@@ -1,8 +1,7 @@
-import { Arg, prequery } from "durcno";
+import { Arg, prequery, Query } from "durcno";
 import { describe, expect, it } from "vitest";
 import type { QueryExecutor } from "../../src/connectors/common";
 import type { AnyDBorTX } from "../../src/db";
-import { Query } from "../../src/query-builders/query";
 
 describe("prequery (unit)", () => {
   it("assigns index and key to args", () => {
@@ -34,17 +33,19 @@ describe("prequery (unit)", () => {
       Object.assign(Promise.resolve([]), { toQuery: () => q }),
     );
 
-    const executor: QueryExecutor = {
-      query: async (_sql: string, _args?: (string | number | null)[]) => ({
-        rows: [{ value: _args ? _args[0] : null }],
-      }),
-      execQuery(q) {
-        return this.query(q.sql, q.arguments);
-      },
-      getRows: (res: any) => res.rows,
-      connect: async () => {},
-      close: async () => {},
-    };
+    const executor = (() => {
+      return {
+        query: async (_sql: string, _args?: (string | number | null)[]) => ({
+          rows: [{ value: _args ? _args[0] : null }],
+        }),
+        execQuery(q: any) {
+          return this.query(q.sql, q.arguments);
+        },
+        getRows: (res: any) => res.rows,
+        connect: async () => {},
+        close: async () => {},
+      } as QueryExecutor;
+    })();
 
     const dbStub = {
       $: { config: {} },
@@ -77,17 +78,19 @@ describe("prequery (unit)", () => {
       Object.assign(Promise.resolve([]), { toQuery: () => q }),
     );
 
-    const executor: QueryExecutor = {
-      query: async (_sql: string, _args?: (string | number | null)[]) => ({
-        rows: [],
-      }),
-      execQuery(q) {
-        return this.query(q.sql, q.arguments);
-      },
-      getRows: (res: any) => res.rows,
-      connect: async () => {},
-      close: async () => {},
-    };
+    const executor = (() => {
+      return {
+        query: async (_sql: string, _args?: (string | number | null)[]) => ({
+          rows: [] as never[],
+        }),
+        execQuery(q: any) {
+          return this.query(q.sql, q.arguments);
+        },
+        getRows: (res: any) => res.rows,
+        connect: async () => {},
+        close: async () => {},
+      } as QueryExecutor;
+    })();
 
     const dbStub = {
       $: { config: {} },

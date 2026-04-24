@@ -6,7 +6,7 @@ import { createEmptySnapshot, type DDLStatement } from "durcno/migration";
 import type { Options } from "..";
 import { ensureMigrationsDirExists, getMigrationFolderNames } from "../checks";
 import { DEFAULT_MIGRATIONS_DIR } from "../consts";
-import { getSetup, resolveConfigPath } from "../helpers";
+import { loadConfig, resolveConfigPath } from "../helpers";
 import { generateMigration } from "./generate";
 
 const { bgGreen, bgRed, yellow, red, green, cyan, gray } = chalk;
@@ -21,7 +21,7 @@ export async function squash(
   options: SquashOptions,
 ): Promise<void> {
   const configPath = resolveConfigPath(options.config);
-  const { config } = await getSetup(configPath);
+  const config = await loadConfig(configPath);
   const migrationsDir = resolve(
     dirname(configPath),
     config.out || DEFAULT_MIGRATIONS_DIR,

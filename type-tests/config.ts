@@ -1,16 +1,16 @@
-import { type Config, type DurcnoSetup, defineConfig } from "durcno";
+import { type Config, type ConnectorOptions, defineConfig } from "durcno";
 import { PgConnector, pg } from "durcno/connectors/pg";
-import { type Equal, Expect, testConfig } from "./utils";
+import { type Equal, Expect, testConnectorOptions } from "./utils";
 
-// Positive: valid minimal config (url form)
-export const goodUrlConfig: Config = {
-  schema: "db/schema.ts",
+// --- ConnectorOptions type tests ---
+
+// Positive: url-form credentials
+export const goodUrlOptions: ConnectorOptions = {
   dbCredentials: { url: "postgres://user:pass@localhost/db" },
 };
 
-// Positive: valid host/user/password form
-export const goodFullConfig: Config = {
-  schema: "db/schema.ts",
+// Positive: host/user/password form credentials
+export const goodFullOptions: ConnectorOptions = {
   dbCredentials: {
     host: "localhost",
     user: "u",
@@ -19,50 +19,78 @@ export const goodFullConfig: Config = {
   },
 };
 
-// Negative helpers - use a function so we check call-site argument compatibility
-declare function acceptConfig(c: Config): void;
+// Negative helpers
+declare function acceptConnectorOptions(o: ConnectorOptions): void;
 
-// Negative: missing required `schema`
-// @ts-expect-error - `schema` is required
-acceptConfig({ dbCredentials: { url: "postgres://x" } });
+// Negative: missing required `dbCredentials`
+// @ts-expect-error - `dbCredentials` is required
+acceptConnectorOptions({});
 
 // Negative: incomplete dbCredentials (host provided but missing required fields)
 // @ts-expect-error - `user` and `database` required when using host form
-acceptConfig({ schema: "db/schema.ts", dbCredentials: { host: "localhost" } });
+acceptConnectorOptions({ dbCredentials: { host: "localhost" } });
 
-// --- DurcnoSetup type tests ---
+// --- Config type tests ---
 
-// Positive: defineConfig with factory function returns DurcnoSetup with correct connector type
-const _setup = defineConfig(pg(), testConfig);
+declare function acceptConfig(c: Config): void;
+
+// Positive: minimal valid config with connector
+export const goodConfig: Config<PgConnector> = {
+  schema: "db/schema.ts",
+  connector: pg(testConnectorOptions),
+};
+
+// Negative: missing required `schema`
+// @ts-expect-error - `schema` is required
+acceptConfig({ connector: pg(testConnectorOptions) });
+
+// Negative: missing required `connector`
+// @ts-expect-error - `connector` is required
+acceptConfig({ schema: "db/schema.ts" });
+
+// Negative: `dbCredentials` is no longer a valid Config field
+acceptConfig({
+  schema: "db/schema.ts",
+  // @ts-expect-error - dbCredentials does not belong in Config
+  dbCredentials: { url: "postgres://x" },
+  connector: pg(testConnectorOptions),
+});
+
+// --- Config type tests (defineConfig return type) ---
+
+// Positive: defineConfig with factory function returns Config with correct connector type
+const _setup = defineConfig({
+  schema: "db/schema.ts",
+  connector: pg(testConnectorOptions),
+});
 type _SetupType = typeof _setup;
-Expect<Equal<_SetupType, DurcnoSetup<PgConnector>>>();
+Expect<Equal<_SetupType, Config<PgConnector>>>();
 
 // Positive: defineConfig with `new PgConnector()` also works
-const _setupNew = defineConfig(new PgConnector(), testConfig);
+const _setupNew = defineConfig({
+  schema: "db/schema.ts",
+  connector: new PgConnector(testConnectorOptions),
+});
 type _SetupNewType = typeof _setupNew;
-Expect<Equal<_SetupNewType, DurcnoSetup<PgConnector>>>();
+Expect<Equal<_SetupNewType, Config<PgConnector>>>();
 
 // Positive: setup has connector property of the correct type
 type _ConnectorType = _SetupType["connector"];
 Expect<Equal<_ConnectorType, PgConnector>>();
 
-// Positive: setup has config property of the correct type
-type _ConfigType = _SetupType["config"];
-Expect<Equal<_ConfigType, Config>>();
-
-// Positive: DurcnoSetup with default generic is assignable
-const _genericSetup: DurcnoSetup = _setup;
+// Positive: Config with default generic is assignable
+const _genericSetup: Config = _setup;
 void _genericSetup;
 
-// Negative: cannot call defineConfig without a valid connector instance
-// @ts-expect-error - first arg must be a Connector instance
-defineConfig("not-a-connector", testConfig);
+// Negative: cannot call defineConfig without a connector
+// @ts-expect-error - `connector` is required in Config
+defineConfig({ schema: "db/schema.ts" });
 
-// Negative: cannot call defineConfig without config
-// @ts-expect-error - config is required
-defineConfig(pg());
+// Negative: connector must be a Connector instance, not a string
+// @ts-expect-error - connector must be a Connector instance
+defineConfig({ schema: "db/schema.ts", connector: "not-a-connector" });
 
-// Negative: DurcnoSetup is not assignable to a plain Connector
-declare function acceptConnector(c: PgConnector): void;
-// @ts-expect-error - DurcnoSetup is not a Connector
-acceptConnector(_setup);
+// Negative: Config is not assignable to a plain Connector
+declare function acceptPgConnector(c: PgConnector): void;
+// @ts-expect-error - Config is not a Connector
+acceptPgConnector(_setup);

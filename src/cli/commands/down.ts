@@ -1,6 +1,6 @@
 import path, { basename, dirname, join, resolve } from "node:path";
 import chalk from "chalk";
-import { type DurcnoSetup, database, eq, Migrations } from "durcno";
+import { type Config, database, eq, Migrations } from "durcno";
 import type { DDLStatement, MigrationOptions } from "durcno/migration";
 
 import type { $Client } from "../../connectors/common";
@@ -11,14 +11,14 @@ import {
   migrationsTableExists,
 } from "../checks";
 import { DEFAULT_MIGRATIONS_DIR } from "../consts";
-import { getSetup, resolveConfigPath } from "../helpers";
+import { loadConfig, resolveConfigPath } from "../helpers";
 
 const { bgGreen, dim, cyan, yellow, red } = chalk;
 
 export async function down(m: string, options: Options): Promise<void> {
   const configPath = resolveConfigPath(options.config);
-  const { connector, config } = await getSetup(configPath);
-  config.pool = { ...config.pool, max: 1 };
+  const config = await loadConfig(configPath);
+  const { connector } = config;
   const migrationsDir = resolve(
     dirname(configPath),
     config.out || DEFAULT_MIGRATIONS_DIR,
@@ -31,7 +31,7 @@ export async function down(m: string, options: Options): Promise<void> {
   await client.connect();
 
   if (await migrationsTableExists(client)) {
-    const db = database({ Migrations }, { connector, config });
+    const db = database({ Migrations }, config);
     const migrations = await db.from(Migrations).select();
     const migrationDirsReversed = migrationDirNames.sort().reverse();
     for (let i = 0; i < migrationDirsReversed.length; i++) {
@@ -45,7 +45,7 @@ export async function down(m: string, options: Options): Promise<void> {
           migrationDirName,
           isFirstMigration,
           migrationsDir,
-          { connector, config },
+          config,
           client,
         );
         if (migration.name === m) {
@@ -65,7 +65,7 @@ export async function runDownMigration(
   migrationDirName: string,
   isFirstMigration: boolean,
   migrationsDirPath: string,
-  setup: DurcnoSetup,
+  config: Config,
   client: $Client,
 ) {
   const migrationName = basename(migrationDirName);
@@ -107,7 +107,9 @@ export async function runDownMigration(
     }
 
     if (!isFirstMigration) {
-      const db = database({ Migrations }, setup);
+      config.connector.pool = { ...config.connector.pool, max: 1 };
+      config.connector.logger = undefined;
+      const db = database({ Migrations }, config);
       await db.delete(Migrations).where(eq(Migrations.name, migrationName));
       await db.close();
     }

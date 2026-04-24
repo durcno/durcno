@@ -1,6 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
 import { is } from "../entity";
-import type { Config } from "../index";
 import type { AnyColumn, TableWithColumns } from "../table";
 import { snakeToCamel } from "../utils";
 
@@ -13,17 +12,10 @@ export class InsertBuilder<
   TPrepare extends boolean,
 > {
   readonly #table: TTableWC;
-  readonly #config: Config;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
-  constructor(
-    table: TTableWC,
-    config: Config,
-    executor: QueryExecutor,
-    prepare: TPrepare,
-  ) {
+  constructor(table: TTableWC, executor: QueryExecutor, prepare: TPrepare) {
     this.#table = table;
-    this.#config = config;
     this.#executor = executor;
     this.#prepare = prepare;
   }
@@ -61,7 +53,6 @@ export class InsertBuilder<
       this.#table,
       values,
       undefined,
-      this.#config,
       this.#executor,
       this.#prepare,
     );
@@ -98,7 +89,6 @@ export class InsertQuery<
   readonly #table: TTableWC;
   readonly #$values: Record<string, unknown> | Record<string, unknown>[];
   readonly #$returning: TReturning;
-  readonly #config: Config;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
 
@@ -106,7 +96,6 @@ export class InsertQuery<
     table: TTableWC,
     values: Record<string, unknown> | Record<string, unknown>[],
     returnings: TReturning,
-    config: Config,
     executor: QueryExecutor,
     prepare: TPrepare,
   ) {
@@ -114,7 +103,6 @@ export class InsertQuery<
     this.#table = table;
     this.#$values = values;
     this.#$returning = returnings;
-    this.#config = config;
     this.#executor = executor;
     this.#prepare = prepare;
   }
@@ -132,7 +120,6 @@ export class InsertQuery<
       this.#table,
       this.#$values,
       returnings,
-      this.#config,
       this.#executor,
       this.#prepare,
     );

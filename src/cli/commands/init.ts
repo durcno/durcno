@@ -97,12 +97,14 @@ function generateConfigFile(config: InitConfig): string {
   return `${envLoader}import { defineConfig } from "durcno";
 import { ${funcName} } from "durcno/connectors/${connector}";
 
-export default defineConfig(${funcName}(), {
+export default defineConfig({
   schema: "${schemaPath}",
   out: "${migrationsDir}",
-  dbCredentials: {
-    url: ${urlValue},
-  },
+  connector: ${funcName}({
+    dbCredentials: {
+      url: ${urlValue},
+    },
+  }),
 });
 `;
 }
@@ -126,9 +128,9 @@ function generateIndexFile(schemaPath: string): string {
   const schemaImport = schemaPath.replace(/^db\//, "./");
   return `import { database } from "durcno";
 import * as schema from "${schemaImport}";
-import setup from "../durcno.config.ts";
+import config from "../durcno.config.ts";
 
-export const db = database(schema, setup);
+export const db = database(schema, config);
 `;
 }
 
