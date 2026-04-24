@@ -29,6 +29,8 @@ export async function status(options: Options): Promise<void> {
     console.log(chalk.yellow("No migrations found."));
     process.exit(0);
   }
+  connector.pool = { ...connector.pool, max: 1 };
+  connector.logger = undefined;
   const db = database({ Migrations }, config);
   const migrationsQuery = db.from(Migrations).select();
   let migrations: Awaited<typeof migrationsQuery>;
