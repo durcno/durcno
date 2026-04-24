@@ -22,7 +22,9 @@ describe("Transactions", () => {
   const migrationsDirName = generateMigrationsDirPath("transactions");
 
   beforeAll(async () => {
-    containerInfo = await startPostgresContainer();
+    containerInfo = await startPostgresContainer({
+      image: "postgres:18-alpine",
+    });
     container = containerInfo.container;
 
     const configPath = path.resolve(__dirname, "durcno.config.ts");

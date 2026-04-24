@@ -3,7 +3,6 @@ import {
   boolean,
   date,
   enumtype,
-  geography,
   integer,
   Migrations,
   notNull,
@@ -58,9 +57,6 @@ export const users = table("public", "users", {
   // Enum types
   status: StatusEnum.enumed({ notNull }),
   role: RoleEnum.enumed({ notNull }),
-
-  // PostGIS geography type
-  location: geography.point({}),
 });
 
 // Table with foreign key relationships

@@ -37,7 +37,7 @@ describe("durcno down command", () => {
       connectionString = process.env.PG_CONNECTION_STRING;
     } else {
       containerInfo = await startPostgresContainer({
-        image: "postgres:16",
+        image: "postgres:14-alpine",
         containerNamePrefix: "durcno-down-tests",
       });
       pgContainer = containerInfo.container;

@@ -22,7 +22,9 @@ describe("SELECT queries", () => {
   const migrationsDirName = generateMigrationsDirPath("select");
 
   beforeAll(async () => {
-    containerInfo = await startPostgresContainer();
+    containerInfo = await startPostgresContainer({
+      image: "postgres:14-alpine",
+    });
     container = containerInfo.container;
 
     const configPath = path.resolve(__dirname, "durcno.config.ts");

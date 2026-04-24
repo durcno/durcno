@@ -107,7 +107,7 @@ describe("durcno squash command", () => {
       connectionString = process.env.PG_CONNECTION_STRING;
     } else {
       containerInfo = await startPostgresContainer({
-        image: "postgres:16",
+        image: "postgres:16-alpine",
         containerNamePrefix: "durcno-squash-tests",
       });
       pgContainer = containerInfo.container;

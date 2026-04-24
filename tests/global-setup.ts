@@ -61,6 +61,7 @@ export async function setup() {
   console.log("Starting global PostgreSQL Database...");
 
   containerInfo = await startPostgresContainer({
+    image: "postgis/postgis:18-3.6-alpine",
     maxRetries: 30,
     containerNamePrefix: "durcno-global-test",
   });

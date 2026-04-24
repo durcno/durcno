@@ -72,6 +72,10 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      - name: Pull images
+        run: pnpm run pull
+        working-directory: tests
+
       - name: Run tests
         run: pnpm test
         working-directory: tests

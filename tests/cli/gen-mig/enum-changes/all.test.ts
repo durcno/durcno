@@ -1,56 +1,22 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import Docker from "dockerode";
 import { MIGRATION_NAME_REGEX } from "durcno/migration";
-import getPort from "get-port";
 import pg from "pg";
-import { v4 as uuid } from "uuid";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  startPostgresContainer,
+  stopPostgresContainer,
+  type TestContainerInfo,
+} from "../../../docker-utils";
 import { rmSync } from "../../../helpers";
 
 describe("durcno generate - enum changes", () => {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
   const migrationsDir = path.resolve(__dirname, "migrations.test");
 
-  let pgContainer: Docker.Container;
-  let docker: Docker;
+  let containerInfo: TestContainerInfo;
   let client: pg.Client;
-  let connectionString: string;
-  let port: number;
-
-  async function createDockerDB(): Promise<string> {
-    docker = new Docker();
-    port = await getPort({ port: 5432 });
-    const image = "postgis/postgis:16-3.4";
-
-    const pullStream = await docker.pull(image);
-    await new Promise((resolve, reject) =>
-      docker.modem.followProgress(pullStream, (err: Error | null) =>
-        err ? reject(err) : resolve(err),
-      ),
-    );
-
-    pgContainer = await docker.createContainer({
-      Image: image,
-      Env: [
-        "POSTGRES_PASSWORD=testpass",
-        "POSTGRES_USER=testuser",
-        "POSTGRES_DB=testdb",
-      ],
-      name: `durcno-enum-changes-test-${uuid()}`,
-      HostConfig: {
-        AutoRemove: true,
-        PortBindings: {
-          "5432/tcp": [{ HostPort: `${port}` }],
-        },
-      },
-    });
-
-    await pgContainer.start();
-
-    return `postgres://testuser:testpass@localhost:${port}/testdb`;
-  }
 
   async function cleanDatabase() {
     // Drop all objects to ensure a clean slate for each test
@@ -80,7 +46,7 @@ describe("durcno generate - enum changes", () => {
       cwd: __dirname,
       env: {
         ...process.env,
-        DATABASE_PORT: String(port),
+        DATABASE_PORT: String(containerInfo.port),
       },
     });
     return {
@@ -101,38 +67,18 @@ describe("durcno generate - enum changes", () => {
     rmSync(migrationsDir);
     delete process.env.ENUM_SCENARIO;
 
-    connectionString =
-      process.env.PG_CONNECTION_STRING ?? (await createDockerDB());
-
-    const sleep = 1000;
-    let timeLeft = 20000;
-    let connected = false;
-    let lastError: unknown | undefined;
-
-    do {
-      try {
-        client = new pg.Client(connectionString);
-        await client.connect();
-        connected = true;
-        break;
-      } catch (e) {
-        lastError = e;
-        await new Promise((resolve) => setTimeout(resolve, sleep));
-        timeLeft -= sleep;
-      }
-    } while (timeLeft > 0);
-
-    if (!connected) {
-      console.error("Cannot connect to Postgres");
-      await client?.end().catch(console.error);
-      await pgContainer?.stop().catch(console.error);
-      throw lastError;
-    }
+    containerInfo = await startPostgresContainer({
+      user: "testuser",
+      password: "testpass",
+      dbName: "testdb",
+    });
+    client = new pg.Client(containerInfo.connectionString);
+    await client.connect();
   }, 120000);
 
   afterAll(async () => {
     await client?.end().catch(console.error);
-    await pgContainer?.stop().catch(console.error);
+    await stopPostgresContainer(containerInfo.container);
   });
 
   describe("appending enum values", () => {

@@ -36,7 +36,9 @@ describe("WHERE clause operators", () => {
   const migrationsDirName = generateMigrationsDirPath("where");
 
   beforeAll(async () => {
-    containerInfo = await startPostgresContainer();
+    containerInfo = await startPostgresContainer({
+      image: "postgres:16-alpine",
+    });
     container = containerInfo.container;
 
     const configPath = path.resolve(__dirname, "durcno.config.ts");

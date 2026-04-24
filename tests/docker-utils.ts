@@ -2,6 +2,7 @@ import Docker from "dockerode";
 import getPort from "get-port";
 import { Client } from "pg";
 import { v4 as uuid } from "uuid";
+import { type Image, images } from "./images";
 
 export interface TestContainerInfo {
   container: Docker.Container;
@@ -30,10 +31,12 @@ export interface PostgresContainerOptions {
  * By default uses PostGIS image for geographic column support.
  */
 export async function startPostgresContainer(
-  options: PostgresContainerOptions = {},
+  options: Omit<PostgresContainerOptions, "image"> & {
+    image?: Image;
+  } = {},
 ): Promise<TestContainerInfo> {
   const {
-    image = "postgis/postgis:17-3.5",
+    image = images["postgres:18-alpine"],
     user = "testuser",
     password = "testpassword",
     dbName = `testdb_${uuid().replace(/-/g, "")}`,

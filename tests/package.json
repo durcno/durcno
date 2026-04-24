@@ -2,11 +2,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "pull": "node ./scripts/pull.mts"
   },
   "dependencies": {
     "@types/dockerode": "^4.0.1",
-    "dockerode": "^4.0.9",
+    "dockerode": "^5.0.0",
     "dotenv": "^17.3.1",
     "durcno": "link:..",
     "get-port": "^7.1.0",
