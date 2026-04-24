@@ -78,15 +78,15 @@ Titles follow the [Conventional Commits](https://www.conventionalcommits.org/) s
 
 ### 3. Create the changenote
 
-Run the CLI to generate the changenote markdown file:
+Run the CLI to generate a single changenote markdown file:
 
 ```sh
 pnpm exec cngpac change <bump> "<title>"
+# Replace <bump> with `patch`| `minor` | `major`
+# And `<title>` with the change title.
 ```
 
-Replace `<bump>` with `patch`, `minor`, or `major`, and `<title>` with the change description.
-
-This creates a file at `.changenotes/<random-name>.md` with this structure:
+This will create a file at `.changenotes/<random-name>.md` with this structure:
 
 ```markdown
 ---
