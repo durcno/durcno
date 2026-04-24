@@ -154,16 +154,15 @@ export abstract class Connector {
 }
 
 /**
- * Abstract base class for single-connection database clients.
+ * Abstract base class shared by {@link $Client} and {@link $Pool}.
  *
- * Implementations wrap specific PostgreSQL client libraries to provide
- * a unified interface for query execution, connection management, and
- * result parsing.
+ * Holds the common `options`, `logger`, `query`, and `execQuery` members so
+ * they only need to be defined once.
  *
  * @abstract
  */
-export abstract class $Client {
-  /** The connector options used to create this client. */
+abstract class $QueryExecutor {
+  /** The connector options used to create this executor. */
   options: ConnectorOptions;
   /** Optional logger instance for query logging. */
   logger?: DurcnoLogger;
@@ -187,20 +186,35 @@ export abstract class $Client {
 
   /**
    * Executes a {@link Query} object by forwarding its sql and arguments to {@link query}.
+   * When a logger is configured, logs the SQL, arguments, and query duration after execution.
    *
    * @param q - The {@link Query} object to execute.
    * @returns A promise that resolves with the raw query result.
    */
-  execQuery(q: Query<any>): Promise<unknown> {
+  async execQuery(q: Query<any>): Promise<unknown> {
+    const start = performance.now();
+    const result = await this.query(q.sql, q.arguments);
     if (this.logger) {
       this.logger.info("Query", {
         sql: q.sql,
         arguments: q.arguments,
+        durationMs: performance.now() - start,
       });
     }
-    return this.query(q.sql, q.arguments);
+    return result;
   }
+}
 
+/**
+ * Abstract base class for single-connection database clients.
+ *
+ * Implementations wrap specific PostgreSQL client libraries to provide
+ * a unified interface for query execution, connection management, and
+ * result parsing.
+ *
+ * @abstract
+ */
+export abstract class $Client extends $QueryExecutor {
   /**
    * Establishes a connection to the database.
    *
@@ -236,48 +250,7 @@ export abstract class $Client {
  *
  * @abstract
  */
-export abstract class $Pool {
-  /** The connector options used to create this pool. */
-  options: ConnectorOptions;
-  /** Optional logger instance for query logging. */
-  logger?: DurcnoLogger;
-
-  constructor(options: ConnectorOptions) {
-    this.options = options;
-    this.logger = options.logger;
-  }
-
-  /**
-   * Executes a SQL query with optional parameterized arguments.
-   *
-   * The pool automatically acquires a connection, executes the query,
-   * and returns the connection to the pool.
-   *
-   * @param query - The SQL query string to execute.
-   * @param args - Optional array of parameter values for parameterized queries.
-   * @returns A promise that resolves with the query result.
-   */
-  query!: (
-    query: string,
-    args?: (string | number | null)[],
-  ) => Promise<unknown>;
-
-  /**
-   * Executes a {@link Query} object by forwarding its sql and arguments to {@link query}.
-   *
-   * @param q - The {@link Query} object to execute.
-   * @returns A promise that resolves with the raw query result.
-   */
-  execQuery(q: Query<any>): Promise<unknown> {
-    if (this.logger) {
-      this.logger.info("Query", {
-        sql: q.sql,
-        arguments: q.arguments,
-      });
-    }
-    return this.query(q.sql, q.arguments);
-  }
-
+export abstract class $Pool extends $QueryExecutor {
   /**
    * Initializes the connection pool.
    *

@@ -36,6 +36,7 @@ const _fakeLogger: DurcnoLogger = {
   info: (_msg: string, _meta?: Record<string, unknown>) => {},
 };
 _fakeLogger.info("Query", { sql: "SELECT 1", arguments: [] });
+_fakeLogger.info("Query", { sql: "SELECT 1", arguments: [], durationMs: 12.5 });
 
 // Negative: logger must have an info method
 declare function acceptConnectorOptions(o: ConnectorOptions): void;

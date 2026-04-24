@@ -4,7 +4,7 @@ sidebar_position: 0
 
 # Query Logger
 
-Durcno supports query logging through a configurable `logger` option. When set, every SQL query executed against the database is passed to the logger's `info()` method along with its SQL string and bound arguments.
+Durcno supports query logging through a configurable `logger` option. When set, after every SQL query is executed the logger's `info()` method is called with the SQL string, bound arguments, and the query duration in milliseconds.
 
 ## Interface
 
@@ -62,19 +62,22 @@ Each logged query is printed in a box-drawing style:
   │ WHERE "id" = $1
   ├ Arguments
   │ $1 = 42
+  ├ Duration
+  │ 3.21ms
   └
 ```
 
-If a query has no bound arguments the `Arguments` section is omitted.
+If a query has no bound arguments the `Arguments` section is omitted. The `Duration` section shows how long the query took to execute.
 
 ## Custom Logger
 
 Pass any object with a compatible `info()` method. The metadata object will always contain:
 
-| Key         | Type                                        | Description                   |
-| ----------- | ------------------------------------------- | ----------------------------- |
-| `sql`       | `string`                                    | The SQL string sent to the DB |
-| `arguments` | `(string \| number \| null)[] \| undefined` | The bound parameter values    |
+| Key          | Type                                        | Description                          |
+| ------------ | ------------------------------------------- | ------------------------------------ |
+| `sql`        | `string`                                    | The SQL string sent to the DB        |
+| `arguments`  | `(string \| number \| null)[] \| undefined` | The bound parameter values           |
+| `durationMs` | `number`                                    | Query execution time in milliseconds |
 
 ```typescript
 // durcno.config.ts

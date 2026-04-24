@@ -59,10 +59,10 @@ describe("Logger", () => {
 			await client.execQuery(q);
 
 			expect(mockLogger.info).toHaveBeenCalledOnce();
-			expect(mockLogger.info).toHaveBeenCalledWith("Query", {
+			expect(mockLogger.info).toHaveBeenCalledWith("Query", expect.objectContaining({
 				sql: "SELECT * FROM users WHERE id = $1",
 				arguments: [42],
-			});
+			}));
 		});
 
 		it("does not throw when no logger is configured", async () => {
@@ -88,10 +88,10 @@ describe("Logger", () => {
 			await pool.execQuery(q);
 
 			expect(mockLogger.info).toHaveBeenCalledOnce();
-			expect(mockLogger.info).toHaveBeenCalledWith("Query", {
+			expect(mockLogger.info).toHaveBeenCalledWith("Query", expect.objectContaining({
 				sql: 'INSERT INTO users ("name") VALUES ($1)',
 				arguments: ["John"],
-			});
+			}));
 		});
 
 		it("does not throw when no logger is configured", async () => {
@@ -116,10 +116,10 @@ describe("Logger", () => {
 
 			await pool.execQuery(q);
 
-			expect(mockLogger.info).toHaveBeenCalledWith("Query", {
+			expect(mockLogger.info).toHaveBeenCalledWith("Query", expect.objectContaining({
 				sql: "SELECT * FROM users WHERE id = $1 AND name = $2",
 				arguments: [1, "Alice"],
-			});
+			}));
 		});
 	});
 
@@ -134,10 +134,10 @@ describe("Logger", () => {
 
 			await client.execQuery(q);
 
-			expect(mockLogger.info).toHaveBeenCalledWith("Query", {
+			expect(mockLogger.info).toHaveBeenCalledWith("Query", expect.objectContaining({
 				sql: "UPDATE users SET name = $1 WHERE id = $2",
 				arguments: [null, 5],
-			});
+			}));
 		});
 	});
 });

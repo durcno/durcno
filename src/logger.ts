@@ -18,7 +18,7 @@ export interface DurcnoLogger {
  * and renders them in a box-drawing style.
  */
 const durcnoFormat = printf(
-  ({ level, message, label, timestamp, sql, arguments: args }) => {
+  ({ level, message, label, timestamp, sql, arguments: args, durationMs }) => {
     if (!sql) {
       return `${timestamp} [${label}] ${String(level).toUpperCase()}: ${message}`;
     }
@@ -37,6 +37,10 @@ const durcnoFormat = printf(
         const val = args[i] === null ? "NULL" : JSON.stringify(args[i]);
         lines.push(`  │ $${i + 1} = ${val}`);
       }
+    }
+    if (durationMs !== undefined) {
+      lines.push(`  ├ Duration`);
+      lines.push(`  │ ${Number(durationMs).toFixed(2)}ms`);
     }
     lines.push("  └");
     return lines.join("\n");
