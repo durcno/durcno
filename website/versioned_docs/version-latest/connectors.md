@@ -28,16 +28,18 @@ npm install postgres
 import { defineConfig } from "durcno";
 import { postgres } from "durcno/connectors/postgres";
 
-export default defineConfig(postgres(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    host: "localhost",
-    port: 5432,
-    user: "postgres",
-    password: "password",
-    database: "myapp",
-  },
+  connector: postgres({
+    dbCredentials: {
+      host: "localhost",
+      port: 5432,
+      user: "postgres",
+      password: "password",
+      database: "myapp",
+    },
+  }),
 });
 ```
 
@@ -54,16 +56,18 @@ npm install pg
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    host: "localhost",
-    port: 5432,
-    user: "postgres",
-    password: "password",
-    database: "myapp",
-  },
+  connector: pg({
+    dbCredentials: {
+      host: "localhost",
+      port: 5432,
+      user: "postgres",
+      password: "password",
+      database: "myapp",
+    },
+  }),
 });
 ```
 
@@ -76,16 +80,18 @@ The `bun` connector uses Bun's native [SQL API](https://bun.sh/docs/api/sql) for
 import { defineConfig } from "durcno";
 import { bun } from "durcno/connectors/bun";
 
-export default defineConfig(bun(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    host: "localhost",
-    port: 5432,
-    user: "postgres",
-    password: "password",
-    database: "myapp",
-  },
+  connector: bun({
+    dbCredentials: {
+      host: "localhost",
+      port: 5432,
+      user: "postgres",
+      password: "password",
+      database: "myapp",
+    },
+  }),
 });
 ```
 
@@ -106,12 +112,14 @@ For testing or temporary data, use an in-memory database:
 import { defineConfig } from "durcno";
 import { pglite } from "durcno/connectors/pglite";
 
-export default defineConfig(pglite(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    url: "memory://",
-  },
+  connector: pglite({
+    dbCredentials: {
+      url: "memory://",
+    },
+  }),
 });
 ```
 
@@ -124,12 +132,14 @@ For persistent local storage, specify a file path:
 import { defineConfig } from "durcno";
 import { pglite } from "durcno/connectors/pglite";
 
-export default defineConfig(pglite(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    url: "./data/myapp.db",
-  },
+  connector: pglite({
+    dbCredentials: {
+      url: "./data/myapp.db",
+    },
+  }),
 });
 ```
 
@@ -141,34 +151,36 @@ export default defineConfig(pglite(), {
 - **Edge/Serverless**: Run PostgreSQL in edge environments or serverless functions
 - **Prototyping**: Quickly prototype database schemas without setup overhead
 
-## Configuration Options
+## Connector Options
 
-All connectors accept the same configuration options:
+All connectors accept the same options object (`ConnectorOptions`):
 
 ```typescript
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   // Required: Path to your schema file
   schema: "db/schema.ts",
 
   // Optional: Output directory for migrations (default: "./migrations")
   out: "migrations",
 
-  // Required: Database connection credentials
-  dbCredentials: {
-    host: "localhost",
-    port: 5432, // Optional, defaults to 5432
-    user: "postgres",
-    password: "password",
-    database: "myapp",
-  },
+  connector: pg({
+    // Required: Database connection credentials
+    dbCredentials: {
+      host: "localhost",
+      port: 5432, // Optional, defaults to 5432
+      user: "postgres",
+      password: "password",
+      database: "myapp",
+    },
 
-  // Optional: Connection pool settings
-  pool: {
-    max: 10, // Maximum connections (default: 10)
-  },
+    // Optional: Connection pool settings
+    pool: {
+      max: 10, // Maximum connections (default: 10)
+    },
+  }),
 });
 ```
 
@@ -180,12 +192,14 @@ Instead of individual credentials, you can use a connection URL:
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    url: "postgresql://postgres:password@localhost:5432/myapp",
-  },
+  connector: pg({
+    dbCredentials: {
+      url: "postgresql://postgres:password@localhost:5432/myapp",
+    },
+  }),
 });
 ```
 
@@ -197,17 +211,19 @@ For secure connections, configure SSL:
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    host: "your-db-host.com",
-    port: 5432,
-    user: "postgres",
-    password: "password",
-    database: "myapp",
-    ssl: "require", // or "verify-full" for strict verification
-  },
+  connector: pg({
+    dbCredentials: {
+      host: "your-db-host.com",
+      port: 5432,
+      user: "postgres",
+      password: "password",
+      database: "myapp",
+      ssl: "require", // or "verify-full" for strict verification
+    },
+  }),
 });
 ```
 
@@ -228,21 +244,23 @@ For production, use environment variables for sensitive credentials:
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   out: "migrations",
-  dbCredentials: {
-    host: process.env.DB_HOST || "localhost",
-    port: Number(process.env.DB_PORT) || 5432,
-    user: process.env.DB_USER || "postgres",
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME || "myapp",
-    ssl: process.env.DB_SSL === "true" ? "require" : undefined,
-  },
+  connector: pg({
+    dbCredentials: {
+      host: process.env.DB_HOST || "localhost",
+      port: Number(process.env.DB_PORT) || 5432,
+      user: process.env.DB_USER || "postgres",
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME || "myapp",
+      ssl: process.env.DB_SSL === "true" ? "require" : undefined,
+    },
+  }),
 });
 ```
 
-## Using the Setup
+## Using the Config
 
 After creating your configuration, use it with the `database` function:
 
@@ -250,9 +268,9 @@ After creating your configuration, use it with the `database` function:
 // db/index.ts
 import { database } from "durcno";
 import * as schema from "./schema.ts";
-import setup from "../durcno.config.ts";
+import config from "../durcno.config.ts";
 
-export const db = database(schema, setup);
+export const db = database(schema, config);
 ```
 
 The `db` instance is now ready for type-safe queries:

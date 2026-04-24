@@ -64,12 +64,14 @@ Create a `durcno.config.ts` file in your project root to define your database co
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts", // Path to your schema file
   out: "migrations", // Directory for migration files
-  dbCredentials: {
-    url: "postgresql://postgres:password@localhost:5432/myapp",
-  },
+  connector: pg({
+    dbCredentials: {
+      url: "postgresql://postgres:password@localhost:5432/myapp",
+    },
+  }),
 });
 ```
 
@@ -77,11 +79,13 @@ export default defineConfig(pg(), {
 Use environment variables for sensitive credentials:
 
 ```typescript
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
-  dbCredentials: {
-    url: process.env.DATABASE_URL,
-  },
+  connector: pg({
+    dbCredentials: {
+      url: process.env.DATABASE_URL,
+    },
+  }),
 });
 ```
 
@@ -123,9 +127,9 @@ Create a database client instance:
 // db/index.ts
 import { database } from "durcno";
 import * as schema from "./schema.ts";
-import setup from "../durcno.config.ts";
+import config from "../durcno.config.ts";
 
-export const db = database(schema, setup);
+export const db = database(schema, config);
 ```
 
 </details>

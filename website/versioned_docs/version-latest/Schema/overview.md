@@ -142,7 +142,7 @@ import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 
 // Single file
-export default defineConfig(pg(), {
+export default defineConfig({
   schema: "db/schema.ts",
   // ...
 });
@@ -255,9 +255,9 @@ Query your database with full type safety:
 ```typescript
 import { database } from "durcno";
 import * as schema from "./schema.ts";
-import setup from "../durcno.config.ts";
+import config from "../durcno.config.ts";
 
-const db = database(schema, setup);
+const db = database(schema, config);
 
 const users = await db.from(schema.Users).select();
 // Type: { id: bigint; username: string }[]

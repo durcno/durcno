@@ -14,9 +14,9 @@ After defining your schema and configuration, create a database instance:
 // db/index.ts
 import { database } from "durcno";
 import * as schema from "./schema.ts";
-import setup from "./durcno.config";
+import config from "./durcno.config.ts";
 
-export const db = database(schema, setup);
+export const db = database(schema, config);
 ```
 
 The `db` instance provides methods for all database operations:
