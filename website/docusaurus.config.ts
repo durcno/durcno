@@ -159,6 +159,11 @@ const config: Config = {
           dropdownActiveClassDisabled: true,
         },
         {
+          href: "https://npmjs.com/package/durcno",
+          label: "NPM",
+          position: "right",
+        },
+        {
           href: "https://github.com/durcno/durcno",
           label: "GitHub",
           position: "right",
