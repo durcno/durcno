@@ -166,6 +166,7 @@ src/
 ├── filters/              # Filter builders
 ├── constraints/          # Constraint builders
 ├── connectors/           # Database connectors
+├── migration/            # Migration builders
 └── cli/                  # CLI entry and commands
 
 type-tests/               # Infered type safety checks
@@ -189,8 +190,8 @@ dist/                     # Production compiled output
 
 #### Column Types (`src/columns/`)
 
-- **`common.ts`**: Base column class
-- **`varchar.ts`**, **`text.ts`**, **`integer.ts`**, **`boolean.ts`**, **`timestamp.ts`**, **`date.ts`**, **`enum.ts`**, etc.: Column types
+- **`common.ts`**: Common utilities for column definitions
+- **`varchar.ts`**, **`integer.ts`**, **`boolean.ts`**, **`timestamp.ts`**, **`enum.ts`**, etc.: Column types
 
 #### Query Builders (`src/query-builders/`)
 
@@ -205,16 +206,12 @@ dist/                     # Production compiled output
 - **`index.ts`**: CLI entry point
 - **`commands/`**: Individual CLI commands
 
-#### Testing
-
-- **`type-tests/`**: Compile-time type safety tests
-- **`tests/`**: Runtime integration tests
-
 ## Development Workflow
 
 ### Environment Setup
 
-1. **Install Dependencies**: Run `pnpm i`
+1. **Setup Node.js**: Ensure Node.js 25+ is installed
+2. **Install Dependencies**: Run `pnpm i`
 
 ### Available Scripts
 
@@ -228,8 +225,8 @@ dist/                     # Production compiled output
 ### Development Process
 
 1. **Code Changes**: Make changes to source files
-2. **Type Validation**: Ensure TypeScript compilation passes
-3. **Testing**: Run appropriate integration tests
+2. **Type Validation**: Add if necessary, and ensure TypeScript compilation passes
+3. **Testing**: Add if necessary, and run appropriate integration tests
 4. **Linting**: Verify code quality with Biome
 5. **Documentation**: Update documentation
 
@@ -281,12 +278,6 @@ type R = Awaited<typeof q>;
 Expect<Equal<R, User[]>>();
 
 // ❌ Negative test: Invalid usage (should not compile)
-db.from(Users).select({
-  // @ts-expect-error: invalid column - nonexistent doesn't exist on Users
-  bad: Users.nonexistent,
-});
-
-// ❌ Another negative example: wrong argument type
 db.from(Users)
   .select()
   // @ts-expect-error: eq expects a column, not a string
@@ -295,9 +286,11 @@ db.from(Users)
 
 ### Integration tests (tests/)
 
-Purpose: Verify runtime behavior — Queries, Columns, migrations, and CLI effects.
+Integrations test are done using Vitest and Docker.
 
-When: For any code that executes at runtime (DB queries, CLI, etc.).
+Purpose: Verify runtime behavior.
+
+When: Changes in Queries, Columns, migrations, and CLI.
 
 How:
 
@@ -306,19 +299,6 @@ How:
 - Use `runDurcnoCommand` function for CLI interactions.
 
 Utilities: `tests/helpers.ts`, `tests/docker-utils.ts`.
-
-Examples:
-
-```ts
-it("selects rows", async () => {
-  const rows = await db.from(Users).select();
-  expect(Array.isArray(rows)).toBe(true);
-});
-
-it("throws on invalid operations", async () => {
-  await expect(db.from(Users).where(invalidCondition)).rejects.toThrow();
-});
-```
 
 ### Before updating docs
 
