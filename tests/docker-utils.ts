@@ -4,6 +4,8 @@ import { Client } from "pg";
 import { v4 as uuid } from "uuid";
 import { type Image, images } from "./images";
 
+export { cleanDatabase } from "./helpers";
+
 export interface TestContainerInfo {
   container: Docker.Container;
   port: number;
@@ -111,35 +113,5 @@ export async function waitForPostgres(
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-  }
-}
-
-/**
- * Clean all tables in the database (used in beforeEach).
- * Excludes the migrations table by default.
- */
-export async function cleanDatabase(
-  connectionString: string,
-  excludeTables: string[] = ["migrations"],
-): Promise<void> {
-  const client = new Client({ connectionString });
-  await client.connect();
-
-  try {
-    const exclusions = excludeTables.map((t) => `'${t}'`).join(", ");
-    const result = await client.query(`
-      SELECT tablename 
-      FROM pg_tables 
-      WHERE schemaname = 'public' 
-      ${exclusions.length > 0 ? `AND tablename NOT IN (${exclusions})` : ""}
-    `);
-
-    for (const row of result.rows) {
-      await client.query(
-        `TRUNCATE TABLE "${row.tablename}" RESTART IDENTITY CASCADE`,
-      );
-    }
-  } finally {
-    await client.end();
   }
 }

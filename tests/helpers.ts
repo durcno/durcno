@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import type { $Client } from "durcno";
+
+export function rmSync(folderPath: string) {
+  if (fs.existsSync(folderPath)) {
+    fs.rmSync(folderPath, { recursive: true, force: true });
+  }
+}
 
 export function runDurcnoCommand(
   args: string[],
@@ -21,8 +28,27 @@ export function runDurcnoCommand(
   }
 }
 
-export function rmSync(folderPath: string) {
-  if (fs.existsSync(folderPath)) {
-    fs.rmSync(folderPath, { recursive: true, force: true });
+/**
+ * Clean all tables in the database (used in beforeEach).
+ * Excludes the migrations table by default.
+ * Expects an already-connected $Client instance.
+ */
+export async function cleanDatabase(
+  client: $Client,
+  excludeTables: string[] = ["migrations"],
+): Promise<void> {
+  const exclusions = excludeTables.map((t) => `'${t}'`).join(", ");
+  const result = await client.query(`
+    SELECT tablename 
+    FROM pg_tables 
+    WHERE schemaname = 'public' 
+    ${exclusions.length > 0 ? `AND tablename NOT IN (${exclusions})` : ""}
+  `);
+
+  const rows = client.getRows(result) as { tablename: string }[];
+  for (const row of rows) {
+    await client.query(
+      `TRUNCATE TABLE "${row.tablename}" RESTART IDENTITY CASCADE`,
+    );
   }
 }

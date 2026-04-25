@@ -30,7 +30,7 @@ export { time } from "./columns/time";
 export { timestamp } from "./columns/timestamp";
 export { type UuidVersion, uuid } from "./columns/uuid";
 export { varchar } from "./columns/varchar";
-export type { ConnectorOptions } from "./connectors/common";
+export type { $Client, ConnectorOptions } from "./connectors/common";
 export {
   PrimaryKeyConstraint,
   primaryKeyConstraint,

@@ -6,7 +6,7 @@ export default defineConfig({
   schema: "./schema.ts",
   out: process.env.MIGRATIONS_DIR,
   connector: pg({
-    pool: { max: 5 },
+    pool: { max: 1 },
     dbCredentials: {
       host: process.env.DB_HOST || "localhost",
       port: parseInt(process.env.DB_PORT || "5432", 10),

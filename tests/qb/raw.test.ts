@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { database, defineConfig } from "durcno";
+import { type $Client, database, defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -19,6 +19,7 @@ describe("Raw SQL queries", () => {
   let containerInfo: TestContainerInfo;
   let container: Docker.Container;
   let db: ReturnType<typeof database<typeof schema>>;
+  let client: $Client;
   const migrationsDirName = generateMigrationsDirPath("raw");
 
   beforeAll(async () => {
@@ -42,7 +43,7 @@ describe("Raw SQL queries", () => {
       defineConfig({
         schema: "./schema.ts",
         connector: pg({
-          pool: { max: 5 },
+          pool: { max: 1 },
           dbCredentials: {
             host: "localhost",
             port: containerInfo.port,
@@ -53,13 +54,16 @@ describe("Raw SQL queries", () => {
         }),
       }),
     );
+    client = db.$.config.connector.getClient();
+    await client.connect();
   }, 120000);
 
   beforeEach(async () => {
-    await cleanDatabase(containerInfo.connectionString);
+    await cleanDatabase(client);
   });
 
   afterAll(async () => {
+    if (client) await client.close();
     if (db) await db.close();
     if (container) await stopPostgresContainer(container);
   });
