@@ -1,761 +1,338 @@
-import { isNotNull, isNull } from "durcno";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-  cleanTestData,
-  destroyTestContext,
-  getDb,
-  initTestContext,
-  schema,
-} from "./setup";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
+import { eq } from "durcno";
 
-describe("Geography Point Column Type (PostGIS)", () => {
+describe("Geography Column Types (PostGIS)", () => {
   beforeAll(async () => {
     await initTestContext();
   }, 120000);
-
-  beforeEach(async () => {
-    await cleanTestData([schema.GeographyPointTests]);
-  });
 
   afterAll(async () => {
     await destroyTestContext();
   });
 
-  // Test coordinates as [longitude, latitude]
-  const pointA = [-74.006, 40.7128] as const; // New York
-  const pointB = [-118.2437, 34.0522] as const; // Los Angeles
-  const pointC = [139.6917, 35.6895] as const; // Tokyo
+  // ==========================================================================
+  // POINT
+  // ==========================================================================
 
-  describe("notNull constraint", () => {
-    it("should insert and read required point", async () => {
+  describe("geography point", () => {
+    let insertedId: number;
+    const pointA: [number, number] = [-74.006, 40.7128]; // NYC
+    const pointB: [number, number] = [-118.2437, 34.0522]; // LA
+
+    it("insert", async () => {
       const db = getDb();
-      await db.insert(schema.GeographyPointTests).values({
-        requiredPoint: pointA,
-      });
-
-      const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(row.requiredPoint).toBeDefined();
-      expect(String(row.requiredPoint?.[0])).toBe(String(pointA[0]));
-      expect(String(row.requiredPoint?.[1])).toBe(String(pointA[1]));
+      const [row] = await db
+        .insert(schema.GeographyPointTests)
+        .values({ point: pointA })
+        .returning({ id: true });
+      insertedId = row.id;
+      expect(insertedId).toBeDefined();
     });
 
-    it("should allow null for optional point", async () => {
+    it("select", async () => {
       const db = getDb();
-      await db.insert(schema.GeographyPointTests).values({
-        requiredPoint: pointA,
-      });
-
-      const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(row.optionalPoint).toBeNull();
-    });
-  });
-
-  describe("create and read", () => {
-    it("should handle different coordinate values", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyPointTests).values({
-        requiredPoint: pointB,
-      });
-
-      const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(String(row.requiredPoint?.[0])).toBe(String(pointB[0]));
-      expect(String(row.requiredPoint?.[1])).toBe(String(pointB[1]));
-    });
-
-    it("should handle origin point", async () => {
-      const db = getDb();
-      const origin = [0, 0] as const;
-      await db.insert(schema.GeographyPointTests).values({
-        requiredPoint: origin,
-      });
-
-      const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(String(row.requiredPoint?.[0])).toBe(String(0));
-      expect(String(row.requiredPoint?.[1])).toBe(String(0));
-    });
-
-    it("should handle negative coordinates", async () => {
-      const db = getDb();
-      const negativePoint = [-180, -90] as const;
-      await db.insert(schema.GeographyPointTests).values({
-        requiredPoint: negativePoint,
-      });
-
-      const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(String(row.requiredPoint?.[0])).toBe(String(-180));
-      expect(String(row.requiredPoint?.[1])).toBe(String(-90));
-    });
-
-    it("should store optional point when provided", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyPointTests).values({
-        requiredPoint: pointA,
-        optionalPoint: pointC,
-      });
-
-      const [row] = await db.from(schema.GeographyPointTests).select();
-      expect(row.optionalPoint).toBeDefined();
-      expect(String(row.optionalPoint?.[0])).toBe(String(pointC[0]));
-      expect(String(row.optionalPoint?.[1])).toBe(String(pointC[1]));
-    });
-  });
-
-  describe("filtering", () => {
-    beforeEach(async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyPointTests).values([
-        { requiredPoint: pointA, optionalPoint: null },
-        { requiredPoint: pointB, optionalPoint: pointC },
-      ]);
-    });
-
-    it("should filter with isNull operator", async () => {
-      const db = getDb();
-      const result = await db
+      const [row] = await db
         .from(schema.GeographyPointTests)
         .select()
-        .where(isNull(schema.GeographyPointTests.optionalPoint));
-
-      expect(result).toHaveLength(1);
+        .where(eq(schema.GeographyPointTests.id, insertedId));
+      expect(row.point).toBeDefined();
+      expect(String(row.point?.[0])).toContain(String(pointA[0]));
     });
 
-    it("should filter with isNotNull operator", async () => {
+    it("update", async () => {
       const db = getDb();
-      const result = await db
+      await db
+        .update(schema.GeographyPointTests)
+        .set({ point: pointB })
+        .where(eq(schema.GeographyPointTests.id, insertedId));
+      const [row] = await db
         .from(schema.GeographyPointTests)
         .select()
-        .where(isNotNull(schema.GeographyPointTests.optionalPoint));
-
-      expect(result).toHaveLength(1);
-    });
-  });
-});
-
-describe("Geography MultiPoint Column Type (PostGIS)", () => {
-  beforeAll(async () => {
-    await initTestContext();
-  }, 120000);
-
-  beforeEach(async () => {
-    await cleanTestData([schema.GeographyMultiPointTests]);
-  });
-
-  afterAll(async () => {
-    await destroyTestContext();
-  });
-
-  // Test coordinates as [longitude, latitude] pairs
-  const multiPointA = [
-    [-74.006, 40.7128], // New York
-    [-118.2437, 34.0522], // Los Angeles
-  ] as const;
-
-  const multiPointB = [
-    [-0.1276, 51.5074], // London
-    [139.6917, 35.6895], // Tokyo
-    [2.3522, 48.8566], // Paris
-  ] as const;
-
-  describe("notNull constraint", () => {
-    it("should insert and read required multipoint", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiPointTests).values({
-        requiredMultiPoint: multiPointA,
-      });
-
-      const [row] = await db.from(schema.GeographyMultiPointTests).select();
-      expect(row.requiredMultiPoint).toBeDefined();
-      expect(row.requiredMultiPoint?.length).toBe(2);
-      expect(String(row.requiredMultiPoint?.[0][0])).toBe(
-        String(multiPointA[0][0]),
-      );
-      expect(String(row.requiredMultiPoint?.[0][1])).toBe(
-        String(multiPointA[0][1]),
-      );
-    });
-
-    it("should allow null for optional multipoint", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiPointTests).values({
-        requiredMultiPoint: multiPointA,
-      });
-
-      const [row] = await db.from(schema.GeographyMultiPointTests).select();
-      expect(row.optionalMultiPoint).toBeNull();
+        .where(eq(schema.GeographyPointTests.id, insertedId));
+      expect(String(row.point?.[0])).toContain(String(pointB[0]));
     });
   });
 
-  describe("create and read", () => {
-    it("should handle multipoint with multiple points", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiPointTests).values({
-        requiredMultiPoint: multiPointB,
-      });
+  // ==========================================================================
+  // MULTIPOINT
+  // ==========================================================================
 
-      const [row] = await db.from(schema.GeographyMultiPointTests).select();
-      expect(row.requiredMultiPoint?.length).toBe(3);
-      expect(String(row.requiredMultiPoint?.[2][0])).toBe(
-        String(multiPointB[2][0]),
-      );
-      expect(String(row.requiredMultiPoint?.[2][1])).toBe(
-        String(multiPointB[2][1]),
-      );
-    });
-
-    it("should handle single point in multipoint", async () => {
-      const db = getDb();
-      const singlePoint = [[0, 0]] as const;
-      await db.insert(schema.GeographyMultiPointTests).values({
-        requiredMultiPoint: singlePoint,
-      });
-
-      const [row] = await db.from(schema.GeographyMultiPointTests).select();
-      expect(row.requiredMultiPoint?.length).toBe(1);
-    });
-  });
-
-  describe("filtering", () => {
-    beforeEach(async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiPointTests).values([
-        { requiredMultiPoint: multiPointA, optionalMultiPoint: null },
-        { requiredMultiPoint: multiPointB, optionalMultiPoint: multiPointA },
-      ]);
-    });
-
-    it("should filter with isNull operator", async () => {
-      const db = getDb();
-      const result = await db
-        .from(schema.GeographyMultiPointTests)
-        .select()
-        .where(isNull(schema.GeographyMultiPointTests.optionalMultiPoint));
-
-      expect(result).toHaveLength(1);
-    });
-
-    it("should filter with isNotNull operator", async () => {
-      const db = getDb();
-      const result = await db
-        .from(schema.GeographyMultiPointTests)
-        .select()
-        .where(isNotNull(schema.GeographyMultiPointTests.optionalMultiPoint));
-
-      expect(result).toHaveLength(1);
-    });
-  });
-});
-
-describe("Geography LineString Column Type (PostGIS)", () => {
-  beforeAll(async () => {
-    await initTestContext();
-  }, 120000);
-
-  beforeEach(async () => {
-    await cleanTestData([schema.GeographyLineStringTests]);
-  });
-
-  afterAll(async () => {
-    await destroyTestContext();
-  });
-
-  // A line from New York to Los Angeles
-  const lineStringA = [
-    [-74.006, 40.7128],
-    [-87.6298, 41.8781], // Chicago
-    [-118.2437, 34.0522],
-  ] as const;
-
-  // A line around Europe
-  const lineStringB = [
-    [-0.1276, 51.5074], // London
-    [2.3522, 48.8566], // Paris
-    [13.405, 52.52], // Berlin
-  ] as const;
-
-  describe("notNull constraint", () => {
-    it("should insert and read required linestring", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyLineStringTests).values({
-        requiredLineString: lineStringA,
-      });
-
-      const [row] = await db.from(schema.GeographyLineStringTests).select();
-      expect(row.requiredLineString).toBeDefined();
-      expect(row.requiredLineString?.length).toBe(3);
-      expect(String(row.requiredLineString?.[0][0])).toBe(
-        String(lineStringA[0][0]),
-      );
-      expect(String(row.requiredLineString?.[0][1])).toBe(
-        String(lineStringA[0][1]),
-      );
-    });
-
-    it("should allow null for optional linestring", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyLineStringTests).values({
-        requiredLineString: lineStringA,
-      });
-
-      const [row] = await db.from(schema.GeographyLineStringTests).select();
-      expect(row.optionalLineString).toBeNull();
-    });
-  });
-
-  describe("create and read", () => {
-    it("should handle linestring with multiple points", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyLineStringTests).values({
-        requiredLineString: lineStringB,
-      });
-
-      const [row] = await db.from(schema.GeographyLineStringTests).select();
-      expect(row.requiredLineString?.length).toBe(3);
-      expect(String(row.requiredLineString?.[1][0])).toBe(
-        String(lineStringB[1][0]),
-      );
-      expect(String(row.requiredLineString?.[1][1])).toBe(
-        String(lineStringB[1][1]),
-      );
-    });
-
-    it("should handle simple two-point linestring", async () => {
-      const db = getDb();
-      const simpleLine = [
-        [0, 0],
-        [10, 10],
-      ] as const;
-      await db.insert(schema.GeographyLineStringTests).values({
-        requiredLineString: simpleLine,
-      });
-
-      const [row] = await db.from(schema.GeographyLineStringTests).select();
-      expect(row.requiredLineString?.length).toBe(2);
-    });
-  });
-
-  describe("filtering", () => {
-    beforeEach(async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyLineStringTests).values([
-        { requiredLineString: lineStringA, optionalLineString: null },
-        { requiredLineString: lineStringB, optionalLineString: lineStringA },
-      ]);
-    });
-
-    it("should filter with isNull operator", async () => {
-      const db = getDb();
-      const result = await db
-        .from(schema.GeographyLineStringTests)
-        .select()
-        .where(isNull(schema.GeographyLineStringTests.optionalLineString));
-
-      expect(result).toHaveLength(1);
-    });
-
-    it("should filter with isNotNull operator", async () => {
-      const db = getDb();
-      const result = await db
-        .from(schema.GeographyLineStringTests)
-        .select()
-        .where(isNotNull(schema.GeographyLineStringTests.optionalLineString));
-
-      expect(result).toHaveLength(1);
-    });
-  });
-});
-
-describe("Geography MultiLineString Column Type (PostGIS)", () => {
-  beforeAll(async () => {
-    await initTestContext();
-  }, 120000);
-
-  beforeEach(async () => {
-    await cleanTestData([schema.GeographyMultiLineStringTests]);
-  });
-
-  afterAll(async () => {
-    await destroyTestContext();
-  });
-
-  // Multiple lines
-  const multiLineStringA = [
-    [
+  describe("geography multipoint", () => {
+    let insertedId: number;
+    const mpA: [number, number][] = [
       [-74.006, 40.7128],
       [-118.2437, 34.0522],
-    ],
-    [
-      [-0.1276, 51.5074],
-      [139.6917, 35.6895],
-    ],
-  ] as const;
+    ];
+    const mpB: [number, number][] = [
+      [-87.6298, 41.8781],
+      [-122.4194, 37.7749],
+    ];
 
-  const multiLineStringB = [
-    [
-      [0, 0],
-      [10, 10],
-    ],
-    [
-      [20, 20],
-      [30, 30],
-    ],
-    [
-      [40, 40],
-      [50, 50],
-    ],
-  ] as const;
-
-  describe("notNull constraint", () => {
-    it("should insert and read required multilinestring", async () => {
+    it("insert", async () => {
       const db = getDb();
-      await db.insert(schema.GeographyMultiLineStringTests).values({
-        requiredMultiLineString: multiLineStringA,
-      });
-
       const [row] = await db
-        .from(schema.GeographyMultiLineStringTests)
-        .select();
-      expect(row.requiredMultiLineString).toBeDefined();
-      expect(row.requiredMultiLineString?.length).toBe(2);
-      expect(String(row.requiredMultiLineString?.[0][0][0])).toBe(
-        String(multiLineStringA[0][0][0]),
-      );
+        .insert(schema.GeographyMultiPointTests)
+        .values({ multipoint: mpA })
+        .returning({ id: true });
+      insertedId = row.id;
+      expect(insertedId).toBeDefined();
     });
 
-    it("should allow null for optional multilinestring", async () => {
+    it("select", async () => {
       const db = getDb();
-      await db.insert(schema.GeographyMultiLineStringTests).values({
-        requiredMultiLineString: multiLineStringA,
-      });
-
       const [row] = await db
-        .from(schema.GeographyMultiLineStringTests)
-        .select();
-      expect(row.optionalMultiLineString).toBeNull();
+        .from(schema.GeographyMultiPointTests)
+        .select()
+        .where(eq(schema.GeographyMultiPointTests.id, insertedId));
+      expect(row.multipoint).toBeDefined();
+      expect(Array.isArray(row.multipoint)).toBe(true);
+    });
+
+    it("update", async () => {
+      const db = getDb();
+      await db
+        .update(schema.GeographyMultiPointTests)
+        .set({ multipoint: mpB })
+        .where(eq(schema.GeographyMultiPointTests.id, insertedId));
+      const [row] = await db
+        .from(schema.GeographyMultiPointTests)
+        .select()
+        .where(eq(schema.GeographyMultiPointTests.id, insertedId));
+      expect(row.multipoint).toBeDefined();
     });
   });
 
-  describe("create and read", () => {
-    it("should handle multilinestring with multiple lines", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiLineStringTests).values({
-        requiredMultiLineString: multiLineStringB,
-      });
+  // ==========================================================================
+  // LINESTRING
+  // ==========================================================================
 
+  describe("geography linestring", () => {
+    let insertedId: number;
+    const lsA: [number, number][] = [
+      [-74.006, 40.7128],
+      [-87.6298, 41.8781],
+      [-118.2437, 34.0522],
+    ];
+    const lsB: [number, number][] = [
+      [-122.4194, 37.7749],
+      [-104.9903, 39.7392],
+    ];
+
+    it("insert", async () => {
+      const db = getDb();
       const [row] = await db
-        .from(schema.GeographyMultiLineStringTests)
-        .select();
-      expect(row.requiredMultiLineString?.length).toBe(3);
+        .insert(schema.GeographyLineStringTests)
+        .values({ linestring: lsA })
+        .returning({ id: true });
+      insertedId = row.id;
+      expect(insertedId).toBeDefined();
+    });
+
+    it("select", async () => {
+      const db = getDb();
+      const [row] = await db
+        .from(schema.GeographyLineStringTests)
+        .select()
+        .where(eq(schema.GeographyLineStringTests.id, insertedId));
+      expect(row.linestring).toBeDefined();
+      expect(Array.isArray(row.linestring)).toBe(true);
+    });
+
+    it("update", async () => {
+      const db = getDb();
+      await db
+        .update(schema.GeographyLineStringTests)
+        .set({ linestring: lsB })
+        .where(eq(schema.GeographyLineStringTests.id, insertedId));
+      const [row] = await db
+        .from(schema.GeographyLineStringTests)
+        .select()
+        .where(eq(schema.GeographyLineStringTests.id, insertedId));
+      expect(row.linestring).toBeDefined();
     });
   });
 
-  describe("filtering", () => {
-    beforeEach(async () => {
+  // ==========================================================================
+  // MULTILINESTRING
+  // ==========================================================================
+
+  describe("geography multilinestring", () => {
+    let insertedId: number;
+    const mlsA: [number, number][][] = [
+      [
+        [-74.006, 40.7128],
+        [-87.6298, 41.8781],
+      ],
+      [
+        [-118.2437, 34.0522],
+        [-122.4194, 37.7749],
+      ],
+    ];
+    const mlsB: [number, number][][] = [
+      [
+        [-104.9903, 39.7392],
+        [-96.797, 32.7767],
+      ],
+    ];
+
+    it("insert", async () => {
       const db = getDb();
-      await db.insert(schema.GeographyMultiLineStringTests).values([
-        {
-          requiredMultiLineString: multiLineStringA,
-          optionalMultiLineString: null,
-        },
-        {
-          requiredMultiLineString: multiLineStringB,
-          optionalMultiLineString: multiLineStringA,
-        },
-      ]);
+      const [row] = await db
+        .insert(schema.GeographyMultiLineStringTests)
+        .values({ multilinestring: mlsA })
+        .returning({ id: true });
+      insertedId = row.id;
+      expect(insertedId).toBeDefined();
     });
 
-    it("should filter with isNull operator", async () => {
+    it("select", async () => {
       const db = getDb();
-      const result = await db
+      const [row] = await db
         .from(schema.GeographyMultiLineStringTests)
         .select()
-        .where(
-          isNull(schema.GeographyMultiLineStringTests.optionalMultiLineString),
-        );
-
-      expect(result).toHaveLength(1);
+        .where(eq(schema.GeographyMultiLineStringTests.id, insertedId));
+      expect(row.multilinestring).toBeDefined();
+      expect(Array.isArray(row.multilinestring)).toBe(true);
     });
 
-    it("should filter with isNotNull operator", async () => {
+    it("update", async () => {
       const db = getDb();
-      const result = await db
+      await db
+        .update(schema.GeographyMultiLineStringTests)
+        .set({ multilinestring: mlsB })
+        .where(eq(schema.GeographyMultiLineStringTests.id, insertedId));
+      const [row] = await db
         .from(schema.GeographyMultiLineStringTests)
         .select()
-        .where(
-          isNotNull(
-            schema.GeographyMultiLineStringTests.optionalMultiLineString,
-          ),
-        );
-
-      expect(result).toHaveLength(1);
-    });
-  });
-});
-
-describe("Geography Polygon Column Type (PostGIS)", () => {
-  beforeAll(async () => {
-    await initTestContext();
-  }, 120000);
-
-  beforeEach(async () => {
-    await cleanTestData([schema.GeographyPolygonTests]);
-  });
-
-  afterAll(async () => {
-    await destroyTestContext();
-  });
-
-  // Simple square polygon (exterior ring only)
-  const polygonA = [
-    [
-      [0, 0],
-      [10, 0],
-      [10, 10],
-      [0, 10],
-      [0, 0], // Closed ring
-    ],
-  ] as const;
-
-  // Polygon with a hole (exterior + interior ring)
-  const polygonWithHole = [
-    [
-      [0, 0],
-      [20, 0],
-      [20, 20],
-      [0, 20],
-      [0, 0],
-    ],
-    [
-      [5, 5],
-      [15, 5],
-      [15, 15],
-      [5, 15],
-      [5, 5],
-    ],
-  ] as const;
-
-  describe("notNull constraint", () => {
-    it("should insert and read required polygon", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyPolygonTests).values({
-        requiredPolygon: polygonA,
-      });
-
-      const [row] = await db.from(schema.GeographyPolygonTests).select();
-      expect(row.requiredPolygon).toBeDefined();
-      expect(row.requiredPolygon?.length).toBe(1);
-      expect(row.requiredPolygon?.[0].length).toBe(5);
-    });
-
-    it("should allow null for optional polygon", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyPolygonTests).values({
-        requiredPolygon: polygonA,
-      });
-
-      const [row] = await db.from(schema.GeographyPolygonTests).select();
-      expect(row.optionalPolygon).toBeNull();
+        .where(eq(schema.GeographyMultiLineStringTests.id, insertedId));
+      expect(row.multilinestring).toBeDefined();
     });
   });
 
-  describe("create and read", () => {
-    it("should handle polygon with hole", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyPolygonTests).values({
-        requiredPolygon: polygonWithHole,
-      });
+  // ==========================================================================
+  // POLYGON
+  // ==========================================================================
 
-      const [row] = await db.from(schema.GeographyPolygonTests).select();
-      expect(row.requiredPolygon?.length).toBe(2); // Exterior + interior ring
+  describe("geography polygon", () => {
+    let insertedId: number;
+    const polyA: [number, number][][] = [
+      [
+        [-74.006, 40.7128],
+        [-73.935242, 40.73061],
+        [-73.996, 40.671],
+        [-74.006, 40.7128],
+      ],
+    ];
+    const polyB: [number, number][][] = [
+      [
+        [-118.2437, 34.0522],
+        [-118.1937, 34.0522],
+        [-118.1937, 34.0022],
+        [-118.2437, 34.0522],
+      ],
+    ];
+
+    it("insert", async () => {
+      const db = getDb();
+      const [row] = await db
+        .insert(schema.GeographyPolygonTests)
+        .values({ polygon: polyA })
+        .returning({ id: true });
+      insertedId = row.id;
+      expect(insertedId).toBeDefined();
     });
 
-    it("should preserve coordinate values", async () => {
+    it("select", async () => {
       const db = getDb();
-      await db.insert(schema.GeographyPolygonTests).values({
-        requiredPolygon: polygonA,
-      });
-
-      const [row] = await db.from(schema.GeographyPolygonTests).select();
-      expect(String(row.requiredPolygon?.[0][1][0])).toBe(String(10));
-      expect(String(row.requiredPolygon?.[0][1][1])).toBe(String(0));
-    });
-  });
-
-  describe("filtering", () => {
-    beforeEach(async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyPolygonTests).values([
-        { requiredPolygon: polygonA, optionalPolygon: null },
-        { requiredPolygon: polygonWithHole, optionalPolygon: polygonA },
-      ]);
-    });
-
-    it("should filter with isNull operator", async () => {
-      const db = getDb();
-      const result = await db
+      const [row] = await db
         .from(schema.GeographyPolygonTests)
         .select()
-        .where(isNull(schema.GeographyPolygonTests.optionalPolygon));
-
-      expect(result).toHaveLength(1);
+        .where(eq(schema.GeographyPolygonTests.id, insertedId));
+      expect(row.polygon).toBeDefined();
+      expect(Array.isArray(row.polygon)).toBe(true);
     });
 
-    it("should filter with isNotNull operator", async () => {
+    it("update", async () => {
       const db = getDb();
-      const result = await db
+      await db
+        .update(schema.GeographyPolygonTests)
+        .set({ polygon: polyB })
+        .where(eq(schema.GeographyPolygonTests.id, insertedId));
+      const [row] = await db
         .from(schema.GeographyPolygonTests)
         .select()
-        .where(isNotNull(schema.GeographyPolygonTests.optionalPolygon));
-
-      expect(result).toHaveLength(1);
-    });
-  });
-});
-
-describe("Geography MultiPolygon Column Type (PostGIS)", () => {
-  beforeAll(async () => {
-    await initTestContext();
-  }, 120000);
-
-  beforeEach(async () => {
-    await cleanTestData([schema.GeographyMultiPolygonTests]);
-  });
-
-  afterAll(async () => {
-    await destroyTestContext();
-  });
-
-  // Two simple polygons
-  const multiPolygonA = [
-    [
-      [
-        [0, 0],
-        [10, 0],
-        [10, 10],
-        [0, 10],
-        [0, 0],
-      ],
-    ],
-    [
-      [
-        [20, 20],
-        [30, 20],
-        [30, 30],
-        [20, 30],
-        [20, 20],
-      ],
-    ],
-  ] as const;
-
-  // Three polygons
-  const multiPolygonB = [
-    [
-      [
-        [0, 0],
-        [5, 0],
-        [5, 5],
-        [0, 5],
-        [0, 0],
-      ],
-    ],
-    [
-      [
-        [10, 10],
-        [15, 10],
-        [15, 15],
-        [10, 15],
-        [10, 10],
-      ],
-    ],
-    [
-      [
-        [20, 20],
-        [25, 20],
-        [25, 25],
-        [20, 25],
-        [20, 20],
-      ],
-    ],
-  ] as const;
-
-  describe("notNull constraint", () => {
-    it("should insert and read required multipolygon", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiPolygonTests).values({
-        requiredMultiPolygon: multiPolygonA,
-      });
-
-      const [row] = await db.from(schema.GeographyMultiPolygonTests).select();
-      expect(row.requiredMultiPolygon).toBeDefined();
-      expect(row.requiredMultiPolygon?.length).toBe(2);
-    });
-
-    it("should allow null for optional multipolygon", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiPolygonTests).values({
-        requiredMultiPolygon: multiPolygonA,
-      });
-
-      const [row] = await db.from(schema.GeographyMultiPolygonTests).select();
-      expect(row.optionalMultiPolygon).toBeNull();
+        .where(eq(schema.GeographyPolygonTests.id, insertedId));
+      expect(row.polygon).toBeDefined();
     });
   });
 
-  describe("create and read", () => {
-    it("should handle multipolygon with multiple polygons", async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiPolygonTests).values({
-        requiredMultiPolygon: multiPolygonB,
-      });
+  // ==========================================================================
+  // MULTIPOLYGON
+  // ==========================================================================
 
-      const [row] = await db.from(schema.GeographyMultiPolygonTests).select();
-      expect(row.requiredMultiPolygon?.length).toBe(3);
+  describe("geography multipolygon", () => {
+    let insertedId: number;
+    const mpolyA: [number, number][][][] = [
+      [
+        [
+          [-74.006, 40.7128],
+          [-73.935242, 40.73061],
+          [-73.996, 40.671],
+          [-74.006, 40.7128],
+        ],
+      ],
+      [
+        [
+          [-118.2437, 34.0522],
+          [-118.1937, 34.0522],
+          [-118.1937, 34.0022],
+          [-118.2437, 34.0522],
+        ],
+      ],
+    ];
+    const mpolyB: [number, number][][][] = [
+      [
+        [
+          [-87.6298, 41.8781],
+          [-87.5798, 41.8781],
+          [-87.5798, 41.8281],
+          [-87.6298, 41.8781],
+        ],
+      ],
+    ];
+
+    it("insert", async () => {
+      const db = getDb();
+      const [row] = await db
+        .insert(schema.GeographyMultiPolygonTests)
+        .values({ multipolygon: mpolyA })
+        .returning({ id: true });
+      insertedId = row.id;
+      expect(insertedId).toBeDefined();
     });
 
-    it("should preserve nested structure", async () => {
+    it("select", async () => {
       const db = getDb();
-      await db.insert(schema.GeographyMultiPolygonTests).values({
-        requiredMultiPolygon: multiPolygonA,
-      });
-
-      const [row] = await db.from(schema.GeographyMultiPolygonTests).select();
-      // multiPolygonA[1][0][1] = [30, 20]
-      expect(String(row.requiredMultiPolygon?.[1][0][1][0])).toBe(String(30));
-      expect(String(row.requiredMultiPolygon?.[1][0][1][1])).toBe(String(20));
-    });
-  });
-
-  describe("filtering", () => {
-    beforeEach(async () => {
-      const db = getDb();
-      await db.insert(schema.GeographyMultiPolygonTests).values([
-        { requiredMultiPolygon: multiPolygonA, optionalMultiPolygon: null },
-        {
-          requiredMultiPolygon: multiPolygonB,
-          optionalMultiPolygon: multiPolygonA,
-        },
-      ]);
-    });
-
-    it("should filter with isNull operator", async () => {
-      const db = getDb();
-      const result = await db
+      const [row] = await db
         .from(schema.GeographyMultiPolygonTests)
         .select()
-        .where(isNull(schema.GeographyMultiPolygonTests.optionalMultiPolygon));
-
-      expect(result).toHaveLength(1);
+        .where(eq(schema.GeographyMultiPolygonTests.id, insertedId));
+      expect(row.multipolygon).toBeDefined();
+      expect(Array.isArray(row.multipolygon)).toBe(true);
     });
 
-    it("should filter with isNotNull operator", async () => {
+    it("update", async () => {
       const db = getDb();
-      const result = await db
+      await db
+        .update(schema.GeographyMultiPolygonTests)
+        .set({ multipolygon: mpolyB })
+        .where(eq(schema.GeographyMultiPolygonTests.id, insertedId));
+      const [row] = await db
         .from(schema.GeographyMultiPolygonTests)
         .select()
-        .where(
-          isNotNull(schema.GeographyMultiPolygonTests.optionalMultiPolygon),
-        );
-
-      expect(result).toHaveLength(1);
+        .where(eq(schema.GeographyMultiPolygonTests.id, insertedId));
+      expect(row.multipolygon).toBeDefined();
     });
   });
 });

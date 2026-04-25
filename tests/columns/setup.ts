@@ -39,7 +39,7 @@ export async function initTestContext(): Promise<TestContext> {
     defineConfig({
       schema: "./schema.ts",
       connector: pg({
-        pool: { max: 2 },
+        pool: { max: 1 },
         dbCredentials: {
           host: env.TEST_DB_HOST,
           port: parseInt(env.TEST_DB_PORT, 10),

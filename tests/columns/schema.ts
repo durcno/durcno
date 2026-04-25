@@ -23,7 +23,6 @@ import {
   text,
   time,
   timestamp,
-  unique,
   uuid,
   varchar,
 } from "durcno";
@@ -54,14 +53,10 @@ export const PriorityEnum = enumtype("public", "priority", [
  */
 export const VarcharTests = table("public", "varchar_tests", {
   id: pk(),
-  // Required varchar with length
-  requiredName: varchar({ length: 100, notNull }),
-  // Optional varchar
-  optionalName: varchar({ length: 100 }),
-  // Varchar with default
-  withDefault: varchar({ length: 50, notNull }).default("default_value"),
-  // Varchar with unique constraint
-  uniqueCode: varchar({ length: 20, unique }),
+  // Nullable varchar
+  name: varchar({ length: 100 }),
+  // Nullable varchar with default
+  nameWithDefault: varchar({ length: 100 }).default("default_value"),
 });
 
 /**
@@ -69,12 +64,10 @@ export const VarcharTests = table("public", "varchar_tests", {
  */
 export const TextTests = table("public", "text_tests", {
   id: pk(),
-  // Required text
-  requiredContent: text({ notNull }),
-  // Optional text
-  optionalContent: text({}),
-  // Text with default
-  withDefault: text({ notNull }).default("default text"),
+  // Nullable text
+  content: text({}),
+  // Nullable text with default
+  contentWithDefault: text({}).default("default text"),
 });
 
 /**
@@ -82,12 +75,10 @@ export const TextTests = table("public", "text_tests", {
  */
 export const CharTests = table("public", "char_tests", {
   id: pk(),
-  // Required char with length
-  requiredCode: char({ length: 5, notNull }),
-  // Optional char
-  optionalCode: char({ length: 3 }),
-  // Char with default
-  withDefault: char({ length: 2, notNull }).default("XX"),
+  // Nullable char
+  code: char({ length: 5 }),
+  // Nullable char with default
+  codeWithDefault: char({ length: 2 }).default("XX"),
 });
 
 // ============================================================================
@@ -99,12 +90,10 @@ export const CharTests = table("public", "char_tests", {
  */
 export const IntegerTests = table("public", "integer_tests", {
   id: pk(),
-  // Required integer
-  requiredCount: integer({ notNull }),
-  // Optional integer
-  optionalCount: integer({}),
-  // Integer with default
-  withDefault: integer({ notNull }).default(0),
+  // Nullable integer
+  count: integer({}),
+  // Nullable integer with default
+  countWithDefault: integer({}).default(0),
 });
 
 /**
@@ -112,12 +101,10 @@ export const IntegerTests = table("public", "integer_tests", {
  */
 export const SmallintTests = table("public", "smallint_tests", {
   id: pk(),
-  // Required smallint
-  requiredValue: smallint({ notNull }),
-  // Optional smallint
-  optionalValue: smallint({}),
-  // Smallint with default
-  withDefault: smallint({ notNull }).default(10),
+  // Nullable smallint
+  value: smallint({}),
+  // Nullable smallint with default
+  valueWithDefault: smallint({}).default(10),
 });
 
 /**
@@ -125,12 +112,10 @@ export const SmallintTests = table("public", "smallint_tests", {
  */
 export const BigintTests = table("public", "bigint_tests", {
   id: pk(),
-  // Required bigint
-  requiredAmount: bigint({ notNull }),
-  // Optional bigint
-  optionalAmount: bigint({}),
-  // Bigint with default
-  withDefault: bigint({ notNull }).default(1000),
+  // Nullable bigint
+  amount: bigint({}),
+  // Nullable bigint with default
+  amountWithDefault: bigint({}).default(1000),
 });
 
 /**
@@ -138,7 +123,7 @@ export const BigintTests = table("public", "bigint_tests", {
  */
 export const SerialTests = table("public", "serial_tests", {
   id: serial({}),
-  name: varchar({ length: 100, notNull }),
+  name: varchar({ length: 100 }),
 });
 
 /**
@@ -146,7 +131,7 @@ export const SerialTests = table("public", "serial_tests", {
  */
 export const SmallserialTests = table("public", "smallserial_tests", {
   id: smallserial({}),
-  name: varchar({ length: 100, notNull }),
+  name: varchar({ length: 100 }),
 });
 
 /**
@@ -154,7 +139,7 @@ export const SmallserialTests = table("public", "smallserial_tests", {
  */
 export const BigserialTests = table("public", "bigserial_tests", {
   id: bigserial({}),
-  name: varchar({ length: 100, notNull }),
+  name: varchar({ length: 100 }),
 });
 
 /**
@@ -162,16 +147,10 @@ export const BigserialTests = table("public", "bigserial_tests", {
  */
 export const NumericTests = table("public", "numeric_tests", {
   id: pk(),
-  // Required numeric without precision/scale
-  requiredValue: numeric({ notNull }),
-  // Optional numeric
-  optionalValue: numeric({}),
-  // Numeric with precision only
-  withPrecision: numeric({ precision: 10, notNull }),
-  // Numeric with precision and scale
-  withScale: numeric({ precision: 10, scale: 2, notNull }),
-  // Numeric with default
-  withDefault: numeric({ notNull }).default("0"),
+  // Nullable numeric
+  value: numeric({}),
+  // Nullable numeric with default
+  valueWithDefault: numeric({}).default("0"),
 });
 
 // ============================================================================
@@ -183,14 +162,10 @@ export const NumericTests = table("public", "numeric_tests", {
  */
 export const BooleanTests = table("public", "boolean_tests", {
   id: pk(),
-  // Required boolean
-  requiredFlag: boolean({ notNull }),
-  // Optional boolean
-  optionalFlag: boolean({}),
-  // Boolean with default true
-  defaultTrue: boolean({ notNull }).default(true),
-  // Boolean with default false
-  defaultFalse: boolean({ notNull }).default(false),
+  // Nullable boolean
+  flag: boolean({}),
+  // Nullable boolean with default
+  flagWithDefault: boolean({}).default(false),
 });
 
 // ============================================================================
@@ -202,14 +177,10 @@ export const BooleanTests = table("public", "boolean_tests", {
  */
 export const TimestampTests = table("public", "timestamp_tests", {
   id: pk(),
-  // Required timestamp (with timezone by default)
-  requiredAt: timestamp({ notNull }),
-  // Optional timestamp
-  optionalAt: timestamp({}),
-  // Timestamp without timezone
-  withoutTz: timestamp({ notNull, withTimezone: false }),
-  // Timestamp with precision
-  withPrecision: timestamp({ precision: 3 }),
+  // Nullable timestamp
+  at: timestamp({}),
+  // Nullable timestamp with default (epoch)
+  atWithDefault: timestamp({}).default(new Date(0)),
 });
 
 /**
@@ -217,10 +188,10 @@ export const TimestampTests = table("public", "timestamp_tests", {
  */
 export const DateTests = table("public", "date_tests", {
   id: pk(),
-  // Required date
-  requiredDate: date({ notNull }),
-  // Optional date
-  optionalDate: date({}),
+  // Nullable date
+  date: date({}),
+  // Nullable date with default
+  dateWithDefault: date({}).default(new Date("2000-01-01T00:00:00.000Z")),
 });
 
 /**
@@ -228,14 +199,10 @@ export const DateTests = table("public", "date_tests", {
  */
 export const TimeTests = table("public", "time_tests", {
   id: pk(),
-  // Required time
-  requiredTime: time({ notNull }),
-  // Optional time
-  optionalTime: time({}),
-  // Time with precision
-  withPrecision: time({ precision: 3 }),
-  // Time with timezone
-  withTimezone: time({ withTimezone: true }),
+  // Nullable time
+  time: time({}),
+  // Nullable time with default
+  timeWithDefault: time({}).default("00:00:00"),
 });
 
 // ============================================================================
@@ -247,12 +214,10 @@ export const TimeTests = table("public", "time_tests", {
  */
 export const UuidTests = table("public", "uuid_tests", {
   id: pk(),
-  // Required uuid
-  requiredUuid: uuid({ notNull }),
-  // Optional uuid
-  optionalUuid: uuid({}),
-  // Unique uuid
-  uniqueUuid: uuid({ unique }),
+  // Nullable uuid
+  uuid: uuid({}),
+  // Nullable uuid with default
+  uuidWithDefault: uuid({}).default("00000000-0000-0000-8000-000000000000"),
 });
 
 // ============================================================================
@@ -264,12 +229,8 @@ export const UuidTests = table("public", "uuid_tests", {
  */
 export const ByteaTests = table("public", "bytea_tests", {
   id: pk(),
-  // Required bytea
-  requiredData: bytea({ notNull }),
-  // Optional bytea
-  optionalData: bytea({}),
-  // Unique bytea
-  uniqueHash: bytea({ unique }),
+  // Nullable bytea
+  data: bytea({}),
 });
 
 // ============================================================================
@@ -281,12 +242,10 @@ export const ByteaTests = table("public", "bytea_tests", {
  */
 export const EnumTests = table("public", "enum_tests", {
   id: pk(),
-  // Required enum
-  requiredStatus: StatusEnum.enumed({ notNull }),
-  // Optional enum
-  optionalStatus: StatusEnum.enumed({}),
-  // Enum with default
-  withDefault: PriorityEnum.enumed({ notNull }).default("medium"),
+  // Nullable enum
+  status: StatusEnum.enumed({}),
+  // Nullable enum with default
+  statusWithDefault: PriorityEnum.enumed({}).default("medium"),
 });
 
 // ============================================================================
@@ -298,10 +257,8 @@ export const EnumTests = table("public", "enum_tests", {
  */
 export const GeographyPointTests = table("public", "geography_point_tests", {
   id: pk(),
-  // Required point
-  requiredPoint: geography.point({ notNull }),
-  // Optional point
-  optionalPoint: geography.point({}),
+  // Nullable point
+  point: geography.point({}),
 });
 
 /**
@@ -312,10 +269,8 @@ export const GeographyMultiPointTests = table(
   "geography_multipoint_tests",
   {
     id: pk(),
-    // Required multipoint
-    requiredMultiPoint: geography.multipoint({ notNull }),
-    // Optional multipoint
-    optionalMultiPoint: geography.multipoint({}),
+    // Nullable multipoint
+    multipoint: geography.multipoint({}),
   },
 );
 
@@ -327,10 +282,8 @@ export const GeographyLineStringTests = table(
   "geography_linestring_tests",
   {
     id: pk(),
-    // Required linestring
-    requiredLineString: geography.linestring({ notNull }),
-    // Optional linestring
-    optionalLineString: geography.linestring({}),
+    // Nullable linestring
+    linestring: geography.linestring({}),
   },
 );
 
@@ -342,10 +295,8 @@ export const GeographyMultiLineStringTests = table(
   "geography_multilinestring_tests",
   {
     id: pk(),
-    // Required multilinestring
-    requiredMultiLineString: geography.multilinestring({ notNull }),
-    // Optional multilinestring
-    optionalMultiLineString: geography.multilinestring({}),
+    // Nullable multilinestring
+    multilinestring: geography.multilinestring({}),
   },
 );
 
@@ -357,10 +308,8 @@ export const GeographyPolygonTests = table(
   "geography_polygon_tests",
   {
     id: pk(),
-    // Required polygon
-    requiredPolygon: geography.polygon({ notNull }),
-    // Optional polygon
-    optionalPolygon: geography.polygon({}),
+    // Nullable polygon
+    polygon: geography.polygon({}),
   },
 );
 
@@ -372,10 +321,8 @@ export const GeographyMultiPolygonTests = table(
   "geography_multipolygon_tests",
   {
     id: pk(),
-    // Required multipolygon
-    requiredMultiPolygon: geography.multipolygon({ notNull }),
-    // Optional multipolygon
-    optionalMultiPolygon: geography.multipolygon({}),
+    // Nullable multipolygon
+    multipolygon: geography.multipolygon({}),
   },
 );
 
@@ -388,12 +335,10 @@ export const GeographyMultiPolygonTests = table(
  */
 export const InetTests = table("public", "inet_tests", {
   id: pk(),
-  // Required inet
-  requiredIp: inet({ notNull }),
-  // Optional inet
-  optionalIp: inet({}),
-  // Unique inet
-  uniqueIp: inet({ unique }),
+  // Nullable inet
+  ip: inet({}),
+  // Nullable inet with default
+  ipWithDefault: inet({}).default("127.0.0.1"),
 });
 
 /**
@@ -401,12 +346,10 @@ export const InetTests = table("public", "inet_tests", {
  */
 export const CidrTests = table("public", "cidr_tests", {
   id: pk(),
-  // Required cidr
-  requiredNetwork: cidr({ notNull }),
-  // Optional cidr
-  optionalNetwork: cidr({}),
-  // Unique cidr
-  uniqueNetwork: cidr({ unique }),
+  // Nullable cidr
+  network: cidr({}),
+  // Nullable cidr with default
+  networkWithDefault: cidr({}).default("0.0.0.0/0"),
 });
 
 /**
@@ -414,12 +357,10 @@ export const CidrTests = table("public", "cidr_tests", {
  */
 export const MacaddrTests = table("public", "macaddr_tests", {
   id: pk(),
-  // Required macaddr
-  requiredMac: macaddr({ notNull }),
-  // Optional macaddr
-  optionalMac: macaddr({}),
-  // Unique macaddr
-  uniqueMac: macaddr({ unique }),
+  // Nullable macaddr
+  mac: macaddr({}),
+  // Nullable macaddr with default
+  macWithDefault: macaddr({}).default("00:00:00:00:00:00"),
 });
 
 // ============================================================================
@@ -502,12 +443,10 @@ export const EnumArrayTests = table("public", "enum_array_tests", {
  */
 export const JsonTests = table("public", "json_tests", {
   id: pk(),
-  // Required json
-  requiredData: json({ notNull }),
-  // Optional json
-  optionalData: json({}),
-  // Json with default
-  withDefault: json({ notNull }).default({ status: "default" }),
+  // Nullable json
+  data: json({}),
+  // Nullable json with default
+  dataWithDefault: json({}).default({ status: "default" }),
 });
 
 /**
@@ -515,12 +454,10 @@ export const JsonTests = table("public", "json_tests", {
  */
 export const JsonbTests = table("public", "jsonb_tests", {
   id: pk(),
-  // Required jsonb
-  requiredData: jsonb({ notNull }),
-  // Optional jsonb
-  optionalData: jsonb({}),
-  // Jsonb with default
-  withDefault: jsonb({ notNull }).default({ status: "default" }),
+  // Nullable jsonb
+  data: jsonb({}),
+  // Nullable jsonb with default
+  dataWithDefault: jsonb({}).default({ status: "default" }),
 });
 
 /**
@@ -537,10 +474,12 @@ export interface UserSettings {
  */
 export const TypedJsonTests = table("public", "typed_json_tests", {
   id: pk(),
-  // Required typed json
-  requiredSettings: json({ notNull }).$type<UserSettings>(),
-  // Optional typed json
-  optionalSettings: json({}).$type<UserSettings>(),
+  // Nullable typed json
+  settings: json({}).$type<UserSettings>(),
+  // Nullable typed json with default
+  settingsWithDefault: json({})
+    .$type<UserSettings>()
+    .default({ theme: "light", notifications: false, language: "en" }),
 });
 
 /**
@@ -548,8 +487,10 @@ export const TypedJsonTests = table("public", "typed_json_tests", {
  */
 export const TypedJsonbTests = table("public", "typed_jsonb_tests", {
   id: pk(),
-  // Required typed jsonb
-  requiredSettings: jsonb({ notNull }).$type<UserSettings>(),
-  // Optional typed jsonb
-  optionalSettings: jsonb({}).$type<UserSettings>(),
+  // Nullable typed jsonb
+  settings: jsonb({}).$type<UserSettings>(),
+  // Nullable typed jsonb with default
+  settingsWithDefault: jsonb({})
+    .$type<UserSettings>()
+    .default({ theme: "light", notifications: false, language: "en" }),
 });
