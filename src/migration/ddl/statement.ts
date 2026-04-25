@@ -1,4 +1,4 @@
-import type { Snapshot } from "./snapshot";
+import type { Snapshot } from "../snapshot";
 
 /**
  * All possible DDL statement types supported by the migration system.
@@ -11,9 +11,12 @@ import type { Snapshot } from "./snapshot";
  * - `"dropTable"` — {@link DropTableStatement}
  * - `"renameTable"` — {@link RenameTableStatement}
  * - `"alterTable"` — {@link AlterTableBuilder}
- * - `"createEnum"` — {@link CreateEnumStatement}
- * - `"alterEnum"` — {@link AlterEnumAddValueStatement}
- * - `"dropEnum"` — {@link DropEnumStatement}
+ * - `"createType"` — {@link CreateTypeStatement}
+ * - `"dropType"` — {@link DropTypeStatement}
+ * - `"alterType"` — {@link AlterTypeBuilder}
+ * - `"createEnum"` — {@link CreateEnumStatement} (deprecated, use `"createType"`)
+ * - `"alterEnum"` — {@link AlterEnumAddValueStatement} (deprecated, use `"alterType"`)
+ * - `"dropEnum"` — {@link DropEnumStatement} (deprecated, use `"dropType"`)
  * - `"createSequence"` — {@link CreateSequenceStatement}
  * - `"dropSequence"` — {@link DropSequenceStatement}
  * - `"createIndex"` — {@link CreateIndexBuilder}
@@ -27,6 +30,9 @@ export type DDLStatementType =
   | "dropTable"
   | "renameTable"
   | "alterTable"
+  | "createType"
+  | "dropType"
+  | "alterType"
   | "createEnum"
   | "alterEnum"
   | "dropEnum"

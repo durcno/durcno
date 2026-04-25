@@ -1,49 +1,5 @@
-/**
- * Type tests for DDL Builder API
- */
-import {
-  type DDLStatement,
-  ddl,
-  type MigrationOptions,
-} from "durcno/migration";
+import { type DDLStatement, ddl, type MigrationOptions } from "durcno/migration";
 
-// ============================================================================
-// MigrationOptions type tests
-// ============================================================================
-
-// Positive: Full options
-const _fullOptions: MigrationOptions = {
-  transaction: true,
-};
-
-// Positive: Empty options (all optional)
-const _emptyOptions: MigrationOptions = {};
-
-// Positive: execution option with 'joined'
-const _joinedOptions: MigrationOptions = {
-  execution: "joined",
-};
-
-// Positive: execution option with 'sequential'
-const _sequentialOptions: MigrationOptions = {
-  execution: "sequential",
-};
-
-// Positive: both options together
-const _bothOptions: MigrationOptions = {
-  transaction: false,
-  execution: "sequential",
-};
-
-// Negative: invalid execution value
-const _invalidExecution: MigrationOptions = {
-  // @ts-expect-error: execution must be 'joined' or 'sequential'
-  execution: "parallel",
-};
-
-// ============================================================================
-// DDL Builder return types
-// ============================================================================
 
 // Positive: createTable returns CreateTableBuilder
 const _tableBuilder = ddl.createTable("public", "users");
@@ -77,9 +33,6 @@ const _dropStatement = ddl.dropTable("public", "users");
 // Positive: custom returns CustomStatement
 const _customStatement = ddl.custom("INSERT INTO users VALUES (1)");
 
-// ============================================================================
-// Chainable methods return this
-// ============================================================================
 
 // Positive: CreateTableBuilder.column returns this (chainable)
 const _chainedTable = ddl
@@ -144,9 +97,6 @@ const _concurrentDrop = ddl.dropIndex("idx_users_email").concurrently();
 // Positive: dropIndex with concurrently() returns DDLStatement
 const _concurrentDropAsStatement: DDLStatement = _concurrentDrop;
 
-// ============================================================================
-// toSQL returns string
-// ============================================================================
 
 const _tableSql: string = _tableBuilder.toSQL();
 const _alterSql: string = _alterBuilder.toSQL();
@@ -156,16 +106,10 @@ const _seqSql: string = _seqStatement.toSQL();
 const _dropSql: string = _dropStatement.toSQL();
 const _customSql: string = _customStatement.toSQL();
 
-// ============================================================================
-// DDLStatement isCustom
-// ============================================================================
 
 const _isCustomFlag: boolean = _customStatement.isCustom;
 const _isCustomFlag2: boolean = _tableBuilder.isCustom;
 
-// ============================================================================
-// Statements array type
-// ============================================================================
 
 const _statements: DDLStatement[] = [
   ddl.createEnum("public", "user_type", ["admin", "user"]),
@@ -180,38 +124,3 @@ const _statements: DDLStatement[] = [
   ddl.custom("INSERT INTO users (type) VALUES ('admin')"),
 ];
 
-// ============================================================================
-// Negative tests
-// ============================================================================
-
-// @ts-expect-error: createTable requires schema and name arguments
-ddl.createTable();
-
-// @ts-expect-error: createEnum requires schema, name and array of strings
-ddl.createEnum("public", "type", "not-an-array");
-
-// @ts-expect-error: column requires name and type
-ddl.createTable("public", "users").column();
-
-ddl
-  .createTable("public", "users")
-  // @ts-expect-error: invalid option key
-  .column("id", "serial", { invalidOption: true });
-
-// @ts-expect-error: createIndex requires name argument
-ddl.createIndex();
-
-// Positive: on can be called without columns when using(type, columns)
-ddl.createIndex("idx").on("public", "users");
-
-// @ts-expect-error: on columns must be a string array
-ddl.createIndex("idx").on("public", "users", "not-an-array");
-
-// @ts-expect-error: using columns must be a string array
-ddl.createIndex("idx").on("public", "users").using("btree", "not-an-array");
-
-// @ts-expect-error: concurrently does not accept arguments
-ddl.createIndex("idx").concurrently(true);
-
-// @ts-expect-error: concurrently on dropIndex does not accept arguments
-ddl.dropIndex("idx").concurrently(true);

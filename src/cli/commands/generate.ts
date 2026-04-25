@@ -339,7 +339,7 @@ export function generateMigration(
   for (const enumName in prev.enums) {
     if (!(enumName in curr.enums)) {
       const enm = prev.enums[enumName];
-      statements.push(`ddl.dropEnum("${enm.schema}", "${enm.name}")`);
+      statements.push(`ddl.dropType("${enm.schema}", "${enm.name}")`);
     }
   }
 
@@ -350,7 +350,7 @@ export function generateMigration(
       const enm = curr.enums[enumName];
       const values = enm.values.map((v) => `"${v}"`).join(", ");
       statements.push(
-        `ddl.createEnum("${enm.schema}", "${enm.name}", [${values}])`,
+        `ddl.createType("${enm.schema}", "${enm.name}", { asEnum: [${values}] })`,
       );
     } else {
       // Check for added values
@@ -416,15 +416,15 @@ export function generateMigration(
 
             if (afterValue !== null) {
               statements.push(
-                `ddl.alterEnumAddValue("${enm.schema}", "${enm.name}", "${addedValue}", { after: "${afterValue}" })`,
+                `ddl.alterType("${enm.schema}", "${enm.name}").addValue("${addedValue}", { after: "${afterValue}" })`,
               );
             } else if (beforeValue !== null) {
               statements.push(
-                `ddl.alterEnumAddValue("${enm.schema}", "${enm.name}", "${addedValue}", { before: "${beforeValue}" })`,
+                `ddl.alterType("${enm.schema}", "${enm.name}").addValue("${addedValue}", { before: "${beforeValue}" })`,
               );
             } else {
               statements.push(
-                `ddl.alterEnumAddValue("${enm.schema}", "${enm.name}", "${addedValue}")`,
+                `ddl.alterType("${enm.schema}", "${enm.name}").addValue("${addedValue}")`,
               );
             }
           }

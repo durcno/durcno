@@ -30,7 +30,11 @@
  */
 
 export { MIGRATION_NAME_REGEX } from "./consts";
-export { ddl } from "./ddl";
+export {
+  CustomStatement,
+  DDLStatement,
+  ddl,
+} from "./ddl";
 export {
   createEmptySnapshot,
   type Snapshot,
@@ -45,10 +49,6 @@ export {
   type SnapshotTableUnique,
   snapshot,
 } from "./snapshot";
-export {
-  CustomStatement,
-  DDLStatement,
-} from "./statement";
 
 /**
  * Migration options that can be exported from up.ts/down.ts
