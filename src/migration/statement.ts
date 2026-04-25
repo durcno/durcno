@@ -40,9 +40,9 @@ export type DDLStatementType =
  * Abstract base class for all DDL (Data Definition Language) statements.
  *
  * Every migration statement extends this class and must implement:
- * - {@link DDLStatement.type | type} — a discriminant for the statement kind
- * - {@link DDLStatements["toSQL"] | toSQL()} — generates the raw SQL string
- * - {@link DDLStatement.applyToSnapshot | applyToSnapshot()} — mutates a {@link Snapshot} in place
+ * - {@link DDLStatement["type"] | type} — a discriminant for the statement kind
+ * - {@link DDLStatement["toSQL"] | toSQL()} — generates the raw SQL string
+ * - {@link DDLStatement["applyToSnapshot"] | applyToSnapshot()} — mutates a {@link Snapshot} in place
  *
  * @example
  * ```typescript
