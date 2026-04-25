@@ -29,7 +29,7 @@
 ## Setup
 
 ```bash
-npm install durcno
+npm add durcno@alpha
 ```
 
 ```bash
