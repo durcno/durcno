@@ -1,6 +1,5 @@
 import type { Snapshot } from "../snapshot";
 import { DDLStatement } from "./statement";
-import { buildRelation } from "./utils";
 
 /**
  * Options for configuring a PostgreSQL sequence.
@@ -54,7 +53,7 @@ export class CreateSequenceStatement extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.name);
+    const relation = `"${this.schema}"."${this.name}"`;
     let sql = `CREATE SEQUENCE ${relation}`;
     if (this.options.startWith !== undefined)
       sql += ` START WITH ${this.options.startWith}`;
@@ -110,7 +109,7 @@ export class DropSequenceStatement extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.name);
+    const relation = `"${this.schema}"."${this.name}"`;
     return `DROP SEQUENCE ${relation};`;
   }
 

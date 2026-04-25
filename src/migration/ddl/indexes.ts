@@ -1,7 +1,6 @@
 import type { IndexType } from "../../indexes";
 import type { Snapshot } from "../snapshot";
 import { DDLStatement } from "./statement";
-import { buildRelation } from "./utils";
 
 /**
  * Chainable builder that constructs a `CREATE INDEX` DDL statement.
@@ -93,7 +92,7 @@ export class CreateIndexBuilder extends DDLStatement {
   }
 
   toSQL(): string {
-    const tableRelation = buildRelation(this.tableSchema, this.tableName);
+    const tableRelation = `"${this.tableSchema}"."${this.tableName}"`;
     const columns = this.indexColumns.map((c) => `"${c}"`).join(", ");
     const uniqueStr = this.isUnique ? " UNIQUE" : "";
     const concurrentlyStr = this.isConcurrent ? " CONCURRENTLY" : "";

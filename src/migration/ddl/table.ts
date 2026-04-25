@@ -10,7 +10,6 @@ import type {
   SnapshotTableUnique,
 } from "../snapshot";
 import { DDLStatement } from "./statement";
-import { buildRelation } from "./utils";
 
 /**
  * Defines a foreign-key reference from a column to another table's column.
@@ -182,7 +181,7 @@ export class CreateTableBuilder extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.name);
+    const relation = `"${this.schema}"."${this.name}"`;
 
     const entries: string[] = [];
 
@@ -305,7 +304,7 @@ export class DropTableStatement extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.name);
+    const relation = `"${this.schema}"."${this.name}"`;
     return `DROP TABLE ${relation};`;
   }
 
@@ -343,7 +342,7 @@ export class RenameTableStatement extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.oldName);
+    const relation = `"${this.schema}"."${this.oldName}"`;
     return `ALTER TABLE ${relation} RENAME TO "${this.newName}";`;
   }
 
@@ -599,7 +598,7 @@ export class AlterTableBuilder extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.name);
+    const relation = `"${this.schema}"."${this.name}"`;
 
     const statements: string[] = [];
 

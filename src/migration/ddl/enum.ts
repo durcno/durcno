@@ -1,6 +1,5 @@
 import type { Snapshot } from "../snapshot";
 import { DDLStatement } from "./statement";
-import { buildRelation } from "./utils";
 
 /**
  * DDL statement that creates a new PostgreSQL enum type.
@@ -32,7 +31,7 @@ export class CreateEnumStatement extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.name);
+    const relation = `"${this.schema}"."${this.name}"`;
     const valuesStr = this.values.map((v) => `'${v}'`).join(", ");
     return `CREATE TYPE ${relation} AS ENUM(${valuesStr});`;
   }
@@ -89,7 +88,7 @@ export class AlterEnumAddValueStatement extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.name);
+    const relation = `"${this.schema}"."${this.name}"`;
     let sql = `ALTER TYPE ${relation} ADD VALUE IF NOT EXISTS '${this.value}'`;
     if (this.position?.after) {
       sql += ` AFTER '${this.position.after}'`;
@@ -151,7 +150,7 @@ export class DropEnumStatement extends DDLStatement {
   }
 
   toSQL(): string {
-    const relation = buildRelation(this.schema, this.name);
+    const relation = `"${this.schema}"."${this.name}"`;
     return `DROP TYPE ${relation};`;
   }
 
