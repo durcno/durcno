@@ -131,7 +131,9 @@ describe("durcno generate - unique/primary key constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(1);
 
     const uniqueConstraints = await getConstraints("constraint_test", "u");
-    expect(uniqueConstraints["constraint_test_unique_email_name"]).toBeDefined();
+    expect(
+      uniqueConstraints["constraint_test_unique_email_name"],
+    ).toBeDefined();
     expect(
       uniqueConstraints["constraint_test_unique_email_name"].columns,
     ).toEqual(["email", "name"]);
