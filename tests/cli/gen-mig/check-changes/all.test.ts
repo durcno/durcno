@@ -19,36 +19,48 @@ describe("durcno generate - check constraint changes", () => {
   let containerInfo: TestContainerInfo;
   let client: pg.Client;
 
-  async function cleanDatabase() {
-    // Drop all objects to ensure a clean slate for each test
-    await client.query(`
-      DROP TABLE IF EXISTS public.check_test CASCADE;
-      DROP TABLE IF EXISTS durcno.migrations CASCADE;
-      DROP SCHEMA IF EXISTS durcno CASCADE;
-    `);
-  }
-
-  function runGenerate(scenario: string): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: process.cwd(),
-      env: { ...process.env, CHECK_SCENARIO: scenario },
-    });
-    return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
+  function runGenerateAndMigrate(stage: number): {
+    success: boolean;
+    output: string;
+  } {
+    const env = {
+      ...process.env,
+      STAGE: String(stage),
+      DATABASE_PORT: String(containerInfo.port),
     };
-  }
 
-  function runMigrate(): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["migrate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: __dirname,
-      env: { ...process.env, DATABASE_PORT: String(containerInfo.port) },
-    });
+    const genResult = spawnSync(
+      "durcno",
+      ["generate", "--config", configPath],
+      {
+        encoding: "utf8",
+        cwd: process.cwd(),
+        env,
+      },
+    );
+    if (genResult.status !== 0) {
+      return {
+        success: false,
+        output: genResult.stdout + genResult.stderr,
+      };
+    }
+
+    const migrateResult = spawnSync(
+      "durcno",
+      ["migrate", "--config", configPath],
+      {
+        encoding: "utf8",
+        cwd: __dirname,
+        env,
+      },
+    );
     return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
+      success: migrateResult.status === 0,
+      output:
+        genResult.stdout +
+        genResult.stderr +
+        migrateResult.stdout +
+        migrateResult.stderr,
     };
   }
 
@@ -87,7 +99,7 @@ describe("durcno generate - check constraint changes", () => {
 
   beforeAll(async () => {
     rmSync(migrationsDir);
-    delete process.env.CHECK_SCENARIO;
+    delete process.env.STAGE;
 
     containerInfo = await startPostgresContainer({
       user: "testuser",
@@ -103,38 +115,28 @@ describe("durcno generate - check constraint changes", () => {
     await stopPostgresContainer(containerInfo.container);
   });
 
-  it("should include checks in initial migration and apply them", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
+  it("[stage 1] should generate and apply initial migration with check constraints", async () => {
+    const result = runGenerateAndMigrate(1);
+    expect(result.success).toBe(true);
 
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(1);
 
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(1);
-
-    // Run migrate
-    const migrateResult = runMigrate();
-    expect(migrateResult.success).toBe(true);
-
-    // Verify check constraints exist in database
     const checks = await getCheckConstraints("check_test");
-
     expect(checks["positive_price_check"]).toBeDefined();
     expect(checks["valid_quantity_check"]).toBeDefined();
     expect(checks["valid_email_check"]).toBeDefined();
     expect(checks["name_length_check"]).toBeDefined();
+    expect(checks["max_price_check"]).toBeUndefined();
 
-    // Verify constraints work - valid data should insert
+    // Valid data should insert
     await client.query(`
       INSERT INTO check_test (price, quantity, email, name, "created_at")
       VALUES (100, 50, 'test@example.com', 'Valid Name', now());
     `);
+    const rows = await client.query("SELECT * FROM check_test");
+    expect(rows.rows.length).toBe(1);
 
-    const result = await client.query("SELECT * FROM check_test");
-    expect(result.rows.length).toBe(1);
-
-    // Verify constraint - invalid price should fail
+    // Invalid price should fail
     await expect(
       client.query(`
         INSERT INTO check_test (price, quantity, email, name, "created_at")
@@ -142,7 +144,7 @@ describe("durcno generate - check constraint changes", () => {
       `),
     ).rejects.toThrow();
 
-    // Verify constraint - invalid quantity should fail
+    // Invalid quantity should fail
     await expect(
       client.query(`
         INSERT INTO check_test (price, quantity, email, name, "created_at")
@@ -151,36 +153,17 @@ describe("durcno generate - check constraint changes", () => {
     ).rejects.toThrow();
   });
 
-  it("should generate and apply ADD CONSTRAINT when a check is added", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
+  it("[stage 2] should generate and apply migration adding max_price check", async () => {
+    const result = runGenerateAndMigrate(2);
+    expect(result.success).toBe(true);
 
-    // Initial
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(2);
 
-    const migrateResult1 = runMigrate();
-    expect(migrateResult1.success).toBe(true);
-
-    // Wait for different timestamp
-    await new Promise((r) => setTimeout(r, 100));
-
-    // Add a check
-    const add = runGenerate("add");
-    expect(add.success).toBe(true);
-
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
-
-    const migrateResult2 = runMigrate();
-    expect(migrateResult2.success).toBe(true);
-
-    // Verify new check constraint exists in database
     const checks = await getCheckConstraints("check_test");
     expect(checks["max_price_check"]).toBeDefined();
     expect(checks["max_price_check"]).toContain("1000000");
 
-    // Verify the new constraint works - price >= 1000000 should fail
+    // Price >= 1000000 should now fail
     await expect(
       client.query(`
         INSERT INTO check_test (price, quantity, email, name, "created_at")
@@ -188,91 +171,45 @@ describe("durcno generate - check constraint changes", () => {
       `),
     ).rejects.toThrow();
 
-    // Valid price should work
+    // Price within range should succeed
     await client.query(`
       INSERT INTO check_test (price, quantity, email, name, "created_at")
       VALUES (999999, 50, 'test@example.com', 'Valid Name', now());
     `);
-
-    const result = await client.query("SELECT price FROM check_test");
-    expect(result.rows[0].price).toBe("999999");
   });
 
-  it("should generate and apply DROP CONSTRAINT when a check is removed", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
+  it("[stage 3] should generate and apply migration removing valid_email check", async () => {
+    const result = runGenerateAndMigrate(3);
+    expect(result.success).toBe(true);
 
-    // Initial
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(3);
 
-    const migrateResult1 = runMigrate();
-    expect(migrateResult1.success).toBe(true);
-
-    // Verify email check exists
-    let checks = await getCheckConstraints("check_test");
-    expect(checks["valid_email_check"]).toBeDefined();
-
-    await new Promise((r) => setTimeout(r, 100));
-
-    const remove = runGenerate("remove");
-    expect(remove.success).toBe(true);
-
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
-
-    const migrateResult2 = runMigrate();
-    expect(migrateResult2.success).toBe(true);
-
-    // Verify check constraint is removed from database
-    checks = await getCheckConstraints("check_test");
+    const checks = await getCheckConstraints("check_test");
     expect(checks["valid_email_check"]).toBeUndefined();
+    expect(checks["positive_price_check"]).toBeDefined();
+    expect(checks["valid_quantity_check"]).toBeDefined();
+    expect(checks["name_length_check"]).toBeDefined();
+    expect(checks["max_price_check"]).toBeDefined();
 
-    // Email without @ should now be allowed
+    // Invalid email format should now be allowed
     await client.query(`
       INSERT INTO check_test (price, quantity, email, name, "created_at")
       VALUES (100, 50, 'invalid-email', 'Valid Name', now());
     `);
-
-    const result = await client.query("SELECT email FROM check_test");
-    expect(result.rows[0].email).toBe("invalid-email");
   });
 
-  it("should recreate constraint when expression is modified", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
+  it("[stage 4] should generate and apply migration modifying valid_quantity upper bound", async () => {
+    const result = runGenerateAndMigrate(4);
+    expect(result.success).toBe(true);
 
-    // Initial
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(4);
 
-    const migrateResult1 = runMigrate();
-    expect(migrateResult1.success).toBe(true);
+    const checks = await getCheckConstraints("check_test");
+    expect(checks["valid_quantity_check"]).toBeDefined();
+    expect(checks["valid_quantity_check"]).toContain("1000");
+    expect(checks["valid_quantity_check"]).not.toContain("10000");
 
-    // Verify original constraint - quantity up to 10000 should work
-    await client.query(`
-      INSERT INTO check_test (price, quantity, email, name, "created_at")
-      VALUES (100, 5000, 'test@example.com', 'Valid Name', now());
-    `);
-
-    let result = await client.query("SELECT quantity FROM check_test");
-    expect(result.rows[0].quantity).toBe(5000);
-
-    // Clean up for next test
-    await client.query("DELETE FROM check_test");
-
-    await new Promise((r) => setTimeout(r, 100));
-
-    const modified = runGenerate("modify");
-    expect(modified.success).toBe(true);
-
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
-
-    const migrateResult2 = runMigrate();
-    expect(migrateResult2.success).toBe(true);
-
-    // Verify modified constraint - quantity > 1000 should now fail
+    // Quantity > 1000 should now fail
     await expect(
       client.query(`
         INSERT INTO check_test (price, quantity, email, name, "created_at")
@@ -280,18 +217,59 @@ describe("durcno generate - check constraint changes", () => {
       `),
     ).rejects.toThrow();
 
-    // Quantity <= 1000 should work
+    // Quantity <= 1000 should succeed
     await client.query(`
       INSERT INTO check_test (price, quantity, email, name, "created_at")
       VALUES (100, 1000, 'test@example.com', 'Valid Name', now());
     `);
+  });
 
-    result = await client.query("SELECT quantity FROM check_test");
-    expect(result.rows[0].quantity).toBe(1000);
+  it("[stage 4] should detect no changes when schema is unchanged", () => {
+    const result = spawnSync("durcno", ["generate", "--config", configPath], {
+      encoding: "utf8",
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        STAGE: "4",
+        DATABASE_PORT: String(containerInfo.port),
+      },
+    });
+    const output = result.stdout + result.stderr;
+    expect(output).toContain("No changes detected");
 
-    // Verify the constraint definition changed
-    const checks = await getCheckConstraints("check_test");
-    expect(checks["valid_quantity_check"]).toContain("1000");
-    expect(checks["valid_quantity_check"]).not.toContain("10000");
+    expect(getMigrationFolders()).toHaveLength(4);
+  });
+
+  it("should verify migration folders follow ISO timestamp naming", () => {
+    const folders = getMigrationFolders();
+    expect(folders.length).toBeGreaterThanOrEqual(4);
+
+    for (const folder of folders) {
+      expect(MIGRATION_NAME_REGEX.test(folder)).toBe(true);
+    }
+
+    for (let i = 1; i < folders.length; i++) {
+      const toISOString = (d: string) =>
+        `${d.split("T")[0]}T${d.split("T")[1].replace(/-/g, ":")}`;
+      const prevTime = new Date(toISOString(folders[i - 1])).getTime();
+      const currTime = new Date(toISOString(folders[i])).getTime();
+      expect(currTime).toBeGreaterThan(prevTime);
+    }
+  });
+
+  it("should be able to insert and query data after migrations", async () => {
+    await client.query(`
+      INSERT INTO check_test (price, quantity, email, name, "created_at")
+      VALUES (500, 100, 'final@example.com', 'Final User', now());
+    `);
+
+    const queryResult = await client.query(
+      "SELECT price, quantity, email, name FROM check_test WHERE email = $1",
+      ["final@example.com"],
+    );
+    expect(queryResult.rows.length).toBe(1);
+    expect(queryResult.rows[0].price).toBe("500");
+    expect(queryResult.rows[0].quantity).toBe(100);
+    expect(queryResult.rows[0].name).toBe("Final User");
   });
 });

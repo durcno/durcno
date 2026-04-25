@@ -18,40 +18,48 @@ describe("durcno generate - enum changes", () => {
   let containerInfo: TestContainerInfo;
   let client: pg.Client;
 
-  async function cleanDatabase() {
-    // Drop all objects to ensure a clean slate for each test
-    await client.query(`
-      DROP TABLE IF EXISTS public.users CASCADE;
-      DROP TYPE IF EXISTS public.role CASCADE;
-      DROP TABLE IF EXISTS durcno.migrations CASCADE;
-      DROP SCHEMA IF EXISTS durcno CASCADE;
-    `);
-  }
-
-  function runGenerate(scenario: string): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: process.cwd(),
-      env: { ...process.env, ENUM_SCENARIO: scenario },
-    });
-    return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
+  function runGenerateAndMigrate(stage: number): {
+    success: boolean;
+    output: string;
+  } {
+    const env = {
+      ...process.env,
+      STAGE: String(stage),
+      DATABASE_PORT: String(containerInfo.port),
     };
-  }
 
-  function runMigrate(): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["migrate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: __dirname,
-      env: {
-        ...process.env,
-        DATABASE_PORT: String(containerInfo.port),
+    const genResult = spawnSync(
+      "durcno",
+      ["generate", "--config", configPath],
+      {
+        encoding: "utf8",
+        cwd: process.cwd(),
+        env,
       },
-    });
+    );
+    if (genResult.status !== 0) {
+      return {
+        success: false,
+        output: genResult.stdout + genResult.stderr,
+      };
+    }
+
+    const migrateResult = spawnSync(
+      "durcno",
+      ["migrate", "--config", configPath],
+      {
+        encoding: "utf8",
+        cwd: __dirname,
+        env,
+      },
+    );
     return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
+      success: migrateResult.status === 0,
+      output:
+        genResult.stdout +
+        genResult.stderr +
+        migrateResult.stdout +
+        migrateResult.stderr,
     };
   }
 
@@ -65,7 +73,7 @@ describe("durcno generate - enum changes", () => {
 
   beforeAll(async () => {
     rmSync(migrationsDir);
-    delete process.env.ENUM_SCENARIO;
+    delete process.env.STAGE;
 
     containerInfo = await startPostgresContainer({
       user: "testuser",
@@ -81,141 +89,161 @@ describe("durcno generate - enum changes", () => {
     await stopPostgresContainer(containerInfo.container);
   });
 
-  describe("appending enum values", () => {
-    it("should generate and apply migration when appending value to end", async () => {
-      await cleanDatabase();
-      rmSync(migrationsDir);
+  it("[stage 1] should generate and apply initial migration creating role enum", async () => {
+    const result = runGenerateAndMigrate(1);
+    expect(result.success).toBe(true);
 
-      // Create initial migration
-      const initialResult = runGenerate("initial");
-      expect(initialResult.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(1);
 
-      let folders = getMigrationFolders();
-      expect(folders).toHaveLength(1);
-
-      // Run initial migrate
-      const migrateResult1 = runMigrate();
-      expect(migrateResult1.success).toBe(true);
-
-      // Wait to ensure different timestamp
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Create subsequent migration with appended value
-      const appendResult = runGenerate("append");
-      expect(appendResult.success).toBe(true);
-
-      folders = getMigrationFolders();
-      expect(folders).toHaveLength(2);
-
-      // Run migrate
-      const migrateResult2 = runMigrate();
-      expect(migrateResult2.success).toBe(true);
-    });
-
-    it("should generate and apply migration when inserting value in middle", async () => {
-      await cleanDatabase();
-      rmSync(migrationsDir);
-
-      // Create initial migration
-      const initialResult = runGenerate("initial");
-      expect(initialResult.success).toBe(true);
-
-      // Run initial migrate
-      const migrateResult1 = runMigrate();
-      if (!migrateResult1.success) {
-        console.error("Migration failed:", migrateResult1.output);
-      }
-      expect(migrateResult1.success).toBe(true);
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Create subsequent migration with value inserted in middle
-      const insertResult = runGenerate("insert_middle");
-      expect(insertResult.success).toBe(true);
-
-      const folders = getMigrationFolders();
-      expect(folders).toHaveLength(2);
-
-      // Run migrate
-      const migrateResult2 = runMigrate();
-      expect(migrateResult2.success).toBe(true);
-    });
-
-    it("should generate and apply migration when inserting value at start", async () => {
-      await cleanDatabase();
-      rmSync(migrationsDir);
-
-      // Create initial migration
-      const initialResult = runGenerate("initial");
-      expect(initialResult.success).toBe(true);
-
-      // Run initial migrate
-      const migrateResult1 = runMigrate();
-      expect(migrateResult1.success).toBe(true);
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Create subsequent migration with value inserted at start
-      const insertResult = runGenerate("insert_start");
-      expect(insertResult.success).toBe(true);
-
-      const folders = getMigrationFolders();
-      expect(folders).toHaveLength(2);
-
-      // Run migrate
-      const migrateResult2 = runMigrate();
-      expect(migrateResult2.success).toBe(true);
-    });
+    const enumResult = await client.query(`
+      SELECT enumlabel
+      FROM pg_enum
+      JOIN pg_type ON pg_enum.enumtypid = pg_type.oid
+      WHERE pg_type.typname = 'role'
+      ORDER BY enumsortorder;
+    `);
+    const values = enumResult.rows.map((row) => row.enumlabel);
+    expect(values).toEqual(["admin", "user"]);
   });
 
-  describe("failing on invalid enum changes", () => {
-    it("should fail when enum values are removed", async () => {
-      await cleanDatabase();
-      rmSync(migrationsDir);
+  it("[stage 2] should generate and apply migration appending value to role enum", async () => {
+    const result = runGenerateAndMigrate(2);
+    expect(result.success).toBe(true);
 
-      // Create initial migration
-      const initialResult = runGenerate("initial");
-      expect(initialResult.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(2);
 
-      // Run initial migrate
-      const migrateResult = runMigrate();
-      expect(migrateResult.success).toBe(true);
+    const enumResult = await client.query(`
+      SELECT enumlabel
+      FROM pg_enum
+      JOIN pg_type ON pg_enum.enumtypid = pg_type.oid
+      WHERE pg_type.typname = 'role'
+      ORDER BY enumsortorder;
+    `);
+    const values = enumResult.rows.map((row) => row.enumlabel);
+    expect(values).toEqual(["admin", "user", "moderator"]);
+  });
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  it("[stage 3] should generate and apply migration inserting value in middle of role enum", async () => {
+    const result = runGenerateAndMigrate(3);
+    expect(result.success).toBe(true);
 
-      // Try to create subsequent migration with removed value - should fail
-      const removeResult = runGenerate("remove");
-      expect(removeResult.success).toBe(false);
-      expect(removeResult.output).toContain("removed values");
-      expect(removeResult.output).toContain("user");
+    expect(getMigrationFolders()).toHaveLength(3);
 
-      // Should not create a new migration folder
-      const folders = getMigrationFolders();
-      expect(folders).toHaveLength(1);
+    const enumResult = await client.query(`
+      SELECT enumlabel
+      FROM pg_enum
+      JOIN pg_type ON pg_enum.enumtypid = pg_type.oid
+      WHERE pg_type.typname = 'role'
+      ORDER BY enumsortorder;
+    `);
+    const values = enumResult.rows.map((row) => row.enumlabel);
+    expect(values).toEqual(["admin", "editor", "user", "moderator"]);
+  });
+
+  it("[stage 4] should generate and apply migration inserting value at start of role enum", async () => {
+    const result = runGenerateAndMigrate(4);
+    expect(result.success).toBe(true);
+
+    expect(getMigrationFolders()).toHaveLength(4);
+
+    const enumResult = await client.query(`
+      SELECT enumlabel
+      FROM pg_enum
+      JOIN pg_type ON pg_enum.enumtypid = pg_type.oid
+      WHERE pg_type.typname = 'role'
+      ORDER BY enumsortorder;
+    `);
+    const values = enumResult.rows.map((row) => row.enumlabel);
+    expect(values).toEqual([
+      "superadmin",
+      "admin",
+      "editor",
+      "user",
+      "moderator",
+    ]);
+  });
+
+  it("[stage 4] should detect no changes when schema is unchanged", () => {
+    const result = spawnSync("durcno", ["generate", "--config", configPath], {
+      encoding: "utf8",
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        STAGE: "4",
+        DATABASE_PORT: String(containerInfo.port),
+      },
     });
+    const output = result.stdout + result.stderr;
+    expect(output).toContain("No changes detected");
 
-    it("should fail when enum values are reordered", async () => {
-      await cleanDatabase();
-      rmSync(migrationsDir);
+    const folders = getMigrationFolders();
+    expect(folders).toHaveLength(4);
+  });
 
-      // Create initial migration
-      const initialResult = runGenerate("initial");
-      expect(initialResult.success).toBe(true);
-
-      // Run initial migrate
-      const migrateResult = runMigrate();
-      expect(migrateResult.success).toBe(true);
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Try to create subsequent migration with reordered values - should fail
-      const reorderResult = runGenerate("reorder");
-      expect(reorderResult.success).toBe(false);
-      expect(reorderResult.output).toContain("reordered values");
-
-      // Should not create a new migration folder
-      const folders = getMigrationFolders();
-      expect(folders).toHaveLength(1);
+  it("should fail when enum values are removed", () => {
+    const result = spawnSync("durcno", ["generate", "--config", configPath], {
+      encoding: "utf8",
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        STAGE: "5",
+        DATABASE_PORT: String(containerInfo.port),
+      },
     });
+    const output = result.stdout + result.stderr;
+    expect(result.status).not.toBe(0);
+    expect(output).toContain("removed values");
+    expect(output).toContain("user");
+
+    expect(getMigrationFolders()).toHaveLength(4);
+  });
+
+  it("should fail when enum values are reordered", () => {
+    const result = spawnSync("durcno", ["generate", "--config", configPath], {
+      encoding: "utf8",
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        STAGE: "6",
+        DATABASE_PORT: String(containerInfo.port),
+      },
+    });
+    const output = result.stdout + result.stderr;
+    expect(result.status).not.toBe(0);
+    expect(output).toContain("reordered values");
+
+    expect(getMigrationFolders()).toHaveLength(4);
+  });
+
+  it("should verify migration folders follow ISO timestamp naming", () => {
+    const folders = getMigrationFolders();
+    expect(folders.length).toBeGreaterThanOrEqual(4);
+
+    for (const folder of folders) {
+      expect(MIGRATION_NAME_REGEX.test(folder)).toBe(true);
+    }
+
+    for (let i = 1; i < folders.length; i++) {
+      const toISOString = (d: string) =>
+        `${d.split("T")[0]}T${d.split("T")[1].replace(/-/g, ":")}`;
+      const prevTime = new Date(toISOString(folders[i - 1])).getTime();
+      const currTime = new Date(toISOString(folders[i])).getTime();
+      expect(currTime).toBeGreaterThan(prevTime);
+    }
+  });
+
+  it("should be able to insert and query data after migrations", async () => {
+    await client.query(`
+      INSERT INTO users (username, role, "created_at")
+      VALUES ('testuser', 'admin', now());
+    `);
+
+    const userResult = await client.query(
+      "SELECT username, role FROM users WHERE username = $1",
+      ["testuser"],
+    );
+    expect(userResult.rows.length).toBe(1);
+    expect(userResult.rows[0].username).toBe("testuser");
+    expect(userResult.rows[0].role).toBe("admin");
   });
 });

@@ -11,27 +11,25 @@ import {
 
 export { Migrations };
 
-// Environment variable controls the test scenario:
-// - "initial": Initial enum with ['admin', 'user']
-// - "append": Append 'moderator' to end: ['admin', 'user', 'moderator']
-// - "insert_middle": Insert 'editor' in middle: ['admin', 'editor', 'user']
-// - "insert_start": Insert 'superadmin' at start: ['superadmin', 'admin', 'user']
-// - "remove": Remove 'user': ['admin'] (should fail)
-// - "reorder": Reorder values: ['user', 'admin'] (should fail)
+// Stage 1: ['admin', 'user'] (initial)
+// Stage 2: ['admin', 'user', 'moderator'] (append to end)
+// Stage 3: ['admin', 'editor', 'user', 'moderator'] (insert in middle)
+// Stage 4: ['superadmin', 'admin', 'editor', 'user', 'moderator'] (insert at start)
+// Stage 5: ['superadmin', 'admin', 'editor', 'moderator'] (remove 'user' - should fail)
+// Stage 6: ['admin', 'superadmin', 'editor', 'user', 'moderator'] (reorder - should fail)
 
 const enumValuesMap = {
-  initial: ["admin", "user"],
-  append: ["admin", "user", "moderator"],
-  insert_middle: ["admin", "editor", "user"],
-  insert_start: ["superadmin", "admin", "user"],
-  remove: ["admin"],
-  reorder: ["user", "admin"],
+  1: ["admin", "user"],
+  2: ["admin", "user", "moderator"],
+  3: ["admin", "editor", "user", "moderator"],
+  4: ["superadmin", "admin", "editor", "user", "moderator"],
+  5: ["superadmin", "admin", "editor", "moderator"],
+  6: ["admin", "superadmin", "editor", "user", "moderator"],
 } as const;
 
-const scenario = (process.env.ENUM_SCENARIO ??
-  "initial") as keyof typeof enumValuesMap;
+const stage = Number(process.env.STAGE ?? 1) as keyof typeof enumValuesMap;
 
-const enumValues = enumValuesMap[scenario] ?? enumValuesMap.initial;
+const enumValues = enumValuesMap[stage] ?? enumValuesMap[1];
 
 export const RoleType = enumtype("public", "role", enumValues);
 

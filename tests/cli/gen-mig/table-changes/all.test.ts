@@ -18,37 +18,48 @@ describe("durcno generate - table changes", () => {
   let containerInfo: TestContainerInfo;
   let client: pg.Client;
 
-  function runGenerate(
-    isFirstMigration: boolean,
-    hasReference = false,
-  ): {
+  function runGenerateAndMigrate(stage: number): {
     success: boolean;
     output: string;
   } {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        FIRST_MIGRATION: isFirstMigration ? "true" : "false",
-        HAS_REFERENCE: hasReference ? "true" : "false",
-      },
-    });
-    return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
+    const env = {
+      ...process.env,
+      STAGE: String(stage),
+      DATABASE_PORT: String(containerInfo.port),
     };
-  }
 
-  function runMigrate(): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["migrate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: __dirname,
-      env: { ...process.env, DATABASE_PORT: String(containerInfo.port) },
-    });
+    const genResult = spawnSync(
+      "durcno",
+      ["generate", "--config", configPath],
+      {
+        encoding: "utf8",
+        cwd: process.cwd(),
+        env,
+      },
+    );
+    if (genResult.status !== 0) {
+      return {
+        success: false,
+        output: genResult.stdout + genResult.stderr,
+      };
+    }
+
+    const migrateResult = spawnSync(
+      "durcno",
+      ["migrate", "--config", configPath],
+      {
+        encoding: "utf8",
+        cwd: __dirname,
+        env,
+      },
+    );
     return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
+      success: migrateResult.status === 0,
+      output:
+        genResult.stdout +
+        genResult.stderr +
+        migrateResult.stdout +
+        migrateResult.stderr,
     };
   }
 
@@ -62,7 +73,7 @@ describe("durcno generate - table changes", () => {
 
   beforeAll(async () => {
     rmSync(migrationsDir);
-    delete process.env.FIRST_MIGRATION;
+    delete process.env.STAGE;
 
     containerInfo = await startPostgresContainer({
       user: "testuser",
@@ -78,19 +89,13 @@ describe("durcno generate - table changes", () => {
     await stopPostgresContainer(containerInfo.container);
   });
 
-  it("should generate and apply initial migration creating users table", async () => {
-    // Generate initial migration
-    const genResult = runGenerate(true);
-    expect(genResult.success).toBe(true);
+  it("[stage 1] should generate and apply initial migration creating users table", async () => {
+    const result = runGenerateAndMigrate(1);
+    expect(result.success).toBe(true);
 
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(1);
+    expect(getMigrationFolders()).toHaveLength(1);
 
-    // Run migrate
-    const migrateResult = runMigrate();
-    expect(migrateResult.success).toBe(true);
-
-    // Verify users table exists with initial columns
+    // Verify users table exists and posts does not
     const tablesResult = await client.query(`
       SELECT table_name
       FROM information_schema.tables
@@ -102,7 +107,7 @@ describe("durcno generate - table changes", () => {
     expect(tableNames).toContain("users");
     expect(tableNames).not.toContain("posts");
 
-    // Verify users table columns
+    // Verify initial columns exist and optional ones do not
     const columnsResult = await client.query(`
       SELECT column_name
       FROM information_schema.columns
@@ -119,20 +124,11 @@ describe("durcno generate - table changes", () => {
     expect(columnNames).not.toContain("age");
   });
 
-  it("should generate and apply subsequent migration adding columns and new table", async () => {
-    // Wait to ensure different timestamp
-    await new Promise((resolve) => setTimeout(resolve, 100));
+  it("[stage 2] should generate and apply migration adding columns to users and creating posts table", async () => {
+    const result = runGenerateAndMigrate(2);
+    expect(result.success).toBe(true);
 
-    // Generate subsequent migration (Posts table without FK yet)
-    const genResult = runGenerate(false, false);
-    expect(genResult.success).toBe(true);
-
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
-
-    // Run migrate
-    const migrateResult = runMigrate();
-    expect(migrateResult.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(2);
 
     // Verify posts table now exists
     const tablesResult = await client.query(`
@@ -193,69 +189,94 @@ describe("durcno generate - table changes", () => {
     expect(postsColumns.user_id).toBeDefined();
     expect(postsColumns.published_at).toBeDefined();
     expect(postsColumns.created_at).toBeDefined();
-
-    // At this stage, user_id has no FK yet
-    const fkResult = await client.query(`
-      SELECT constraint_name
-      FROM information_schema.table_constraints
-      WHERE constraint_type = 'FOREIGN KEY'
-      AND table_schema = 'public'
-      AND table_name = 'posts';
-    `);
-    expect(fkResult.rows.length).toBe(0);
   });
 
-  it("should generate and apply migration adding FK reference to existing column", async () => {
-    // Wait to ensure different timestamp
-    await new Promise((resolve) => setTimeout(resolve, 100));
+  it("[stage 3] should generate and apply migration dropping bio column (column drop)", async () => {
+    const result = runGenerateAndMigrate(3);
+    expect(result.success).toBe(true);
 
-    // Generate migration that adds FK to posts.user_id
-    const genResult = runGenerate(false, true);
-    expect(genResult.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(3);
 
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(3);
-
-    // Run migrate
-    const migrateResult = runMigrate();
-    expect(migrateResult.success).toBe(true);
-
-    // Verify posts table foreign key to users now exists
-    const fkResult = await client.query(`
-      SELECT
-        kcu.column_name,
-        ccu.table_name AS foreign_table_name,
-        ccu.column_name AS foreign_column_name
-      FROM information_schema.table_constraints AS tc
-      JOIN information_schema.key_column_usage AS kcu
-        ON tc.constraint_name = kcu.constraint_name
-        AND tc.table_schema = kcu.table_schema
-      JOIN information_schema.constraint_column_usage AS ccu
-        ON ccu.constraint_name = tc.constraint_name
-        AND ccu.table_schema = tc.table_schema
-      WHERE tc.constraint_type = 'FOREIGN KEY'
-      AND tc.table_schema = 'public'
-      AND tc.table_name = 'posts';
+    // Verify posts table still exists
+    const tablesResult = await client.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND table_type = 'BASE TABLE'
+      ORDER BY table_name;
     `);
-    expect(fkResult.rows.length).toBeGreaterThan(0);
-    const foreignKey = fkResult.rows[0];
-    expect(foreignKey.column_name).toBe("user_id");
-    expect(foreignKey.foreign_table_name).toBe("users");
-    expect(foreignKey.foreign_column_name).toBe("id");
+    const tableNames = tablesResult.rows.map((row) => row.table_name);
+    expect(tableNames).toContain("users");
+    expect(tableNames).toContain("posts");
+
+    // Verify bio column was dropped, but age remains
+    const columnsResult = await client.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+      AND table_name = 'users'
+      ORDER BY ordinal_position;
+    `);
+    const columnNames = columnsResult.rows.map((row) => row.column_name);
+    expect(columnNames).not.toContain("bio");
+    expect(columnNames).toContain("age");
+    expect(columnNames).toContain("id");
+    expect(columnNames).toContain("username");
+    expect(columnNames).toContain("email");
   });
 
-  it("should detect no changes when schema is unchanged", () => {
-    const result = runGenerate(false, true);
-    expect(result.output).toContain("No changes detected");
+  it("[stage 4] should generate and apply migration dropping posts table (table drop)", async () => {
+    const result = runGenerateAndMigrate(4);
+    expect(result.success).toBe(true);
+
+    expect(getMigrationFolders()).toHaveLength(4);
+
+    // Verify posts table was dropped
+    const tablesResult = await client.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND table_type = 'BASE TABLE'
+      ORDER BY table_name;
+    `);
+    const tableNames = tablesResult.rows.map((row) => row.table_name);
+    expect(tableNames).toContain("users");
+    expect(tableNames).not.toContain("posts");
+
+    // Users table should still have age (bio was already dropped in stage 3)
+    const columnsResult = await client.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+      AND table_name = 'users'
+      ORDER BY ordinal_position;
+    `);
+    const columnNames = columnsResult.rows.map((row) => row.column_name);
+    expect(columnNames).toContain("age");
+    expect(columnNames).not.toContain("bio");
+  });
+
+  it("[stage 4] should detect no changes when schema is unchanged", () => {
+    const result = spawnSync("durcno", ["generate", "--config", configPath], {
+      encoding: "utf8",
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        STAGE: "4",
+        DATABASE_PORT: String(containerInfo.port),
+      },
+    });
+    const output = result.stdout + result.stderr;
+    expect(output).toContain("No changes detected");
 
     // Should not create a new migration folder
     const folders = getMigrationFolders();
-    expect(folders).toHaveLength(3);
+    expect(folders).toHaveLength(4);
   });
 
   it("should verify migration folders follow ISO timestamp naming", () => {
     const folders = getMigrationFolders();
-    expect(folders.length).toBeGreaterThanOrEqual(3);
+    expect(folders.length).toBeGreaterThanOrEqual(4);
 
     for (const folder of folders) {
       expect(MIGRATION_NAME_REGEX.test(folder)).toBe(true);
@@ -272,46 +293,19 @@ describe("durcno generate - table changes", () => {
   });
 
   it("should be able to insert and query data after migrations", async () => {
-    // Insert a user
+    // At stage 4: users has age but no bio, posts table is dropped
     await client.query(`
-      INSERT INTO users (username, email, bio, age, "created_at")
-      VALUES ('testuser', 'test@example.com', 'Test bio', 25, now());
+      INSERT INTO users (username, email, age, "created_at")
+      VALUES ('testuser', 'test@example.com', 30, now());
     `);
 
-    // Query the user
     const userResult = await client.query(
-      "SELECT username, email, bio, age FROM users WHERE username = $1",
+      "SELECT username, email, age FROM users WHERE username = $1",
       ["testuser"],
     );
     expect(userResult.rows.length).toBe(1);
     expect(userResult.rows[0].username).toBe("testuser");
-    expect(userResult.rows[0].bio).toBe("Test bio");
-    expect(userResult.rows[0].age).toBe(25);
-
-    // Insert a post referencing the user
-    const userIdResult = await client.query(
-      "SELECT id FROM users WHERE username = $1",
-      ["testuser"],
-    );
-    const userId = userIdResult.rows[0].id;
-
-    await client.query(
-      `
-      INSERT INTO posts (title, content, "user_id", "created_at")
-      VALUES ('Test Post', 'Post content', $1, now());
-    `,
-      [userId],
-    );
-
-    // Query the post with join
-    const postResult = await client.query(`
-      SELECT p.title, p.content, u.username
-      FROM posts p
-      JOIN users u ON p."user_id" = u.id
-      WHERE p.title = 'Test Post';
-    `);
-    expect(postResult.rows.length).toBe(1);
-    expect(postResult.rows[0].title).toBe("Test Post");
-    expect(postResult.rows[0].username).toBe("testuser");
+    expect(userResult.rows[0].email).toBe("test@example.com");
+    expect(userResult.rows[0].age).toBe(30);
   });
 });

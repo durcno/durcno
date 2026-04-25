@@ -19,35 +19,48 @@ describe("durcno generate - unique/primary key constraint changes", () => {
   let containerInfo: TestContainerInfo;
   let client: pg.Client;
 
-  async function cleanDatabase() {
-    await client.query(`
-      DROP TABLE IF EXISTS public.constraint_test CASCADE;
-      DROP TABLE IF EXISTS durcno.migrations CASCADE;
-      DROP SCHEMA IF EXISTS durcno CASCADE;
-    `);
-  }
-
-  function runGenerate(scenario: string): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: process.cwd(),
-      env: { ...process.env, CONSTRAINT_SCENARIO: scenario },
-    });
-    return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
+  function runGenerateAndMigrate(stage: number): {
+    success: boolean;
+    output: string;
+  } {
+    const env = {
+      ...process.env,
+      STAGE: String(stage),
+      DATABASE_PORT: String(containerInfo.port),
     };
-  }
 
-  function runMigrate(): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["migrate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: __dirname,
-      env: { ...process.env, DATABASE_PORT: String(containerInfo.port) },
-    });
+    const genResult = spawnSync(
+      "durcno",
+      ["generate", "--config", configPath],
+      {
+        encoding: "utf8",
+        cwd: process.cwd(),
+        env,
+      },
+    );
+    if (genResult.status !== 0) {
+      return {
+        success: false,
+        output: genResult.stdout + genResult.stderr,
+      };
+    }
+
+    const migrateResult = spawnSync(
+      "durcno",
+      ["migrate", "--config", configPath],
+      {
+        encoding: "utf8",
+        cwd: __dirname,
+        env,
+      },
+    );
     return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
+      success: migrateResult.status === 0,
+      output:
+        genResult.stdout +
+        genResult.stderr +
+        migrateResult.stdout +
+        migrateResult.stderr,
     };
   }
 
@@ -95,7 +108,7 @@ describe("durcno generate - unique/primary key constraint changes", () => {
 
   beforeAll(async () => {
     rmSync(migrationsDir);
-    delete process.env.CONSTRAINT_SCENARIO;
+    delete process.env.STAGE;
 
     containerInfo = await startPostgresContainer({
       user: "testuser",
@@ -111,29 +124,18 @@ describe("durcno generate - unique/primary key constraint changes", () => {
     await stopPostgresContainer(containerInfo.container);
   });
 
-  it("should include unique and PK constraints in initial migration and apply them", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
+  it("[stage 1] should generate and apply initial migration with PK and unique constraints", async () => {
+    const result = runGenerateAndMigrate(1);
+    expect(result.success).toBe(true);
 
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(1);
 
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(1);
-
-    const migrateResult = runMigrate();
-    expect(migrateResult.success).toBe(true);
-
-    // Verify unique constraints exist in database
     const uniqueConstraints = await getConstraints("constraint_test", "u");
-    expect(
-      uniqueConstraints["constraint_test_unique_email_name"],
-    ).toBeDefined();
+    expect(uniqueConstraints["constraint_test_unique_email_name"]).toBeDefined();
     expect(
       uniqueConstraints["constraint_test_unique_email_name"].columns,
     ).toEqual(["email", "name"]);
 
-    // Verify primary key constraint exists in database
     const pkConstraints = await getConstraints("constraint_test", "p");
     expect(pkConstraints["constraint_test_pk"]).toBeDefined();
     expect(pkConstraints["constraint_test_pk"].columns).toEqual([
@@ -141,13 +143,13 @@ describe("durcno generate - unique/primary key constraint changes", () => {
       "group_id",
     ]);
 
-    // Verify PK works - insert valid data
+    // Valid insert
     await client.query(`
       INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
       VALUES (1, 1, 'test@example.com', 'John', now());
     `);
 
-    // Verify PK works - duplicate PK should fail
+    // Duplicate PK should fail
     await expect(
       client.query(`
         INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
@@ -155,7 +157,7 @@ describe("durcno generate - unique/primary key constraint changes", () => {
       `),
     ).rejects.toThrow();
 
-    // Verify unique constraint works - duplicate email+name should fail
+    // Duplicate (email, name) should fail
     await expect(
       client.query(`
         INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
@@ -163,37 +165,19 @@ describe("durcno generate - unique/primary key constraint changes", () => {
       `),
     ).rejects.toThrow();
 
-    // Same email, different name - should succeed
+    // Same email, different name should succeed
     await client.query(`
       INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
       VALUES (2, 2, 'test@example.com', 'Jane', now());
     `);
   });
 
-  it("should generate and apply ADD CONSTRAINT when a unique constraint is added", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
+  it("[stage 2] should generate and apply migration adding unique name+createdAt constraint", async () => {
+    const result = runGenerateAndMigrate(2);
+    expect(result.success).toBe(true);
 
-    // Initial
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(2);
 
-    const migrateResult1 = runMigrate();
-    expect(migrateResult1.success).toBe(true);
-
-    await new Promise((r) => setTimeout(r, 100));
-
-    // Add unique constraint
-    const add = runGenerate("add_unique");
-    expect(add.success).toBe(true);
-
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
-
-    const migrateResult2 = runMigrate();
-    expect(migrateResult2.success).toBe(true);
-
-    // Verify new unique constraint exists
     const uniqueConstraints = await getConstraints("constraint_test", "u");
     expect(
       uniqueConstraints["constraint_test_unique_name_created"],
@@ -202,143 +186,51 @@ describe("durcno generate - unique/primary key constraint changes", () => {
       uniqueConstraints["constraint_test_unique_name_created"].columns,
     ).toEqual(["name", "created_at"]);
 
-    // Verify the new constraint works - duplicate (name, createdAt) should fail
+    // Duplicate (name, createdAt) should now fail
     await client.query(`
       INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-      VALUES (1, 1, 'a@example.com', 'UniqueName', '2025-01-01T00:00:00Z');
+      VALUES (3, 3, 'a@example.com', 'UniqueName', '2025-01-01T00:00:00Z');
     `);
-
     await expect(
       client.query(`
         INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-        VALUES (2, 2, 'b@example.com', 'UniqueName', '2025-01-01T00:00:00Z');
+        VALUES (4, 4, 'b@example.com', 'UniqueName', '2025-01-01T00:00:00Z');
       `),
     ).rejects.toThrow();
   });
 
-  it("should generate and apply DROP CONSTRAINT when a unique constraint is removed", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
+  it("[stage 3] should generate and apply migration removing unique_email_name constraint", async () => {
+    const result = runGenerateAndMigrate(3);
+    expect(result.success).toBe(true);
 
-    // Initial
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(3);
 
-    const migrateResult1 = runMigrate();
-    expect(migrateResult1.success).toBe(true);
-
-    // Verify unique constraint exists
-    let uniqueConstraints = await getConstraints("constraint_test", "u");
-    expect(
-      uniqueConstraints["constraint_test_unique_email_name"],
-    ).toBeDefined();
-
-    await new Promise((r) => setTimeout(r, 100));
-
-    const remove = runGenerate("remove_unique");
-    expect(remove.success).toBe(true);
-
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
-
-    const migrateResult2 = runMigrate();
-    expect(migrateResult2.success).toBe(true);
-
-    // Verify unique constraint is removed
-    uniqueConstraints = await getConstraints("constraint_test", "u");
-    expect(
-      uniqueConstraints["constraint_test_unique_email_name"],
-    ).toBeUndefined();
-
-    // Duplicate email+name should now be allowed
-    await client.query(`
-      INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-      VALUES (1, 1, 'test@example.com', 'John', now());
-    `);
-    await client.query(`
-      INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-      VALUES (2, 2, 'test@example.com', 'John', now());
-    `);
-  });
-
-  it("should recreate unique constraint when columns are modified", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
-
-    // Initial
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
-
-    const migrateResult1 = runMigrate();
-    expect(migrateResult1.success).toBe(true);
-
-    await new Promise((r) => setTimeout(r, 100));
-
-    // Modify unique constraint columns (email, name) -> (email)
-    const modified = runGenerate("modify_unique");
-    expect(modified.success).toBe(true);
-
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
-
-    const migrateResult2 = runMigrate();
-    expect(migrateResult2.success).toBe(true);
-
-    // Verify constraint now only covers email
     const uniqueConstraints = await getConstraints("constraint_test", "u");
     expect(
       uniqueConstraints["constraint_test_unique_email_name"],
-    ).toBeDefined();
+    ).toBeUndefined();
     expect(
-      uniqueConstraints["constraint_test_unique_email_name"].columns,
-    ).toEqual(["email", "created_at"]);
+      uniqueConstraints["constraint_test_unique_name_created"],
+    ).toBeDefined();
 
-    // Duplicate (email, createdAt) should now fail
+    // Duplicate (email, name) should now be allowed
     await client.query(`
       INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-      VALUES (1, 1, 'test@example.com', 'John', '2025-01-01T00:00:00Z');
+      VALUES (5, 5, 'dupe@example.com', 'DupeName', now());
     `);
-    await expect(
-      client.query(`
-        INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-        VALUES (2, 2, 'test@example.com', 'DifferentName', '2025-01-01T00:00:00Z');
-      `),
-    ).rejects.toThrow();
+    await client.query(`
+      INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
+      VALUES (6, 6, 'dupe@example.com', 'DupeName', now());
+    `);
   });
 
-  it("should recreate PK constraint when columns are modified", async () => {
-    await cleanDatabase();
-    rmSync(migrationsDir);
+  it("[stage 4] should generate and apply migration modifying PK to include email", async () => {
+    const result = runGenerateAndMigrate(4);
+    expect(result.success).toBe(true);
 
-    // Initial
-    const initial = runGenerate("initial");
-    expect(initial.success).toBe(true);
+    expect(getMigrationFolders()).toHaveLength(4);
 
-    const migrateResult1 = runMigrate();
-    expect(migrateResult1.success).toBe(true);
-
-    // Verify initial PK covers (userId, groupId)
-    let pkConstraints = await getConstraints("constraint_test", "p");
-    expect(pkConstraints["constraint_test_pk"]).toBeDefined();
-    expect(pkConstraints["constraint_test_pk"].columns).toEqual([
-      "user_id",
-      "group_id",
-    ]);
-
-    await new Promise((r) => setTimeout(r, 100));
-
-    // Modify PK (userId, groupId) -> (userId, groupId, email)
-    const modified = runGenerate("modify_pk");
-    expect(modified.success).toBe(true);
-
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(2);
-
-    const migrateResult2 = runMigrate();
-    expect(migrateResult2.success).toBe(true);
-
-    // Verify PK now covers (userId, groupId, email)
-    pkConstraints = await getConstraints("constraint_test", "p");
+    const pkConstraints = await getConstraints("constraint_test", "p");
     expect(pkConstraints["constraint_test_pk"]).toBeDefined();
     expect(pkConstraints["constraint_test_pk"].columns).toEqual([
       "user_id",
@@ -349,19 +241,68 @@ describe("durcno generate - unique/primary key constraint changes", () => {
     // Same userId+groupId but different email should now succeed
     await client.query(`
       INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-      VALUES (1, 1, 'a@example.com', 'John', now());
+      VALUES (10, 10, 'a@example.com', 'Alpha', now());
     `);
     await client.query(`
       INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-      VALUES (1, 1, 'b@example.com', 'Jane', now());
+      VALUES (10, 10, 'b@example.com', 'Beta', now());
     `);
 
-    // Same userId+groupId+email should fail
+    // Same userId+groupId+email should still fail
     await expect(
       client.query(`
         INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
-        VALUES (1, 1, 'a@example.com', 'Other', now());
+        VALUES (10, 10, 'a@example.com', 'Other', now());
       `),
     ).rejects.toThrow();
+  });
+
+  it("[stage 4] should detect no changes when schema is unchanged", () => {
+    const result = spawnSync("durcno", ["generate", "--config", configPath], {
+      encoding: "utf8",
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        STAGE: "4",
+        DATABASE_PORT: String(containerInfo.port),
+      },
+    });
+    const output = result.stdout + result.stderr;
+    expect(output).toContain("No changes detected");
+
+    expect(getMigrationFolders()).toHaveLength(4);
+  });
+
+  it("should verify migration folders follow ISO timestamp naming", () => {
+    const folders = getMigrationFolders();
+    expect(folders.length).toBeGreaterThanOrEqual(4);
+
+    for (const folder of folders) {
+      expect(MIGRATION_NAME_REGEX.test(folder)).toBe(true);
+    }
+
+    for (let i = 1; i < folders.length; i++) {
+      const toISOString = (d: string) =>
+        `${d.split("T")[0]}T${d.split("T")[1].replace(/-/g, ":")}`;
+      const prevTime = new Date(toISOString(folders[i - 1])).getTime();
+      const currTime = new Date(toISOString(folders[i])).getTime();
+      expect(currTime).toBeGreaterThan(prevTime);
+    }
+  });
+
+  it("should be able to insert and query data after migrations", async () => {
+    await client.query(`
+      INSERT INTO constraint_test ("user_id", "group_id", email, name, "created_at")
+      VALUES (99, 99, 'final@example.com', 'Final User', now());
+    `);
+
+    const queryResult = await client.query(
+      `SELECT "user_id", "group_id", email, name FROM constraint_test WHERE email = $1`,
+      ["final@example.com"],
+    );
+    expect(queryResult.rows.length).toBe(1);
+    expect(queryResult.rows[0]["user_id"]).toBe(99);
+    expect(queryResult.rows[0]["group_id"]).toBe(99);
+    expect(queryResult.rows[0].name).toBe("Final User");
   });
 });

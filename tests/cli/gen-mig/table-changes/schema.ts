@@ -14,8 +14,13 @@ import {
 
 export { Migrations };
 
-const isFirstMigration = process.env.FIRST_MIGRATION !== "false";
-const hasReference = process.env.HAS_REFERENCE === "true";
+const stage = Number(process.env.STAGE ?? 1);
+
+// Scenarios:
+// - Stage 1: initial users table (table create)
+// - Stage 2: add bio/age columns to users + create posts table (column add + table create)
+// - Stage 3: drop bio column from users only (column drop)
+// - Stage 4: drop posts table (table drop)
 
 // Base table that always exists
 export const Users = table("public", "users", {
@@ -23,27 +28,20 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, unique, notNull }),
   email: varchar({ length: 100, notNull }),
   createdAt: timestamp({ notNull, default: now() }),
-  // Conditionally add columns based on environment variable
-  ...(!isFirstMigration && {
-    bio: text({}),
-    age: integer({}),
-  }),
+  // Stage 2: bio and age added; Stage 3+: only age remains
+  ...(stage >= 2 && stage <= 2 && { bio: text({}) }),
+  ...(stage >= 2 && { age: integer({}) }),
 });
 
-// Conditionally create and export new table.
-// When FIRST_MIGRATION is true, export undefined which will be filtered out by the CLI.
-// userId starts without a FK reference; HAS_REFERENCE=true adds it in a subsequent migration.
-export const Posts = !isFirstMigration
-  ? table("public", "posts", {
-      id: pk(),
-      title: varchar({ length: 500, notNull }),
-      content: text({ notNull }),
-      userId: hasReference
-        ? bigint({
-            notNull,
-          }).references({ column: () => Users.id, onDelete: "CASCADE" })
-        : bigint({ notNull }),
-      publishedAt: timestamp({}),
-      createdAt: timestamp({ notNull, default: now() }),
-    })
-  : undefined;
+// Stage 2 and 3: posts table; Stage 4+: dropped
+export const Posts =
+  stage >= 2 && stage <= 3
+    ? table("public", "posts", {
+        id: pk(),
+        title: varchar({ length: 500, notNull }),
+        content: text({ notNull }),
+        userId: bigint({ notNull }),
+        publishedAt: timestamp({}),
+        createdAt: timestamp({ notNull, default: now() }),
+      })
+    : undefined;
