@@ -1,5 +1,6 @@
 import type { ConnectionOptions } from "node:tls";
 import type { DurcnoLogger } from "../logger";
+import type { MigrationOptions } from "../migration/index";
 import type { Query } from "../query-builders/query";
 
 /**
@@ -114,6 +115,23 @@ export function getUrlFromDbCredentials(
  * @abstract
  */
 export abstract class Connector {
+  /**
+   * Default migration options applied to generated migration files for this
+   * connector. When set, the `generate` CLI command will use these values as
+   * the `options` export in the produced `up.ts` / `down.ts` files instead of
+   * the built-in defaults.
+   *
+   * @example
+   * ```typescript
+   * class MyConnector extends Connector {
+   *   static override migrationOptions: MigrationOptions = {
+   *     transaction: false,
+   *     execution: "sequential",
+   *   };
+   * }
+   * ```
+   */
+  static migrationOptions?: MigrationOptions;
   /**
    * The original options passed to the connector constructor.
    * Provides full access to `dbCredentials`, `pool`, and `logger`.

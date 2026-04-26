@@ -4,9 +4,11 @@ import chalk from "chalk";
 import {
   createEmptySnapshot,
   type DDLStatement,
+  type MigrationOptions,
   snapshot,
 } from "durcno/migration";
 import prompts from "prompts";
+import type { Connector } from "../../connectors/common";
 import { snapshotExprToSQL } from "../../constraints/check";
 import type {
   Snapshot,
@@ -228,12 +230,18 @@ export async function generate(options: Options) {
     renamedTables,
   );
 
+  // Read migration option defaults from the connector class (if any)
+  const connectorMigrationOpts = (
+    config.connector.constructor as typeof Connector
+  ).migrationOptions;
+
   const migrationUpTs = generateMigration(
     ssPrevious,
     ssCurrent,
     "up",
     renamedTables,
     renamedColumns,
+    connectorMigrationOpts,
   );
 
   // Build reverse rename mappings for the down migration
@@ -260,6 +268,7 @@ export async function generate(options: Options) {
     "down",
     reverseRenamedTables,
     reverseRenamedColumns,
+    connectorMigrationOpts,
   );
 
   if (migrationUpTs === null) {
@@ -274,7 +283,7 @@ export async function generate(options: Options) {
   writeFileSync(resolve(migrationDir, "up.ts"), migrationUpTs);
   writeFileSync(
     resolve(migrationDir, "down.ts"),
-    migrationDnTs ?? generateNoOpMigration(),
+    migrationDnTs ?? generateNoOpMigration(connectorMigrationOpts),
   );
 
   const migrationsRelativePath = relative(process.cwd(), migrationsDir);
@@ -292,6 +301,7 @@ export function generateMigration(
   direction: "up" | "down",
   renamedTables: RenamedTables = {},
   renamedColumns: RenamedColumns = {},
+  defaultOptions?: MigrationOptions,
 ): string | null {
   const statements: string[] = [];
 
@@ -549,9 +559,7 @@ export function generateMigration(
   // TypeScript migration file content
   return `import { type DDLStatement, ddl, type MigrationOptions } from "durcno/migration";
 
-export const options: MigrationOptions = {
-  transaction: true,
-};
+export const options: MigrationOptions = ${stringifyMigrationOpts(defaultOptions ?? { transaction: true })};
 
 export const statements: DDLStatement[] = [
   ${statements.join(",\n  ")},
@@ -560,15 +568,22 @@ export const statements: DDLStatement[] = [
 }
 
 /** Generates a no-op migration file with an empty statements array. */
-function generateNoOpMigration(): string {
+function generateNoOpMigration(defaultOptions?: MigrationOptions): string {
   return `import { type DDLStatement, ddl, type MigrationOptions } from "durcno/migration";
 
-export const options: MigrationOptions = {
-  transaction: true,
-};
+export const options: MigrationOptions = ${stringifyMigrationOpts(defaultOptions ?? { transaction: true })};
 
 export const statements: DDLStatement[] = [];
 `;
+}
+
+/**
+ * Serializes a {@link MigrationOptions} object into a TypeScript object literal
+ * string suitable for embedding in a typescript migration file.
+ */
+function stringifyMigrationOpts(opts: MigrationOptions): string {
+  if (opts.transaction === undefined) opts.transaction = true;
+  return JSON.stringify(opts, null, 2);
 }
 
 /**

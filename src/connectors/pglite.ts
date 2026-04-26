@@ -19,6 +19,15 @@ import {
  * @see https://www.npmjs.com/package/@electric-sql/pglite
  */
 export class PgLiteConnector extends Connector {
+  /**
+   * PGlite does not support DDL statements inside transactions and requires
+   * sequential execution, so migrations are generated with these defaults.
+   */
+  static override migrationOptions = {
+    transaction: false,
+    execution: "sequential" as const,
+  };
+
   #driverOptions?: PGliteOptions;
 
   constructor(options: ConnectorOptions, driverOptions?: PGliteOptions) {
