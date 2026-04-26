@@ -80,27 +80,24 @@ export async function runDownMigration(
     const useTransaction = options.transaction ?? true;
     const execution = options.execution ?? "joined";
 
-    if (useTransaction) {
-      await client.query("BEGIN;");
-    }
-
     try {
       if (statements.length > 0) {
         if (execution === "sequential") {
+          if (useTransaction) await client.query("BEGIN;");
           for (const st of statements) {
             await client.query(st.toSQL());
           }
+          if (useTransaction) await client.query("COMMIT;");
         } else {
-          const sql = `${statements.map((st) => st.toSQL()).join("\n")}`;
+          let sql = "";
+          if (useTransaction) sql += "BEGIN;\n";
+          sql += statements.map((st) => st.toSQL()).join("\n");
+          if (useTransaction) sql += "\nCOMMIT;";
           await client.query(sql);
         }
       }
-
-      if (useTransaction) {
-        await client.query("COMMIT;");
-      }
     } catch (e) {
-      if (useTransaction) {
+      if (useTransaction && execution === "sequential") {
         await client.query("ROLLBACK;");
       }
       throw e;
