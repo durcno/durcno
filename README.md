@@ -40,7 +40,7 @@ npm exec durcno init
 
 Get started with Durcno by following our comprehensive documentation.
 
-**[Read the Documentation](https://durcno.dev/docs)**
+**[Read the Documentation](https://durcno.dev/docs/latest/intro)**
 
 > [!WARNING]
 > Durcno is currently in the alpha stage.
