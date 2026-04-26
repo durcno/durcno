@@ -2,5 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile --filter=./website",
   "buildCommand": "cd website && pnpm run build",
-  "outputDirectory": "website/build"
+  "outputDirectory": "website/build",
+  "redirects": [
+    {
+      "source": "/docs",
+      "destination": "/docs/latest/intro",
+      "permanent": false
+    }
+  ]
 }
