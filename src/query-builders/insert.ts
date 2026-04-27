@@ -132,62 +132,42 @@ export class InsertQuery<
       ? this.#$values
       : [this.#$values];
 
-    // Get all unique fields from all rows
-    const allFields = new Set<string>();
-    for (const row of valuesArray) {
-      for (const field of Object.keys(row)) {
-        allFields.add(field);
-      }
-    }
-
-    // Add default fields that are missing from all rows
-    for (const col in this.#table._.columns) {
-      const column = this.#table._.columns[col];
-      if (!allFields.has(col) && column.hasInsertFn) {
-        allFields.add(column.name);
-      }
-    }
-
-    const fields = Array.from(allFields);
+    const fields = Object.keys(this.#table._.columns);
     query.sql += " ( ";
     query.sql += fields
       .map((field) => `"${this.#table._.columns[field].nameSnake}"`)
       .join(", ");
     query.sql += " ) VALUES";
 
-    const rowsValue: string[] = [];
-
-    for (let rowIndex = 0; rowIndex < valuesArray.length; rowIndex++) {
-      const row = valuesArray[rowIndex];
-      const rowValues: string[] = [];
-
-      for (const field of fields) {
-        let value = row[field];
-        const column = this.#table._.columns[field];
-
-        // Handle missing values
+    valuesArray.forEach((row, i) => {
+      query.sql += "(";
+      fields.forEach((fieldName, j) => {
+        const value = row[fieldName];
+        const column = this.#table._.columns[fieldName];
         if (value === undefined) {
-          if (column?.hasInsertFn) {
-            value = column.getInsertFnVal();
+          // Handle empty values
+          if (column.hasInsertFn) {
+            query.sql += column.toSQL(column.getInsertFnVal(), { cast: true });
           } else {
-            rowValues.push("NULL");
-            continue;
+            query.sql += "DEFAULT";
           }
-        }
-
-        if (this.#prepare && is(value, Arg)) {
-          const cast = value.cast ?? column?.sqlCast ?? null;
+        } else if (this.#prepare && is(value, Arg)) {
+          const cast = value.cast ?? column.sqlCast ?? null;
           const castSuffix = cast ? `::${cast}` : "";
-          rowValues.push(`$${value.index}${castSuffix}`);
+          query.sql += `$${value.index}${castSuffix}`;
           query.arguments.push(value.key);
         } else {
-          rowValues.push(column?.toSQL(value, { cast: true }));
+          query.sql += column.toSQL(value, { cast: true });
         }
+        if (j !== fields.length - 1) {
+          query.sql += ", ";
+        }
+      });
+      query.sql += ")";
+      if (i !== valuesArray.length - 1) {
+        query.sql += ",\n";
       }
-
-      rowsValue.push(`(${rowValues.join(", ")})`);
-    }
-    query.sql += rowsValue.join(",\n  ");
+    });
 
     if (this.#$returning) {
       query.sql += " RETURNING ";
