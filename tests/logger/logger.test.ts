@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DurcnoLogger } from "durcno";
-import { createDurcnoLogger } from "durcno/logger";
+import {  createQueryLogger } from "durcno/logger";
 import { Query } from "../../src/query-builders/query";
 import { $Client, $Pool } from "../../src/connectors/common";
 
@@ -40,9 +40,9 @@ class TestPool extends $Pool {
 }
 
 describe("Logger", () => {
-	describe("createDurcnoLogger", () => {
+	describe("createQueryLogger", () => {
 		it("returns an object with an info method", () => {
-			const logger = createDurcnoLogger();
+			const logger = createQueryLogger();
 			expect(typeof logger.info).toBe("function");
 		});
 	});

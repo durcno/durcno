@@ -36,7 +36,7 @@ npm install winston
 // durcno.config.ts
 import { defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
-import { createDurcnoLogger } from "durcno/logger";
+import { createQueryLogger } from "durcno/logger";
 
 export default defineConfig({
   schema: "db/schema.ts",
@@ -45,7 +45,7 @@ export default defineConfig({
     dbCredentials: {
       url: process.env.DATABASE_URL!,
     },
-    logger: createDurcnoLogger(),
+    logger: createQueryLogger(),
   }),
 });
 ```

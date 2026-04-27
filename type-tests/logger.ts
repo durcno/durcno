@@ -1,6 +1,6 @@
 import type { Config, ConnectorOptions, DurcnoLogger } from "durcno";
 import { pg } from "durcno/connectors/pg";
-import { createDurcnoLogger } from "durcno/logger";
+import { createQueryLogger } from "durcno/logger";
 import { type Equal, Expect } from "./utils";
 
 // --- DurcnoLogger type tests ---
@@ -27,8 +27,8 @@ const _optionsWithoutLogger: ConnectorOptions = {
 };
 void _optionsWithoutLogger;
 
-// Positive: createDurcnoLogger returns a DurcnoLogger
-const _logger: DurcnoLogger = createDurcnoLogger();
+// Positive: createQueryLogger returns a DurcnoLogger
+const _logger: DurcnoLogger = createQueryLogger();
 void _logger;
 
 // Positive: Winston-style info call with metadata

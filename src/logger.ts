@@ -55,7 +55,7 @@ const durcnoFormat = printf(
  *
  * @example
  * ```ts
- * import { createDurcnoLogger } from "durcno/logger";
+ * import { createQueryLogger } from "durcno/logger";
  * import { defineConfig } from "durcno";
  * import { pg } from "durcno/connectors/pg";
  *
@@ -63,13 +63,18 @@ const durcnoFormat = printf(
  *   schema: "db/schema.ts",
  *   out: "migrations",
  *   dbCredentials: { url: process.env.DATABASE_URL! },
- *   logger: createDurcnoLogger(),
+ *   logger: createQueryLogger(),
  * });
  * ```
  */
-export function createDurcnoLogger(): DurcnoLogger {
+export function createQueryLogger(): DurcnoLogger {
   return createLogger({
     format: combine(label({ label: "durcno" }), timestamp(), durcnoFormat),
     transports: [new transports.Console()],
   });
 }
+
+/**
+ * @deprecated Use `createQueryLogger` instead.
+ */
+export const createDurcnoLogger = createQueryLogger;
