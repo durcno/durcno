@@ -7,6 +7,7 @@ import { QueryPromise } from "./query-promise";
 
 export class FirstQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean = false,
   TReturn =
     | {
         [ColName in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
@@ -15,21 +16,30 @@ export class FirstQuery<
 > extends QueryPromise<TReturn> {
   readonly #$table: TTableWC;
   readonly #$where:
-    | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
+    | BuildFilterExpression<
+        TColsToLeftRight<TTableWC["_"]["columns"]>,
+        TPrepare
+      >
     | undefined;
   readonly #$executor: QueryExecutor;
+  readonly #$prepare: TPrepare;
 
   constructor(
     table: TTableWC,
     where:
-      | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
+      | BuildFilterExpression<
+          TColsToLeftRight<TTableWC["_"]["columns"]>,
+          TPrepare
+        >
       | undefined,
     executor: QueryExecutor,
+    prepare: TPrepare = false as TPrepare,
   ) {
     super();
     this.#$table = table;
     this.#$where = where;
     this.#$executor = executor;
+    this.#$prepare = prepare;
   }
 
   toQuery() {
@@ -37,7 +47,11 @@ export class FirstQuery<
     query.sql += this.#$table._.fullName;
     if (this.#$where) {
       query.sql += " WHERE ";
-      query.sql += this.#$where.toSQL();
+      if (this.#$prepare) {
+        this.#$where.toQuery(query);
+      } else {
+        query.sql += this.#$where.toSQL();
+      }
     }
     query.sql += " LIMIT 1";
     return query;

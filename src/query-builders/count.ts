@@ -6,24 +6,34 @@ import { QueryPromise } from "./query-promise";
 
 export class CountQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean = false,
 > extends QueryPromise<number> {
   readonly #$table: TTableWC;
   readonly #$where:
-    | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
+    | BuildFilterExpression<
+        TColsToLeftRight<TTableWC["_"]["columns"]>,
+        TPrepare
+      >
     | undefined;
   readonly #$executor: QueryExecutor;
+  readonly #$prepare: TPrepare;
 
   constructor(
     table: TTableWC,
     where:
-      | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
+      | BuildFilterExpression<
+          TColsToLeftRight<TTableWC["_"]["columns"]>,
+          TPrepare
+        >
       | undefined,
     executor: QueryExecutor,
+    prepare: TPrepare = false as TPrepare,
   ) {
     super();
     this.#$table = table;
     this.#$where = where;
     this.#$executor = executor;
+    this.#$prepare = prepare;
   }
 
   toQuery() {
@@ -34,7 +44,11 @@ export class CountQuery<
     query.sql += this.#$table._.fullName;
     if (this.#$where) {
       query.sql += " WHERE ";
-      query.sql += this.#$where.toSQL();
+      if (this.#$prepare) {
+        this.#$where.toQuery(query);
+      } else {
+        query.sql += this.#$where.toSQL();
+      }
     }
     return query;
   }

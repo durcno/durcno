@@ -16,23 +16,32 @@ export class AggregateQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
   TColumn extends TableColumn<string, string, Key, AnyColumn>,
   TReturn extends number | null,
+  TPrepare extends boolean = false,
 > extends QueryPromise<TReturn> {
   readonly #$table: TTableWC;
   readonly #$column: TColumn;
   readonly #$fn: AggregateFunction;
   readonly #$where:
-    | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
+    | BuildFilterExpression<
+        TColsToLeftRight<TTableWC["_"]["columns"]>,
+        TPrepare
+      >
     | undefined;
   readonly #$executor: QueryExecutor;
+  readonly #$prepare: TPrepare;
 
   constructor(
     table: TTableWC,
     column: TColumn,
     fn: AggregateFunction,
     where:
-      | BuildFilterExpression<TColsToLeftRight<TTableWC["_"]["columns"]>>
+      | BuildFilterExpression<
+          TColsToLeftRight<TTableWC["_"]["columns"]>,
+          TPrepare
+        >
       | undefined,
     executor: QueryExecutor,
+    prepare: TPrepare = false as TPrepare,
   ) {
     super();
     this.#$table = table;
@@ -40,6 +49,7 @@ export class AggregateQuery<
     this.#$fn = fn;
     this.#$where = where;
     this.#$executor = executor;
+    this.#$prepare = prepare;
   }
 
   toQuery() {
@@ -51,7 +61,11 @@ export class AggregateQuery<
     query.sql += this.#$table._.fullName;
     if (this.#$where) {
       query.sql += " WHERE ";
-      query.sql += this.#$where.toSQL();
+      if (this.#$prepare) {
+        this.#$where.toQuery(query);
+      } else {
+        query.sql += this.#$where.toSQL();
+      }
     }
     return query;
   }

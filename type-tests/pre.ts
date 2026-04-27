@@ -521,3 +521,111 @@ const missingDeleteArg = prequery(
 );
 // @ts-expect-error - Missing required argument for delete should not compile
 missingDeleteArg.run(db, { id: 1 });
+
+// ============================================================================
+// Shortcut ($) prepared query type tests
+// ============================================================================
+
+// Type test: $count with Arg in WHERE
+const countPreparedQuery = prequery({ userType: Users.type.arg() }, (args) => {
+  return db.prepare().$count(Users, eq(Users.type, args.userType));
+});
+const _countPreparedResult = countPreparedQuery.run(db, { userType: "admin" });
+type CountPreparedResult = Awaited<typeof _countPreparedResult>;
+Expect<Equal<CountPreparedResult, number>>();
+
+// Type test: $exists with Arg in WHERE
+const existsPreparedQuery = prequery(
+  { username: Users.username.arg() },
+  (args) => {
+    return db.prepare().$exists(Users, eq(Users.username, args.username));
+  },
+);
+const _existsPreparedResult = existsPreparedQuery.run(db, { username: "john" });
+type ExistsPreparedResult = Awaited<typeof _existsPreparedResult>;
+Expect<Equal<ExistsPreparedResult, boolean>>();
+
+// Type test: $first with Arg in WHERE
+const firstPreparedQuery = prequery({ userId: Users.id.arg() }, (args) => {
+  return db.prepare().$first(Users, eq(Users.id, args.userId));
+});
+const _firstPreparedResult = firstPreparedQuery.run(db, { userId: 1 });
+type FirstPreparedResult = Awaited<typeof _firstPreparedResult>;
+Expect<
+  Equal<
+    FirstPreparedResult,
+    {
+      id: number;
+      username: string;
+      email: string | null;
+      type: "admin" | "user";
+      createdAt: Date;
+      externalId: string;
+      trackingId: string | null;
+    } | null
+  >
+>();
+
+// Type test: $sum with Arg in WHERE
+const sumPreparedQuery = prequery({ userType: Users.type.arg() }, (args) => {
+  return db.prepare().$sum(Users, Users.id, eq(Users.type, args.userType));
+});
+const _sumPreparedResult = sumPreparedQuery.run(db, { userType: "admin" });
+type SumPreparedResult = Awaited<typeof _sumPreparedResult>;
+Expect<Equal<SumPreparedResult, number | null>>();
+
+// Type test: $avg with Arg in WHERE
+const avgPreparedQuery = prequery({ userType: Users.type.arg() }, (args) => {
+  return db.prepare().$avg(Users, Users.id, eq(Users.type, args.userType));
+});
+const _avgPreparedResult = avgPreparedQuery.run(db, { userType: "user" });
+type AvgPreparedResult = Awaited<typeof _avgPreparedResult>;
+Expect<Equal<AvgPreparedResult, number | null>>();
+
+// Type test: $min with Arg in WHERE
+const minPreparedQuery = prequery({ userType: Users.type.arg() }, (args) => {
+  return db.prepare().$min(Users, Users.id, eq(Users.type, args.userType));
+});
+const _minPreparedResult = minPreparedQuery.run(db, { userType: "admin" });
+type MinPreparedResult = Awaited<typeof _minPreparedResult>;
+Expect<Equal<MinPreparedResult, number | null>>();
+
+// Type test: $max with Arg in WHERE
+const maxPreparedQuery = prequery({ userType: Users.type.arg() }, (args) => {
+  return db.prepare().$max(Users, Users.id, eq(Users.type, args.userType));
+});
+const _maxPreparedResult = maxPreparedQuery.run(db, { userType: "user" });
+type MaxPreparedResult = Awaited<typeof _maxPreparedResult>;
+Expect<Equal<MaxPreparedResult, number | null>>();
+
+// Type test: $distinct with Arg in WHERE
+const distinctPreparedQuery = prequery(
+  { userType: Users.type.arg() },
+  (args) => {
+    return db
+      .prepare()
+      .$distinct(Users, Users.email, eq(Users.type, args.userType));
+  },
+);
+const _distinctPreparedResult = distinctPreparedQuery.run(db, {
+  userType: "admin",
+});
+type DistinctPreparedResult = Awaited<typeof _distinctPreparedResult>;
+Expect<Equal<DistinctPreparedResult, (string | null)[]>>();
+
+// Negative type tests: Arg<T> must NOT be accepted in non-prepare shortcuts
+
+// @ts-expect-error - Arg is not allowed in $count without db.prepare()
+db.$count(Users, eq(Users.type, Users.type.arg()));
+
+// @ts-expect-error - Arg is not allowed in $exists without db.prepare()
+db.$exists(Users, eq(Users.username, Users.username.arg()));
+
+// @ts-expect-error - Arg is not allowed in $first without db.prepare()
+db.$first(Users, eq(Users.id, Users.id.arg()));
+
+// @ts-expect-error - Arg is not allowed in $sum without db.prepare()
+db.$sum(Users, Users.id, eq(Users.type, Users.type.arg()));
+
+// @ts-expect-error - Arg is not allowed in $distinct without db.prepare()
+db.$distinct(Users, Users.email, eq(Users.type, Users.type.arg()));
