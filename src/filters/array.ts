@@ -25,26 +25,6 @@ type ArrayElement<T> = T extends readonly (infer E)[]
     : E
   : T;
 
-/** Converts an array of values to a PostgreSQL array literal. */
-function arrayToSql<T>(values: T[]): string {
-  if (values.length === 0) return "'{}'";
-  const escaped = values.map((v) => {
-    if (typeof v === "string") {
-      return `'${v.replace(/'/g, "''")}'`;
-    }
-    return String(v);
-  });
-  return `ARRAY[${escaped.join(", ")}]`;
-}
-
-/** Converts a single value to a SQL literal. */
-function valueToSql<T>(value: T): string {
-  if (typeof value === "string") {
-    return `'${value.replace(/'/g, "''")}'`;
-  }
-  return String(value);
-}
-
 /**
  * ArrayContains filter: col @> ARRAY[values]
  * Returns true if the array column contains all the specified values.
@@ -63,11 +43,11 @@ export class ArrayContainsFilter<
   }
 
   toSQL(): string {
-    return `${this.left.fullName} @> ${arrayToSql(this.right)}`;
+    return `${this.left.fullName} @> ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
 
   toQuery(query: Query): void {
-    query.sql += `${this.left.fullName} @> ${arrayToSql(this.right)}`;
+    query.sql += `${this.left.fullName} @> ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
 }
 
@@ -103,11 +83,11 @@ export class ArrayContainedByFilter<
   }
 
   toSQL(): string {
-    return `${this.left.fullName} <@ ${arrayToSql(this.right)}`;
+    return `${this.left.fullName} <@ ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
 
   toQuery(query: Query): void {
-    query.sql += `${this.left.fullName} <@ ${arrayToSql(this.right)}`;
+    query.sql += `${this.left.fullName} <@ ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
 }
 
@@ -140,11 +120,11 @@ export class ArrayOverlapsFilter<
   }
 
   toSQL(): string {
-    return `${this.left.fullName} && ${arrayToSql(this.right)}`;
+    return `${this.left.fullName} && ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
 
   toQuery(query: Query): void {
-    query.sql += `${this.left.fullName} && ${arrayToSql(this.right)}`;
+    query.sql += `${this.left.fullName} && ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
 }
 
@@ -177,11 +157,11 @@ export class ArrayHasFilter<
   }
 
   toSQL(): string {
-    return `${valueToSql(this.right)} = ANY(${this.left.fullName})`;
+    return `${this.left.toSQLScalar(this.right)} = ANY(${this.left.fullName})`;
   }
 
   toQuery(query: Query): void {
-    query.sql += `${valueToSql(this.right)} = ANY(${this.left.fullName})`;
+    query.sql += `${this.left.toSQLScalar(this.right)} = ANY(${this.left.fullName})`;
   }
 }
 
@@ -214,11 +194,11 @@ export class ArrayAllFilter<
   }
 
   toSQL(): string {
-    return `${valueToSql(this.right)} = ALL(${this.left.fullName})`;
+    return `${this.left.toSQLScalar(this.right)} = ALL(${this.left.fullName})`;
   }
 
   toQuery(query: Query): void {
-    query.sql += `${valueToSql(this.right)} = ALL(${this.left.fullName})`;
+    query.sql += `${this.left.toSQLScalar(this.right)} = ALL(${this.left.fullName})`;
   }
 }
 
