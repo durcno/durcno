@@ -194,7 +194,7 @@ A logger instance that receives every SQL query before it is sent to the databas
 Pass `logger` inside the connector options. See [Query Logger](./Advanced/logger) for full details and examples.
 
 ```typescript
-import { createDurcnoLogger } from "durcno/logger";
+import { createQueryLogger } from "durcno/logger";
 
 export default defineConfig({
   schema: "db/schema.ts",
@@ -202,7 +202,7 @@ export default defineConfig({
     dbCredentials: {
       url: process.env.DATABASE_URL!,
     },
-    logger: createDurcnoLogger(),
+    logger: createQueryLogger(),
   }),
 });
 ```
