@@ -61,11 +61,7 @@ export class AggregateQuery<
     query.sql += this.#$table._.fullName;
     if (this.#$where) {
       query.sql += " WHERE ";
-      if (this.#$prepare) {
-        this.#$where.toQuery(query);
-      } else {
-        query.sql += this.#$where.toSQL();
-      }
+      this.#$where.toQuery(query);
     }
     return query;
   }

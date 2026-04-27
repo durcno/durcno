@@ -42,10 +42,6 @@ export class ArrayContainsFilter<
     this.right = values;
   }
 
-  toSQL(): string {
-    return `${this.left.fullName} @> ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
-  }
-
   toQuery(query: Query): void {
     query.sql += `${this.left.fullName} @> ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
@@ -82,10 +78,6 @@ export class ArrayContainedByFilter<
     this.right = values;
   }
 
-  toSQL(): string {
-    return `${this.left.fullName} <@ ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
-  }
-
   toQuery(query: Query): void {
     query.sql += `${this.left.fullName} <@ ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
@@ -117,10 +109,6 @@ export class ArrayOverlapsFilter<
     super();
     this.left = column;
     this.right = values;
-  }
-
-  toSQL(): string {
-    return `${this.left.fullName} && ${this.left.toSQL(this.right)}::${this.left.sqlType}`;
   }
 
   toQuery(query: Query): void {
@@ -156,10 +144,6 @@ export class ArrayHasFilter<
     this.right = value;
   }
 
-  toSQL(): string {
-    return `${this.left.toSQLScalar(this.right)} = ANY(${this.left.fullName})`;
-  }
-
   toQuery(query: Query): void {
     query.sql += `${this.left.toSQLScalar(this.right)} = ANY(${this.left.fullName})`;
   }
@@ -191,10 +175,6 @@ export class ArrayAllFilter<
     super();
     this.left = column;
     this.right = value;
-  }
-
-  toSQL(): string {
-    return `${this.left.toSQLScalar(this.right)} = ALL(${this.left.fullName})`;
   }
 
   toQuery(query: Query): void {

@@ -6,6 +6,5 @@ export abstract class Filter<
   TColumn extends TableColumn<any, any, any, AnyColumn>,
 > {
   readonly $Columns!: TColumn;
-  abstract toSQL(): string;
   abstract toQuery(query: Query): void;
 }

@@ -18,10 +18,6 @@ class ColumnLengthFilter<
     super();
   }
 
-  toSQL(): string {
-    return `LENGTH(${this.field.fullName}) > ${this.length}`;
-  }
-
   toQuery(query: Query): void {
     query.sql += `LENGTH(${this.field.fullName}) > ${this.length}`;
   }

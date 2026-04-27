@@ -397,15 +397,12 @@ export class SelectQuery<
     query.sql += this.#table._.fullName;
     this.#$innerJoins?.forEach((innerJoin) => {
       const join = innerJoin;
-      query.sql += ` INNER JOIN ${join.table._.fullName} ON ${join.on.toSQL()}`;
+      query.sql += ` INNER JOIN ${join.table._.fullName} ON `;
+      join.on.toQuery(query);
     });
     if (this.#$where) {
       query.sql += " WHERE ";
-      if (this.#prepare) {
-        this.#$where.toQuery(query);
-      } else {
-        query.sql += this.#$where.toSQL();
-      }
+      this.#$where.toQuery(query);
     }
     if (this.#$orderBy) {
       const orders = Array.isArray(this.#$orderBy)

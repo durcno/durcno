@@ -314,7 +314,8 @@ class RelationQuery<
       }
     }
     if (options.where) {
-      query.sql += ` WHERE ${options.where.toSQL()}`;
+      query.sql += " WHERE ";
+      options.where.toQuery(query);
     }
     if (options.orderBy) {
       const orders = Array.isArray(options.orderBy)

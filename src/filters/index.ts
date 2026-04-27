@@ -172,9 +172,6 @@ export class EqualValCondition<
     this.left = field;
     this.right = right;
   }
-  toSQL(): string {
-    return `${this.left.fullName} = ${this.left.toSQL(this.right)}`;
-  }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} = `;
     if (is(this.right, Arg)) {
@@ -203,9 +200,6 @@ export class EqualColCondition<
   ) {
     this.left = field;
     this.right = right;
-  }
-  toSQL(): string {
-    return `${this.left.fullName} = ${this.right.fullName}`;
   }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} = ${this.right.fullName}`;
@@ -278,9 +272,6 @@ class NotEqualValCondition<
     this.left = field;
     this.right = right;
   }
-  toSQL(): string {
-    return `${this.left.fullName} != ${this.left.toSQL(this.right)}`;
-  }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} != `;
     if (is(this.right, Arg)) {
@@ -309,9 +300,6 @@ class NotEqualColCondition<
   ) {
     this.left = field;
     this.right = right;
-  }
-  toSQL(): string {
-    return `${this.left.fullName} != ${this.right.fullName}`;
   }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} != ${this.right.fullName}`;
@@ -384,9 +372,6 @@ export class GreaterEqualValCondition<
     this.left = field;
     this.right = right;
   }
-  toSQL(): string {
-    return `${this.left.fullName} >= ${this.left.toSQL(this.right)}`;
-  }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} >= `;
     if (is(this.right, Arg)) {
@@ -415,9 +400,6 @@ class GreaterEqualColCondition<
   ) {
     this.left = field;
     this.right = right;
-  }
-  toSQL(): string {
-    return `${this.left.fullName} >= ${this.right.fullName}`;
   }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} >= ${this.right.fullName}`;
@@ -490,9 +472,6 @@ export class GreaterThanValCondition<
     this.left = field;
     this.right = right;
   }
-  toSQL(): string {
-    return `${this.left.fullName} > ${this.left.toSQL(this.right)}`;
-  }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} > `;
     if (is(this.right, Arg)) {
@@ -521,9 +500,6 @@ class GreaterThanColCondition<
   ) {
     this.left = field;
     this.right = right;
-  }
-  toSQL(): string {
-    return `${this.left.fullName} > ${this.right.fullName}`;
   }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} > ${this.right.fullName}`;
@@ -596,9 +572,6 @@ class LessEqualValCondition<
     this.left = field;
     this.right = right;
   }
-  toSQL(): string {
-    return `${this.left.fullName} <= ${this.left.toSQL(this.right)}`;
-  }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} <= `;
     if (is(this.right, Arg)) {
@@ -627,9 +600,6 @@ class LessEqualColCondition<
   ) {
     this.left = field;
     this.right = right;
-  }
-  toSQL(): string {
-    return `${this.left.fullName} <= ${this.right.fullName}`;
   }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} <= ${this.right.fullName}`;
@@ -702,9 +672,6 @@ export class LessThanValCondition<
     this.left = field;
     this.right = right;
   }
-  toSQL(): string {
-    return `${this.left.fullName} < ${this.left.toSQL(this.right)}`;
-  }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} < `;
     if (is(this.right, Arg)) {
@@ -733,9 +700,6 @@ class LessThanColCondition<
   ) {
     this.left = field;
     this.right = right;
-  }
-  toSQL(): string {
-    return `${this.left.fullName} < ${this.right.fullName}`;
   }
   toQuery(query: Query) {
     query.sql += `${this.left.fullName} < ${this.right.fullName}`;
@@ -805,9 +769,6 @@ export class IsNullCondition<
   constructor(field: TableColumn<CTSchema, CTName, CName, Col>) {
     this.field = field;
   }
-  toSQL(): string {
-    return `${this.field.fullName} IS NULL`;
-  }
   toQuery(query: Query) {
     query.sql += `${this.field.fullName} IS NULL`;
   }
@@ -834,9 +795,6 @@ export class IsNotNullCondition<
     this.field = field;
   }
 
-  toSQL(): string {
-    return `${this.field.fullName} IS NOT NULL`;
-  }
   toQuery(query: Query) {
     query.sql += `${this.field.fullName} IS NOT NULL`;
   }
@@ -879,16 +837,6 @@ export class InCondition<
     this.field = field;
     this.values = values;
   }
-  toSQL(): string {
-    if (Array.isArray(this.values)) {
-      if (this.values.length === 0) {
-        return "FALSE";
-      }
-      return `${this.field.fullName} IN (${this.values.map((v) => this.field.toSQL(v)).join(", ")})`;
-    } else {
-      return `${this.field.fullName} IN (${this.values.toQuery()})`;
-    }
-  }
   toQuery(query: Query) {
     if (Array.isArray(this.values)) {
       if (this.values.length === 0) {
@@ -926,16 +874,6 @@ export class AndCondition<
   constructor(...conditions: TConditions) {
     this.conditions = conditions;
   }
-  toSQL(): string {
-    let sql = "";
-    for (let i = 0; i < this.conditions.length; i++) {
-      sql += this.conditions[i].toSQL();
-      if (i < this.conditions.length - 1) {
-        sql += " AND ";
-      }
-    }
-    return sql;
-  }
   toQuery(query: Query) {
     for (let i = 0; i < this.conditions.length; i++) {
       this.conditions[i].toQuery(query);
@@ -961,17 +899,6 @@ export class OrCondition<
   constructor(...conditions: TConditions) {
     this.conditions = conditions;
   }
-  toSQL(): string {
-    let sql = "";
-    for (let i = 0; i < this.conditions.length; i++) {
-      sql += this.conditions[i].toSQL();
-      if (i < this.conditions.length - 1) {
-        sql += " OR ";
-      }
-    }
-    return sql;
-  }
-
   toQuery(query: Query) {
     for (let i = 0; i < this.conditions.length; i++) {
       this.conditions[i].toQuery(query);
