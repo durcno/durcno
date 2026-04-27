@@ -1,4 +1,5 @@
 import type { AnyColumn, AnyTableWithColumns, TableColumn } from "../table";
+import type { Key } from "../types";
 
 // ============================================================================
 // Unique Constraint

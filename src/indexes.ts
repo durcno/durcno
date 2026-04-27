@@ -1,4 +1,5 @@
 import type { AnyColumn, StdTable, TableColumn } from "./table";
+import type { Key } from "./types";
 
 export type IndexType =
   | "btree"

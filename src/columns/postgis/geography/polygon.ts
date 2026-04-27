@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { Sql } from "../../../sql";
+import type { SelfOrReadonly } from "../../../types";
 import { Polygon } from "../../../wkx";
 import { Column, type ColumnConfig } from "../../common";
 

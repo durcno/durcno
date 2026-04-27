@@ -3,6 +3,7 @@ import { Arg } from "../query-builders/pre";
 import { Sql } from "../sql";
 import { entityType } from "../symbols";
 import type { StdTableColumn, TableColumn } from "../table";
+import type { Key } from "../types";
 import { camelToSnake } from "../utils";
 
 export const notNull = true as const;

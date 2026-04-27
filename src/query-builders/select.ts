@@ -9,6 +9,13 @@ import type {
   TableWithColumns,
   TColsToLeftRight,
 } from "../table";
+import type {
+  Key,
+  Prettify,
+  SelfOrArray,
+  UnionToIntersection,
+  Valueof,
+} from "../types";
 import { camelToSnake, snakeToCamel } from "../utils";
 import type { OrderBy } from "./orderby-clause";
 import { Query } from "./query";

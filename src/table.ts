@@ -10,7 +10,7 @@ import type {
 } from "./constraints/unique";
 import type { Index } from "./indexes";
 import { entityType } from "./symbols";
-import type { CamelToSnake } from "./types";
+import type { CamelToSnake, Key } from "./types";
 
 // biome-ignore lint/suspicious/noExplicitAny: AnyColumn is a wildcard type for any column
 export type AnyColumn = Column<any, any>;

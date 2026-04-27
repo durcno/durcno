@@ -4,3 +4,21 @@ export type CamelToSnake<S extends string> =
       ? `_${Lowercase<Head>}${CamelToSnake<Tail>}`
       : `${Head}${CamelToSnake<Tail>}`
     : S;
+
+export type Key = string | number | symbol;
+
+// biome-ignore lint/suspicious/noExplicitAny: <>
+export type Valueof<T> = T extends any ? T[keyof T] : never;
+
+export type SelfOrArray<T> = T | T[];
+export type SelfOrReadonly<T> = T | Readonly<T>;
+
+export type UnionToIntersection<U> =
+  // biome-ignore lint/suspicious/noExplicitAny: <>
+  (U extends any ? (k: U) => void : never) extends (k: infer I) => void
+    ? I
+    : never;
+
+export type Is<T, U> = T extends U ? true : false;
+
+export type Prettify<T> = { [K in keyof T]: T[K] } & {};

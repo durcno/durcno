@@ -1,6 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
 import { is } from "../entity";
 import type { AnyColumn, TableWithColumns } from "../table";
+import type { Key } from "../types";
 import { snakeToCamel } from "../utils";
 
 import { Arg } from "./pre";

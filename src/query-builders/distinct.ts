@@ -6,6 +6,7 @@ import type {
   TableWithColumns,
   TColsToLeftRight,
 } from "../table";
+import type { Key } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 

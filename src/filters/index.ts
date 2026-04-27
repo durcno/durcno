@@ -12,6 +12,7 @@ import type {
   TableColumnArgs,
   TColsToLeftRight,
 } from "../table";
+import type { Key } from "../types";
 
 export { Filter } from "./custom";
 

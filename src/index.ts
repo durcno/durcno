@@ -144,22 +144,12 @@ export type Config<T extends Connector = Connector> = {
   connector: T;
 };
 
-declare global {
-  type Key = string | number | symbol;
-
-  // biome-ignore lint/suspicious/noExplicitAny: <>
-  type Valueof<T> = T extends any ? T[keyof T] : never;
-
-  type SelfOrArray<T> = T | T[];
-  type SelfOrReadonly<T> = T | Readonly<T>;
-
-  type UnionToIntersection<U> =
-    // biome-ignore lint/suspicious/noExplicitAny: <>
-    (U extends any ? (k: U) => void : never) extends (k: infer I) => void
-      ? I
-      : never;
-
-  type Is<T, U> = T extends U ? true : false;
-
-  type Prettify<T> = { [K in keyof T]: T[K] } & {};
-}
+export type {
+  Is,
+  Key,
+  Prettify,
+  SelfOrArray,
+  SelfOrReadonly,
+  UnionToIntersection,
+  Valueof,
+} from "./types";

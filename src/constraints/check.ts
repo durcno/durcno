@@ -1,5 +1,6 @@
 import { isTableCol } from "../entity";
 import type { AnyColumn, TableColumn } from "../table";
+import type { Key } from "../types";
 
 // ============================================================================
 // Operator Types
