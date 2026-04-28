@@ -46,7 +46,7 @@ export const Products = table(
       { gt, gte, lte, like, fnGt, fnLte, length, and },
     ) => [
       // Price must be positive
-      check("positive_price", gt(t.price, 0)),
+      check("positive_price", gt(t.price, 0n)),
 
       // Quantity must be between 0 and 10000
       check("valid_quantity", and(gte(t.quantity, 0), lte(t.quantity, 10000))),

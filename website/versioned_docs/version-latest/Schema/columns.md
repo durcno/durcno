@@ -111,7 +111,7 @@ Use `numeric` when you need exact decimal precision, such as for monetary values
 Serial columns are PostgreSQL's legacy auto-incrementing integer types.
 
 - SQL type: `serial` / `smallserial` / `bigserial` (wraps integer/smallint/bigint with a sequence)
-- JS type: `number` or `bigint` (per SQL width) — treated as NOT NULL for SELECT, optional on INSERT
+- JS type: `number` (`serial` / `smallserial`) or `bigint` (`bigserial`) — treated as NOT NULL for SELECT, optional on INSERT
 - Supported Options: primaryKey, unique.
 
 > Note: Do not set `.default()`, `.$insertFn()`, or `.$updateFn()` on serial columns — sequences managed by PostgreSQL provide the auto-generated values.

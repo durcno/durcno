@@ -101,7 +101,7 @@ const result = updateSchema.safeParse({
 });
 
 if (result.success) {
-  await db.update(Users).set(result.data).where(eq(Users.id, 1));
+  await db.update(Users).set(result.data).where(eq(Users.id, 1n));
 }
 ```
 
@@ -170,7 +170,7 @@ function createUser(data: InsertUser) {
   return db.insert(Users).values(data);
 }
 
-function updateUser(id: number, data: UpdateUser) {
+function updateUser(id: bigint, data: UpdateUser) {
   return db.update(Users).set(data).where(eq(Users.id, id));
 }
 ```

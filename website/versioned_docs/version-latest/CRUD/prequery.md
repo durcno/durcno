@@ -35,7 +35,7 @@ Use `.run()` to execute the prepared query with specific values:
 ```typescript
 // Execute with type-safe parameters
 const users = await findUserByUsername.run(db, { username: "john" });
-// Type: { id: number; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
+// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
 ```
 
 :::warning
@@ -100,7 +100,7 @@ const findUserInfo = prequery({ id: Users.id.arg() }, (args) => {
     .where(eq(Users.id, args.id));
 });
 
-const result = await findUserInfo.run(db, { id: 1 });
+const result = await findUserInfo.run(db, { id: 1n });
 // Type: { username: string; email: string | null }[]
 ```
 
@@ -134,7 +134,7 @@ const result = await findByEitherUsername.run(db, {
   username1: "john",
   username2: "jane",
 });
-// Type: { id: number; username: string }[]
+// Type: { id: bigint; username: string }[]
 ```
 
 ### Combined AND/OR Conditions
@@ -182,7 +182,7 @@ const findPostsByUser = prequery({ userId: Posts.userId.arg() }, (args) => {
   return db.prepare().from(Posts).select().where(eq(Posts.userId, args.userId));
 });
 
-const posts = await findPostsByUser.run(db, { userId: 1 });
+const posts = await findPostsByUser.run(db, { userId: 1n });
 ```
 
 ### Enum Arguments
@@ -198,7 +198,7 @@ const findByUserType = prequery({ userType: Users.type.arg() }, (args) => {
 
 // TypeScript ensures only valid enum values can be passed
 const admins = await findByUserType.run(db, { userType: "admin" });
-// Type: { id: number; type: "admin" | "user" }[]
+// Type: { id: bigint; type: "admin" | "user" }[]
 ```
 
 ### Date/Timestamp Arguments
@@ -216,7 +216,7 @@ const findUsersByDate = prequery(
 );
 
 const result = await findUsersByDate.run(db, { createdAt: new Date() });
-// Type: { id: number; createdAt: Date }[]
+// Type: { id: bigint; createdAt: Date }[]
 ```
 
 ## Type Safety
@@ -236,10 +236,10 @@ const findUser = prequery({ id: Users.id.arg() }, (args) => {
     .where(eq(Users.id, args.id));
 });
 
-// ✅ Correct: id is a number
-await findUser.run(db, { id: 1 });
+// ✅ Correct: id is a bigint
+await findUser.run(db, { id: 1n });
 
-// ❌ TypeScript error: id should be number, not string
+// ❌ TypeScript error: id should be bigint, not string
 await findUser.run(db, { id: "1" });
 ```
 

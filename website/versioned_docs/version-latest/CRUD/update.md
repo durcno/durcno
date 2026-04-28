@@ -36,7 +36,7 @@ import { eq } from "durcno";
 await db
   .update(Users)
   .set({ email: "newemail@example.com" })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 ```
 
 ### Update Multiple Columns
@@ -50,7 +50,7 @@ await db
     email: "updated@example.com",
     type: "admin",
   })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 ```
 
 :::warning
@@ -63,7 +63,10 @@ All columns in `.set()` are optional—only specify the columns you want to chan
 
 ```typescript
 // Only update the email, leave other columns unchanged
-await db.update(Users).set({ email: "new@example.com" }).where(eq(Users.id, 1));
+await db
+  .update(Users)
+  .set({ email: "new@example.com" })
+  .where(eq(Users.id, 1n));
 ```
 
 ## Complex Filters
@@ -91,17 +94,17 @@ Use `.returning()` to get data back from updated rows:
 const updated = await db
   .update(Users)
   .set({ email: "updated@example.com" })
-  .where(eq(Users.id, 1))
+  .where(eq(Users.id, 1n))
   .returning({ id: true, email: true });
-// Type: { id: number; email: string | null }[]
+// Type: { id: bigint; email: string | null }[]
 
 // Return all columns except some
 const updated = await db
   .update(Users)
   .set({ email: "updated@example.com" })
-  .where(eq(Users.id, 1))
+  .where(eq(Users.id, 1n))
   .returning({ createdAt: false });
-// Type: { id: number; username: string; email: string | null; type: "admin" | "user" }[]
+// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user" }[]
 ```
 
 ### Without Returning
@@ -112,7 +115,7 @@ Without `.returning()`, the update returns `null`:
 const result = await db
   .update(Users)
   .set({ email: "updated@example.com" })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 // Type: null
 ```
 
@@ -129,7 +132,7 @@ const Posts = table("public", "posts", {
 });
 
 // `updatedAt` is automatically set by `.$updateFn()`
-await db.update(Posts).set({ title: "New Title" }).where(eq(Posts.id, 1));
+await db.update(Posts).set({ title: "New Title" }).where(eq(Posts.id, 1n));
 // updatedAt will be auto-generated
 
 // You can still override with an explicit value
@@ -139,7 +142,7 @@ await db
     title: "New Title",
     updatedAt: new Date("2024-06-15"), // Override updateFn
   })
-  .where(eq(Posts.id, 1));
+  .where(eq(Posts.id, 1n));
 ```
 
 :::tip
@@ -157,7 +160,7 @@ import { sql } from "durcno";
 await db
   .update(Users)
   .set({ createdAt: sql`NOW()` })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 ```
 
 ## Primary Key Restriction
@@ -169,7 +172,7 @@ Primary key columns cannot be updated:
 await db
   .update(Users)
   .set({ id: 999 }) // Error!
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 ```
 
 ## Method Chaining Order
@@ -181,13 +184,13 @@ Methods can be chained in any order:
 await db
   .update(Users)
   .set({ email: "a@b.com" })
-  .where(eq(Users.id, 1))
+  .where(eq(Users.id, 1n))
   .returning({ id: true });
 await db
   .update(Users)
   .set({ email: "a@b.com" })
   .returning({ id: true })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 ```
 
 ## Type Safety
@@ -199,19 +202,19 @@ Durcno ensures type safety for update values:
 await db
   .update(Users)
   .set({ email: "valid@example.com" })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 
 // ❌ TypeScript Error - wrong type
 await db
   .update(Users)
   .set({ email: 123 }) // email expects string
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 
 // ❌ TypeScript Error - invalid enum value
 await db
   .update(Users)
   .set({ type: "superadmin" }) // Not in enum
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 ```
 
 ## Related

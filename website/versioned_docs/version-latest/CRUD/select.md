@@ -38,7 +38,7 @@ import { Users } from "./db/schema.ts";
 
 // Select all columns from Users table
 const users = await db.from(Users).select();
-// Type: { id: number; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
+// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
 ```
 
 ### Select Specific Columns
@@ -57,7 +57,7 @@ const userInfo = await db.from(Users).select({
   id: Users.id,
   email: Users.email,
 });
-// Type: { id: number; email: string | null }[]
+// Type: { id: bigint; email: string | null }[]
 ```
 
 ### Column Aliasing

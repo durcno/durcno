@@ -27,7 +27,7 @@ import { Users } from "./db/schema.ts";
 import { eq } from "durcno";
 
 // Delete a specific user
-await db.delete(Users).where(eq(Users.id, 1));
+await db.delete(Users).where(eq(Users.id, 1n));
 ```
 
 :::warning
@@ -67,16 +67,16 @@ Use `.returning()` to get data from deleted rows:
 // Return specific columns from deleted rows
 const deleted = await db
   .delete(Users)
-  .where(eq(Users.id, 1))
+  .where(eq(Users.id, 1n))
   .returning({ id: true, username: true });
-// Type: { id: number; username: string }[]
+// Type: { id: bigint; username: string }[]
 
 // Return all columns except some
 const deleted = await db
   .delete(Users)
-  .where(eq(Users.id, 1))
+  .where(eq(Users.id, 1n))
   .returning({ createdAt: false });
-// Type: { id: number; username: string; email: string | null; type: "admin" | "user" }[]
+// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user" }[]
 ```
 
 ### Without Returning
@@ -84,7 +84,7 @@ const deleted = await db
 Without `.returning()`, the delete returns `null`:
 
 ```typescript
-const result = await db.delete(Users).where(eq(Users.id, 1));
+const result = await db.delete(Users).where(eq(Users.id, 1n));
 // Type: null
 ```
 
@@ -94,8 +94,8 @@ const result = await db.delete(Users).where(eq(Users.id, 1));
 
 ```typescript
 // These are equivalent
-await db.delete(Users).where(eq(Users.id, 1)).returning({ id: true });
-await db.delete(Users).returning({ id: true }).where(eq(Users.id, 1));
+await db.delete(Users).where(eq(Users.id, 1n)).returning({ id: true });
+await db.delete(Users).returning({ id: true }).where(eq(Users.id, 1n));
 ```
 
 ## Delete All Rows
@@ -122,7 +122,7 @@ Instead of actually deleting, you might update a flag:
 await db
   .update(Users)
   .set({ deletedAt: sql`NOW()` })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 ```
 
 ### Delete with Confirmation
@@ -147,10 +147,10 @@ When deleting rows that have foreign key relationships, ensure you handle cascad
 
 ```typescript
 // Delete user's posts first (if no cascade)
-await db.delete(Posts).where(eq(Posts.userId, 1));
+await db.delete(Posts).where(eq(Posts.userId, 1n));
 
 // Then delete the user
-await db.delete(Users).where(eq(Users.id, 1));
+await db.delete(Users).where(eq(Users.id, 1n));
 ```
 
 ## Related

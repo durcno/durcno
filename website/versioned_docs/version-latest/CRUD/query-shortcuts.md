@@ -207,7 +207,7 @@ import { Users } from "./db/schema.ts";
 
 // Get the first user
 const user = await db.$first(Users);
-// Type: { id: number; username: string; email: string | null; ... } | null
+// Type: { id: bigint; username: string; email: string | null; ... } | null
 ```
 
 ```sql
@@ -262,7 +262,7 @@ if (admin) {
 
 ```typescript
 // $first returns null when no rows match
-const user = await db.$first(Users, eq(Users.id, 999999));
+const user = await db.$first(Users, eq(Users.id, 999999n));
 
 if (user === null) {
   throw new Error("User not found");
@@ -278,10 +278,10 @@ console.log(user.username);
 
 ```typescript
 // Using $first
-const user = await db.$first(Users, eq(Users.id, 1));
+const user = await db.$first(Users, eq(Users.id, 1n));
 
 // Equivalent using select
-const [user] = await db.from(Users).select().where(eq(Users.id, 1)).limit(1);
+const [user] = await db.from(Users).select().where(eq(Users.id, 1n)).limit(1);
 ```
 
 Key differences:
@@ -298,7 +298,7 @@ const user = await db.$first(Users);
 
 if (user) {
   // TypeScript knows all properties
-  user.id; // number
+  user.id; // bigint
   user.username; // string
   user.email; // string | null
   user.type; // "admin" | "user"
@@ -618,7 +618,7 @@ const stats = {
 ```typescript
 import { eq } from "durcno";
 
-async function getUserStats(userId: number) {
+async function getUserStats(userId: bigint) {
   const where = eq(Posts.userId, userId);
 
   return {
