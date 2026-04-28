@@ -84,7 +84,7 @@ const userId = await db.transaction(async (tx) => {
     .returning({ id: true });
   return user.id;
 });
-// Type: number
+// Type: bigint
 
 // Return an object
 const result = await db.transaction(async (tx) => {
@@ -97,7 +97,7 @@ const result = await db.transaction(async (tx) => {
 
   return { user, posts };
 });
-// Type: { user: { id: number; username: string }, posts: Post[] }
+// Type: { user: { id: bigint; username: string }, posts: Post[] }
 ```
 
 ## Practical Examples

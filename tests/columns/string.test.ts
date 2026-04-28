@@ -16,7 +16,7 @@ describe("String Column Types", () => {
   // ==========================================================================
 
   describe("varchar", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -57,7 +57,7 @@ describe("String Column Types", () => {
   // ==========================================================================
 
   describe("text", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -98,7 +98,7 @@ describe("String Column Types", () => {
   // ==========================================================================
 
   describe("char", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();

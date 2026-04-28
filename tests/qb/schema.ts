@@ -46,7 +46,7 @@ export const Users = table("public", "users", {
   age: integer({}),
   score: integer({ notNull }).default(0),
   points: bigint({}),
-  balance: bigint({ notNull }).default(0),
+  balance: bigint({ notNull }).default(0n),
 
   // Boolean type
   isActive: boolean({ notNull }).default(false),
@@ -98,7 +98,7 @@ export const Posts = table("public", "posts", {
   publishedAt: timestamp({}),
   createdAt: timestamp({ notNull }).default(now()),
   viewCount: integer({ notNull }).default(0),
-  likeCount: bigint({ notNull }).default(0),
+  likeCount: bigint({ notNull }).default(0n),
 });
 
 export const PostsRelations = relations(Posts, () => ({

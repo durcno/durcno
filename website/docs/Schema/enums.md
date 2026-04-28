@@ -151,7 +151,7 @@ const users = await db.from(Users).select();
 
 ```typescript
 // ✅ Valid
-await db.update(Users).set({ role: "moderator" }).where(eq(Users.id, 1));
+await db.update(Users).set({ role: "moderator" }).where(eq(Users.id, 1n));
 
 // ❌ Type Error
 await db.update(Users).set({ role: "invalid" }); // TypeScript error!

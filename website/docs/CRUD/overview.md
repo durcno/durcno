@@ -79,7 +79,7 @@ Durcno infers types from your schema, ensuring type-safe operations:
 ```typescript
 // Return type is automatically inferred
 const users = await db.from(Users).select();
-// Type: { id: number; username: string; email: string | null; ... }[]
+// Type: { id: bigint; username: string; email: string | null; ... }[]
 
 // Only valid columns are allowed
 const result = await db.from(Users).select({

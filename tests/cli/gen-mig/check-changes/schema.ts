@@ -39,7 +39,7 @@ export const CheckTest = table(
       const quantityMax = stage >= 4 ? 1000 : 10000;
 
       const checks = [
-        check("positive_price", gt(t.price, 0)),
+        check("positive_price", gt(t.price, 0n)),
         check(
           "valid_quantity",
           and(gte(t.quantity, 0), lte(t.quantity, quantityMax)),
@@ -49,7 +49,7 @@ export const CheckTest = table(
           "name_length",
           and(fnGt(length(t.name), 2), fnLte(length(t.name), 100)),
         ),
-        ...(stage >= 2 ? [check("max_price", lt(t.price, 1000000))] : []),
+        ...(stage >= 2 ? [check("max_price", lt(t.price, 1000000n))] : []),
       ];
 
       return checks;

@@ -1,6 +1,6 @@
+import { eq } from "durcno";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
-import { eq } from "durcno";
 
 describe("Geography Column Types (PostGIS)", () => {
   beforeAll(async () => {
@@ -16,7 +16,7 @@ describe("Geography Column Types (PostGIS)", () => {
   // ==========================================================================
 
   describe("geography point", () => {
-    let insertedId: number;
+    let insertedId: bigint;
     const pointA: [number, number] = [-74.006, 40.7128]; // NYC
     const pointB: [number, number] = [-118.2437, 34.0522]; // LA
 
@@ -59,7 +59,7 @@ describe("Geography Column Types (PostGIS)", () => {
   // ==========================================================================
 
   describe("geography multipoint", () => {
-    let insertedId: number;
+    let insertedId: bigint;
     const mpA: [number, number][] = [
       [-74.006, 40.7128],
       [-118.2437, 34.0522],
@@ -108,7 +108,7 @@ describe("Geography Column Types (PostGIS)", () => {
   // ==========================================================================
 
   describe("geography linestring", () => {
-    let insertedId: number;
+    let insertedId: bigint;
     const lsA: [number, number][] = [
       [-74.006, 40.7128],
       [-87.6298, 41.8781],
@@ -158,7 +158,7 @@ describe("Geography Column Types (PostGIS)", () => {
   // ==========================================================================
 
   describe("geography multilinestring", () => {
-    let insertedId: number;
+    let insertedId: bigint;
     const mlsA: [number, number][][] = [
       [
         [-74.006, 40.7128],
@@ -215,7 +215,7 @@ describe("Geography Column Types (PostGIS)", () => {
   // ==========================================================================
 
   describe("geography polygon", () => {
-    let insertedId: number;
+    let insertedId: bigint;
     const polyA: [number, number][][] = [
       [
         [-74.006, 40.7128],
@@ -272,7 +272,7 @@ describe("Geography Column Types (PostGIS)", () => {
   // ==========================================================================
 
   describe("geography multipolygon", () => {
-    let insertedId: number;
+    let insertedId: bigint;
     const mpolyA: [number, number][][][] = [
       [
         [

@@ -81,7 +81,7 @@ export function createTestUser(
  * Simple helper to create test posts
  */
 export function createTestPost(
-  userId: number,
+  userId: bigint,
   overrides: {
     title?: string;
     content?: string;
@@ -89,7 +89,7 @@ export function createTestPost(
     isPublished?: boolean;
     publishedAt?: Date;
     viewCount?: number;
-    likeCount?: number; // bigint columns use number in Durcno
+    likeCount?: bigint;
   } = {},
 ) {
   return {
@@ -116,8 +116,8 @@ export function createTestPost(
  * Simple helper to create test comments
  */
 export function createTestComment(
-  postId: number,
-  userId: number,
+  postId: bigint,
+  userId: bigint,
   overrides: {
     body?: string;
   } = {},

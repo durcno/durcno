@@ -2,7 +2,7 @@ import * as z from "zod";
 import { Sql } from "../sql";
 import { Column, type ColumnConfig } from "./common";
 
-type BigserialValType = number;
+type BigserialValType = bigint;
 
 type BigserialConfig = Pick<ColumnConfig, "primaryKey" | "unique">;
 
@@ -34,27 +34,29 @@ export class BigserialColumn<TConfig extends BigserialConfig> extends Column<
   }
 
   get zodTypeScaler() {
-    return z.coerce.number();
+    return z.coerce.bigint();
   }
 
   toDriverScalar(value: BigserialValType | Sql | null) {
     if (value === null) return null;
-    return value instanceof Sql ? value.string : value;
+    return value instanceof Sql ? value.string : value.toString();
   }
 
-  toSQLScalar(value: number | Sql | null): string {
+  toSQLScalar(value: BigserialValType | Sql | null): string {
     if (value === null) return "NULL";
     if (value instanceof Sql) return value.string;
     return value.toString();
   }
 
-  fromDriverScalar(value: number | string | null): BigserialValType | null {
+  fromDriverScalar(
+    value: BigserialValType | string | null,
+  ): BigserialValType | null {
     if (value === null) return null;
-    return typeof value === "string" ? parseInt(value, 10) : value;
+    return BigInt(value);
   }
 }
 
-/** Creates a `bigserial` column. Auto-incrementing 64-bit integer, implicitly `NOT NULL`. Maps to `number`. */
+/** Creates a `bigserial` column. Auto-incrementing 64-bit integer, implicitly `NOT NULL`. Maps to `bigint`. */
 export function bigserial<TConfig extends BigserialConfig>(
   config: TConfig,
 ): BigserialColumn<TConfig> {

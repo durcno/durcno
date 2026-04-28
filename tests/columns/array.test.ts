@@ -31,7 +31,7 @@ describe("Array Column Types", () => {
   // ==========================================================================
 
   describe("varchar[]", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -111,7 +111,7 @@ describe("Array Column Types", () => {
   // ==========================================================================
 
   describe("integer[]", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -152,7 +152,7 @@ describe("Array Column Types", () => {
   // ==========================================================================
 
   describe("integer[3]", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -193,7 +193,7 @@ describe("Array Column Types", () => {
   // ==========================================================================
 
   describe("varchar[2]", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -237,7 +237,7 @@ describe("Array Column Types", () => {
   // ==========================================================================
 
   describe("integer[][]", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -311,7 +311,7 @@ describe("Array Column Types", () => {
   // ==========================================================================
 
   describe("[number, number][]", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -363,7 +363,7 @@ describe("Array Column Types", () => {
   // ==========================================================================
 
   describe("StatusEnum[]", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();

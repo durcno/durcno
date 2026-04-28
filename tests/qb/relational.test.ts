@@ -490,7 +490,7 @@ describe("Relational queries", () => {
 
       await db.insert(schema.Posts).values(createTestPost(user.id));
       await db.insert(schema.Comments).values({
-        postId: 1, // bigint columns use number in Durcno
+        postId: 1n,
         userId: user.id,
         body: "Comment",
       });

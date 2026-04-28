@@ -115,7 +115,7 @@ export const BigintTests = table("public", "bigint_tests", {
   // Nullable bigint
   amount: bigint({}),
   // Nullable bigint with default
-  amountWithDefault: bigint({}).default(1000),
+  amountWithDefault: bigint({}).default(1000n),
 });
 
 /**

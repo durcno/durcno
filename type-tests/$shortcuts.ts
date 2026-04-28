@@ -57,7 +57,7 @@ Expect<
   Equal<
     FirstUserResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -75,7 +75,7 @@ Expect<
   Equal<
     FirstByUsernameResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -93,7 +93,7 @@ Expect<
   Equal<
     FirstAdminResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -111,8 +111,8 @@ Expect<
   Equal<
     FirstPostResult,
     {
-      id: number;
-      userId: number;
+      id: bigint;
+      userId: bigint;
       title: string | null;
       content: string | null;
       createdAt: Date;
@@ -215,7 +215,7 @@ Expect<Equal<DistinctUsernamesFilteredResult, string[]>>();
 // Test $distinct with numeric column
 const distinctUserIds = db.$distinct(Posts, Posts.userId);
 type DistinctUserIdsResult = Awaited<typeof distinctUserIds>;
-Expect<Equal<DistinctUserIdsResult, number[]>>();
+Expect<Equal<DistinctUserIdsResult, bigint[]>>();
 
 // ============================================================
 // $insertReturning tests
@@ -232,7 +232,7 @@ Expect<
   Equal<
     InsertedUserResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -255,7 +255,7 @@ Expect<
   Equal<
     InsertedUserFullResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -268,15 +268,15 @@ Expect<
 
 // Test $insertReturning with Posts table
 const insertedPost = db.$insertReturning(Posts, {
-  userId: 1,
+  userId: 1n,
 });
 type InsertedPostResult = Awaited<typeof insertedPost>;
 Expect<
   Equal<
     InsertedPostResult,
     {
-      id: number;
-      userId: number;
+      id: bigint;
+      userId: bigint;
       title: string | null;
       content: string | null;
       createdAt: Date;

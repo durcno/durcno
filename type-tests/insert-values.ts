@@ -54,7 +54,7 @@ type TestInsertType = Parameters<
 Expect<Equal<"id" extends keyof TestInsertType ? true : false, false>>();
 
 // Test: Generate BY DEFAULT should be optional
-Expect<Equal<TestInsertType["autoId"], number | undefined>>();
+Expect<Equal<TestInsertType["autoId"], bigint | undefined>>();
 
 // Test: Not null without default should be required
 Expect<Equal<TestInsertType["requiredField"], string | Sql>>();

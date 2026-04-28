@@ -212,7 +212,7 @@ const userNames = await db.from(Users).select({
 // With conditions
 import { eq } from "durcno";
 
-const users = await db.from(Users).select().where(eq(Users.id, 1));
+const users = await db.from(Users).select().where(eq(Users.id, 1n));
 ```
 
 ### Update Queries

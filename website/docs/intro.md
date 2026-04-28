@@ -56,12 +56,12 @@ Every query & the return,
 ```typescript
 // TypeScript knows exactly what columns and types are available
 const users = await db.from(Users).select({
-  id: Users.id, // type: number
+  id: Users.id, // type: bigint
   username: Users.username, // type: string
   email: Users.email, // type: string
   role: Users.role, // type: "admin" | "moderator" | "user"
 });
-// Result type: { id: number; username: string; email: string; role: "admin" | "moderator" | "user" }[]
+// Result type: { id: bigint; username: string; email: string; role: "admin" | "moderator" | "user" }[]
 
 // TypeScript prevents invalid operations
 await db.insert(Users).values({

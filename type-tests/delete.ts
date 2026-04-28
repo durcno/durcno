@@ -8,14 +8,14 @@ type BasicDelete = Awaited<typeof basicDeleteQuery>;
 Expect<Equal<BasicDelete, null>>();
 
 // Type test: delete with simple where condition
-const deleteWithWhereQuery = db.delete(Users).where(eq(Users.id, 1));
+const deleteWithWhereQuery = db.delete(Users).where(eq(Users.id, 1n));
 type DeleteWithWhere = Awaited<typeof deleteWithWhereQuery>;
 Expect<Equal<DeleteWithWhere, null>>();
 
 // Type test: delete with multiple where conditions (and)
 const deleteWithAndQuery = db
   .delete(Users)
-  .where(and(eq(Users.id, 1), eq(Users.type, "admin")));
+  .where(and(eq(Users.id, 1n), eq(Users.type, "admin")));
 type DeleteWithAnd = Awaited<typeof deleteWithAndQuery>;
 Expect<Equal<DeleteWithAnd, null>>();
 
@@ -27,11 +27,11 @@ type DeleteWithOr = Awaited<typeof deleteWithOrQuery>;
 Expect<Equal<DeleteWithOr, null>>();
 
 // Type test: delete with comparison operators
-const deleteWithGteQuery = db.delete(Users).where(gte(Users.id, 10));
+const deleteWithGteQuery = db.delete(Users).where(gte(Users.id, 10n));
 type DeleteWithGte = Awaited<typeof deleteWithGteQuery>;
 Expect<Equal<DeleteWithGte, null>>();
 
-const deleteWithLteQuery = db.delete(Users).where(lte(Users.id, 100));
+const deleteWithLteQuery = db.delete(Users).where(lte(Users.id, 100n));
 type DeleteWithLte = Awaited<typeof deleteWithLteQuery>;
 Expect<Equal<DeleteWithLte, null>>();
 
@@ -52,28 +52,28 @@ type DeleteWithIsIn = Awaited<typeof deleteWithIsInQuery>;
 Expect<Equal<DeleteWithIsIn, null>>();
 
 // Type test: delete from Posts table
-const deletePostsQuery = db.delete(Posts).where(eq(Posts.userId, 1));
+const deletePostsQuery = db.delete(Posts).where(eq(Posts.userId, 1n));
 type DeletePosts = Awaited<typeof deletePostsQuery>;
 Expect<Equal<DeletePosts, null>>();
 
 // Type test: delete from Comments table
 const deleteCommentsQuery = db
   .delete(Comments)
-  .where(and(eq(Comments.postId, 1), eq(Comments.userId, 1)));
+  .where(and(eq(Comments.postId, 1n), eq(Comments.userId, 1n)));
 type DeleteComments = Awaited<typeof deleteCommentsQuery>;
 Expect<Equal<DeleteComments, null>>();
 
 // Type test: delete from UserProfiles table
 const deleteUserProfilesQuery = db
   .delete(UserProfiles)
-  .where(eq(UserProfiles.userId, 1));
+  .where(eq(UserProfiles.userId, 1n));
 type DeleteUserProfiles = Awaited<typeof deleteUserProfilesQuery>;
 Expect<Equal<DeleteUserProfiles, null>>();
 
 // Type test: complex delete with nested conditions
 const complexDeleteQuery = db
   .delete(Users)
-  .where(and(eq(Users.type, "admin"), gte(Users.id, 1)));
+  .where(and(eq(Users.type, "admin"), gte(Users.id, 1n)));
 type ComplexDelete = Awaited<typeof complexDeleteQuery>;
 Expect<Equal<ComplexDelete, null>>();
 
@@ -99,13 +99,13 @@ Expect<Equal<DeleteWithTimestamp, null>>();
 // Type test: delete with bigint reference field
 const deleteWithReferenceQuery = db
   .delete(UserProfiles)
-  .where(eq(UserProfiles.userId, 123));
+  .where(eq(UserProfiles.userId, 123n));
 type DeleteWithReference = Awaited<typeof deleteWithReferenceQuery>;
 Expect<Equal<DeleteWithReference, null>>();
 
 // Type safety tests - these should work fine
-db.delete(Users).where(eq(Users.id, 1));
-db.delete(Posts).where(isIn(Posts.id, [1, 2, 3]));
+db.delete(Users).where(eq(Users.id, 1n));
+db.delete(Posts).where(isIn(Posts.id, [1n, 2n, 3n]));
 db.delete(Comments).where(isNotNull(Comments.body));
 
 // Type safety tests - these should cause compile errors:
@@ -128,14 +128,14 @@ db.delete(Users).where(eq(Users.username, 123));
 // Type test: delete with returning all columns
 const deleteReturningAllQuery = db
   .delete(Users)
-  .where(eq(Users.id, 1))
+  .where(eq(Users.id, 1n))
   .returning({ id: true, username: true, email: true, type: true });
 type DeleteReturningAll = Awaited<typeof deleteReturningAllQuery>;
 Expect<
   Equal<
     DeleteReturningAll,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -149,7 +149,7 @@ const deleteReturningSpecificQuery = db
   .where(eq(Users.type, "admin"))
   .returning({ id: true, username: true });
 type DeleteReturningSpecific = Awaited<typeof deleteReturningSpecificQuery>;
-Expect<Equal<DeleteReturningSpecific, { id: number; username: string }[]>>();
+Expect<Equal<DeleteReturningSpecific, { id: bigint; username: string }[]>>();
 
 // Type test: delete with returning single column
 const deleteReturningSingleQuery = db.delete(Users).returning({ email: true });
@@ -162,36 +162,36 @@ const deleteNoWhereReturningQuery = db
   .returning({ id: true, type: true });
 type DeleteNoWhereReturning = Awaited<typeof deleteNoWhereReturningQuery>;
 Expect<
-  Equal<DeleteNoWhereReturning, { id: number; type: "admin" | "user" }[]>
+  Equal<DeleteNoWhereReturning, { id: bigint; type: "admin" | "user" }[]>
 >();
 
 // Type test: delete with returning before where
 const deleteReturningBeforeWhereQuery = db
   .delete(Users)
   .returning({ id: true, username: true })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 type DeleteReturningBeforeWhere = Awaited<
   typeof deleteReturningBeforeWhereQuery
 >;
-Expect<Equal<DeleteReturningBeforeWhere, { id: number; username: string }[]>>();
+Expect<Equal<DeleteReturningBeforeWhere, { id: bigint; username: string }[]>>();
 
 // Type test: delete Posts with returning
 const deletePostsReturningQuery = db
   .delete(Posts)
-  .where(eq(Posts.userId, 1))
+  .where(eq(Posts.userId, 1n))
   .returning({ id: true, title: true, userId: true });
 type DeletePostsReturning = Awaited<typeof deletePostsReturningQuery>;
 Expect<
   Equal<
     DeletePostsReturning,
-    { id: number; title: string | null; userId: number }[]
+    { id: bigint; title: string | null; userId: bigint }[]
   >
 >();
 
 // Type test: delete with enum column in returning
 const deleteEnumReturningQuery = db
   .delete(Users)
-  .where(eq(Users.id, 1))
+  .where(eq(Users.id, 1n))
   .returning({ type: true });
 type DeleteEnumReturning = Awaited<typeof deleteEnumReturningQuery>;
 Expect<Equal<DeleteEnumReturning, { type: "admin" | "user" }[]>>();
@@ -199,12 +199,12 @@ Expect<Equal<DeleteEnumReturning, { type: "admin" | "user" }[]>>();
 // Type test: delete Comments with returning
 const deleteCommentsReturningQuery = db
   .delete(Comments)
-  .where(eq(Comments.postId, 1))
+  .where(eq(Comments.postId, 1n))
   .returning({ id: true, body: true, createdAt: true });
 type DeleteCommentsReturning = Awaited<typeof deleteCommentsReturningQuery>;
 Expect<
   Equal<
     DeleteCommentsReturning,
-    { id: number; body: string | null; createdAt: Date }[]
+    { id: bigint; body: string | null; createdAt: Date }[]
   >
 >();

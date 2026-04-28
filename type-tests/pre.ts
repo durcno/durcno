@@ -17,7 +17,7 @@ Expect<
   Equal<
     BasicResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -60,7 +60,7 @@ Expect<
   Equal<
     MultiArgResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -80,7 +80,7 @@ const selectiveQuery = prequery({ id: Users.id.arg() }, (args) => {
     .where(eq(Users.id, args.id));
 });
 
-const selectiveResult = selectiveQuery.run(db, { id: 1 });
+const selectiveResult = selectiveQuery.run(db, { id: 1n });
 type SelectiveResult = Awaited<typeof selectiveResult>;
 Expect<Equal<SelectiveResult, { username: string; email: string | null }[]>>();
 
@@ -89,14 +89,14 @@ const numericQuery = prequery({ userId: Users.id.arg() }, (args) => {
   return db.prepare().from(Posts).select().where(eq(Posts.userId, args.userId));
 });
 
-const numericResult = numericQuery.run(db, { userId: 1 });
+const numericResult = numericQuery.run(db, { userId: 1n });
 type NumericResult = Awaited<typeof numericResult>;
 Expect<
   Equal<
     NumericResult,
     {
-      id: number;
-      userId: number;
+      id: bigint;
+      userId: bigint;
       title: string | null;
       content: string | null;
       createdAt: Date;
@@ -127,7 +127,7 @@ const orResult = orQuery.run(db, {
   username2: "jane",
 });
 type OrResult = Awaited<typeof orResult>;
-Expect<Equal<OrResult, { id: number; username: string }[]>>();
+Expect<Equal<OrResult, { id: bigint; username: string }[]>>();
 
 // Type test: prepared query with enum argument
 const enumQuery = prequery({ userType: Users.type.arg() }, (args) => {
@@ -140,7 +140,7 @@ const enumQuery = prequery({ userType: Users.type.arg() }, (args) => {
 
 const enumResult = enumQuery.run(db, { userType: "admin" });
 type EnumResult = Awaited<typeof enumResult>;
-Expect<Equal<EnumResult, { id: number; type: "admin" | "user" }[]>>();
+Expect<Equal<EnumResult, { id: bigint; type: "admin" | "user" }[]>>();
 
 // Type test: prepared query with nullable column argument
 const nullableQuery = prequery({ email: Users.email.arg() }, (args) => {
@@ -155,7 +155,7 @@ Expect<
   Equal<
     NullableResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -207,7 +207,7 @@ const postsQuery = prequery(
   },
 );
 
-const postsResult = postsQuery.run(db, { postId: 1, userId: 1 });
+const postsResult = postsQuery.run(db, { postId: 1n, userId: 1n });
 type PostsResult = Awaited<typeof postsResult>;
 Expect<
   Equal<PostsResult, { title: string | null; content: string | null }[]>
@@ -230,15 +230,15 @@ const commentsQuery = prequery(
   },
 );
 
-const commentsResult = commentsQuery.run(db, { postId: 1, userId: 1 });
+const commentsResult = commentsQuery.run(db, { postId: 1n, userId: 1n });
 type CommentsResult = Awaited<typeof commentsResult>;
 Expect<
   Equal<
     CommentsResult,
     {
-      id: number;
-      postId: number;
-      userId: number;
+      id: bigint;
+      postId: bigint;
+      userId: bigint;
       body: string | null;
       createdAt: Date;
     }[]
@@ -254,7 +254,7 @@ const singleColumnQuery = prequery({ id: Users.id.arg() }, (args) => {
     .where(eq(Users.id, args.id));
 });
 
-const singleColumnResult = singleColumnQuery.run(db, { id: 1 });
+const singleColumnResult = singleColumnQuery.run(db, { id: 1n });
 type SingleColumnResult = Awaited<typeof singleColumnResult>;
 Expect<Equal<SingleColumnResult, { username: string }[]>>();
 
@@ -272,7 +272,7 @@ const timestampQuery = prequery(
 
 const timestampResult = timestampQuery.run(db, { createdAt: new Date() });
 type TimestampResult = Awaited<typeof timestampResult>;
-Expect<Equal<TimestampResult, { id: number; createdAt: Date }[]>>();
+Expect<Equal<TimestampResult, { id: bigint; createdAt: Date }[]>>();
 
 // ============================================================================
 // Negative type tests - these should cause compile errors
@@ -312,7 +312,7 @@ const extraArgQuery = prequery({ id: Users.id.arg() }, (args) =>
   db.prepare().from(Users).select().where(eq(Users.id, args.id)),
 );
 // @ts-expect-error - Extra argument should not compile
-extraArgQuery.run(db, { id: 1, extra: "unused" });
+extraArgQuery.run(db, { id: 1n, extra: "unused" });
 
 // ============================================================================
 // Update prepared query type tests
@@ -327,7 +327,7 @@ const updateBasicQuery = prequery({ userId: Users.id.arg() }, (args) => {
     .where(eq(Users.id, args.userId));
 });
 
-const updateBasicResult = updateBasicQuery.run(db, { userId: 1 });
+const updateBasicResult = updateBasicQuery.run(db, { userId: 1n });
 type UpdateBasicResult = Awaited<typeof updateBasicResult>;
 Expect<Equal<UpdateBasicResult, null>>();
 
@@ -344,7 +344,7 @@ const updateMultiArgQuery = prequery(
 );
 
 const updateMultiArgResult = updateMultiArgQuery.run(db, {
-  userId: 1,
+  userId: 1n,
   userType: "admin",
 });
 type UpdateMultiArgResult = Awaited<typeof updateMultiArgResult>;
@@ -360,9 +360,9 @@ const updateReturningQuery = prequery({ userId: Users.id.arg() }, (args) => {
     .returning({ id: true, username: true });
 });
 
-const updateReturningResult = updateReturningQuery.run(db, { userId: 1 });
+const updateReturningResult = updateReturningQuery.run(db, { userId: 1n });
 type UpdateReturningResult = Awaited<typeof updateReturningResult>;
-Expect<Equal<UpdateReturningResult, { id: number; username: string }[]>>();
+Expect<Equal<UpdateReturningResult, { id: bigint; username: string }[]>>();
 
 // Type test: prepared update with OR condition
 const updateOrQuery = prequery(
@@ -395,7 +395,7 @@ const updatePostsQuery = prequery(
   },
 );
 
-const updatePostsResult = updatePostsQuery.run(db, { postId: 1, userId: 1 });
+const updatePostsResult = updatePostsQuery.run(db, { postId: 1n, userId: 1n });
 type UpdatePostsResult = Awaited<typeof updatePostsResult>;
 Expect<Equal<UpdatePostsResult, null>>();
 
@@ -421,7 +421,7 @@ const missingUpdateArg = prequery(
       .where(and(eq(Users.id, args.id), eq(Users.type, args.type))),
 );
 // @ts-expect-error - Missing required argument for update should not compile
-missingUpdateArg.run(db, { id: 1 });
+missingUpdateArg.run(db, { id: 1n });
 
 // ============================================================================
 // Delete prepared query type tests
@@ -432,7 +432,7 @@ const deleteBasicQuery = prequery({ userId: Users.id.arg() }, (args) => {
   return db.prepare().delete(Users).where(eq(Users.id, args.userId));
 });
 
-const deleteBasicResult = deleteBasicQuery.run(db, { userId: 1 });
+const deleteBasicResult = deleteBasicQuery.run(db, { userId: 1n });
 type DeleteBasicResult = Awaited<typeof deleteBasicResult>;
 Expect<Equal<DeleteBasicResult, null>>();
 
@@ -448,7 +448,7 @@ const deleteMultiArgQuery = prequery(
 );
 
 const deleteMultiArgResult = deleteMultiArgQuery.run(db, {
-  userId: 1,
+  userId: 1n,
   userType: "admin",
 });
 type DeleteMultiArgResult = Awaited<typeof deleteMultiArgResult>;
@@ -463,9 +463,9 @@ const deleteReturningQuery = prequery({ userId: Users.id.arg() }, (args) => {
     .returning({ id: true, username: true });
 });
 
-const deleteReturningResult = deleteReturningQuery.run(db, { userId: 1 });
+const deleteReturningResult = deleteReturningQuery.run(db, { userId: 1n });
 type DeleteReturningResult = Awaited<typeof deleteReturningResult>;
-Expect<Equal<DeleteReturningResult, { id: number; username: string }[]>>();
+Expect<Equal<DeleteReturningResult, { id: bigint; username: string }[]>>();
 
 // Type test: prepared delete with OR condition
 const deleteOrQuery = prequery(
@@ -497,8 +497,8 @@ const deletePostsPreQuery = prequery(
 );
 
 const deletePostsPreResult = deletePostsPreQuery.run(db, {
-  postId: 1,
-  userId: 1,
+  postId: 1n,
+  userId: 1n,
 });
 type DeletePostsPreResult = Awaited<typeof deletePostsPreResult>;
 Expect<Equal<DeletePostsPreResult, null>>();
@@ -520,7 +520,7 @@ const missingDeleteArg = prequery(
       .where(and(eq(Users.id, args.id), eq(Users.type, args.type))),
 );
 // @ts-expect-error - Missing required argument for delete should not compile
-missingDeleteArg.run(db, { id: 1 });
+missingDeleteArg.run(db, { id: 1n });
 
 // ============================================================================
 // Shortcut ($) prepared query type tests
@@ -549,13 +549,13 @@ Expect<Equal<ExistsPreparedResult, boolean>>();
 const firstPreparedQuery = prequery({ userId: Users.id.arg() }, (args) => {
   return db.prepare().$first(Users, eq(Users.id, args.userId));
 });
-const _firstPreparedResult = firstPreparedQuery.run(db, { userId: 1 });
+const _firstPreparedResult = firstPreparedQuery.run(db, { userId: 1n });
 type FirstPreparedResult = Awaited<typeof _firstPreparedResult>;
 Expect<
   Equal<
     FirstPreparedResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";

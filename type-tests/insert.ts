@@ -20,13 +20,13 @@ db.insert(Users).values({
 // Type test: insert on Posts (includes array column)
 db.insert(Posts).values([
   {
-    userId: 1,
+    userId: 1n,
     title: "title",
     content: "content",
     tags: ["typescript", "postgres"],
   },
   {
-    userId: 1,
+    userId: 1n,
     title: "title",
     content: "content",
     // tags is nullable, can be omitted
@@ -35,15 +35,15 @@ db.insert(Posts).values([
 
 // Type test: insert Posts with explicit null for array column
 db.insert(Posts).values({
-  userId: 1,
+  userId: 1n,
   title: "test",
   tags: null,
 });
 
 // Type test: insert on Comments
 db.insert(Comments).values({
-  postId: 1,
-  userId: 1,
+  postId: 1n,
+  userId: 1n,
   body: "body",
 });
 
@@ -62,7 +62,7 @@ Expect<
   Equal<
     InsertWithReturning,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
     }[]
@@ -96,7 +96,7 @@ Expect<
   Equal<
     InsertLogsWithReturning,
     {
-      id: number;
+      id: bigint;
       message: string;
       createdAt: Date;
     }[]
@@ -109,7 +109,7 @@ Expect<
 
 // Type test: insert on UserProfiles - serial id is auto-generated and optional
 db.insert(UserProfiles).values({
-  userId: 1,
+  userId: 1n,
   avatarData: Buffer.from("avatar"),
   // id is auto-generated (serial) and optional
 });
@@ -117,20 +117,20 @@ db.insert(UserProfiles).values({
 // Type test: insert on UserProfiles - can provide explicit serial value
 db.insert(UserProfiles).values({
   id: 1,
-  userId: 1,
+  userId: 1n,
   avatarData: Buffer.from("avatar"),
 });
 
 // Type test: insert UserProfiles with skills array column
 db.insert(UserProfiles).values({
-  userId: 1,
+  userId: 1n,
   avatarData: Buffer.from("avatar"),
   skills: ["TypeScript", "PostgreSQL", "Node.js"],
 });
 
 // Type test: insert UserProfiles with null skills (nullable array)
 db.insert(UserProfiles).values({
-  userId: 1,
+  userId: 1n,
   avatarData: Buffer.from("avatar"),
   skills: null,
 });
@@ -145,7 +145,7 @@ db.insert(Categories).values({
 const insertSerialWithReturning = db
   .insert(UserProfiles)
   .values({
-    userId: 1,
+    userId: 1n,
     avatarData: Buffer.from("avatar"),
   })
   .returning({ id: true, userId: true });
@@ -155,7 +155,7 @@ Expect<
     InsertSerialWithReturning,
     {
       id: number;
-      userId: number;
+      userId: bigint;
     }[]
   >
 >();
@@ -194,7 +194,7 @@ Expect<
   Equal<
     InsertUuidWithReturning,
     {
-      id: number;
+      id: bigint;
       externalId: string;
       trackingId: string | null;
       username: string;
@@ -208,14 +208,14 @@ Expect<
 
 // Type test: insert on UserProfiles - avatarData required, thumbnailData optional
 db.insert(UserProfiles).values({
-  userId: 1,
+  userId: 1n,
   avatarData: Buffer.from("hello world"),
   // thumbnailData is optional (nullable)
 });
 
 // Type test: insert on UserProfiles - can provide explicit buffer for nullable column
 db.insert(UserProfiles).values({
-  userId: 1,
+  userId: 1n,
   avatarData: Buffer.from("required data"),
   thumbnailData: Buffer.from("optional data"),
 });
@@ -224,7 +224,7 @@ db.insert(UserProfiles).values({
 const insertByteaWithReturning = db
   .insert(UserProfiles)
   .values({
-    userId: 1,
+    userId: 1n,
     avatarData: Buffer.from("test data"),
   })
   .returning({ id: true, avatarData: true, thumbnailData: true, userId: true });
@@ -236,7 +236,7 @@ Expect<
       id: number;
       avatarData: Buffer;
       thumbnailData: Buffer | null;
-      userId: number;
+      userId: bigint;
     }[]
   >
 >();
@@ -360,7 +360,7 @@ Expect<
   Equal<
     InsertNetworkWithReturning,
     {
-      id: number;
+      id: bigint;
       ipAddress: string;
       secondaryIp: string | null;
       macAddress: string;

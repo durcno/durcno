@@ -16,7 +16,7 @@ describe("Date/Time Column Types", () => {
   // ==========================================================================
 
   describe("timestamp", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -61,7 +61,7 @@ describe("Date/Time Column Types", () => {
   // ==========================================================================
 
   describe("date", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -106,7 +106,7 @@ describe("Date/Time Column Types", () => {
   // ==========================================================================
 
   describe("time", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();

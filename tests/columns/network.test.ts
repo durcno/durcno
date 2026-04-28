@@ -16,7 +16,7 @@ describe("Network Column Types", () => {
   // ==========================================================================
 
   describe("inet", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -57,7 +57,7 @@ describe("Network Column Types", () => {
   // ==========================================================================
 
   describe("cidr", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -98,7 +98,7 @@ describe("Network Column Types", () => {
   // ==========================================================================
 
   describe("macaddr", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();

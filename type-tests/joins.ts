@@ -45,14 +45,14 @@ Expect<
   Equal<
     UsersWithPostsAll,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
       createdAt: Date;
       externalId: string;
       trackingId: string | null;
-      userId: number;
+      userId: bigint;
       title: string | null;
       content: string | null;
       tags: string[] | null;
@@ -75,7 +75,7 @@ Expect<
   Equal<
     UsersWithPostsSelectPosts,
     {
-      postId: number;
+      postId: bigint;
       title: string | null;
       content: string | null;
     }[]
@@ -99,9 +99,9 @@ Expect<
   Equal<
     MixedColumns,
     {
-      userId: number;
+      userId: bigint;
       username: string;
-      postId: number;
+      postId: bigint;
       postTitle: string | null;
       postCreatedAt: Date;
     }[]
@@ -242,11 +242,11 @@ Expect<
   Equal<
     DoubleJoinAllColumns,
     {
-      userId: number;
+      userId: bigint;
       userType: "admin" | "user";
-      postId: number;
+      postId: bigint;
       postContent: string | null;
-      commentId: number;
+      commentId: bigint;
       commentBody: string | null;
     }[]
   >

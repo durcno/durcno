@@ -16,7 +16,7 @@ describe("Numeric Column Types", () => {
   // ==========================================================================
 
   describe("integer", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -57,7 +57,7 @@ describe("Numeric Column Types", () => {
   // ==========================================================================
 
   describe("smallint", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -98,13 +98,13 @@ describe("Numeric Column Types", () => {
   // ==========================================================================
 
   describe("bigint", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.BigintTests)
-        .values({ amount: 1000000000 })
+        .values({ amount: 1000000000n })
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -116,21 +116,21 @@ describe("Numeric Column Types", () => {
         .from(schema.BigintTests)
         .select()
         .where(eq(schema.BigintTests.id, insertedId));
-      expect(row.amount).toBe(1000000000);
-      expect(row.amountWithDefault).toBe(1000);
+      expect(row.amount).toBe(1000000000n);
+      expect(row.amountWithDefault).toBe(1000n);
     });
 
     it("update", async () => {
       const db = getDb();
       await db
         .update(schema.BigintTests)
-        .set({ amount: 2000000000 })
+        .set({ amount: 2000000000n })
         .where(eq(schema.BigintTests.id, insertedId));
       const [row] = await db
         .from(schema.BigintTests)
         .select()
         .where(eq(schema.BigintTests.id, insertedId));
-      expect(row.amount).toBe(2000000000);
+      expect(row.amount).toBe(2000000000n);
     });
   });
 
@@ -219,7 +219,7 @@ describe("Numeric Column Types", () => {
   // ==========================================================================
 
   describe("bigserial", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -259,7 +259,7 @@ describe("Numeric Column Types", () => {
   // ==========================================================================
 
   describe("numeric", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();

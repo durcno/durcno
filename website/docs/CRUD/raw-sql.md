@@ -12,7 +12,7 @@ While Durcno's query builder handles most use cases, sometimes you need to execu
 import { db } from "./db/index.ts";
 
 // Execute a raw SELECT query
-const result = await db.raw<{ id: number; username: string }[]>(
+const result = await db.raw<{ id: bigint; username: string }[]>(
   "SELECT id, username FROM users",
   [],
   (rows) => rows,
@@ -78,7 +78,7 @@ const count = await db.raw("SELECT COUNT(*) as count FROM users", [], (rows) =>
 // Returns: 42
 
 // Pass rows through unchanged
-const users = await db.raw<{ id: number; username: string }[]>(
+const users = await db.raw<{ id: bigint; username: string }[]>(
   "SELECT id, username FROM users",
   [],
   (rows) => rows,
@@ -127,7 +127,7 @@ await db.raw(
 );
 
 // Insert with RETURNING
-const inserted = await db.raw<{ id: number }[]>(
+const inserted = await db.raw<{ id: bigint }[]>(
   `INSERT INTO users (username, email, type, status, role) 
    VALUES ($1, $2, $3, $4, $5) 
    RETURNING id`,
@@ -250,7 +250,7 @@ The generic type parameter `TReturn` allows you to specify the expected return t
 
 ```typescript
 // Specify the return type
-const users = await db.raw<{ id: number; username: string }[]>(
+const users = await db.raw<{ id: bigint; username: string }[]>(
   "SELECT id, username FROM users",
   [],
   (rows) => rows,

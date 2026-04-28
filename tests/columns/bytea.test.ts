@@ -12,7 +12,7 @@ describe("Bytea Column Type", () => {
   });
 
   describe("bytea", () => {
-    let insertedId: number;
+    let insertedId: bigint;
     const initialData = Buffer.from("hello");
     const updatedData = Buffer.from("world");
 

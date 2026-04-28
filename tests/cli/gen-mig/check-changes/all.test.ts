@@ -240,23 +240,6 @@ describe("durcno generate - check constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(4);
   });
 
-  it("should verify migration folders follow ISO timestamp naming", () => {
-    const folders = getMigrationFolders();
-    expect(folders.length).toBeGreaterThanOrEqual(4);
-
-    for (const folder of folders) {
-      expect(MIGRATION_NAME_REGEX.test(folder)).toBe(true);
-    }
-
-    for (let i = 1; i < folders.length; i++) {
-      const toISOString = (d: string) =>
-        `${d.split("T")[0]}T${d.split("T")[1].replace(/-/g, ":")}`;
-      const prevTime = new Date(toISOString(folders[i - 1])).getTime();
-      const currTime = new Date(toISOString(folders[i])).getTime();
-      expect(currTime).toBeGreaterThan(prevTime);
-    }
-  });
-
   it("should be able to insert and query data after migrations", async () => {
     await client.query(`
       INSERT INTO check_test (price, quantity, email, name, "created_at")

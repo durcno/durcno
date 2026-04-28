@@ -99,14 +99,14 @@ const inserted = await db
   .insert(Users)
   .values({ username: "john_doe", type: "user" })
   .returning({ id: true, username: true });
-// Type: { id: number; username: string }[]
+// Type: { id: bigint; username: string }[]
 
 // Return all columns except some
 const inserted = await db
   .insert(Users)
   .values({ username: "john_doe", type: "user" })
   .returning({ email: false });
-// Type: { id: number; username: string; type: "admin" | "user"; createdAt: Date }[]
+// Type: { id: bigint; username: string; type: "admin" | "user"; createdAt: Date }[]
 ```
 
 ### Returning with Multiple Inserts
@@ -121,8 +121,8 @@ const inserted = await db
     { username: "jane", type: "admin" },
   ])
   .returning({ id: true, username: true });
-// Type: { id: number; username: string }[]
-// Returns: [{ id: 1, username: "john" }, { id: 2, username: "jane" }]
+// Type: { id: bigint; username: string }[]
+// Returns: [{ id: 1n, username: "john" }, { id: 2n, username: "jane" }]
 ```
 
 ## Auto-generated Values with `.$insertFn()`
@@ -213,7 +213,7 @@ const newUser = await db.$insertReturning(Users, {
   type: "user",
 });
 
-// Type: { id: number; username: string; email: string | null; type: "admin" | "user"; createdAt: Date; }
+// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date; }
 console.log(newUser.id); // Auto-generated ID
 console.log(newUser.createdAt); // Auto-generated timestamp
 ```
@@ -289,7 +289,7 @@ const [user] = await db
   .insert(Users)
   .values({ username: "john", type: "user" })
   .returning({ id: true, username: true });
-// Type: { id: number; username: string }[]
+// Type: { id: bigint; username: string }[]
 ```
 
 ### Use Cases

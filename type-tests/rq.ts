@@ -9,7 +9,7 @@ Expect<
   Equal<
     AllQueryRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -34,7 +34,7 @@ Expect<
   Equal<
     ManyWtColsTrueRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -79,7 +79,7 @@ Expect<
   Equal<
     WhereQueryRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -100,7 +100,7 @@ Expect<
   Equal<
     OrderByQueryRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
     }[]
   >
@@ -120,7 +120,7 @@ Expect<
   Equal<
     MultiOrderByQueryRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
       createdAt: Date;
     }[]
@@ -149,7 +149,7 @@ Expect<
   Equal<
     UsersWithProfileQueryRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -183,12 +183,12 @@ Expect<
   Equal<
     PostsWithCommentsQueryRtrn,
     {
-      id: number;
-      userId: number;
+      id: bigint;
+      userId: bigint;
       title: string | null;
       content: string | null;
       comments: {
-        id: number;
+        id: bigint;
         body: string | null;
       }[];
     }[]
@@ -215,10 +215,10 @@ Expect<
   Equal<
     PostsWithAuthorQueryRtrn,
     {
-      id: number;
+      id: bigint;
       title: string | null;
       author: {
-        id: number;
+        id: bigint;
         username: string;
       };
     }[]
@@ -245,10 +245,10 @@ Expect<
   Equal<
     ArticlesWithAuthorQueryRtrn,
     {
-      id: number;
+      id: bigint;
       title: string;
       author: {
-        id: number;
+        id: bigint;
         username: string;
       };
     }[]
@@ -275,7 +275,7 @@ Expect<
   Equal<
     ArticlesWithCategoryQueryRtrn,
     {
-      id: number;
+      id: bigint;
       title: string;
       category: {
         id: number;
@@ -313,10 +313,10 @@ Expect<
   Equal<
     ArticlesWithBothRelationsQueryRtrn,
     {
-      id: number;
+      id: bigint;
       title: string;
       author: {
-        id: number;
+        id: bigint;
         username: string;
       };
       category: {
@@ -361,13 +361,13 @@ Expect<
   Equal<
     PostsWithNestedCommentsAuthorQueryRtrn,
     {
-      id: number;
+      id: bigint;
       title: string | null;
       comments: {
-        id: number;
+        id: bigint;
         body: string | null;
         author: {
-          id: number;
+          id: bigint;
           username: string;
         };
       }[];
@@ -405,13 +405,13 @@ Expect<
   Equal<
     PostsWithNestedCommentsPostQueryRtrn,
     {
-      id: number;
+      id: bigint;
       title: string | null;
       comments: {
-        id: number;
+        id: bigint;
         body: string | null;
         post: {
-          id: number;
+          id: bigint;
           title: string | null;
         };
       }[];
@@ -455,17 +455,17 @@ Expect<
   Equal<
     PostsWithAuthorAndNestedCommentsQueryRtrn,
     {
-      id: number;
+      id: bigint;
       title: string | null;
       author: {
-        id: number;
+        id: bigint;
         username: string;
       };
       comments: {
-        id: number;
+        id: bigint;
         body: string | null;
         author: {
-          id: number;
+          id: bigint;
           username: string;
         };
       }[];
@@ -509,16 +509,16 @@ Expect<
   Equal<
     UsersWithDeepNestedQueryRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
       posts: {
-        id: number;
+        id: bigint;
         title: string | null;
         comments: {
-          id: number;
+          id: bigint;
           body: string | null;
           author: {
-            id: number;
+            id: bigint;
             username: string;
           };
         }[];
@@ -548,16 +548,16 @@ Expect<
   Equal<
     PostsWithNestedAllColumnsQueryRtrn,
     {
-      id: number;
+      id: bigint;
       title: string | null;
       comments: {
-        id: number;
-        postId: number;
-        userId: number;
+        id: bigint;
+        postId: bigint;
+        userId: bigint;
         body: string | null;
         createdAt: Date;
         author: {
-          id: number;
+          id: bigint;
           username: string;
           email: string | null;
           type: "admin" | "user";
@@ -581,7 +581,7 @@ Expect<
   Equal<
     FirstAllQueryRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -604,7 +604,7 @@ Expect<
   Equal<
     FirstWtColsRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
     } | null
   >
@@ -651,10 +651,10 @@ Expect<
   Equal<
     FirstPostsWithCommentsRtrn,
     {
-      id: number;
+      id: bigint;
       title: string | null;
       comments: {
-        id: number;
+        id: bigint;
         body: string | null;
       }[];
     } | null
@@ -689,10 +689,10 @@ Expect<
   Equal<
     FirstArticlesWithRelationsRtrn,
     {
-      id: number;
+      id: bigint;
       title: string;
       author: {
-        id: number;
+        id: bigint;
         username: string;
       };
       category: {
@@ -731,13 +731,13 @@ Expect<
   Equal<
     FirstUsersDeepNestedRtrn,
     {
-      id: number;
+      id: bigint;
       username: string;
       posts: {
-        id: number;
+        id: bigint;
         title: string | null;
         comments: {
-          id: number;
+          id: bigint;
           body: string | null;
         }[];
       }[];

@@ -106,7 +106,7 @@ describe("INSERT queries", () => {
 
     const users = await db.from(schema.Users).select();
     expect(users[0].score).toBe(0);
-    expect(users[0].balance).toBe(0);
+    expect(users[0].balance).toBe(0n);
     expect(users[0].isActive).toBe(false);
   });
 
@@ -174,8 +174,8 @@ describe("INSERT queries", () => {
       description: "A detailed description",
       age: 30,
       score: 100,
-      points: 5000,
-      balance: 10000,
+      points: 5000n,
+      balance: 10000n,
       isActive: true,
       isVerified: false,
       birthDate: testDate,
@@ -201,8 +201,8 @@ describe("INSERT queries", () => {
       status: "active",
       role: "moderator",
     });
-    expect(users[0].points).toBe(5000);
-    expect(users[0].balance).toBe(10000);
+    expect(users[0].points).toBe(5000n);
+    expect(users[0].balance).toBe(10000n);
   });
 
   it("should handle enum values correctly", async () => {

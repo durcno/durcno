@@ -12,13 +12,13 @@ Durcno provides a set of type-safe filter operators for building WHERE condition
 | ----------------------------- | -------------------------------- | -------------------------------------------- |
 | `eq(col, val)`                | Equal                            | `eq(Users.type, "admin")`                    |
 | `ne(col, val)`                | Not equal                        | `ne(Users.type, "admin")`                    |
-| `gt(col, val)`                | Greater than                     | `gt(Users.id, 10)`                           |
-| `gte(col, val)`               | Greater than or equal            | `gte(Users.id, 10)`                          |
-| `lt(col, val)`                | Less than                        | `lt(Users.id, 10)`                           |
-| `lte(col, val)`               | Less than or equal               | `lte(Users.id, 10)`                          |
+| `gt(col, val)`                | Greater than                     | `gt(Users.id, 10n)`                          |
+| `gte(col, val)`               | Greater than or equal            | `gte(Users.id, 10n)`                         |
+| `lt(col, val)`                | Less than                        | `lt(Users.id, 10n)`                          |
+| `lte(col, val)`               | Less than or equal               | `lte(Users.id, 10n)`                         |
 | `isNull(col)`                 | IS NULL                          | `isNull(Users.email)`                        |
 | `isNotNull(col)`              | IS NOT NULL                      | `isNotNull(Users.email)`                     |
-| `isIn(col, arrOrSubquery)`    | IN array or subquery             | `isIn(Users.id, [1, 2, 3])`                  |
+| `isIn(col, arrOrSubquery)`    | IN array or subquery             | `isIn(Users.id, [1n, 2n, 3n])`               |
 | `and(...conditions)`          | AND logic                        | `and(eq(...), gte(...))`                     |
 | `or(...conditions)`           | OR logic                         | `or(eq(...), eq(...))`                       |
 | `arrayContains(col, values)`  | Array contains all values (`@>`) | `arrayContains(Posts.tags, ["ts", "pg"])`    |
@@ -68,7 +68,7 @@ await db
   .where(gte(Users.createdAt, new Date("2024-01-01")));
 
 // Get users with id >= 10
-await db.from(Users).select().where(gte(Users.id, 10));
+await db.from(Users).select().where(gte(Users.id, 10n));
 ```
 
 ### Less Than or Equal (`lte`)
@@ -93,7 +93,7 @@ Check if a column is strictly greater than a value:
 import { gt } from "durcno";
 
 // Get users with id > 10 (excludes 10)
-await db.from(Users).select().where(gt(Users.id, 10));
+await db.from(Users).select().where(gt(Users.id, 10n));
 
 // Get users created after a date
 await db
@@ -110,7 +110,7 @@ Check if a column is strictly less than a value:
 import { lt } from "durcno";
 
 // Get users with id < 100 (excludes 100)
-await db.from(Users).select().where(lt(Users.id, 100));
+await db.from(Users).select().where(lt(Users.id, 100n));
 
 // Get users created before a date
 await db
@@ -152,7 +152,7 @@ import { isIn } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(isIn(Users.id, [1, 2, 3]));
+  .where(isIn(Users.id, [1n, 2n, 3n]));
 
 // Get users with specific types
 await db
@@ -183,7 +183,7 @@ await db
   .from(Users)
   .select()
   .where(
-    and(eq(Users.type, "admin"), gte(Users.id, 10), isNotNull(Users.email)),
+    and(eq(Users.type, "admin"), gte(Users.id, 10n), isNotNull(Users.email)),
   );
 ```
 

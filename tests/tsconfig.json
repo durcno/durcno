@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
-    "target": "es2017" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+    "target": "es2020" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
     /* Language and Environment */
     "lib": [
       "es2022"
@@ -26,6 +26,7 @@
     "./*.ts",
     "./cli/**/*.ts",
     "./columns/**/*.ts",
+    "./constraints/**/*.ts",
     "./qb/**/*.ts",
     "./logger/**/*.ts",
     "../tsdown.config.ts",

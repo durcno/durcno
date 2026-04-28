@@ -64,11 +64,22 @@ export type SnapshotComparisonOp =
 export type SnapshotPatternOp = "LIKE" | "SIMILAR TO" | "~";
 export type SnapshotLogicalOp = "AND" | "OR";
 
+/**
+ * A tagged column reference stored in a snapshot expression.
+ * Stores the snake_case column name so it can be quoted correctly in SQL output.
+ */
+export interface ExprColumnRef {
+  type: "col";
+  /** Snake_case column name as used in PostgreSQL (e.g. `user_id`). */
+  name: string;
+}
+
 export interface SnapshotComparisonExpr {
   type: "comparison";
-  left: string | SnapshotFunctionExpr;
+  left: ExprColumnRef | SnapshotFunctionExpr;
   op: SnapshotComparisonOp | SnapshotPatternOp;
-  right: unknown;
+  /** Column ref, or a pre-rendered SQL string (incl. `(v1, v2)` for IN lists). */
+  right: ExprColumnRef | string;
 }
 
 export interface SnapshotLogicalExpr {
@@ -80,7 +91,8 @@ export interface SnapshotLogicalExpr {
 export interface SnapshotFunctionExpr {
   type: "function";
   name: string;
-  args: (string | unknown)[];
+  /** Column refs or pre-rendered SQL strings. */
+  args: (ExprColumnRef | string)[];
 }
 
 export interface SnapshotRawExpr {
@@ -166,7 +178,7 @@ export class CheckBuilder {
   // Set membership operators (lists of strings or numbers)
   in<TCol extends TableColumn<string, string, Key, AnyColumn>>(
     col: TCol,
-    values: (TCol["ValType"] & (string | number))[],
+    values: TCol["ValType"][],
   ): ComparisonExpr {
     if (!Array.isArray(values) || values.length === 0) {
       throw new Error("IN expression requires a non-empty array of values");
@@ -176,7 +188,7 @@ export class CheckBuilder {
 
   notIn<TCol extends TableColumn<string, string, Key, AnyColumn>>(
     col: TCol,
-    values: (TCol["ValType"] & (string | number))[],
+    values: TCol["ValType"][],
   ): ComparisonExpr {
     if (!Array.isArray(values) || values.length === 0) {
       throw new Error("NOT IN expression requires a non-empty array of values");
@@ -296,12 +308,16 @@ export function check(name: string, expr: CheckExpr): Check {
 // Helper Functions
 // ============================================================================
 
-function formatValue(value: unknown): string {
+/**
+ * Converts a raw JavaScript value to a SQL literal string.
+ * Used as a fallback when no column type context is available.
+ */
+function formatUnknown(value: unknown): string {
   if (value === null) return "NULL";
+  if (typeof value === "bigint") return value.toString();
   if (typeof value === "string") return `'${value.replace(/'/g, "''")}'`;
   if (typeof value === "number") return String(value);
   if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
-  if (value instanceof Date) return `'${value.toISOString()}'`;
   return String(value);
 }
 
@@ -313,7 +329,7 @@ function exprToSQL(expr: CheckExpr): string {
   if (expr.type === "comparison") {
     let left: string;
     if (isTableCol(expr.left)) {
-      left = `"${expr.left.name}"`;
+      left = `"${expr.left.nameSnake}"`;
     } else if (expr.left.type === "function") {
       left = exprToSQL(expr.left);
     } else {
@@ -323,20 +339,22 @@ function exprToSQL(expr: CheckExpr): string {
     if (expr.op === "IN" || expr.op === "NOT IN") {
       if (Array.isArray(expr.right)) {
         const list = expr.right
-          .map((v) => (isTableCol(v) ? `"${v.name}"` : formatValue(v)))
+          .map((v) => (isTableCol(v) ? `"${v.nameSnake}"` : formatUnknown(v)))
           .join(", ");
         return `${left} ${expr.op} (${list})`;
       }
 
       // Fallback: single value (wrap in parens)
       const singleRight = isTableCol(expr.right)
-        ? `"${expr.right.name}"`
-        : formatValue(expr.right);
+        ? `"${expr.right.nameSnake}"`
+        : formatUnknown(expr.right);
       return `${left} ${expr.op} (${singleRight})`;
     }
     const right = isTableCol(expr.right)
-      ? `"${expr.right.name}"`
-      : formatValue(expr.right);
+      ? `"${expr.right.nameSnake}"`
+      : isTableCol(expr.left)
+        ? expr.left.toSQL(expr.right as never)
+        : formatUnknown(expr.right);
 
     return `${left} ${expr.op} ${right}`;
   }
@@ -348,7 +366,7 @@ function exprToSQL(expr: CheckExpr): string {
 
   if (expr.type === "function") {
     const args = expr.args.map((arg) =>
-      isTableCol(arg) ? `"${arg.name}"` : formatValue(arg),
+      isTableCol(arg) ? `"${arg.nameSnake}"` : formatUnknown(arg),
     );
     return `${expr.name}(${args.join(", ")})`;
   }
@@ -362,25 +380,40 @@ function exprToSnapshot(expr: CheckExpr): SnapshotCheckExpr {
   }
 
   if (expr.type === "comparison") {
-    let left: string | SnapshotFunctionExpr;
+    // Convert left side to ExprColumnRef or SnapshotFunctionExpr
+    let left: ExprColumnRef | SnapshotFunctionExpr;
     if (isTableCol(expr.left)) {
-      left = expr.left.name as string;
-    } else if (expr.left.type === "function") {
-      left = exprToSnapshot(expr.left) as SnapshotFunctionExpr;
+      left = { type: "col", name: expr.left.nameSnake as string };
     } else {
-      left = String(expr.left);
+      left = exprToSnapshot(expr.left) as SnapshotFunctionExpr;
     }
 
-    const right = isTableCol(expr.right)
-      ? (expr.right.name as string)
-      : expr.right;
+    // Convert right side: column ref becomes ExprColumnRef, values are rendered to SQL strings
+    let right: ExprColumnRef | string;
+    if (isTableCol(expr.right)) {
+      right = { type: "col", name: expr.right.nameSnake as string };
+    } else if (
+      (expr.op === "IN" || expr.op === "NOT IN") &&
+      Array.isArray(expr.right)
+    ) {
+      // For IN / NOT IN: render each element and join as a pre-formatted SQL tuple string
+      const refCol = isTableCol(expr.left) ? expr.left : undefined;
+      const list = (expr.right as unknown[]).map((v) => {
+        if (isTableCol(v)) return `"${v.nameSnake}"`;
+        return refCol ? refCol.toSQL(v) : formatUnknown(v);
+      });
+      right = `(${list.join(", ")})`;
+    } else if (isTableCol(expr.left)) {
+      // Use the column's toSQL for type-aware serialization — handles both scalar
+      // values and array values (dimension columns) correctly via ARRAY[...] syntax.
+      right = expr.left.toSQL(expr.right as never);
+    } else {
+      // Left is a FunctionExpr - its return type differs from any column arg type,
+      // so fall back to formatValue (function comparison values are always plain numbers/strings)
+      right = formatUnknown(expr.right);
+    }
 
-    return {
-      type: "comparison",
-      left,
-      op: expr.op,
-      right,
-    };
+    return { type: "comparison", left, op: expr.op, right };
   }
 
   if (expr.type === "logical") {
@@ -392,30 +425,46 @@ function exprToSnapshot(expr: CheckExpr): SnapshotCheckExpr {
   }
 
   if (expr.type === "function") {
+    // Find the first column arg - used as type context for non-column args (e.g. coalesce default value)
+    const refCol = expr.args.find(isTableCol);
     return {
       type: "function",
       name: expr.name,
-      args: expr.args.map((arg) =>
-        isTableCol(arg) ? (arg.name as string) : arg,
-      ),
+      args: expr.args.map((arg) => {
+        if (isTableCol(arg)) {
+          return { type: "col" as const, name: arg.nameSnake as string };
+        }
+        return refCol ? refCol.toSQL(arg) : formatUnknown(arg);
+      }),
     };
   }
 
   throw new Error("Unknown expression type");
 }
 
-// Convert snapshot expression back to SQL
+/** Type guard for {@link ExprColumnRef}. */
+function isExprColumnRef(value: unknown): value is ExprColumnRef {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as ExprColumnRef).type === "col"
+  );
+}
+
+/** Convert a snapshot expression back to a SQL string. */
 export function snapshotExprToSQL(expr: SnapshotCheckExpr): string {
   if (expr.type === "raw") {
     return expr.sql;
   }
 
   if (expr.type === "comparison") {
-    const left =
-      typeof expr.left === "string"
-        ? `"${expr.left}"`
-        : snapshotExprToSQL(expr.left);
-    const right = formatSnapshotValue(expr.right);
+    const left = isExprColumnRef(expr.left)
+      ? `"${expr.left.name}"`
+      : snapshotExprToSQL(expr.left);
+    // Right is either a column ref or a pre-rendered SQL string (values rendered at snapshot time)
+    const right = isExprColumnRef(expr.right)
+      ? `"${expr.right.name}"`
+      : expr.right;
     return `${left} ${expr.op} ${right}`;
   }
 
@@ -426,23 +475,9 @@ export function snapshotExprToSQL(expr: SnapshotCheckExpr): string {
   }
 
   if (expr.type === "function") {
-    const args = expr.args.map((a) =>
-      typeof a === "string" ? `"${a}"` : formatSnapshotValue(a),
-    );
+    const args = expr.args.map((a) => (isExprColumnRef(a) ? `"${a.name}"` : a));
     return `${expr.name}(${args.join(", ")})`;
   }
 
   throw new Error("Unknown expression type");
-}
-
-function formatSnapshotValue(value: unknown): string {
-  if (value === null) return "NULL";
-  if (Array.isArray(value)) {
-    const list = value.map((v) => formatSnapshotValue(v)).join(", ");
-    return `(${list})`;
-  }
-  if (typeof value === "string") return `'${value.replace(/'/g, "''")}'`;
-  if (typeof value === "number") return String(value);
-  if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
-  return String(value);
 }

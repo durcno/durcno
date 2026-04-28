@@ -47,7 +47,7 @@ import { Users } from "./db/schema.ts";
 const users = await db.query(Users).findMany({
   limit: 10,
 });
-// Type: { id: number; username: string }[]
+// Type: { id: bigint; username: string }[]
 ```
 
 ### Find First
@@ -58,9 +58,9 @@ Fetch a single record (returns `null` if not found):
 import { eq } from "durcno";
 
 const user = await db.query(Users).findFirst({
-  where: eq(Users.id, 1),
+  where: eq(Users.id, 1n),
 });
-// Type: { id: number; username: string } | null
+// Type: { id: bigint; username: string } | null
 ```
 
 ## Selecting Columns
@@ -76,7 +76,7 @@ const users = await db.query(Users).findMany({
     username: true,
   },
 });
-// Type: { id: number; username: string }[]
+// Type: { id: bigint; username: string }[]
 ```
 
 ### Exclude Columns
@@ -89,7 +89,7 @@ const users = await db.query(Users).findMany({
     email: false, // Exclude email
   },
 });
-// Type: { id: number; username: string; type: "admin" | "user"; createdAt: Date }[]
+// Type: { id: bigint; username: string; type: "admin" | "user"; createdAt: Date }[]
 ```
 
 ## Loading Relations
@@ -103,7 +103,7 @@ const usersWithPosts = await db.query(Users).findMany({
     posts: {},
   },
 });
-// Type: { id: number; username: string; posts: { id: number; userId: number; title: string }[] }[]
+// Type: { id: bigint; username: string; posts: { id: bigint; userId: bigint; title: string }[] }[]
 ```
 
 ### Nested Relations
@@ -223,9 +223,9 @@ const result = await db.query(Users).findMany({
   },
 });
 // Type: {
-//   id: number;
+//   id: bigint;
 //   username: string;
-//   posts: { id: number; title: string }[]
+//   posts: { id: bigint; title: string }[]
 // }[]
 ```
 
@@ -245,7 +245,7 @@ const posts = await db.query(Posts).findMany({
     author: {},
   },
 });
-// Type: { ...; author: { id: number; username: string } }[]
+// Type: { ...; author: { id: bigint; username: string } }[]
 // Note: Result is non-null because Posts.userId has notNull constraint
 ```
 
@@ -270,7 +270,7 @@ const users = await db.query(Users).findMany({
     posts: {},
   },
 });
-// Type: { ...; posts: { id: number; userId: number; title: string }[] }[]
+// Type: { ...; posts: { id: bigint; userId: bigint; title: string }[] }[]
 ```
 
 ## Options Reference

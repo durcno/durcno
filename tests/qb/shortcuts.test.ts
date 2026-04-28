@@ -562,7 +562,7 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
       );
 
       expect(inserted.id).toBeDefined();
-      expect(typeof inserted.id).toBe("number");
+      expect(typeof inserted.id).toBe("bigint");
       expect(inserted.username).toBe("newuser");
       expect(inserted.email).toBe("new@test.com");
     });

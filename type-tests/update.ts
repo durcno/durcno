@@ -31,7 +31,7 @@ const updateWithWhereQuery = db
     username: "updated_user",
     email: "updated@example.com",
   })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 type UpdateWithWhere = Awaited<typeof updateWithWhereQuery>;
 Expect<Equal<UpdateWithWhere, null>>();
 
@@ -41,7 +41,7 @@ const updateWithAndQuery = db
   .set({
     email: "new@example.com",
   })
-  .where(and(eq(Users.id, 1), eq(Users.type, "admin")));
+  .where(and(eq(Users.id, 1n), eq(Users.type, "admin")));
 type UpdateWithAnd = Awaited<typeof updateWithAndQuery>;
 Expect<Equal<UpdateWithAnd, null>>();
 
@@ -52,7 +52,7 @@ const updatePostsQuery = db
     title: "Updated Title",
     content: "Updated content",
   })
-  .where(eq(Posts.id, 1));
+  .where(eq(Posts.id, 1n));
 type UpdatePosts = Awaited<typeof updatePostsQuery>;
 Expect<Equal<UpdatePosts, null>>();
 
@@ -62,7 +62,7 @@ const updateCommentsQuery = db
   .set({
     body: "Updated comment body",
   })
-  .where(eq(Comments.userId, 1));
+  .where(eq(Comments.userId, 1n));
 type UpdateComments = Awaited<typeof updateCommentsQuery>;
 Expect<Equal<UpdateComments, null>>();
 
@@ -73,7 +73,7 @@ const updateUserProfilesQuery = db
     bio: "Updated bio",
     avatarUrl: "https://example.com/new-avatar.jpg",
   })
-  .where(eq(UserProfiles.userId, 1));
+  .where(eq(UserProfiles.userId, 1n));
 type UpdateUserProfiles = Awaited<typeof updateUserProfilesQuery>;
 Expect<Equal<UpdateUserProfiles, null>>();
 
@@ -86,14 +86,14 @@ db.update(Posts)
   .set({
     tags: ["updated", "tags", "array"],
   })
-  .where(eq(Posts.id, 1));
+  .where(eq(Posts.id, 1n));
 
 // Type test: update Posts tags to null
 db.update(Posts)
   .set({
     tags: null,
   })
-  .where(eq(Posts.id, 1));
+  .where(eq(Posts.id, 1n));
 
 // Type test: update UserProfiles skills array column
 db.update(UserProfiles)
@@ -115,7 +115,7 @@ const updateEnumQuery = db
   .set({
     type: "user",
   })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 type UpdateEnum = Awaited<typeof updateEnumQuery>;
 Expect<Equal<UpdateEnum, null>>();
 
@@ -129,7 +129,7 @@ db.update(Users).set({
 // Type safety test: Reference field type validation
 // This should work - providing valid bigint value
 db.update(UserProfiles).set({
-  userId: 1,
+  userId: 1n,
 });
 
 // Type safety tests - these should cause compile errors:
@@ -159,7 +159,7 @@ Expect<
   Equal<
     UpdateReturningAll,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -174,7 +174,7 @@ const updateReturningSpecificQuery = db
   .returning({ id: true, email: true });
 type UpdateReturningSpecific = Awaited<typeof updateReturningSpecificQuery>;
 Expect<
-  Equal<UpdateReturningSpecific, { id: number; email: string | null }[]>
+  Equal<UpdateReturningSpecific, { id: bigint; email: string | null }[]>
 >();
 
 // Type test: update with returning single column
@@ -189,21 +189,21 @@ Expect<Equal<UpdateReturningSingle, { username: string }[]>>();
 const updateWhereReturningQuery = db
   .update(Users)
   .set({ email: "new@example.com" })
-  .where(eq(Users.id, 1))
+  .where(eq(Users.id, 1n))
   .returning({ id: true, email: true });
 type UpdateWhereReturning = Awaited<typeof updateWhereReturningQuery>;
-Expect<Equal<UpdateWhereReturning, { id: number; email: string | null }[]>>();
+Expect<Equal<UpdateWhereReturning, { id: bigint; email: string | null }[]>>();
 
 // Type test: update with returning before where
 const updateReturningBeforeWhereQuery = db
   .update(Users)
   .set({ username: "new_username" })
   .returning({ id: true, username: true })
-  .where(eq(Users.id, 1));
+  .where(eq(Users.id, 1n));
 type UpdateReturningBeforeWhere = Awaited<
   typeof updateReturningBeforeWhereQuery
 >;
-Expect<Equal<UpdateReturningBeforeWhere, { id: number; username: string }[]>>();
+Expect<Equal<UpdateReturningBeforeWhere, { id: bigint; username: string }[]>>();
 
 // Type test: update Posts with returning
 const updatePostsReturningQuery = db
@@ -214,7 +214,7 @@ type UpdatePostsReturning = Awaited<typeof updatePostsReturningQuery>;
 Expect<
   Equal<
     UpdatePostsReturning,
-    { id: number; title: string | null; userId: number }[]
+    { id: bigint; title: string | null; userId: bigint }[]
   >
 >();
 
@@ -231,7 +231,7 @@ Expect<Equal<UpdateEnumReturning, { type: "admin" | "user" }[]>>();
 const updateLogsQuery = db
   .update(Logs)
   .set({ message: "Updated message" })
-  .where(eq(Logs.id, 1));
+  .where(eq(Logs.id, 1n));
 type UpdateLogs = Awaited<typeof updateLogsQuery>;
 Expect<Equal<UpdateLogs, null>>();
 
@@ -239,11 +239,11 @@ Expect<Equal<UpdateLogs, null>>();
 const updateLogsReturningQuery = db
   .update(Logs)
   .set({ message: "New message" })
-  .where(eq(Logs.id, 1))
+  .where(eq(Logs.id, 1n))
   .returning({ id: true, message: true, updatedAt: true });
 type UpdateLogsReturning = Awaited<typeof updateLogsReturningQuery>;
 Expect<
-  Equal<UpdateLogsReturning, { id: number; message: string; updatedAt: Date }[]>
+  Equal<UpdateLogsReturning, { id: bigint; message: string; updatedAt: Date }[]>
 >();
 
 // Type test: update Logs - can still provide explicit value for updateFn column
@@ -252,4 +252,4 @@ db.update(Logs)
     message: "Message",
     updatedAt: new Date("2025-01-01"), // Override updateFn with explicit value
   })
-  .where(eq(Logs.id, 1));
+  .where(eq(Logs.id, 1n));

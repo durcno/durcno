@@ -12,7 +12,7 @@ describe("Boolean Column Type", () => {
   });
 
   describe("boolean", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();

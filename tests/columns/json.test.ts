@@ -1,6 +1,6 @@
+import { eq } from "durcno";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
-import { eq } from "durcno";
 
 describe("JSON/JSONB Column Types", () => {
   beforeAll(async () => {
@@ -16,7 +16,7 @@ describe("JSON/JSONB Column Types", () => {
   // ==========================================================================
 
   describe("json", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -57,7 +57,7 @@ describe("JSON/JSONB Column Types", () => {
   // ==========================================================================
 
   describe("jsonb", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -98,7 +98,7 @@ describe("JSON/JSONB Column Types", () => {
   // ==========================================================================
 
   describe("typed json", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();
@@ -155,7 +155,7 @@ describe("JSON/JSONB Column Types", () => {
   // ==========================================================================
 
   describe("typed jsonb", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();

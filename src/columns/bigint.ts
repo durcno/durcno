@@ -2,7 +2,7 @@ import * as z from "zod";
 import { Sql } from "../sql";
 import { Column, type ColumnConfig } from "./common";
 
-type BigintValType = number;
+type BigintValType = bigint;
 
 type BigintConfig = ColumnConfig;
 
@@ -20,27 +20,27 @@ export class BigintColumn<TConfig extends BigintConfig> extends Column<
     return null;
   }
   get zodTypeScaler() {
-    return z.coerce.number();
+    return z.coerce.bigint();
   }
 
   toDriverScalar(value: BigintValType | Sql | null) {
     if (value === null) return null;
-    return value instanceof Sql ? value.string : value;
+    return value instanceof Sql ? value.string : value.toString();
   }
 
-  toSQLScalar(value: number | Sql | null): string {
+  toSQLScalar(value: BigintValType | Sql | null): string {
     if (value === null) return "NULL";
     if (value instanceof Sql) return value.string;
     return value.toString();
   }
 
-  fromDriverScalar(value: number | string | null): BigintValType | null {
+  fromDriverScalar(value: bigint | string | null): BigintValType | null {
     if (value === null) return null;
-    return typeof value === "string" ? parseInt(value, 10) : value;
+    return BigInt(value);
   }
 }
 
-/** Creates a `bigint` column. PostgreSQL 64-bit signed integer, maps to `number`. */
+/** Creates a `bigint` column. PostgreSQL 64-bit signed integer, maps to `bigint`. */
 export function bigint<TConfig extends BigintConfig>(
   config: TConfig,
 ): BigintColumn<TConfig> {

@@ -41,7 +41,7 @@ Expect<
   Equal<
     ValidCustomResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -63,7 +63,7 @@ Expect<
   Equal<
     ValidMixedResult,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";

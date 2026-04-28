@@ -104,7 +104,7 @@ export const Articles = table("public", "articles", {
   // Non-null FK - author is required
   authorId: bigint({ notNull }).references(() => Users.id),
   // Nullable FK - category is optional
-  categoryId: bigint({}).references(() => Categories.id),
+  categoryId: integer({}).references(() => Categories.id),
 });
 
 export const ArticlesRelations = relations(Articles, () => ({
@@ -176,7 +176,7 @@ export const CheckTest = table(
       { gt, gte, fnGte, lte, fnLte, like, and, length },
     ) => [
       // Typesafe: comparisons with column value types
-      check("positive_price", gt(t.price, 0)),
+      check("positive_price", gt(t.price, 0n)),
 
       // Range check with and()
       check("valid_quantity", and(gte(t.quantity, 0), lte(t.quantity, 10000))),

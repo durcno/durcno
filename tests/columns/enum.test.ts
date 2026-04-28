@@ -12,7 +12,7 @@ describe("Enum Column Type", () => {
   });
 
   describe("enum", () => {
-    let insertedId: number;
+    let insertedId: bigint;
 
     it("insert", async () => {
       const db = getDb();

@@ -69,7 +69,7 @@ Expect<
   Equal<
     TransactionAwaitType,
     {
-      id: number;
+      id: bigint;
       username: string | null;
       email: string | null;
     }[]

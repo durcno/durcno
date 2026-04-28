@@ -9,7 +9,7 @@ Expect<
   Equal<
     AllUsers,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
@@ -30,7 +30,7 @@ const userIdAndEmailQuery = db
   .from(Users)
   .select({ id: Users.id, email: Users.email });
 type UserIdAndEmail = Awaited<typeof userIdAndEmailQuery>;
-Expect<Equal<UserIdAndEmail, { id: number; email: string | null }[]>>();
+Expect<Equal<UserIdAndEmail, { id: bigint; email: string | null }[]>>();
 
 // Type test: select with all fields false (should be empty object array)
 const noneQuery = db.from(Users).select({});
@@ -44,8 +44,8 @@ Expect<
   Equal<
     AllPosts,
     {
-      id: number;
-      userId: number;
+      id: bigint;
+      userId: bigint;
       title: string | null;
       content: string | null;
       createdAt: Date;
@@ -57,7 +57,7 @@ Expect<
 // Type test: select array column from Posts (nullable)
 const tagsQuery = db.from(Posts).select({ id: Posts.id, tags: Posts.tags });
 type TagsResult = Awaited<typeof tagsQuery>;
-Expect<Equal<TagsResult, { id: number; tags: string[] | null }[]>>();
+Expect<Equal<TagsResult, { id: bigint; tags: string[] | null }[]>>();
 
 // Type test: select on Comments, only body
 const commentBodyQuery = db.from(Comments).select({ body: Comments.body });
@@ -194,7 +194,7 @@ Expect<
   Equal<
     AllNetworkDevices,
     {
-      id: number;
+      id: bigint;
       name: string;
       ipAddress: string;
       secondaryIp: string | null;
@@ -213,7 +213,7 @@ const allowedIpsQuery = db
   .select({ id: NetworkDevices.id, allowedIps: NetworkDevices.allowedIps });
 type AllowedIpsResult = Awaited<typeof allowedIpsQuery>;
 Expect<
-  Equal<AllowedIpsResult, { id: number; allowedIps: string[] | null }[]>
+  Equal<AllowedIpsResult, { id: bigint; allowedIps: string[] | null }[]>
 >();
 
 // Type test: select INET column (notNull)
@@ -285,7 +285,7 @@ Expect<
   Equal<
     DistinctOnSingle,
     {
-      id: number;
+      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
