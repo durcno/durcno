@@ -27,7 +27,7 @@ export default function Home(): ReactNode {
 }
 
 const codeExample = `import { asc, eq } from "durcno";
-import { db } from "./db/index";
+import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
 // Fully typed result inferred from schema
@@ -42,7 +42,7 @@ const admins = await db
   .orderBy(asc(Users.name))
   .limit(10);
 
-// admins: { id: number; name: string; email: string }[]
+// admins: { id: bigint; name: string; email: string }[]
 `;
 
 function HomepageHeader() {
