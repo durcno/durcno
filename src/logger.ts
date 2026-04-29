@@ -7,7 +7,7 @@ const { combine, label, timestamp, printf } = format;
  *
  * Any object satisfying this contract can be used as a Durcno query logger.
  */
-export interface DurcnoLogger {
+export interface QueryLogger {
   info(message: string, meta?: Record<string, unknown>): void;
 }
 
@@ -67,7 +67,7 @@ const durcnoFormat = printf(
  * });
  * ```
  */
-export function createQueryLogger(): DurcnoLogger {
+export function createQueryLogger(): QueryLogger {
   return createLogger({
     format: combine(label({ label: "durcno" }), timestamp(), durcnoFormat),
     transports: [new transports.Console()],

@@ -69,7 +69,7 @@ export { sequence } from "./sequence";
 
 import { is } from "./entity";
 
-export type { DurcnoLogger } from "./logger";
+export type { QueryLogger } from "./logger";
 export { Sql, sql } from "./sql";
 export type { AnyTableColumn } from "./table";
 export {

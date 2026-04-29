@@ -186,7 +186,7 @@ connector: pg({
 
 #### `logger`
 
-**Type:** `DurcnoLogger`  
+**Type:** `QueryLogger`  
 **Optional**
 
 A logger instance that receives every SQL query before it is sent to the database. Any object with a compatible `info()` method can be used. Durcno ships a pre-configured Winston logger via `durcno/logger`.
@@ -333,6 +333,6 @@ type ConnectorOptions = {
   pool?: {
     max?: number;
   };
-  logger?: DurcnoLogger;
+  logger?: QueryLogger;
 };
 ```

@@ -1,4 +1,4 @@
-import type { DurcnoLogger } from "durcno";
+import type { QueryLogger } from "durcno";
 import { createQueryLogger } from "durcno/logger";
 import { describe, expect, it, vi } from "vitest";
 import { $Client, $Pool } from "../../src/connectors/common";
@@ -49,7 +49,7 @@ describe("Logger", () => {
 
   describe("$Client.execQuery with logger", () => {
     it("calls logger.info with structured query metadata", async () => {
-      const mockLogger: DurcnoLogger = { info: vi.fn() };
+      const mockLogger: QueryLogger = { info: vi.fn() };
       const client = new TestClient();
       client.logger = mockLogger;
 
@@ -78,7 +78,7 @@ describe("Logger", () => {
 
   describe("$Pool.execQuery with logger", () => {
     it("calls logger.info with structured query metadata", async () => {
-      const mockLogger: DurcnoLogger = { info: vi.fn() };
+      const mockLogger: QueryLogger = { info: vi.fn() };
       const pool = new TestPool();
       pool.logger = mockLogger;
 
@@ -107,7 +107,7 @@ describe("Logger", () => {
 
   describe("$Pool.execQuery logs multiple arguments correctly", () => {
     it("passes all arguments in the metadata", async () => {
-      const mockLogger: DurcnoLogger = { info: vi.fn() };
+      const mockLogger: QueryLogger = { info: vi.fn() };
       const pool = new TestPool();
       pool.logger = mockLogger;
 
@@ -131,7 +131,7 @@ describe("Logger", () => {
 
   describe("$Client.execQuery logs query with null arguments", () => {
     it("includes null in arguments array", async () => {
-      const mockLogger: DurcnoLogger = { info: vi.fn() };
+      const mockLogger: QueryLogger = { info: vi.fn() };
       const client = new TestClient();
       client.logger = mockLogger;
 

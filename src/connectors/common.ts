@@ -1,5 +1,5 @@
 import type { ConnectionOptions } from "node:tls";
-import type { DurcnoLogger } from "../logger";
+import type { QueryLogger } from "../logger";
 import type { MigrationOptions } from "../migration/index";
 import type { Query } from "../query-builders/query";
 
@@ -58,7 +58,7 @@ export type ConnectorOptions = {
    * When set, all executed queries will be logged at the `info` level with
    * structured `{ sql, arguments }` metadata.
    */
-  logger?: DurcnoLogger;
+  logger?: QueryLogger;
 };
 
 /**
@@ -142,7 +142,7 @@ export abstract class Connector {
   /** Connection pool size override (can be mutated by CLI commands before `getPool()` is called). */
   pool?: ConnectorOptions["pool"];
   /** Optional logger instance for query logging. */
-  logger?: DurcnoLogger;
+  logger?: QueryLogger;
 
   constructor(options: ConnectorOptions) {
     this.options = options;
@@ -183,7 +183,7 @@ abstract class $QueryExecutor {
   /** The connector options used to create this executor. */
   options: ConnectorOptions;
   /** Optional logger instance for query logging. */
-  logger?: DurcnoLogger;
+  logger?: QueryLogger;
 
   constructor(options: ConnectorOptions) {
     this.options = options;

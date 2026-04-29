@@ -1,12 +1,12 @@
-import type { Config, ConnectorOptions, DurcnoLogger } from "durcno";
+import type { Config, ConnectorOptions, QueryLogger } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { createQueryLogger } from "durcno/logger";
 import { type Equal, Expect } from "./utils";
 
-// --- DurcnoLogger type tests ---
+// --- QueryLogger type tests ---
 
-// Positive: DurcnoLogger is a valid type with an info method
-type _LoggerHasInfo = DurcnoLogger["info"];
+// Positive: QueryLogger is a valid type with an info method
+type _LoggerHasInfo = QueryLogger["info"];
 Expect<
   Equal<
     _LoggerHasInfo,
@@ -27,12 +27,12 @@ const _optionsWithoutLogger: ConnectorOptions = {
 };
 void _optionsWithoutLogger;
 
-// Positive: createQueryLogger returns a DurcnoLogger
-const _logger: DurcnoLogger = createQueryLogger();
+// Positive: createQueryLogger returns a QueryLogger
+const _logger: QueryLogger = createQueryLogger();
 void _logger;
 
 // Positive: Winston-style info call with metadata
-const _fakeLogger: DurcnoLogger = {
+const _fakeLogger: QueryLogger = {
   info: (_msg: string, _meta?: Record<string, unknown>) => {},
 };
 _fakeLogger.info("Query", { sql: "SELECT 1", arguments: [] });

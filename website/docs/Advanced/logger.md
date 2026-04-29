@@ -8,10 +8,10 @@ Durcno supports query logging through a configurable `logger` option. When set, 
 
 ## Interface
 
-Any object implementing the `DurcnoLogger` interface can be used:
+Any object implementing the `QueryLogger` interface can be used:
 
 ```typescript
-interface DurcnoLogger {
+interface QueryLogger {
   info(message: string, meta?: Record<string, unknown>): void;
 }
 ```
