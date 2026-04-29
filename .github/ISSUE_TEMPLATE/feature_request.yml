@@ -1,0 +1,46 @@
+name: Feature Request
+description: Suggest an idea for Durcno
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a new feature!
+        Please search the [existing issues](https://github.com/durcno/durcno/issues) to ensure this feature hasn't already been requested.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of what the feature is and what it would enable you to do.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why do you need this feature? What problem does it solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-api
+    attributes:
+      label: Proposed Implementation / API
+      description: If you have an idea of how this feature should look (e.g., API design, code snippets), please share it here.
+      placeholder: |
+        ```typescript
+        const result = await db.from(Users).newFeature();
+        ```
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to submit a pull request to implement this feature?
+      options:
+        - label: Yes, I would like to implement this feature.

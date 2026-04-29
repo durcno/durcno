@@ -1,0 +1,83 @@
+name: Bug Report
+description: File a bug report to help us improve Durcno
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        Before filing a new issue, please search the [existing issues](https://github.com/durcno/durcno/issues) to see if it has already been reported.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: I encountered an issue where...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        Please provide a minimal reproducible example. A link to a GitHub repository or a code snippet. 
+        Remember that Durcno is a query builder, so please include your schema, query, and any relevant database context.
+      placeholder: |
+        1. Define schema...
+        2. Run query...
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: input
+    id: durcno-version
+    attributes:
+      label: Durcno Version
+      description: Which version of Durcno are you using?
+      placeholder: e.g., 1.0.0-alpha.7
+    validations:
+      required: true
+
+  - type: input
+    id: runtime-version
+    attributes:
+      label: Runtime and Version
+      description: Which runtime and version are you using? (e.g., Node.js 25+, Bun, Deno)
+      placeholder: e.g., Node.js 25.0.0, Bun 1.1.0, Deno 1.42.0
+    validations:
+      required: true
+
+  - type: input
+    id: pg-version
+    attributes:
+      label: PostgreSQL Version
+      description: Which PostgreSQL version are you using? (Durcno requires PostgreSQL 14+)
+      placeholder: e.g., 16.2
+    validations:
+      required: true
+
+  - type: input
+    id: typescript-version
+    attributes:
+      label: TypeScript Version
+      description: Which version of TypeScript are you using?
+      placeholder: e.g., 6.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here (e.g., OS, log outputs, etc.).
