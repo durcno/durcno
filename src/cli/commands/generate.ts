@@ -9,7 +9,10 @@ import {
 } from "durcno/migration";
 import prompts from "prompts";
 import type { Connector } from "../../connectors/common";
-import { snapshotExprToSQL } from "../../constraints/check";
+import {
+  snapshotExprToCheckBuilderCode,
+  snapshotExprToSQL,
+} from "../../constraints/check";
 import type {
   Snapshot,
   SnapshotColumn,
@@ -510,7 +513,9 @@ export function generateMigration(
         );
       }
       for (const chk of Object.values(currTable.checkConstraints)) {
-        tableBuilder.push(`.check("${chk.name}", ${JSON.stringify(chk.expr)})`);
+        tableBuilder.push(
+          `.check("${chk.name}", ${snapshotExprToCheckBuilderCode(chk.expr)})`,
+        );
       }
       for (const uc of Object.values(currTable.uniqueConstraints ?? {})) {
         const cols = uc.columns.map((c) => `"${c}"`).join(", ");
@@ -557,9 +562,9 @@ export function generateMigration(
   if (statements.length === 0) return null;
 
   // TypeScript migration file content
-  return `import { type DDLStatement, ddl, type MigrationOptions } from "durcno/migration";
+  return `import { type DDLStatement, ddl, sql, type MigrationOptions } from "durcno/migration";
 
-export const options: MigrationOptions = ${stringifyMigrationOpts(defaultOptions ?? { transaction: true })};
+export const options: MigrationOptions = ${stringifyMigrationOpts(defaultOptions ?? {})};
 
 export const statements: DDLStatement[] = [
   ${statements.join(",\n  ")},
@@ -571,7 +576,7 @@ export const statements: DDLStatement[] = [
 function generateNoOpMigration(defaultOptions?: MigrationOptions): string {
   return `import { type DDLStatement, ddl, type MigrationOptions } from "durcno/migration";
 
-export const options: MigrationOptions = ${stringifyMigrationOpts(defaultOptions ?? { transaction: true })};
+export const options: MigrationOptions = ${stringifyMigrationOpts(defaultOptions ?? {})};
 
 export const statements: DDLStatement[] = [];
 `;
@@ -724,14 +729,14 @@ function generateAlterTableStmts(
 
     if (!prevChk) {
       alterStatements.push(
-        `.addCheck("${chkName}", ${JSON.stringify(currChk.expr)})`,
+        `.addCheck("${chkName}", ${snapshotExprToCheckBuilderCode(currChk.expr)})`,
       );
     } else {
       const prevSql = snapshotExprToSQL(prevChk.expr);
       const currSql = snapshotExprToSQL(currChk.expr);
       if (prevSql !== currSql) {
         alterStatements.push(
-          `.addCheck("${chkName}", ${JSON.stringify(currChk.expr)})`,
+          `.addCheck("${chkName}", ${snapshotExprToCheckBuilderCode(currChk.expr)})`,
         );
       }
     }

@@ -1,0 +1,38 @@
+---
+bump: minor
+---
+
+# impr(migration)!: emit check constraints as builder callbacks in generated migrations
+
+Previously, check constraints in generated migration files were serialized as raw JSON expression objects (`{"type":"comparison",...}`), which was unreadable and inconsistent with the schema definition API.
+
+Migration files now emit check constraints using the same callback pattern as the schema definition, with `sql` template literals for literal values:
+
+```javascript
+// Before
+check("positive_price", {
+  type: "comparison",
+  left: { type: "col", name: "price" },
+  op: ">",
+  right: "0",
+});
+
+// After
+check("positive_price", ({ gt }) => gt("price", sql`0`));
+check("valid_qty", ({ and, gte, lte }) =>
+  and(gte("quantity", sql`0`), lte("quantity", sql`10000`)),
+);
+check("valid_email", ({ like }) => like("email", sql`'%@%.%'`));
+check("name_length", ({ and, fnGt, fnLte, length }) =>
+  and(fnGt(length("user_name"), sql`2`), fnLte(length("user_name"), sql`100`)),
+);
+```
+
+The `in` operator is safely aliased as `inOp` in the destructuring pattern, since `in` is a JS reserved word.
+
+**New exports from `durcno/migration`:**
+
+- `sql` — the SQL template literal tag, for use in migration check expressions
+- `MigrationCheckBuilder` — the builder class whose methods are passed via the callback
+
+**`check()` / `addCheck()` only accept the callback form.** Passing a raw `SnapshotCheckExpr` object directly is no longer supported.

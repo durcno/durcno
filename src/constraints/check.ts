@@ -1,6 +1,6 @@
 import { isTableCol } from "../entity";
-import type { AnyColumn, TableColumn } from "../table";
-import type { Key } from "../types";
+import type { Sql } from "../sql";
+import type { StdTableColumn, TableColumn } from "../table";
 
 // ============================================================================
 // Operator Types
@@ -24,7 +24,7 @@ export type LogicalOp = "AND" | "OR";
 
 export interface ComparisonExpr {
   type: "comparison";
-  left: TableColumn<string, string, Key, AnyColumn> | FunctionExpr;
+  left: StdTableColumn | FunctionExpr;
   op: ComparisonOp | PatternOp;
   right: unknown;
 }
@@ -38,7 +38,7 @@ export interface LogicalExpr {
 export interface FunctionExpr {
   type: "function";
   name: string;
-  args: (TableColumn<string, string, Key, AnyColumn> | unknown)[];
+  args: (StdTableColumn | unknown)[];
 }
 
 export interface RawExpr {
@@ -112,63 +112,63 @@ export type SnapshotCheckExpr =
 
 export class CheckBuilder {
   // Comparison methods - typesafe column references
-  eq<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  eq<TCol extends StdTableColumn>(
     col: TCol,
     value: TCol["ValType"],
   ): ComparisonExpr {
     return { type: "comparison", left: col, op: "=", right: value };
   }
 
-  neq<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  neq<TCol extends StdTableColumn>(
     col: TCol,
     value: TCol["ValType"],
   ): ComparisonExpr {
     return { type: "comparison", left: col, op: "<>", right: value };
   }
 
-  gt<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  gt<TCol extends StdTableColumn>(
     col: TCol,
     value: TCol["ValType"],
   ): ComparisonExpr {
     return { type: "comparison", left: col, op: ">", right: value };
   }
 
-  gte<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  gte<TCol extends StdTableColumn>(
     col: TCol,
     value: TCol["ValType"],
   ): ComparisonExpr {
     return { type: "comparison", left: col, op: ">=", right: value };
   }
 
-  lt<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  lt<TCol extends StdTableColumn>(
     col: TCol,
     value: TCol["ValType"],
   ): ComparisonExpr {
     return { type: "comparison", left: col, op: "<", right: value };
   }
 
-  lte<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  lte<TCol extends StdTableColumn>(
     col: TCol,
     value: TCol["ValType"],
   ): ComparisonExpr {
     return { type: "comparison", left: col, op: "<=", right: value };
   }
 
-  like<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  like<TCol extends StdTableColumn>(
     col: TCol,
     pattern: string,
   ): ComparisonExpr {
     return { type: "comparison", left: col, op: "LIKE", right: pattern };
   }
 
-  similarTo<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  similarTo<TCol extends StdTableColumn>(
     col: TCol,
     pattern: string,
   ): ComparisonExpr {
     return { type: "comparison", left: col, op: "SIMILAR TO", right: pattern };
   }
 
-  regex<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  regex<TCol extends StdTableColumn>(
     col: TCol,
     pattern: string,
   ): ComparisonExpr {
@@ -176,7 +176,7 @@ export class CheckBuilder {
   }
 
   // Set membership operators (lists of strings or numbers)
-  in<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  in<TCol extends StdTableColumn>(
     col: TCol,
     values: TCol["ValType"][],
   ): ComparisonExpr {
@@ -186,7 +186,7 @@ export class CheckBuilder {
     return { type: "comparison", left: col, op: "IN", right: values };
   }
 
-  notIn<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  notIn<TCol extends StdTableColumn>(
     col: TCol,
     values: TCol["ValType"][],
   ): ComparisonExpr {
@@ -206,31 +206,23 @@ export class CheckBuilder {
   }
 
   // SQL Functions
-  length<TCol extends TableColumn<string, string, Key, AnyColumn>>(
-    col: TCol,
-  ): FunctionExpr {
+  length<TCol extends StdTableColumn>(col: TCol): FunctionExpr {
     return { type: "function", name: "length", args: [col] };
   }
 
-  lower<TCol extends TableColumn<string, string, Key, AnyColumn>>(
-    col: TCol,
-  ): FunctionExpr {
+  lower<TCol extends StdTableColumn>(col: TCol): FunctionExpr {
     return { type: "function", name: "lower", args: [col] };
   }
 
-  upper<TCol extends TableColumn<string, string, Key, AnyColumn>>(
-    col: TCol,
-  ): FunctionExpr {
+  upper<TCol extends StdTableColumn>(col: TCol): FunctionExpr {
     return { type: "function", name: "upper", args: [col] };
   }
 
-  trim<TCol extends TableColumn<string, string, Key, AnyColumn>>(
-    col: TCol,
-  ): FunctionExpr {
+  trim<TCol extends StdTableColumn>(col: TCol): FunctionExpr {
     return { type: "function", name: "trim", args: [col] };
   }
 
-  coalesce<TCol extends TableColumn<string, string, Key, AnyColumn>>(
+  coalesce<TCol extends StdTableColumn>(
     col: TCol,
     defaultValue: TCol["ValType"],
   ): FunctionExpr {
@@ -443,7 +435,7 @@ function exprToSnapshot(expr: CheckExpr): SnapshotCheckExpr {
 }
 
 /** Type guard for {@link ExprColumnRef}. */
-function isExprColumnRef(value: unknown): value is ExprColumnRef {
+export function isExprColumnRef(value: unknown): value is ExprColumnRef {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -480,4 +472,404 @@ export function snapshotExprToSQL(expr: SnapshotCheckExpr): string {
   }
 
   throw new Error("Unknown expression type");
+}
+
+// ============================================================================
+// MigrationCheckBuilder — migration-context check builder
+// ============================================================================
+
+/**
+ * Callback type for check expressions in migration DDL builders.
+ * Receives a {@link MigrationCheckBuilder} and returns a {@link SnapshotCheckExpr}.
+ */
+export type MigrationCheckExprCallback = (
+  builder: MigrationCheckBuilder,
+) => SnapshotCheckExpr;
+
+/**
+ * A check-expression builder for use inside migration files.
+ *
+ * Unlike {@link CheckBuilder}, which works with live {@link TableColumn} objects,
+ * this builder accepts column names as strings and values as {@link Sql} instances.
+ * It returns {@link SnapshotCheckExpr} objects directly, which are stored by
+ * {@link CreateTableBuilder} / {@link AlterTableBuilder} and rendered to SQL
+ * via {@link snapshotExprToSQL}.
+ *
+ * Because all methods are stateless, destructuring is safe:
+ * ```typescript
+ * .check("positive_price", ({ gt }) => gt("price", sql`0`))
+ * ```
+ */
+export class MigrationCheckBuilder {
+  // ------------------------------------------------------------------
+  // Private factories
+  // Arrow functions so that `this` is bound even when methods are destructured.
+  // ------------------------------------------------------------------
+
+  /** Builds a column-comparison snapshot node. */
+  #colComparison = (
+    col: string,
+    op: ComparisonOp | PatternOp,
+    value: Sql,
+  ): SnapshotComparisonExpr => {
+    return {
+      type: "comparison",
+      left: { type: "col", name: col },
+      op,
+      right: value.toSQL(),
+    };
+  };
+
+  /** Builds a function-comparison snapshot node. */
+  #fnComparison = (
+    fn: SnapshotFunctionExpr,
+    op: ComparisonOp,
+    value: Sql,
+  ): SnapshotComparisonExpr => {
+    return { type: "comparison", left: fn, op, right: value.toSQL() };
+  };
+
+  // ------------------------------------------------------------------
+  // Comparison operators
+  // ------------------------------------------------------------------
+
+  /** `col = value` */
+  eq = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "=", value);
+  };
+
+  /** `col <> value` */
+  neq = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "<>", value);
+  };
+
+  /** `col > value` */
+  gt = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, ">", value);
+  };
+
+  /** `col >= value` */
+  gte = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, ">=", value);
+  };
+
+  /** `col < value` */
+  lt = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "<", value);
+  };
+
+  /** `col <= value` */
+  lte = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "<=", value);
+  };
+
+  /** `col LIKE pattern` */
+  like = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "LIKE", value);
+  };
+
+  /** `col SIMILAR TO pattern` */
+  similarTo = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "SIMILAR TO", value);
+  };
+
+  /** `col ~ pattern` */
+  regex = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "~", value);
+  };
+
+  /**
+   * `col IN (...)` — pass the full tuple as a single sql literal:
+   * ```typescript
+   * in("status", sql`('active', 'pending')`)
+   * ```
+   */
+  in = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "IN", value);
+  };
+
+  /**
+   * `col NOT IN (...)` — pass the full tuple as a single sql literal:
+   * ```typescript
+   * notIn("status", sql`('archived', 'deleted')`)
+   * ```
+   */
+  notIn = (col: string, value: Sql): SnapshotComparisonExpr => {
+    return this.#colComparison(col, "NOT IN", value);
+  };
+
+  // ------------------------------------------------------------------
+  // Logical operators
+  // ------------------------------------------------------------------
+
+  /** `(expr1 AND expr2 ...)` */
+  and = (...expressions: SnapshotCheckExpr[]): SnapshotLogicalExpr => {
+    return { type: "logical", op: "AND", expressions };
+  };
+
+  /** `(expr1 OR expr2 ...)` */
+  or = (...expressions: SnapshotCheckExpr[]): SnapshotLogicalExpr => {
+    return { type: "logical", op: "OR", expressions };
+  };
+
+  // ------------------------------------------------------------------
+  // SQL functions (return a SnapshotFunctionExpr for use with fn* methods)
+  // ------------------------------------------------------------------
+
+  /** Builds a single-column function snapshot node. */
+  #colFn = (name: string, col: string): SnapshotFunctionExpr => {
+    return { type: "function", name, args: [{ type: "col", name: col }] };
+  };
+
+  /** `length(col)` */
+  length = (col: string): SnapshotFunctionExpr => {
+    return this.#colFn("length", col);
+  };
+
+  /** `lower(col)` */
+  lower = (col: string): SnapshotFunctionExpr => {
+    return this.#colFn("lower", col);
+  };
+
+  /** `upper(col)` */
+  upper = (col: string): SnapshotFunctionExpr => {
+    return this.#colFn("upper", col);
+  };
+
+  /** `trim(col)` */
+  trim = (col: string): SnapshotFunctionExpr => {
+    return this.#colFn("trim", col);
+  };
+
+  /** `coalesce(col, default)` */
+  coalesce = (col: string, value: Sql): SnapshotFunctionExpr => {
+    return {
+      type: "function",
+      name: "coalesce",
+      args: [{ type: "col", name: col }, value.toSQL()],
+    };
+  };
+
+  // ------------------------------------------------------------------
+  // Function comparisons
+  // ------------------------------------------------------------------
+
+  /** `fn(col) = value` */
+  fnEq = (fn: SnapshotFunctionExpr, value: Sql): SnapshotComparisonExpr => {
+    return this.#fnComparison(fn, "=", value);
+  };
+
+  /** `fn(col) <> value` */
+  fnNeq = (fn: SnapshotFunctionExpr, value: Sql): SnapshotComparisonExpr => {
+    return this.#fnComparison(fn, "<>", value);
+  };
+
+  /** `fn(col) > value` */
+  fnGt = (fn: SnapshotFunctionExpr, value: Sql): SnapshotComparisonExpr => {
+    return this.#fnComparison(fn, ">", value);
+  };
+
+  /** `fn(col) >= value` */
+  fnGte = (fn: SnapshotFunctionExpr, value: Sql): SnapshotComparisonExpr => {
+    return this.#fnComparison(fn, ">=", value);
+  };
+
+  /** `fn(col) < value` */
+  fnLt = (fn: SnapshotFunctionExpr, value: Sql): SnapshotComparisonExpr => {
+    return this.#fnComparison(fn, "<", value);
+  };
+
+  /** `fn(col) <= value` */
+  fnLte = (fn: SnapshotFunctionExpr, value: Sql): SnapshotComparisonExpr => {
+    return this.#fnComparison(fn, "<=", value);
+  };
+
+  // ------------------------------------------------------------------
+  // Raw SQL escape hatch
+  // ------------------------------------------------------------------
+
+  /** Emit a raw SQL expression verbatim. */
+  raw = (sql: string): SnapshotRawExpr => {
+    return { type: "raw", sql };
+  };
+}
+
+// ============================================================================
+// snapshotExprToCheckBuilderCode — snapshot expr → TS source code
+// ============================================================================
+
+/** Maps a comparison operator to its MigrationCheckBuilder method name. */
+const opToMethod: Record<string, string> = {
+  "=": "eq",
+  "<>": "neq",
+  ">": "gt",
+  ">=": "gte",
+  "<": "lt",
+  "<=": "lte",
+  LIKE: "like",
+  "SIMILAR TO": "similarTo",
+  "~": "regex",
+  IN: "in",
+  "NOT IN": "notIn",
+};
+
+/** Maps a comparison operator to its fn* MigrationCheckBuilder method name. */
+const fnOpToMethod: Record<string, string> = {
+  "=": "fnEq",
+  "<>": "fnNeq",
+  ">": "fnGt",
+  ">=": "fnGte",
+  "<": "fnLt",
+  "<=": "fnLte",
+};
+
+/**
+ * Method names that are JS reserved words and cannot be used as plain destructure
+ * bindings. Maps them to a safe local alias used in the emitted callback body.
+ * e.g. `in` → destructured as `{ in: inOp }`, called as `inOp(...)`.
+ */
+const reservedMethodAlias: Record<string, string> = {
+  in: "inOp",
+};
+
+/** Wraps a pre-rendered SQL string in a sql`...` template literal. */
+function wrapSql(value: string): string {
+  // Escape any backticks that appear in the value itself
+  return `sql\`${value.replace(/`/g, "\\`")}\``;
+}
+
+/**
+ * Walks a {@link SnapshotCheckExpr} tree and collects all
+ * {@link MigrationCheckBuilder} method names referenced, for use in the
+ * destructuring pattern of the emitted callback.
+ */
+function collectMethods(expr: SnapshotCheckExpr, names: Set<string>): void {
+  if (expr.type === "raw") {
+    names.add("raw");
+    return;
+  }
+
+  if (expr.type === "comparison") {
+    // Col-to-col comparison (right is an ExprColumnRef) — fall back to raw
+    if (isExprColumnRef(expr.right)) {
+      names.add("raw");
+      return;
+    }
+    if (expr.left.type === "function") {
+      // fn* method + the function name itself (e.g. "fnGt" + "length")
+      names.add(fnOpToMethod[expr.op] ?? "fnEq");
+      names.add(expr.left.name);
+    } else {
+      names.add(opToMethod[expr.op] ?? "eq");
+    }
+    return;
+  }
+
+  if (expr.type === "logical") {
+    names.add(expr.op === "AND" ? "and" : "or");
+    for (const e of expr.expressions) {
+      collectMethods(e, names);
+    }
+    return;
+  }
+
+  if (expr.type === "function") {
+    names.add(expr.name);
+  }
+}
+
+/**
+ * Builds the destructuring string for the callback parameter, handling
+ * JS reserved word collisions (e.g. `in` → `in: inOp`).
+ */
+function buildDestructure(names: Set<string>): string {
+  return [...names]
+    .sort()
+    .map((name) => {
+      const alias = reservedMethodAlias[name];
+      return alias ? `${name}: ${alias}` : name;
+    })
+    .join(", ");
+}
+
+/**
+ * Returns the local identifier to use when calling a method in the body,
+ * accounting for reserved word aliases.
+ */
+function callName(method: string): string {
+  return reservedMethodAlias[method] ?? method;
+}
+
+/**
+ * Renders a {@link SnapshotFunctionExpr} as a source-code call string,
+ * e.g. `length("name")` or `coalesce("name", sql\`'default'\`)`.
+ */
+function renderFunctionExpr(fn: SnapshotFunctionExpr): string {
+  const args = fn.args.map((a) =>
+    typeof a === "string"
+      ? wrapSql(a)
+      : isExprColumnRef(a)
+        ? JSON.stringify(a.name)
+        : wrapSql(snapshotExprToSQL(a)),
+  );
+  return `${fn.name}(${args.join(", ")})`;
+}
+
+/**
+ * Recursively renders a {@link SnapshotCheckExpr} as a source-code expression
+ * string using {@link MigrationCheckBuilder} method calls.
+ */
+function renderExpr(expr: SnapshotCheckExpr): string {
+  if (expr.type === "raw") {
+    return `raw(${JSON.stringify(expr.sql)})`;
+  }
+
+  if (expr.type === "comparison") {
+    // Col-to-col comparison — emit raw SQL as a fallback
+    if (isExprColumnRef(expr.right)) {
+      return `raw(${JSON.stringify(snapshotExprToSQL(expr))})`;
+    }
+
+    if (expr.left.type === "function") {
+      const method = fnOpToMethod[expr.op] ?? "fnEq";
+      return `${callName(method)}(${renderFunctionExpr(expr.left)}, ${wrapSql(expr.right)})`;
+    }
+
+    const method = opToMethod[expr.op] ?? "eq";
+    return `${callName(method)}(${JSON.stringify(expr.left.name)}, ${wrapSql(expr.right)})`;
+  }
+
+  if (expr.type === "logical") {
+    const method = expr.op === "AND" ? "and" : "or";
+    const parts = expr.expressions.map((e) => renderExpr(e)).join(", ");
+    return `${method}(${parts})`;
+  }
+
+  if (expr.type === "function") {
+    return renderFunctionExpr(expr);
+  }
+
+  throw new Error("Unknown SnapshotCheckExpr type");
+}
+
+/**
+ * Converts a {@link SnapshotCheckExpr} into a TypeScript callback string
+ * suitable for embedding in a generated migration file.
+ *
+ * @example
+ * // { type: "comparison", left: { type: "col", name: "price" }, op: ">", right: "0" }
+ * // → '({ gt }) => gt("price", sql`0`)'
+ *
+ * @example
+ * // IN expression — 'in' is a JS reserved word, aliased as 'inOp':
+ * // → '({ in: inOp }) => inOp("category_id", sql`(1, 2, 3)`)'
+ */
+export function snapshotExprToCheckBuilderCode(
+  expr: SnapshotCheckExpr,
+): string {
+  const names = new Set<string>();
+  collectMethods(expr, names);
+  const destructure = buildDestructure(names);
+  const body = renderExpr(expr);
+  return `({ ${destructure} }) => ${body}`;
 }

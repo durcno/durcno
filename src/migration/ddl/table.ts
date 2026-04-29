@@ -1,5 +1,7 @@
 import type { OnDeleteAction } from "../../columns/common";
 import {
+  MigrationCheckBuilder,
+  type MigrationCheckExprCallback,
   type SnapshotCheckExpr,
   snapshotExprToSQL,
 } from "../../constraints/check";
@@ -14,7 +16,7 @@ import { DDLStatement } from "./statement";
 /**
  * Defines a foreign-key reference from a column to another table's column.
  *
- * @see {@link ColumnOptions.references}
+ * @see {@link ColumnOptions["references"]}
  */
 export interface ColumnReference {
   /** Schema of the referenced table. */
@@ -147,12 +149,20 @@ export class CreateTableBuilder extends DDLStatement {
   /**
    * Add a CHECK constraint to the table.
    *
+   * Mirrors the `checkConstraints` schema API:
+   * ```typescript
+   * .check("positive_price", ({ gt }) => gt("price", sql`0`))
+   * ```
+   *
    * @param chkName - Constraint name.
-   * @param expr - The check expression.
+   * @param expr - A callback receiving {@link MigrationCheckBuilder}.
    * @returns `this` for chaining.
    */
-  check(chkName: string, expr: SnapshotCheckExpr): this {
-    this.checks.push({ name: chkName, expr });
+  check(chkName: string, expr: MigrationCheckExprCallback): this {
+    this.checks.push({
+      name: chkName,
+      expr: expr(new MigrationCheckBuilder()),
+    });
     return this;
   }
 
@@ -530,12 +540,21 @@ export class AlterTableBuilder extends DDLStatement {
   /**
    * Add a CHECK constraint to the table.
    *
+   * Mirrors the `checkConstraints` schema API:
+   * ```typescript
+   * .addCheck("max_price", ({ lt }) => lt("price", sql`1000000`))
+   * ```
+   *
    * @param name - Constraint name.
-   * @param expr - The check expression.
+   * @param expr - A callback receiving {@link MigrationCheckBuilder}.
    * @returns `this` for chaining.
    */
-  addCheck(name: string, expr: SnapshotCheckExpr): this {
-    this.actions.push({ type: "addCheck", name, expr });
+  addCheck(name: string, expr: MigrationCheckExprCallback): this {
+    this.actions.push({
+      type: "addCheck",
+      name,
+      expr: expr(new MigrationCheckBuilder()),
+    });
     return this;
   }
 

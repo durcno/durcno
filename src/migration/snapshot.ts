@@ -1,6 +1,10 @@
 import chalk from "chalk";
 import type { OnDeleteAction } from "../columns/common";
-import { CheckBuilder, check } from "../constraints/check";
+import {
+  CheckBuilder,
+  check,
+  type SnapshotCheckExpr,
+} from "../constraints/check";
 import { primaryKeyConstraint } from "../constraints/primary-key";
 import { uniqueConstraint } from "../constraints/unique";
 import { is } from "../entity";
@@ -141,7 +145,7 @@ export interface SnapshotTableCheck {
   /** The `"schema.table"` key of the owning table. */
   table: string;
   /** The check expression. */
-  expr: import("../constraints/check").SnapshotCheckExpr;
+  expr: SnapshotCheckExpr;
 }
 
 /**

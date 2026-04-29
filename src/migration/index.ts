@@ -29,6 +29,11 @@
  * ```
  */
 
+export {
+  MigrationCheckBuilder,
+  type MigrationCheckExprCallback,
+} from "../constraints/check";
+export { sql } from "../sql";
 export { MIGRATION_NAME_REGEX } from "./consts";
 export {
   CustomStatement,
