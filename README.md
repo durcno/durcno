@@ -22,8 +22,9 @@
 
 - **🔗 Relation Mapping** — Intuitive `many`, `one`, and `fk` relations with full type inference.
 - **🦾 Robust Migrations** — Auto-generated, reversible, and squashable migrations for production applications.
-- **🚀 Zero Runtime Overhead** — Thin abstraction layer that compiles to efficient SQL.
+- **⚡ Zero Runtime Overhead** — Thin abstraction layer that compiles to efficient SQL.
 - **🔌 Multiple Drivers** — Support for `pg`, `postgres`, `bun`, and `pglite` drivers.
+- **🛡️ Zod Integration** — Built-in Zod validators for schema validation and type inference.
 - **🌍 PostGIS Support** — First-class geographic column types for spatial queries.
 
 ## Setup
@@ -40,7 +41,7 @@ npm exec durcno init
 
 Get started with Durcno by following our comprehensive documentation.
 
-**[Read the Documentation](https://durcno.dev/docs/latest/intro)**
+**[Getting Started | Durcno](https://durcno.dev/docs/latest/getting-started)**
 
 > [!WARNING]
 > Durcno is currently in the alpha stage.
