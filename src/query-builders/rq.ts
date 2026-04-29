@@ -258,23 +258,11 @@ class RelationQuery<
     const query = new Query("SELECT ", this.handleRows.bind(this));
 
     const selects: string[] = [];
-    if (
-      options.columns === undefined ||
-      Object.keys(options.columns).length === 0
-    ) {
-      for (const [, column] of Object.entries(this.#table._.columns)) {
-        selects.push(column.fullName);
-      }
-    } else {
-      if (Object.values(options.columns).at(0) === true) {
-        for (const [colName, column] of Object.entries(this.#table._.columns)) {
-          colName in options.columns && selects.push(column.fullName);
-        }
-      } else {
-        for (const [colName, column] of Object.entries(this.#table._.columns)) {
-          !(colName in options.columns) && selects.push(column.fullName);
-        }
-      }
+    for (const [, column] of getSelectedColumns(
+      options.columns,
+      this.#table._.columns,
+    )) {
+      selects.push(column.fullName);
     }
     const relations = this.#allRelations[this.#table._.fullName];
     if (relations) {
@@ -302,7 +290,8 @@ class RelationQuery<
           if (relation) {
             // Use path-based alias: top-level is just the key, nested use "__" separator
             // Parent table alias is the root table name for top-level relations
-            query.sql += buildRelationSubquery(
+            buildRelationSubquery(
+              query,
               key, // aliasPath at top level is just the key
               this.#table._.name, // parent table alias is the root table name
               o as StdOptionsBase,
@@ -351,6 +340,23 @@ class RelationQuery<
 }
 
 /**
+ * Returns the [colName, column] entries to include based on the columns filter option.
+ */
+function getSelectedColumns(
+  columns: StdOptionsBase["columns"],
+  tableColumns: Record<string, AnyColumn>,
+): [string, AnyColumn][] {
+  const entries = Object.entries(tableColumns) as [string, AnyColumn][];
+  if (columns === undefined || Object.keys(columns).length === 0) {
+    return entries;
+  }
+  if (Object.values(columns).at(0) === true) {
+    return entries.filter(([colName]) => colName in columns);
+  }
+  return entries.filter(([colName]) => !(colName in columns));
+}
+
+/**
  * Build the json_build_object selects for a relation, including nested relations.
  * @param alias - The alias used for the inner subquery (e.g., "posts", "posts__comments")
  * @param options - The options for this relation
@@ -366,25 +372,11 @@ function getJsonBuildObjectSelects(
   const selects: string[] = [];
 
   // Add column selects
-  if (
-    options.columns === undefined ||
-    Object.keys(options.columns).length === 0
-  ) {
-    for (const [colName, column] of Object.entries(table._.columns)) {
-      selects.push(`'${colName}', "${alias}"."${column.nameSnake}"`);
-    }
-  } else {
-    if (Object.values(options.columns).at(0) === true) {
-      for (const [colName, column] of Object.entries(table._.columns)) {
-        colName in options.columns &&
-          selects.push(`'${colName}', "${alias}"."${column.nameSnake}"`);
-      }
-    } else {
-      for (const [colName, column] of Object.entries(table._.columns)) {
-        !(colName in options.columns) &&
-          selects.push(`'${colName}', "${alias}"."${column.nameSnake}"`);
-      }
-    }
+  for (const [colName, column] of getSelectedColumns(
+    options.columns,
+    table._.columns,
+  )) {
+    selects.push(`'${colName}', "${alias}"."${column.nameSnake}"`);
   }
 
   // Add nested relation selects
@@ -408,8 +400,10 @@ function getJsonBuildObjectSelects(
 
 /**
  * Build a LATERAL JOIN subquery for a relation, recursively handling nested relations.
+ * Mutates query.sql directly to avoid intermediate string allocations.
  * Alias path format: "relationKey" for top-level, "parent__child" for nested (debuggable).
  *
+ * @param query - The query object to mutate
  * @param aliasPath - The full alias path (e.g., "posts", "posts__comments")
  * @param parentTableAlias - The alias of the parent table (e.g., "users" for top-level, "posts" for nested)
  * @param options - The options for this relation
@@ -417,13 +411,14 @@ function getJsonBuildObjectSelects(
  * @param allRelations - All relations in the schema
  */
 function buildRelationSubquery(
+  query: Query,
   aliasPath: string,
   parentTableAlias: string,
   options: StdOptionsBase,
   relation: AnyRelation,
   allRelations: Record<string, StdRelations>,
-): string {
-  let sql = " LEFT JOIN LATERAL (";
+): void {
+  query.sql += " LEFT JOIN LATERAL (";
 
   const jsonSelects = getJsonBuildObjectSelects(
     aliasPath,
@@ -433,47 +428,44 @@ function buildRelationSubquery(
   );
 
   if (relation.t === "Many") {
-    sql += `SELECT coalesce(json_agg(json_build_object(${jsonSelects.join(", ")})), '[]'::json) AS "data"`;
+    query.sql += `SELECT coalesce(json_agg(json_build_object(${jsonSelects.join(", ")})), '[]'::json) AS "data"`;
   } else {
     // One or Fk
-    sql += `SELECT json_build_object(${jsonSelects.join(", ")}) AS "data"`;
+    query.sql += `SELECT json_build_object(${jsonSelects.join(", ")}) AS "data"`;
   }
 
-  sql += ` FROM (SELECT "${aliasPath}".*`;
+  const nestedTableRelations = options.with
+    ? allRelations[relation.table._.fullName]
+    : undefined;
 
-  // Add nested relation data columns to the inner select
-  if (options.with) {
-    const tableRelations = allRelations[relation.table._.fullName];
-    if (tableRelations) {
-      for (const nestedKey in options.with) {
-        const nestedRelation = tableRelations.map[nestedKey];
-        if (nestedRelation) {
-          const nestedAliasPath = `${aliasPath}__${nestedKey}`;
-          sql += `, "${nestedAliasPath}"."data" AS "${nestedKey}_data"`;
-        }
+  query.sql += ` FROM (SELECT "${aliasPath}".*`;
+
+  if (nestedTableRelations) {
+    for (const nestedKey in options.with) {
+      const nestedRelation = nestedTableRelations.map[nestedKey];
+      if (nestedRelation) {
+        const nestedAliasPath = `${aliasPath}__${nestedKey}`;
+        query.sql += `, "${nestedAliasPath}"."data" AS "${nestedKey}_data"`;
       }
     }
   }
 
-  sql += ` FROM ${relation.table._.fullName} "${aliasPath}"`;
+  query.sql += ` FROM ${relation.table._.fullName} "${aliasPath}"`;
 
-  // Add nested LATERAL JOINs
-  if (options.with) {
-    const tableRelations = allRelations[relation.table._.fullName];
-    if (tableRelations) {
-      for (const nestedKey in options.with) {
-        const nestedOptions = options.with[nestedKey];
-        const nestedRelation = tableRelations.map[nestedKey];
-        if (nestedRelation && nestedOptions) {
-          const nestedAliasPath = `${aliasPath}__${nestedKey}`;
-          sql += buildNestedRelationSubquery(
-            nestedAliasPath,
-            aliasPath,
-            nestedOptions,
-            nestedRelation,
-            allRelations,
-          );
-        }
+  if (nestedTableRelations) {
+    for (const nestedKey in options.with) {
+      const nestedOptions = options.with[nestedKey];
+      const nestedRelation = nestedTableRelations.map[nestedKey];
+      if (nestedRelation && nestedOptions) {
+        const nestedAliasPath = `${aliasPath}__${nestedKey}`;
+        buildRelationSubquery(
+          query,
+          nestedAliasPath,
+          aliasPath,
+          nestedOptions,
+          nestedRelation,
+          allRelations,
+        );
       }
     }
   }
@@ -490,9 +482,9 @@ function buildRelationSubquery(
           `Columns used in 'many' or 'one' relations must call .references() to define the join target.`,
       );
     }
-    sql += ` WHERE "${aliasPath}"."${relation.col.nameSnake}" = "${parentTableAlias}"."${referencedCol.nameSnake}"`;
+    query.sql += ` WHERE "${aliasPath}"."${relation.col.nameSnake}" = "${parentTableAlias}"."${referencedCol.nameSnake}"`;
     if (relation.t === "One") {
-      sql += ` LIMIT 1`;
+      query.sql += ` LIMIT 1`;
     }
   } else if (relation.t === "Fk") {
     // For Fk: relation.col is the FK column on the parent, relation.table is the referenced table
@@ -505,112 +497,12 @@ function buildRelationSubquery(
           `Columns used in 'fk' relations must call .references() to define the join target.`,
       );
     }
-    sql += ` WHERE "${aliasPath}"."${referencedCol.nameSnake}" = "${parentTableAlias}"."${relation.col.nameSnake}"`;
-    sql += ` LIMIT 1`;
+    query.sql += ` WHERE "${aliasPath}"."${referencedCol.nameSnake}" = "${parentTableAlias}"."${relation.col.nameSnake}"`;
+    query.sql += ` LIMIT 1`;
   }
 
-  sql += `) "${aliasPath}"`;
-  sql += `) "${aliasPath}" ON true`;
-
-  return sql;
-}
-
-/**
- * Build a nested LATERAL JOIN subquery (for relations within relations).
- * Similar to buildRelationSubquery but with parent alias reference for WHERE conditions.
- */
-function buildNestedRelationSubquery(
-  aliasPath: string,
-  parentAliasPath: string,
-  options: StdOptionsBase,
-  relation: AnyRelation,
-  allRelations: Record<string, StdRelations>,
-): string {
-  let sql = " LEFT JOIN LATERAL (";
-
-  const jsonSelects = getJsonBuildObjectSelects(
-    aliasPath,
-    options,
-    relation.table,
-    allRelations,
-  );
-
-  if (relation.t === "Many") {
-    sql += `SELECT coalesce(json_agg(json_build_object(${jsonSelects.join(", ")})), '[]'::json) AS "data"`;
-  } else {
-    sql += `SELECT json_build_object(${jsonSelects.join(", ")}) AS "data"`;
-  }
-
-  sql += ` FROM (SELECT "${aliasPath}".*`;
-
-  // Add nested relation data columns
-  if (options.with) {
-    const tableRelations = allRelations[relation.table._.fullName];
-    if (tableRelations) {
-      for (const nestedKey in options.with) {
-        const nestedRelation = tableRelations.map[nestedKey];
-        if (nestedRelation) {
-          const nestedAliasPath = `${aliasPath}__${nestedKey}`;
-          sql += `, "${nestedAliasPath}"."data" AS "${nestedKey}_data"`;
-        }
-      }
-    }
-  }
-
-  sql += ` FROM ${relation.table._.fullName} "${aliasPath}"`;
-
-  // Recursively add nested LATERAL JOINs
-  if (options.with) {
-    const tableRelations = allRelations[relation.table._.fullName];
-    if (tableRelations) {
-      for (const nestedKey in options.with) {
-        const nestedOptions = options.with[nestedKey];
-        const nestedRelation = tableRelations.map[nestedKey];
-        if (nestedRelation && nestedOptions) {
-          const nestedAliasPath = `${aliasPath}__${nestedKey}`;
-          sql += buildNestedRelationSubquery(
-            nestedAliasPath,
-            aliasPath,
-            nestedOptions,
-            nestedRelation,
-            allRelations,
-          );
-        }
-      }
-    }
-  }
-
-  // WHERE clause with parent alias reference
-  if (relation.t === "Many" || relation.t === "One") {
-    const referencedCol = relation.col
-      .referencesCol as unknown as AnyColumn | null;
-    if (!referencedCol) {
-      throw new Error(
-        `Relation column "${relation.col.nameSnake}" has no .references() definition. ` +
-          `Columns used in 'many' or 'one' relations must call .references() to define the join target.`,
-      );
-    }
-    sql += ` WHERE "${aliasPath}"."${relation.col.nameSnake}" = "${parentAliasPath}"."${referencedCol.nameSnake}"`;
-    if (relation.t === "One") {
-      sql += ` LIMIT 1`;
-    }
-  } else if (relation.t === "Fk") {
-    const referencedCol = relation.col
-      .referencesCol as unknown as AnyColumn | null;
-    if (!referencedCol) {
-      throw new Error(
-        `Relation column "${relation.col.nameSnake}" has no .references() definition. ` +
-          `Columns used in 'fk' relations must call .references() to define the join target.`,
-      );
-    }
-    sql += ` WHERE "${aliasPath}"."${referencedCol.nameSnake}" = "${parentAliasPath}"."${relation.col.nameSnake}"`;
-    sql += ` LIMIT 1`;
-  }
-
-  sql += `) "${aliasPath}"`;
-  sql += `) "${aliasPath}" ON true`;
-
-  return sql;
+  query.sql += `) "${aliasPath}"`;
+  query.sql += `) "${aliasPath}" ON true`;
 }
 
 function convert(
