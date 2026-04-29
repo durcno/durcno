@@ -158,53 +158,39 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
 ```
 src/
 ├── index.ts              # All public exports
-├── db.ts                 # Query builder creator classes
-├── table.ts              # Table and column types
-├── enumtype.ts           # Enum builder
 ├── columns/              # Column type implementations
 ├── query-builders/       # Query builder classes
 ├── filters/              # Filter builders
 ├── constraints/          # Constraint builders
 ├── connectors/           # Database connectors
-├── migration/            # Migration builders
+├── migration/            # Migration handling
 └── cli/                  # CLI entry and commands
 
 type-tests/               # Infered type safety checks
-tests/
+tests/                    # Runtime integration tests
 ├── columns/              # Column read/write tests
 ├── qb/                   # Query builders integration tests
 └── cli/                  # CLI integration tests
 
 website/                  # Website
+└── docs/                 # Documentation
 
 scripts/                  # Utility scripts
 dist/                     # Production compiled output
 ```
 
-### Key Files/Folders
-
-#### Core Files
+### Core Files
 
 - **`src/index.ts`**: All public exports - **EXPORT NEW APIS HERE**
 - **`src/db.ts`**: Query builder creator classes
-
-#### Column Types (`src/columns/`)
-
-- **`common.ts`**: Common utilities for column definitions
-- **`varchar.ts`**, **`integer.ts`**, **`boolean.ts`**, **`timestamp.ts`**, **`enum.ts`**, etc.: Column types
-
-#### Query Builders (`src/query-builders/`)
-
-- **`select.ts`**: SELECT queries
-- **`insert.ts`**: INSERT operations
-- **`update.ts`**: UPDATE operations
-- **`delete.ts`**: DELETE operations
-- and more...
-
-#### CLI (`src/cli/`)
-
-- **`index.ts`**: CLI entry point
-- **`commands/`**: Individual CLI commands
+- **`src/table.ts`**: Table and column types
+- **`src/enumtype.ts`**: Enum builder
+- **`src/sequence.ts`**: PostgreSQL sequence definitions
+- **`src/indexes.ts`**: Database index definitions
+- **`src/sql.ts`**: SQL string building with template literals and parameters
+- **`src/types.ts`**: Shared TypeScript utility types
+- **`src/models.ts`**: Migration tracking table definition
+- **`src/logger.ts`**: Query logger
 
 ## Development Workflow
 
