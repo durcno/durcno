@@ -15,10 +15,7 @@ import * as schema from "./schema";
 
 const MIGRATIONS_DIR = "migrations.test";
 
-function runDurcnoCli(
-  command: string,
-  containerInfo: TestContainerInfo,
-): void {
+function runDurcnoCli(command: string, containerInfo: TestContainerInfo): void {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
   runDurcnoCommand([command, "--config", configPath], {
     ...process.env,
@@ -107,9 +104,7 @@ describe("check constraints — insert acceptance and rejection", () => {
 
     it("rejects price >= 1_000_000 (max_price: price < 1_000_000)", async () => {
       await expect(
-        db
-          .insert(schema.Products)
-          .values({ ...validRow, price: 1_000_000n }),
+        db.insert(schema.Products).values({ ...validRow, price: 1_000_000n }),
       ).rejects.toThrow();
     });
 
@@ -137,17 +132,13 @@ describe("check constraints — insert acceptance and rejection", () => {
 
     it("rejects email not matching LIKE '%@%.%'", async () => {
       await expect(
-        db
-          .insert(schema.Products)
-          .values({ ...validRow, email: "notanemail" }),
+        db.insert(schema.Products).values({ ...validRow, email: "notanemail" }),
       ).rejects.toThrow();
     });
 
     it("accepts a null email (LIKE only applies when non-null)", async () => {
       await expect(
-        db
-          .insert(schema.Products)
-          .values({ ...validRow, email: undefined }),
+        db.insert(schema.Products).values({ ...validRow, email: undefined }),
       ).resolves.not.toThrow();
     });
 
@@ -168,7 +159,11 @@ describe("check constraints — insert acceptance and rejection", () => {
 
   // ──────────────────────────────────────────────────────────────────────────
   describe("Orders table — IN / NOT IN constraints", () => {
-    const validRow = { categoryId: 1, status: "active" as const, array: [1,2] };
+    const validRow = {
+      categoryId: 1,
+      status: "active" as const,
+      array: [1, 2],
+    };
 
     it("accepts a valid row", async () => {
       await expect(
@@ -200,9 +195,7 @@ describe("check constraints — insert acceptance and rejection", () => {
 
     it("rejects status not in the allowed set", async () => {
       await expect(
-        db
-          .insert(schema.Orders)
-          .values({ ...validRow, status: "unknown" }),
+        db.insert(schema.Orders).values({ ...validRow, status: "unknown" }),
       ).rejects.toThrow();
     });
 
@@ -216,16 +209,20 @@ describe("check constraints — insert acceptance and rejection", () => {
 
     it("accepts valid dimensions ([1,2] and [2,1])", async () => {
       await expect(
-        db.insert(schema.Orders).values({ ...validRow, array: [1,2] }),
+        db.insert(schema.Orders).values({ ...validRow, array: [1, 2] }),
       ).resolves.not.toThrow();
 
       await expect(
-        db.insert(schema.Orders).values({ ...validRow, array: [2,1] }),
+        db.insert(schema.Orders).values({ ...validRow, array: [2, 1] }),
       ).resolves.not.toThrow();
     });
 
     it("rejects dimensions not in ([1,2] and [2,1])", async () => {
-      for (const dimensions of [[1,3], [3,1], [1,2,3]]) {
+      for (const dimensions of [
+        [1, 3],
+        [3, 1],
+        [1, 2, 3],
+      ]) {
         await expect(
           db.insert(schema.Orders).values({ ...validRow, array: dimensions }),
         ).rejects.toThrow();

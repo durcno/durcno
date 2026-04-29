@@ -58,7 +58,13 @@ export const Orders = table(
       check("valid_category", inOp(t.categoryId, [1, 2, 3])),
       check("excluded_category", notIn(t.categoryId, [99, 100])),
       check("valid_status", inOp(t.status, ["active", "pending", "closed"])),
-      check("valid_array", inOp(t.array, [[1,2], [2,1]])),
+      check(
+        "valid_array",
+        inOp(t.array, [
+          [1, 2],
+          [2, 1],
+        ]),
+      ),
     ],
   },
 );
