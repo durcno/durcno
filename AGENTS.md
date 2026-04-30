@@ -234,7 +234,8 @@ Commands:
 - `pnpm run test-types` — run "Type tests" in `type-tests/`
 - `pnpm run test` — run all integration tests in `tests/`
 
-> 💡 Tip: Run a single folder or file while running integration tests to speed feedback, by using `pnpm test tests/qb/my.test.ts`
+> 💡 Tip: Run a single folder or file while running integration tests to speed feedback,
+> by using `pnpm test tests/cli/` or `pnpm test tests/qb/my.test.ts`
 
 ---
 
@@ -326,12 +327,16 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 - **Tables**: PascalCase plural nouns (e.g., `Users`, not `User`)
 - **Relations**: Use `Relations` suffix for relation objects (e.g., `UsersRelations`)
 
+### Performance Considerations
+
+- Avoid unnecessary string instantiation or return, prefer direct concatenation
+
 ### Code Quality Standards
 
-- **Type Safety**: Try not to use `any`, prefer `unknown` or proper type guards
+- **Type Safety**: Try not to use `any`, prefer proper type guards or `unknown`
 - **Import Paths**: Use relative imports (e.g., `./common`, `../table`) in all TypeScript files within the root `src` folder.
-- **Importing**: use `import type` for type imports and `import` for value imports
-- **Code Documentation**: Add small and concise jsdoc comments to all internal functions, classes, and methods to improve code readability and maintainability.
+- **Importing**: use `type` modifier for type-only imports
+- **Code Documentation**: Add small and concise jsdoc comments to all internal functions, classes, and methods for better code readability and maintainability.
 
 ## Guides
 
@@ -342,26 +347,19 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 - **Type Errors**: Verify all exports are included in `src/index.ts`
 - **Test failing**: First validate the test, then proceed to validate the core implementations
 
-#### Debug Commands
-
-- **Src Type Checking**: `pnpm run tsclint`
-- **CLI Type Checking**: `pnpm run tsclint-cli`
-- **All tsc checks**: `pnpm run tsclint-all`
-- **Testing specific folder/file**: `pnpm test tests/cli/` or `pnpm test tests/qb/my.test.ts`
-
 ### Critical Reminders
 
 #### When Adding/Modifying Features
 
-- **All database operations must be type-safe**
-- **Export all new public APIs from `src/index.ts`**
-- **Maintain backward compatibility in public APIs**
-- **Create/Update comprehensive type tests in `type-tests/`**
-- **Ensure both positive and negative type tests**
-- **Run type tests** (`pnpm run test-types`) - **MUST PASS**
-- **Create/Update necessary integration tests in `tests/`**
-- **Run integration tests** (`pnpm test`) - **MUST PASS**
-- **Update documentation** - **AFTER RELATED TESTS PASS**
+- All database operations must be type-safe
+- Export all new public APIs from `src/index.ts`
+- Maintain backward compatibility in public APIs
+- Create/Update comprehensive type tests in `type-tests/`
+- Ensure both positive and negative type tests
+- Run type tests (`pnpm run test-types`) - MUST PASS
+- Create/Update necessary integration tests in `tests/`
+- Run integration tests (`pnpm test`) - MUST PASS
+- Update documentation - AFTER RELATED TESTS PASS
 
 ---
 
