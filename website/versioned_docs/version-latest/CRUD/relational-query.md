@@ -142,6 +142,30 @@ const users = await db.query(Users).findMany({
 // Type: { username: string; posts: { title: string }[] }[]
 ```
 
+### Filtering, Ordering & Limiting Nested Many Relations
+
+`where`, `orderBy`, and `limit` can be applied inside a `with` block for **`many`** (one-to-many) relations:
+
+```typescript
+import { eq, desc } from "durcno";
+
+const posts = await db.query(Posts).findMany({
+  with: {
+    comments: {
+      columns: { id: true, body: true },
+      where: eq(Comments.isEdited, true),
+      orderBy: desc(Comments.createdAt),
+      limit: 5,
+    },
+  },
+});
+// Each post includes only edited comments, sorted newest-first, capped at 5
+```
+
+:::note
+`where`, `orderBy`, and `limit` are **not available** on nested `fk` (many-to-one) or `one` (one-to-one) relations. The join condition already uniquely identifies the related row, so further filtering is not meaningful — the TypeScript compiler will reject such usage.
+:::
+
 ## Filtering
 
 Use `where` to filter results:
@@ -275,6 +299,8 @@ const users = await db.query(Users).findMany({
 
 ## Options Reference
 
+### Top-level options (`findMany` / `findFirst`)
+
 | Option    | Description                                                     |
 | --------- | --------------------------------------------------------------- |
 | `columns` | Select or exclude columns (`{ col: true }` or `{ col: false }`) |
@@ -283,6 +309,16 @@ const users = await db.query(Users).findMany({
 | `limit`   | Maximum number of results                                       |
 | `offset`  | Number of results to skip                                       |
 | `with`    | Related records to include                                      |
+
+### Nested relation options (inside `with`)
+
+| Option    | `many` (one-to-many) | `fk` / `one` (many-to-one / one-to-one) |
+| --------- | :------------------: | :-------------------------------------: |
+| `columns` |          ✓           |                    ✓                    |
+| `with`    |          ✓           |                    ✓                    |
+| `where`   |          ✓           |             ✗ (type error)              |
+| `orderBy` |          ✓           |             ✗ (type error)              |
+| `limit`   |          ✓           |             ✗ (type error)              |
 
 ## Methods Reference
 

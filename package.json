@@ -1,6 +1,6 @@
 {
   "name": "durcno",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha.8",
   "description": "A PostgreSQL Query Builder and Migration Manager for TypeScript, from the future.",
   "license": "Apache-2.0",
   "homepage": "https://durcno.dev",
