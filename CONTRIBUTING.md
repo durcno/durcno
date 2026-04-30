@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to Durcno! We welcome contributions from the community and are grateful for any help you can provide.
 
+> **Before you start** Please discuss your idea with the authors and community first — open a [GitHub Discussion](https://github.com/durcno/durcno/discussions) or join the [Discord server](https://discord.gg/JuVrdjeNeQ). This avoids duplicated effort and ensures the change aligns with the project direction.
+
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
@@ -193,8 +195,8 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/) styl
 If you have questions about contributing, feel free to:
 
 - Read [AGENTS.md](AGENTS.md) for detailed codebase insights
-- Check existing issues and PRs for context
 - Join our [Discord server](https://discord.gg/JuVrdjeNeQ) to chat with the community
 - Or open a [discussion](https://github.com/durcno/durcno/discussions)
+- Check existing issues and PRs for context
 
 Thank you for contributing to Durcno! 🎉
