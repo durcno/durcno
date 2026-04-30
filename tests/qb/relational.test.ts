@@ -1101,4 +1101,261 @@ describe("Relational queries", () => {
       );
     });
   });
+
+  describe("Nested Many relation filtering (where/orderBy/limit)", () => {
+    it("should filter nested Many relation rows with where", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      // Insert two comments, one edited and one not
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "edited comment" }),
+          createTestComment(post.id, user.id, { body: "normal comment" }),
+        ]);
+
+      // Mark first comment as edited
+      await db
+        .update(schema.Comments)
+        .set({ isEdited: true })
+        .where(eq(schema.Comments.body, "edited comment"));
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true, title: true },
+        with: {
+          comments: {
+            columns: { id: true, body: true, isEdited: true },
+            where: eq(schema.Comments.isEdited, true),
+          },
+        },
+      });
+
+      expect(posts).toHaveLength(1);
+      // Only the edited comment should be returned
+      expect(posts[0].comments).toHaveLength(1);
+      expect(posts[0].comments[0].body).toBe("edited comment");
+      expect(posts[0].comments[0].isEdited).toBe(true);
+    });
+
+    it("should return empty array for nested Many relation when where matches nothing", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values(createTestComment(post.id, user.id, { body: "a comment" }));
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true },
+        with: {
+          comments: {
+            // isEdited = true matches nothing since we never edited
+            where: eq(schema.Comments.isEdited, true),
+          },
+        },
+      });
+
+      expect(posts).toHaveLength(1);
+      expect(posts[0].comments).toEqual([]);
+    });
+
+    it("should apply limit to nested Many relation rows", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "c1" }),
+          createTestComment(post.id, user.id, { body: "c2" }),
+          createTestComment(post.id, user.id, { body: "c3" }),
+        ]);
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true },
+        with: {
+          comments: {
+            columns: { id: true, body: true },
+            limit: 2,
+          },
+        },
+      });
+
+      expect(posts).toHaveLength(1);
+      expect(posts[0].comments).toHaveLength(2);
+    });
+
+    it("should apply orderBy to nested Many relation rows", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "charlie" }),
+          createTestComment(post.id, user.id, { body: "alice" }),
+          createTestComment(post.id, user.id, { body: "bob" }),
+        ]);
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true },
+        with: {
+          comments: {
+            columns: { id: true, body: true },
+            orderBy: asc(schema.Comments.body),
+          },
+        },
+      });
+
+      expect(posts).toHaveLength(1);
+      expect(posts[0].comments.map((c) => c.body)).toEqual([
+        "alice",
+        "bob",
+        "charlie",
+      ]);
+    });
+
+    it("should combine where + orderBy + limit on nested Many relation", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      // 3 edited comments, 1 normal — we want the top-2 edited by body desc
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "edited-a" }),
+          createTestComment(post.id, user.id, { body: "edited-b" }),
+          createTestComment(post.id, user.id, { body: "edited-c" }),
+          createTestComment(post.id, user.id, { body: "not-edited" }),
+        ]);
+
+      await db
+        .update(schema.Comments)
+        .set({ isEdited: true })
+        .where(eq(schema.Comments.isEdited, false));
+
+      // reset the not-edited one
+      await db
+        .update(schema.Comments)
+        .set({ isEdited: false })
+        .where(eq(schema.Comments.body, "not-edited"));
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true },
+        with: {
+          comments: {
+            columns: { id: true, body: true },
+            where: eq(schema.Comments.isEdited, true),
+            orderBy: desc(schema.Comments.body),
+            limit: 2,
+          },
+        },
+      });
+
+      expect(posts).toHaveLength(1);
+      expect(posts[0].comments).toHaveLength(2);
+      // Should be top 2 edited comments in descending body order
+      expect(posts[0].comments[0].body).toBe("edited-c");
+      expect(posts[0].comments[1].body).toBe("edited-b");
+    });
+
+    it("should apply nested where independently per parent row", async () => {
+      const [user1] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "user_a" }))
+        .returning({ id: true });
+
+      const [user2] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "user_b" }))
+        .returning({ id: true });
+
+      const [post1] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user1.id, { title: "Post A" }))
+        .returning({ id: true });
+
+      const [post2] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user2.id, { title: "Post B" }))
+        .returning({ id: true });
+
+      // post1: 1 edited + 1 normal
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post1.id, user1.id, { body: "p1-edited" }),
+          createTestComment(post1.id, user1.id, { body: "p1-normal" }),
+        ]);
+      await db
+        .update(schema.Comments)
+        .set({ isEdited: true })
+        .where(eq(schema.Comments.body, "p1-edited"));
+
+      // post2: 0 edited + 2 normal
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post2.id, user2.id, { body: "p2-normal-1" }),
+          createTestComment(post2.id, user2.id, { body: "p2-normal-2" }),
+        ]);
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true, title: true },
+        with: {
+          comments: {
+            columns: { id: true, body: true },
+            where: eq(schema.Comments.isEdited, true),
+          },
+        },
+        orderBy: asc(schema.Posts.title),
+      });
+
+      expect(posts).toHaveLength(2);
+
+      const postA = posts.find((p) => p.title === "Post A");
+      const postB = posts.find((p) => p.title === "Post B");
+
+      expect(postA?.comments).toHaveLength(1);
+      expect(postA?.comments[0].body).toBe("p1-edited");
+
+      expect(postB?.comments).toHaveLength(0);
+    });
+  });
 });

@@ -5,6 +5,7 @@ import type {
   AnyRelation,
   Fk,
   Many,
+  One,
   Relations,
   StdRelations,
   StdTableWithColumns,
@@ -25,11 +26,13 @@ type RelationReturnType<O, TRelation extends AnyRelation> =
         : O | null
       : O | null;
 
-type OptionsBase<
+/**
+ * Shared column-selection fields used across all option types.
+ */
+type ColumnsOption<
   TTSchema extends string,
   TTName extends string,
   TTColumns extends Record<string, AnyColumn>,
-  TAllRelations extends Record<string, StdRelations>,
 > = {
   columns?:
     | Partial<
@@ -44,6 +47,46 @@ type OptionsBase<
           false
         >
       >;
+};
+
+/**
+ * Options allowed for a nested `Fk` or `One` relation.
+ * `where`, `orderBy`, and `limit` are excluded because the join condition
+ * already uniquely identifies the row — further filtering is meaningless.
+ */
+type NestedOptionsFkOne<
+  TTSchema extends string,
+  TTName extends string,
+  TTColumns extends Record<string, AnyColumn>,
+  TAllRelations extends Record<string, StdRelations>,
+> = ColumnsOption<TTSchema, TTName, TTColumns> & {
+  with?: keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"] extends never
+    ? never
+    : {
+        [TRelationName in keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"]]?: TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName] extends
+          | Fk<any, any, any, any>
+          | One<any, any, any, any>
+          ? NestedOptionsFkOne<
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
+              TAllRelations
+            >
+          : OptionsBase<
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
+              TAllRelations
+            >;
+      };
+};
+
+type OptionsBase<
+  TTSchema extends string,
+  TTName extends string,
+  TTColumns extends Record<string, AnyColumn>,
+  TAllRelations extends Record<string, StdRelations>,
+> = ColumnsOption<TTSchema, TTName, TTColumns> & {
   where?: BuildFilterExpression<
     TColsToLeftRight<
       TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
@@ -56,12 +99,21 @@ type OptionsBase<
   with?: keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"] extends never
     ? never
     : {
-        [TRelationName in keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"]]?: OptionsBase<
-          TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
-          TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-          TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
-          TAllRelations
-        >;
+        [TRelationName in keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"]]?: TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName] extends
+          | Fk<any, any, any, any>
+          | One<any, any, any, any>
+          ? NestedOptionsFkOne<
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
+              TAllRelations
+            >
+          : OptionsBase<
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
+              TAllRelations
+            >;
       };
 };
 
@@ -483,6 +535,11 @@ function buildRelationSubquery(
       );
     }
     query.sql += ` WHERE "${aliasPath}"."${relation.col.nameSnake}" = "${parentTableAlias}"."${referencedCol.nameSnake}"`;
+    // Apply user-supplied where filter on top of the join condition (Many only)
+    if (relation.t === "Many" && options.where) {
+      query.sql += " AND ";
+      options.where.toQuery(query);
+    }
     if (relation.t === "One") {
       query.sql += ` LIMIT 1`;
     }
@@ -499,6 +556,17 @@ function buildRelationSubquery(
     }
     query.sql += ` WHERE "${aliasPath}"."${referencedCol.nameSnake}" = "${parentTableAlias}"."${relation.col.nameSnake}"`;
     query.sql += ` LIMIT 1`;
+  }
+
+  // Apply user-supplied orderBy and limit for Many relations
+  if (relation.t === "Many") {
+    if (options.orderBy) {
+      const orders = Array.isArray(options.orderBy)
+        ? options.orderBy
+        : [options.orderBy];
+      query.sql += ` ORDER BY ${orders.map((o) => o.toSQL()).join(", ")}`;
+    }
+    if (options.limit) query.sql += ` LIMIT ${options.limit}`;
   }
 
   query.sql += `) "${aliasPath}"`;

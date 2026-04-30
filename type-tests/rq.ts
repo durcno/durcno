@@ -1,5 +1,5 @@
 import { asc, desc, eq } from "durcno";
-import { Articles, db, Posts, Users } from "./schema";
+import { Articles, Comments, db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
 // Type test: query on Users
@@ -782,3 +782,48 @@ db.query(Users).findFirst({ columns: { nonExistentColumn: true } });
 
 // @ts-expect-error - Non-existent relation in findFirst should not compile
 db.query(Users).findFirst({ with: { nonExistentRelation: {} } });
+
+// ============================================================================
+// Negative type tests - where/orderBy/limit on nested Fk/One relations
+// ============================================================================
+
+db.query(Posts).findMany({
+  with: {
+    author: {
+      // @ts-expect-error - where is not allowed on a nested Fk relation
+      where: eq(Users.username, "foo"),
+    },
+  },
+});
+
+db.query(Users).findMany({
+  with: {
+    profile: {
+      // @ts-expect-error - where is not allowed on a nested One relation
+      where: eq(Users.username, "foo"),
+    },
+  },
+});
+
+db.query(Posts).findMany({
+  with: {
+    author: {
+      // @ts-expect-error - orderBy is not allowed on a nested Fk relation
+      orderBy: asc(Users.username),
+    },
+  },
+});
+
+db.query(Posts).findMany({
+  with: {
+    author: {
+      // @ts-expect-error - limit is not allowed on a nested Fk relation
+      limit: 10,
+    },
+  },
+});
+
+// Positive: where IS allowed on a nested Many relation (comments)
+db.query(Posts).findMany({
+  with: { comments: { where: eq(Comments.body, "hello") } },
+});
