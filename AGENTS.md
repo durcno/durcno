@@ -16,9 +16,10 @@
 
 This is **Durcno**. A PostgreSQL query builder and migration manager for TypeScript. It is designed around these core principles:
 
-- **Intuitive Abstraction**: Clean definitions and queries that map to PostgreSQL
-- **Type Safety**: Full TypeScript inference across all operations
-- **Migration Management**: Auto generated, reversible, and squashable migrations
+- **Intuitive**: Clean definitions and queries that map to PostgreSQL
+- **Type-safe**: Full TypeScript inference across all operations
+- **Runtime-safe**: Built-in validators for runtime data safety
+- **Robust**: Auto generated, reversible, and squashable migrations
 
 This is NOT a Drizzle-based project - it's a custom query builder and migration manager with its own unique patterns and conventions.
 

@@ -4,17 +4,18 @@ sidebar_position: 1
 
 # Introduction
 
-**Durcno** is a PostgreSQL Query Builder and Migration Manager for TypeScript designed around three core principles:
+**Durcno** is a PostgreSQL Query Builder and Migration Manager for TypeScript designed around four core principles:
 
-- **Intuitive Abstraction**: Clean definitions and queries that map to PostgreSQL
-- **Type Safety**: Maximum TypeScript inference across all operations
-- **Migration Management**: Auto generated, reversible, and squashable migrations
+- **Intuitive**: Clean definitions and queries that map to PostgreSQL
+- **Type-safe**: Full TypeScript inference across all operations
+- **Runtime-safe**: Built-in validators for runtime data safety
+- **Robust**: Auto generated, reversible, and squashable migrations
 
 ## Why Durcno?
 
-Durcno provides a modern, type-safe approach to working with PostgreSQL databases in TypeScript applications. Unlike traditional ORMs, Durcno prioritizes developer experience with intuitive APIs, comprehensive type safety and robust migration management.
+Durcno provides a modern, type-safe approach to working with PostgreSQL databases in TypeScript applications. Unlike traditional ORMs, Durcno prioritizes developer experience with an intuitive API, comprehensive type safety, runtime validation, and robust migration management.
 
-### 🧩 Intuitive Abstraction
+### 🧩 Intuitive
 
 Define your database schema using clean, type-safe table definitions that map directly to PostgreSQL columns:
 
@@ -49,7 +50,7 @@ export const Users = table("public", "users", {
 
 Every column type maps naturally to PostgreSQL types, and TypeScript automatically infers the correct types for all your queries. No decorators, no magic—just clean, declarative code with configuration objects.
 
-### 🎯 Type Safety First
+### 🎯 Type-safe
 
 Every query & the return,
 
@@ -73,7 +74,23 @@ await db.insert(Users).values({
 
 With Durcno, your IDE becomes your most powerful debugging tool, catching mistakes before you even run your code.
 
-### 📦 Migration Management
+### 🔒 Runtime-safe
+
+Beyond compile-time checks, Durcno provides runtime safety through built-in [Zod](https://zod.dev/) schema generation. Validate incoming data against your table definitions before it ever reaches the database:
+
+```typescript
+import { createInsertSchema } from "durcno/validators/zod";
+
+const UserInsertSchema = createInsertSchema(Users);
+
+// Validates at runtime — throws for invalid data
+const data = UserInsertSchema.parse(req.body);
+await db.insert(Users).values(data);
+```
+
+This ensures your application handles untrusted data — from API requests, webhooks, or user input — safely and predictably.
+
+### 🔥 Robust
 
 No separate migration tool needed. Durcno includes a powerful CLI that automatically generates migrations by comparing your schema definitions with your database:
 
@@ -100,11 +117,14 @@ durcno squash <start-migration> <end-migration>
 
 Durcno tracks your schema changes automatically, so you can focus on building features instead of writing SQL migration scripts by hand.
 
+A robust, production-ready foundation — designed to scale with your project from prototype to production.
+
 ## Features
 
-- **Relation query** - Define and query table relationships
-- **Multiple drivers** - Support for `pg`, `postgres`, `bun`, and `pglite` drivers
-- **PostGIS support** - Built-in geographic column types
+- **🔗 Relation Mapping** — Intuitive `many`, `one`, and `fk` relations with full type inference.
+- **⚡ Zero Runtime Overhead** — Thin abstraction layer that compiles to efficient SQL.
+- **🔌 Multiple Drivers** — Support for `pg`, `postgres`, `bun`, and `pglite` drivers.
+- **🌍 PostGIS Support** — First-class geographic column types for spatial queries.
 
 ## Next Steps
 

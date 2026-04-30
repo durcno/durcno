@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  Type-safe • Intuitive • Robust
+  Intuitive • Type-safe • Runtime-safe • Robust
 </p>
 
 ---
