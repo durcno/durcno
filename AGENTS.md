@@ -226,8 +226,8 @@ Durcno uses two clearly separated test suites — **Type tests** and **Integrati
 
 Quick rules:
 
-- Add **type tests** for type/API changes and run `pnpm run test-types`.
-- Add **integration tests** for runtime behavior and run `pnpm run test`.
+- Add/Update/Run **type tests** for type/API validation.
+- Add/Update/Run **integration tests** for runtime behavior validation.
 - Cover positive, negative, and edge cases.
 
 Commands:
@@ -288,12 +288,6 @@ How:
 
 Utilities: `tests/helpers.ts`, `tests/docker-utils.ts`.
 
-### Before updating docs
-
-1. Add or update **type tests**, then run `pnpm run test-types` (must pass).
-2. Add or update **integration tests**, then run `pnpm run test` (must pass).
-3. Update documentation **only after** tests pass.
-
 ## Documentation
 
 Website is built using [Docusaurus 3.9](https://docusaurus.io/).
@@ -304,22 +298,16 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 
 **Important:** Do not touch `website/versioned_docs/` — unless you're explicitly told to do so. The term `docs` usually refers to `website/docs/`.
 
-### Updating Documentation
+### When to update
 
-**CRITICAL: Create and run related tests BEFORE updating documentation.** Never proceed to documentation if related tests are failing or incomplete.
+- **New Features**: Added new public API or functionality
+- **API Changes**: Modified existing public API (parameters, return types, behavior)
+- **Bug Fixes**: Resolved issues that affect usage or behavior
 
-**After adding or updating any API and successfully testing it**, you MUST update the documentation.
+### Pre-requisites
 
-**Documentation workflow (STRICT ORDER - DO NOT SKIP STEPS)**:
-
-1. Complete the feature implementation or modification
-2. **Create type tests** in `type-tests/` for any feature affecting TypeScript types
-3. **Run type tests** (`pnpm run test-types`) - must pass before continuing
-4. **Create integration tests** in `tests/` for runtime behavior
-5. **Run integration tests** (`pnpm run test`) - must pass before continuing
-6. **Only after all tests pass** update the relevant documentation files with:
-   - Clear usage examples with TypeScript code blocks
-   - Type signatures where relevant
+- All new features must be covered by type tests
+- All new features must be covered by integration tests
 
 ## Best Practices
 
