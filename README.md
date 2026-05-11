@@ -43,9 +43,9 @@ Get started with Durcno by following our comprehensive documentation.
 
 **[Getting Started | Durcno](https://durcno.dev/docs/latest/getting-started)**
 
-> [!WARNING]
+> [!NOTE]
 > Durcno is currently in the alpha stage.
-> Avoid using it in any critical or large project until it reaches beta. Expect bugs and breaking changes. However, your feedback is invaluable to help us shape the future of Durcno!
+> Avoid using it in any critical or large project until it reaches beta. Expect edge cases and breaking changes. However, your feedback is invaluable to help us shape the future of Durcno!
 
 ## Contributing
 
