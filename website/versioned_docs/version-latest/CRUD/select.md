@@ -74,7 +74,7 @@ const users = await db.from(Users).select({
 
 ## Filtering with WHERE
 
-Use `.where()` to filter results. See [Filters](./filters) for all available operators.
+Use `.where()` to filter results. See [Filters](../Expressions/filters.md) for all available operators.
 
 ```typescript
 import { eq, and, gte } from "durcno";
@@ -266,4 +266,4 @@ const results = await db
 
 ## Related
 
-- [Filters](./filters.md) — Complete list of filter operators for `.where()` conditions.
+- [Filters](../Expressions/filters.md) — Complete list of filter operators for `.where()` conditions.

@@ -109,7 +109,7 @@ See [Raw SQL](./raw-sql) for comprehensive documentation on raw queries.
 - [Insert](./insert) - Learn about INSERT operations with `db.insert()`
 - [Update](./update) - Learn about UPDATE operations with `db.update()`
 - [Delete](./delete) - Learn about DELETE operations with `db.delete()`
-- [Filters](./filters) - Learn about WHERE conditions and operators
+- [Filters](../Expressions/filters.md) - Learn about WHERE conditions and operators
 - [Relational Queries](./relational-query) - Learn about the Relational Query Builder
 - [Query Shortcuts](./query-shortcuts) - Learn about `$`-prefixed utility functions
 - [Prepared Query](./prequery) - Learn about reusable prepared statements

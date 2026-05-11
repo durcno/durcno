@@ -219,4 +219,4 @@ await db
 
 ## Related
 
-- [Filters](./filters.md) — Complete list of filter operators for `.where()` conditions.
+- [Filters](../Expressions/filters.md) — Complete list of filter operators for `.where()` conditions.
