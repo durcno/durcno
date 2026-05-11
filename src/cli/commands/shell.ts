@@ -17,6 +17,7 @@ const { cyan, green, red, yellow, gray, bgCyan, bold } = chalk;
 export async function shell(options: Options): Promise<void> {
   const configPath = resolveConfigPath(options.config);
   const { connector } = await loadConfig(configPath);
+  connector.options.logger = undefined;
   const client = connector.getClient();
 
   console.log(gray("Connecting to database..."));

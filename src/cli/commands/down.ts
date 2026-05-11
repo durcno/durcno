@@ -104,8 +104,11 @@ export async function runDownMigration(
     }
 
     if (!isFirstMigration) {
-      config.connector.pool = { ...config.connector.pool, max: 1 };
-      config.connector.logger = undefined;
+      config.connector.options.pool = {
+        ...config.connector.options.pool,
+        max: 1,
+      };
+      config.connector.options.logger = undefined;
       const db = database({ Migrations }, config);
       await db.delete(Migrations).where(eq(Migrations.name, migrationName));
       await db.close();

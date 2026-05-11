@@ -139,15 +139,9 @@ export abstract class Connector {
    * construction (e.g. by CLI commands); use the instance fields for current values.
    */
   options: ConnectorOptions;
-  /** Connection pool size override (can be mutated by CLI commands before `getPool()` is called). */
-  pool?: ConnectorOptions["pool"];
-  /** Optional logger instance for query logging. */
-  logger?: QueryLogger;
 
   constructor(options: ConnectorOptions) {
     this.options = options;
-    this.pool = options.pool;
-    this.logger = options.logger;
   }
 
   /**
