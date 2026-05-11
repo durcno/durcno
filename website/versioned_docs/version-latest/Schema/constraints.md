@@ -22,12 +22,25 @@ For **single-column** primary keys and unique constraints, use the column-level 
 
 ## Check Constraints
 
-Check constraints validate that column values satisfy a boolean expression. They are defined using the `checkConstraints` callback and the `CheckBuilder` API.
+Check constraints validate that column values satisfy a boolean expression. They are defined using the `checkConstraints` callback and the same **filter functions** you use in `.where()` clauses.
 
 ### Basic Usage
 
 ```typescript
-import { table, pk, varchar, integer, bigint, notNull } from "durcno";
+import {
+  and,
+  bigint,
+  gt,
+  gte,
+  integer,
+  length,
+  like,
+  lte,
+  notNull,
+  pk,
+  table,
+  varchar,
+} from "durcno";
 
 export const Products = table(
   "public",
@@ -40,11 +53,7 @@ export const Products = table(
     email: varchar({ length: 255 }),
   },
   {
-    checkConstraints: (
-      t,
-      check,
-      { gt, gte, lte, like, fnGt, fnLte, length, and },
-    ) => [
+    checkConstraints: (t, check) => [
       // Price must be positive
       check("positive_price", gt(t.price, 0n)),
 
@@ -54,40 +63,42 @@ export const Products = table(
       // Email must contain @
       check("valid_email", like(t.email, "%@%.%")),
 
-      // Name must be at least 2 characters
+      // Name must be between 2 and 200 characters
       check(
         "name_length",
-        and(fnGt(length(t.name), 2), fnLte(length(t.name), 200)),
+        and(gt(length(t.name), 2), lte(length(t.name), 200)),
       ),
     ],
   },
 );
 ```
 
-### Using `raw` for Compact Checks
+### Using Raw SQL
 
-If you prefer raw SQL expressions, use `raw(...)`:
+For expressions not covered by the filter functions, pass a `sql` tagged template:
 
 ```typescript
-checkConstraints: (t, check, { raw }) => [
-  check("status_allowed", raw(`"status" IN ('active','inactive')`)),
+import { sql } from "durcno";
+
+checkConstraints: (t, check) => [
+  check("status_allowed", sql`"status" IN ('active','inactive')`),
 ];
 ```
 
-### CheckBuilder API
+### Using `isIn` and `notIn`
 
-The `check` function is passed as the second callback parameter — use it to create named constraints. The `CheckBuilder` (destructured from the third parameter) provides these helpers:
+```typescript
+import { isIn, notIn } from "durcno";
 
-| Category                 | Methods                                           |
-| ------------------------ | ------------------------------------------------- |
-| **Comparison**           | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`             |
-| **Pattern**              | `like`, `similarTo`, `regex`                      |
-| **Logical**              | `and`, `or`                                       |
-| **SQL Functions**        | `length`, `lower`, `upper`, `trim`, `coalesce`    |
-| **Function Comparisons** | `fnEq`, `fnNeq`, `fnGt`, `fnGte`, `fnLt`, `fnLte` |
-| **Raw SQL**              | `raw(sql)`                                        |
+checkConstraints: (t, check) => [
+  check("valid_status", isIn(t.status, ["active", "pending", "closed"])),
+  check("excluded_category", notIn(t.categoryId, [99, 100])),
+],
+```
 
-Each helper returns a `CheckExpr` which can be combined as needed.
+### Available Filter Functions
+
+The `checkConstraints` callback accepts any standard **filter expression** (the same ones used in `.where()`) as the second argument to `check()`. See the [Filters](../Expressions/filters.md) page for the full list of available functions.
 
 > **Note:** CHECK constraints do not affect TypeScript types. If you want compile-time guarantees, use enums for stable sets or add runtime validation (Zod) in application code.
 
@@ -362,6 +373,7 @@ In PostgreSQL, a unique constraint automatically creates a unique index, so func
 ## Related
 
 - [Columns](./columns.md) — Column-level `primaryKey` and `unique` flags
+- [Filters](../Expressions/filters.md) — All available filters for check constraints
 - [Indexes](./indexes.md) — `uniqueIndex()` for index-level uniqueness
 - [Enums](./enums.md) — Alternative to CHECK for fixed value sets
 - [Enums vs Check Constraints](../Guides/enum-vs-check.md) — Comparison guide
