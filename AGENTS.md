@@ -311,6 +311,20 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 
 ## Best Practices
 
+### Code Quality
+
+- **Type Safety**: Try not to use `any`, prefer proper type guards or `unknown`
+- **Import Paths**: Use relative imports (e.g., `./common`, `../table`) in all TypeScript files within the root `src` folder.
+- **Importing**: Always use `type` modifier for type-only imports
+- **Code Documentation**: Add small and concise jsdoc comments to all internal functions, classes, and methods for better code readability and maintainability.
+- **Node builtins**: Prefix with `node:`
+- **Don't append code at the end of files** — find the right place for it based on its purpose and related code
+
+### Code structuring
+
+- **Files**: Group related files in the same folder (e.g., `src/columns`, `src/query-builders`)
+- **Definitions**: Colocate entities in the same file that are closely related
+
 ### Naming Conventions
 
 - **Tables**: PascalCase plural nouns (e.g., `Users`, not `User`)
@@ -319,13 +333,6 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 ### Performance Considerations
 
 - Avoid unnecessary string instantiation or return, prefer direct concatenation
-
-### Code Quality Standards
-
-- **Type Safety**: Try not to use `any`, prefer proper type guards or `unknown`
-- **Import Paths**: Use relative imports (e.g., `./common`, `../table`) in all TypeScript files within the root `src` folder.
-- **Importing**: use `type` modifier for type-only imports
-- **Code Documentation**: Add small and concise jsdoc comments to all internal functions, classes, and methods for better code readability and maintainability.
 
 ## Guides
 
