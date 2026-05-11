@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path, { isAbsolute, resolve } from "node:path";
 import type { TestContainerInfo } from "./docker-utils";
 import { startPostgresContainer, stopPostgresContainer } from "./docker-utils";
-import { rmSync, runDurcnoCommand } from "./helpers";
+import { rmSync, runDurcno } from "./helpers";
 import vitestConfig from "./vitest.config";
 
 let containerInfo: TestContainerInfo;
@@ -91,14 +91,14 @@ export async function setup() {
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   try {
-    runDurcnoCommand(["generate", "--config", configPath], {
+    runDurcno(["generate", "--config", configPath], {
       ...process.env,
       DB_PORT: containerInfo.port.toString(),
       DB_NAME: containerInfo.dbName,
       MIGRATIONS_DIR: `./${migrationsDirName}`,
     });
 
-    runDurcnoCommand(["migrate", "--config", configPath], {
+    runDurcno(["migrate", "--config", configPath], {
       ...process.env,
       DB_PORT: containerInfo.port.toString(),
       DB_NAME: containerInfo.dbName,

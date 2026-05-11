@@ -24,7 +24,7 @@ export const Users = table("public", "users", {
   id: pk(),
   username: varchar({ length: 50, unique, notNull }),
   email: varchar({ length: 100, notNull }),
-  createdAt: timestamp({ notNull, default: now() }),
+  createdAt: timestamp({ notNull }).default(now()),
   // Add columns in version 2
   ...(migrationVersion >= 2 && {
     bio: text({}),
@@ -43,6 +43,6 @@ export const Posts =
           notNull,
         }).references({ column: () => Users.id, onDelete: "CASCADE" }),
         publishedAt: timestamp({}),
-        createdAt: timestamp({ notNull, default: now() }),
+        createdAt: timestamp({ notNull }).default(now()),
       })
     : undefined;

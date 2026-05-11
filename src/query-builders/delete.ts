@@ -1,7 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { BuildFilterExpression } from "../filters/index";
-import type { AnyColumn, TableWithColumns, TColsToLeftRight } from "../table";
-import type { Key } from "../types";
+import type { FilterExpression } from "../filters/index";
+import type { AnyColumn, TableWithColumns } from "../table";
+import type { Key, Valueof } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -34,10 +34,7 @@ export class DeleteQuery<
 > extends QueryPromise<TReturn> {
   readonly #$table: TTableWC;
   readonly #$where:
-    | BuildFilterExpression<
-        TColsToLeftRight<TTableWC["_"]["columns"]>,
-        TPrepare
-      >
+    | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
     | undefined;
   readonly #$returning: TReturning;
   readonly #$executor: QueryExecutor;
@@ -46,10 +43,7 @@ export class DeleteQuery<
   constructor(
     table: TTableWC,
     where:
-      | BuildFilterExpression<
-          TColsToLeftRight<TTableWC["_"]["columns"]>,
-          TPrepare
-        >
+      | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
       | undefined,
     returnings: TReturning,
     executor: QueryExecutor,
@@ -64,8 +58,8 @@ export class DeleteQuery<
   }
 
   where<
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTableWC["_"]["columns"]>,
+    TWhere extends FilterExpression<
+      Valueof<TTableWC["_"]["columns"]>,
       TPrepare
     >,
   >(where: TWhere) {

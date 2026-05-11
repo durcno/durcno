@@ -16,10 +16,10 @@ import { type Equal, Expect, testSetup } from "./utils";
 // Table with various column configurations
 const TestTable = table("public", "testTable", {
   // Generate ALWAYS - should be never in insert
-  id: bigint({ primaryKey, generated: "ALWAYS" as const }),
+  id: bigint({ primaryKey }).generatedAlways(),
 
   // Generate BY DEFAULT - should be optional in insert
-  autoId: bigint({ generated: "BY DEFAULT" as const }),
+  autoId: bigint({}).generatedByDefault(),
 
   // Not null without default - should be required in insert
   requiredField: varchar({ length: 50, notNull }),

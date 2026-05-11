@@ -8,7 +8,8 @@ type ByteaConfig = ColumnConfig;
 
 export class ByteaColumn<TConfig extends ByteaConfig> extends Column<
   TConfig,
-  ByteaValType
+  ByteaValType,
+  "bytea"
 > {
   static readonly id = "Column.Bytea";
 

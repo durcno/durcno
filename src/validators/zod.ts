@@ -9,10 +9,10 @@ type InferColInsertZodType<
   TColumn extends AnyColumn,
   ZType extends z.ZodType,
 > = TColumn extends {
-  generated: "ALWAYS";
+  isGeneratedAlways: true;
 }
   ? never
-  : TColumn extends { generated: "BY DEFAULT" }
+  : TColumn extends { isGeneratedByDefault: true }
     ? z.ZodOptional<ZType>
     : TColumn extends { hasDefault: true }
       ? z.ZodOptional<ZType>

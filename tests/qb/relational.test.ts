@@ -6,7 +6,6 @@ import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
-  cleanDatabase,
   createTestComment,
   createTestPost,
   createTestUser,
@@ -15,6 +14,7 @@ import {
   startPostgresContainer,
   stopPostgresContainer,
   type TestContainerInfo,
+  truncateTables,
 } from "./setup";
 
 describe("Relational queries", () => {
@@ -61,7 +61,7 @@ describe("Relational queries", () => {
   }, 120000);
 
   beforeEach(async () => {
-    await cleanDatabase(client);
+    await truncateTables(client);
   });
 
   afterAll(async () => {

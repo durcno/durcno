@@ -39,14 +39,10 @@ export class InsertBuilder<
     } extends infer TValues
       ?
           | {
-              [colName in keyof TValues as TValues[colName] extends never
-                ? never
-                : colName]: TValues[colName];
+              [colName in keyof TValues]: TValues[colName];
             }
           | {
-              [colName in keyof TValues as TValues[colName] extends never
-                ? never
-                : colName]: TValues[colName];
+              [colName in keyof TValues]: TValues[colName];
             }[]
       : never,
   ) {
@@ -141,18 +137,17 @@ export class InsertQuery<
     query.sql += " ) VALUES";
 
     valuesArray.forEach((row, i) => {
-      query.sql += "(";
+      query.sql += " (";
       fields.forEach((fieldName, j) => {
         const value = row[fieldName];
         const column = this.#table._.columns[fieldName];
         if (value === undefined) {
-          // Handle empty values
           if (column.hasInsertFn) {
-            query.sql += column.toSQL(column.getInsertFnVal(), { cast: true });
+            query.sql += column.toSQL(column.getInsertFnVal, { cast: true });
           } else {
             query.sql += "DEFAULT";
           }
-        } else if (this.#prepare && is(value, Arg)) {
+        } else if (is(value, Arg)) {
           const cast = value.cast ?? column.sqlCast ?? null;
           const castSuffix = cast ? `::${cast}` : "";
           query.sql += `$${value.index}${castSuffix}`;
@@ -192,15 +187,16 @@ export class InsertQuery<
   }
 
   handleRows(rows: Record<string, unknown>[]) {
-    const { columns } = this.#table._;
+    const newRows: Record<string, unknown>[] = [];
     rows.forEach((row) => {
+      const newRow: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(row)) {
         const keyCamel = snakeToCamel(key);
-        const column = columns[keyCamel] as AnyColumn;
-        row[keyCamel] = column.fromDriver(value);
-        if (keyCamel !== key) delete row[key];
+        const column = this.#table._.columns[keyCamel];
+        newRow[keyCamel] = column.fromDriver(value);
       }
+      newRows.push(newRow);
     });
-    return rows as TReturn;
+    return newRows as TReturn;
   }
 }

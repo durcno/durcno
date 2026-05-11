@@ -41,7 +41,8 @@ type JsonConfig = ColumnConfig;
  */
 export class JsonColumn<TConfig extends JsonConfig> extends Column<
   TConfig,
-  JsonValType
+  JsonValType,
+  "json"
 > {
   static readonly id = "Column.Json";
 

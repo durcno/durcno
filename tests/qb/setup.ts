@@ -1,14 +1,14 @@
 import { v4 as uuid } from "uuid";
-import { runDurcnoCommand } from "../helpers";
+import { runDurcno } from "../helpers";
 
 import type { Users } from "./schema";
 
 // Re-export Docker utilities from the shared module
 export {
-  cleanDatabase,
   startPostgresContainer,
   stopPostgresContainer,
   type TestContainerInfo,
+  truncateTables,
 } from "../docker-utils";
 
 import type { TestContainerInfo } from "../docker-utils";
@@ -26,7 +26,7 @@ export function runDurcnoCli(
   containerInfo: TestContainerInfo,
   migrationsDirName: string,
 ) {
-  runDurcnoCommand([command, "--config", configPath], {
+  runDurcno([command, "--config", configPath], {
     ...process.env,
     DB_PORT: containerInfo.port.toString(),
     DB_NAME: containerInfo.dbName,

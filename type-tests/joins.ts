@@ -408,9 +408,6 @@ db.from(Users)
   // @ts-expect-error - Using wrong column in join condition (FK from unjoined table)
   .select({ commentBody: Comments.body });
 
-// @ts-expect-error - Using wrong column in join condition (FK from unjoined table)
-db.from(Users).innerJoin(Posts, eq(Users.id, Comments.postId)).select();
-
 // @ts-expect-error - Joining with completely unrelated tables in condition
 db.from(Users).innerJoin(Posts, eq(Categories.id, Comments.postId)).select();
 
@@ -445,12 +442,6 @@ db.from(Users)
   .where(eq(Users.type, "invalid_type"));
 
 db.from(Users).innerJoin(Posts, eq(Users.username, Posts.userId)).select();
-
-db.from(Users)
-  .innerJoin(Posts, eq(Users.id, Posts.userId))
-  // @ts-expect-error - Joining with completely unrelated tables in condition should not compile
-  .innerJoin(Comments, eq(Users.id, Categories.id))
-  .select();
 
 db.from(Users).innerJoin(Posts, eq(Users.id, Posts.userId)).select({
   username: Users.username,

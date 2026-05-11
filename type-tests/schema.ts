@@ -1,4 +1,5 @@
 import {
+  and,
   bigint,
   bigserial,
   bytea,
@@ -6,8 +7,13 @@ import {
   database,
   enumtype,
   fk,
+  gt,
+  gte,
   inet,
   integer,
+  length,
+  like,
+  lte,
   macaddr,
   many,
   notNull,
@@ -170,11 +176,7 @@ export const CheckTest = table(
     name: varchar({ length: 100, notNull }),
   },
   {
-    checkConstraints: (
-      t,
-      check,
-      { gt, gte, fnGte, lte, fnLte, like, and, length },
-    ) => [
+    checkConstraints: (t, check) => [
       // Typesafe: comparisons with column value types
       check("positive_price", gt(t.price, 0n)),
 
@@ -187,7 +189,7 @@ export const CheckTest = table(
       // Length constraints using functions
       check(
         "name_length",
-        and(fnGte(length(t.name), 2), fnLte(length(t.name), 100)),
+        and(gte(length(t.name), 2), lte(length(t.name), 100)),
       ),
     ],
   },

@@ -8,7 +8,8 @@ type MacaddrConfig = ColumnConfig;
 
 export class MacaddrColumn<TConfig extends MacaddrConfig> extends Column<
   TConfig,
-  MacaddrValType
+  MacaddrValType,
+  "text"
 > {
   static readonly id = "Column.Macaddr";
 

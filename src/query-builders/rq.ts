@@ -1,5 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { BuildFilterExpression } from "../filters/index";
+import type { FilterExpression } from "../filters/index";
 import type {
   AnyColumn,
   AnyRelation,
@@ -10,8 +10,8 @@ import type {
   StdRelations,
   StdTableWithColumns,
   TableWithColumns,
-  TColsToLeftRight,
 } from "../table";
+import type { Valueof } from "../types";
 import { snakeToCamel } from "../utils";
 import type { OrderBy } from "./orderby-clause";
 import { Query } from "./query";
@@ -69,13 +69,13 @@ type NestedOptionsFkOne<
           ? NestedOptionsFkOne<
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
               TAllRelations
             >
           : OptionsBase<
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
               TAllRelations
             >;
       };
@@ -87,14 +87,12 @@ type OptionsBase<
   TTColumns extends Record<string, AnyColumn>,
   TAllRelations extends Record<string, StdRelations>,
 > = ColumnsOption<TTSchema, TTName, TTColumns> & {
-  where?: BuildFilterExpression<
-    TColsToLeftRight<
-      TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
-    >
+  where?: FilterExpression<
+    Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
   >;
   orderBy?:
-    | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>>
-    | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>>[];
+    | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>, undefined>
+    | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>, undefined>[];
   limit?: number;
   with?: keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"] extends never
     ? never
@@ -105,13 +103,13 @@ type OptionsBase<
           ? NestedOptionsFkOne<
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
               TAllRelations
             >
           : OptionsBase<
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["cols"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
               TAllRelations
             >;
       };
@@ -172,7 +170,7 @@ type Object<
           ? TNestedOptions extends OptionsBase<
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["schema"],
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["cols"],
+              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["$"]["columns"],
               TAllRelations
             >
             ? RelationReturnType<
@@ -180,13 +178,13 @@ type Object<
                   [K in keyof Object<
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["schema"],
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["name"],
-                    TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["cols"],
+                    TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["$"]["columns"],
                     TAllRelations,
                     TNestedOptions
                   >]: Object<
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["schema"],
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["name"],
-                    TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["cols"],
+                    TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["$"]["columns"],
                     TAllRelations,
                     TNestedOptions
                   >[K];
@@ -362,7 +360,7 @@ class RelationQuery<
       const orders = Array.isArray(options.orderBy)
         ? options.orderBy
         : [options.orderBy];
-      query.sql += ` ORDER BY ${orders.map((o) => o.toSQL()).join(", ")}`;
+      orderByToQuery(orders, query);
     }
     if (options.limit) query.sql += ` LIMIT ${options.limit}`;
     const optionsWithOffset = this.#options as StdOptions;
@@ -526,8 +524,7 @@ function buildRelationSubquery(
   // For Many/One: relation.col is the FK column on the related table, references points to parent
   // For Fk: relation.col is the FK column on the parent table, table is the referenced table
   if (relation.t === "Many" || relation.t === "One") {
-    const referencedCol = relation.col
-      .referencesCol as unknown as AnyColumn | null;
+    const referencedCol = relation.col.getReferencesCol;
     if (!referencedCol) {
       throw new Error(
         `Relation column "${relation.col.name}" has no .references() definition. ` +
@@ -546,8 +543,7 @@ function buildRelationSubquery(
   } else if (relation.t === "Fk") {
     // For Fk: relation.col is the FK column on the parent, relation.table is the referenced table
     // We need to find the primary key of the referenced table (relation.table)
-    const referencedCol = relation.col
-      .referencesCol as unknown as AnyColumn | null;
+    const referencedCol = relation.col.getReferencesCol;
     if (!referencedCol) {
       throw new Error(
         `Relation column "${relation.col.name}" has no .references() definition. ` +
@@ -564,13 +560,25 @@ function buildRelationSubquery(
       const orders = Array.isArray(options.orderBy)
         ? options.orderBy
         : [options.orderBy];
-      query.sql += ` ORDER BY ${orders.map((o) => o.toSQL()).join(", ")}`;
+      orderByToQuery(orders, query);
     }
     if (options.limit) query.sql += ` LIMIT ${options.limit}`;
   }
 
   query.sql += `) "${aliasPath}"`;
   query.sql += `) "${aliasPath}" ON true`;
+}
+
+/** Appends an ORDER BY clause for `orders` to `query.sql`. */
+function orderByToQuery(
+  orders: Array<{ toQuery(q: Query): void }>,
+  query: Query,
+): void {
+  query.sql += " ORDER BY ";
+  for (let i = 0; i < orders.length; i++) {
+    orders[i].toQuery(query);
+    if (i < orders.length - 1) query.sql += ", ";
+  }
 }
 
 function convert(

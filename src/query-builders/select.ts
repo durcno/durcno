@@ -1,22 +1,21 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { BuildFilterExpression, StdCondition } from "../filters/index";
+import type { FilterExpression, StdCondition } from "../filters/index";
+import type { AnySqlFn, SqlFnFor, StdSqlFn } from "../functions/index";
+import { SqlFn } from "../functions/index";
 import type {
   AnyColumn,
   AnyTableWithColumns,
-  BuildScmTblColumns,
   StdTableColumn,
-  TableColumn,
+  TableAnyColumn,
   TableWithColumns,
-  TColsToLeftRight,
 } from "../table";
 import type {
-  Key,
   Prettify,
   SelfOrArray,
   UnionToIntersection,
   Valueof,
 } from "../types";
-import { camelToSnake, snakeToCamel } from "../utils";
+import { snakeToCamel } from "../utils";
 import type { OrderBy } from "./orderby-clause";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -31,15 +30,11 @@ export class SelectBuilder<
     | [
         {
           table: AnyTableWithColumns;
-          on: BuildFilterExpression<
-            TColsToLeftRight<AnyTableWithColumns["_"]["columns"]>
-          >;
+          on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
         },
         ...{
           table: AnyTableWithColumns;
-          on: BuildFilterExpression<
-            TColsToLeftRight<AnyTableWithColumns["_"]["columns"]>
-          >;
+          on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
         }[],
       ],
 > {
@@ -67,16 +62,18 @@ export class SelectBuilder<
     TJoinTSchema extends string,
     TJoinTName extends string,
     TJoinTColumns extends Record<string, AnyColumn>,
-    TOn extends BuildFilterExpression<
-      TColsToLeftRight<
-        BuildScmTblColumns<TTSchema, TTName, TTColumns> &
-          BuildScmTblColumns<TJoinTSchema, TJoinTName, TJoinTColumns> &
-          (TInnerJoins extends unknown[]
-            ? UnionToIntersection<
-                TInnerJoins[number]["table"]["$"]["_"]["scmTblColumns"]
-              >
-            : Record<never, never>)
-      >
+    TOn extends FilterExpression<
+      | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
+      | Valueof<
+          TableWithColumns<
+            TJoinTSchema,
+            TJoinTName,
+            TJoinTColumns
+          >["_"]["columns"]
+        >
+      | (TInnerJoins extends unknown[]
+          ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
+          : never)
     >,
   >(
     table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinTColumns>,
@@ -149,6 +146,20 @@ export class SelectBuilder<
       | (TInnerJoins extends unknown[]
           ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
           : never)
+      | SqlFnFor<
+          any,
+          Valueof<
+            TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
+          >,
+          TPrepare
+        >
+      | (TInnerJoins extends unknown[]
+          ? SqlFnFor<
+              any,
+              Valueof<TInnerJoins[number]["table"]["_"]["columns"]>,
+              TPrepare
+            >
+          : never)
     >,
   >(
     selects: TSelects,
@@ -171,6 +182,20 @@ export class SelectBuilder<
             >
           | (TInnerJoins extends unknown[]
               ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
+              : never)
+          | SqlFnFor<
+              any,
+              Valueof<
+                TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
+              >,
+              TPrepare
+            >
+          | (TInnerJoins extends unknown[]
+              ? SqlFnFor<
+                  any,
+                  Valueof<TInnerJoins[number]["table"]["_"]["columns"]>,
+                  TPrepare
+                >
               : never)
         >
       | undefined,
@@ -199,53 +224,48 @@ export class SelectQuery<
     | [
         {
           table: AnyTableWithColumns;
-          on: BuildFilterExpression<
-            TColsToLeftRight<AnyTableWithColumns["$"]["_"]["scmTblColumns"]>
-          >;
+          on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
         },
         ...{
           table: AnyTableWithColumns;
-          on: BuildFilterExpression<
-            TColsToLeftRight<AnyTableWithColumns["$"]["_"]["scmTblColumns"]>
-          >;
+          on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
         }[],
       ],
   TSelects extends
     | Record<
         string,
-        | Valueof<
-            NoInfer<
-              TableWithColumns<TTSchema, TTName, TTColumns>
-            >["_"]["columns"]
-          >
+        | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
         | (TInnerJoins extends unknown[]
             ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
             : never)
+        | SqlFnFor<any, any, boolean>
       >
     | undefined,
   TPrepare extends boolean,
   TWhere extends
-    | BuildFilterExpression<
-        TColsToLeftRight<
-          NoInfer<TableWithColumns<TTSchema, TTName, TTColumns>>["_"]["columns"]
-        >,
+    | FilterExpression<
+        | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
+        | (TInnerJoins extends unknown[]
+            ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
+            : never),
         TPrepare
       >
     | undefined,
   TOrderBy extends
-    | OrderBy<NoInfer<TableWithColumns<TTSchema, TTName, TTColumns>>>
-    | OrderBy<NoInfer<TableWithColumns<TTSchema, TTName, TTColumns>>>[]
+    | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>, TSelects, TPrepare>
+    | OrderBy<
+        TableWithColumns<TTSchema, TTName, TTColumns>,
+        TSelects,
+        TPrepare
+      >[]
     | undefined,
   TReturn = (TSelects extends Record<string, unknown>
     ? {
-        [TCol in keyof TSelects]: TSelects[TCol] extends TableColumn<
-          string,
-          string,
-          Key,
-          infer TColumn
-        >
-          ? TColumn["ValTypeSelect"]
-          : never;
+        [TCol in keyof TSelects]: TSelects[TCol] extends TableAnyColumn
+          ? TSelects[TCol]["ValTypeSelect"]
+          : TSelects[TCol] extends AnySqlFn
+            ? TSelects[TCol]["$"]["TsType"]
+            : never;
       }
     : Prettify<
         TableWithColumns<TTSchema, TTName, TTColumns>["$"]["inferSelect"] &
@@ -294,15 +314,13 @@ export class SelectQuery<
 
   where<
     TWhere extends
-      | BuildFilterExpression<
-          TColsToLeftRight<
-            BuildScmTblColumns<TTSchema, TTName, TTColumns> &
-              (TInnerJoins extends unknown[]
-                ? UnionToIntersection<
-                    TInnerJoins[number]["table"]["$"]["_"]["scmTblColumns"]
-                  >
-                : Record<never, never>)
-          >,
+      | FilterExpression<
+          | Valueof<
+              TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
+            >
+          | (TInnerJoins extends unknown[]
+              ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
+              : never),
           TPrepare
         >
       | undefined,
@@ -324,15 +342,23 @@ export class SelectQuery<
   orderBy<
     TOrderBys extends
       | (
-          | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>>
+          | OrderBy<
+              TableWithColumns<TTSchema, TTName, TTColumns>,
+              TSelects,
+              TPrepare
+            >
           | (TInnerJoins extends unknown[]
-              ? OrderBy<TInnerJoins[number]["table"]>
+              ? OrderBy<TInnerJoins[number]["table"], TSelects, TPrepare>
               : never)
         )
       | (
-          | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>>
+          | OrderBy<
+              TableWithColumns<TTSchema, TTName, TTColumns>,
+              TSelects,
+              TPrepare
+            >
           | (TInnerJoins extends unknown[]
-              ? OrderBy<TInnerJoins[number]["table"]>
+              ? OrderBy<TInnerJoins[number]["table"], TSelects, TPrepare>
               : never)
         )[],
   >(orderBy: TOrderBys) {
@@ -385,14 +411,21 @@ export class SelectQuery<
     if (this.#$distinctOn?.length) {
       query.sql += `DISTINCT ON (${this.#$distinctOn.map((c) => c.fullName).join(", ")}) `;
     }
-    query.sql += this.#$select
-      ? Object.entries(this.#$select)
-          .map(
-            ([key, column]) =>
-              `${(column as StdTableColumn).fullName} AS ${camelToSnake(key)}`,
-          )
-          .join(", ")
-      : "*";
+    const entries = this.#$select ? Object.entries(this.#$select) : null;
+    if (entries) {
+      for (let i = 0; i < entries.length; i++) {
+        const [key, colOrFn] = entries[i];
+        if (colOrFn instanceof SqlFn) {
+          colOrFn.toQuery(query);
+          query.sql += ` AS "${key}"`;
+        } else {
+          query.sql += `${(colOrFn as StdTableColumn).fullName} AS "${key}"`;
+        }
+        if (i < entries.length - 1) query.sql += ", ";
+      }
+    } else {
+      query.sql += "*";
+    }
     query.sql += " FROM ";
     query.sql += this.#table._.fullName;
     this.#$innerJoins?.forEach((innerJoin) => {
@@ -404,11 +437,37 @@ export class SelectQuery<
       query.sql += " WHERE ";
       this.#$where.toQuery(query);
     }
+    if (entries) {
+      const hasAggregate = entries.some(
+        ([, colOrFn]) => colOrFn instanceof SqlFn && colOrFn.isAggregate,
+      );
+      if (hasAggregate) {
+        const nonAggEntries = entries.filter(
+          ([, colOrFn]) => !(colOrFn instanceof SqlFn) || !colOrFn.isAggregate,
+        );
+        if (nonAggEntries.length > 0) {
+          query.sql += " GROUP BY ";
+          for (let i = 0; i < nonAggEntries.length; i++) {
+            const [, colOrFn] = nonAggEntries[i];
+            if (colOrFn instanceof SqlFn) {
+              colOrFn.toQuery(query);
+            } else {
+              query.sql += (colOrFn as StdTableColumn).fullName;
+            }
+            if (i < nonAggEntries.length - 1) query.sql += ", ";
+          }
+        }
+      }
+    }
     if (this.#$orderBy) {
       const orders = Array.isArray(this.#$orderBy)
         ? this.#$orderBy
         : [this.#$orderBy];
-      query.sql += ` ORDER BY ${orders.map((o) => o.toSQL()).join(", ")}`;
+      query.sql += " ORDER BY ";
+      for (let i = 0; i < orders.length; i++) {
+        orders[i].toQuery(query);
+        if (i < orders.length - 1) query.sql += ", ";
+      }
     }
     if (this.#$limit) query.sql += ` LIMIT ${this.#$limit}`;
     if (this.#$offset) query.sql += ` OFFSET ${this.#$offset}`;
@@ -424,17 +483,39 @@ export class SelectQuery<
   }
 
   handleRows(rows: Record<string, unknown>[]) {
-    const { columns } = this.#table._;
-    const cols = this.#$select ?? columns;
-    rows.forEach((row) => {
-      for (const [key, value] of Object.entries(row)) {
-        const keyCamel = snakeToCamel(key);
-        const column = cols[keyCamel] as AnyColumn;
-        row[keyCamel] = column.fromDriver(value);
-        if (keyCamel !== key) delete row[key];
-      }
-    });
-    return rows as TReturn;
+    if (this.#$select !== undefined) {
+      rows.forEach((row) => {
+        for (const [key, value] of Object.entries(row)) {
+          const colOrFn = (
+            this.#$select as Record<string, StdTableColumn | StdSqlFn>
+          )[key];
+          row[key] = colOrFn.fromDriver(value);
+        }
+      });
+      return rows as TReturn;
+    } else {
+      const newRows: Record<string, unknown>[] = [];
+      rows.forEach((row) => {
+        const newRow: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(row)) {
+          const keyCamel = snakeToCamel(key);
+          let column = this.#table._.columns[keyCamel];
+          if (column === undefined) {
+            this.#$innerJoins?.forEach((innerJoin) => {
+              const joinCol = innerJoin.table._.columns[keyCamel];
+              if (joinCol !== undefined) {
+                column = joinCol;
+              }
+            });
+          }
+          if (column === undefined)
+            throw new Error(`Column ${keyCamel} not found in any table`);
+          newRow[keyCamel] = column.fromDriver(value);
+        }
+        newRows.push(newRow);
+      });
+      return newRows as TReturn;
+    }
   }
 }
 

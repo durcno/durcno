@@ -8,7 +8,8 @@ type BigintConfig = ColumnConfig;
 
 export class BigintColumn<TConfig extends BigintConfig> extends Column<
   TConfig,
-  BigintValType
+  BigintValType,
+  "numeric"
 > {
   static readonly id = "Column.Bigint";
 

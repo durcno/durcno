@@ -1,6 +1,6 @@
 import type { $Pool, QueryExecutor } from "./connectors/common";
 import { is } from "./entity";
-import type { BuildFilterExpression } from "./filters/index";
+import type { FilterExpression } from "./filters/index";
 import type { Config } from "./index";
 import { AggregateQuery } from "./query-builders/aggregates";
 import { CountQuery } from "./query-builders/count";
@@ -25,8 +25,8 @@ import {
   Table,
   type TableWCorNever,
   type TableWithColumns,
-  type TColsToLeftRight,
 } from "./table";
+import type { Valueof } from "./types";
 
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnyDBorTX = Base<any, any, any, false>;
@@ -146,17 +146,11 @@ class Base<
   ): CountQuery<TTable, TPrepare>;
   $count<
     TTable extends TTables[keyof TTables],
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    TWhere extends FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   >(table: TTable, where: TWhere): CountQuery<TTable, TPrepare>;
   $count<TTable extends TTables[keyof TTables]>(
     table: TTable,
-    where?: BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
     return new CountQuery(table, where, this.#getExecutor(), this.$.pre);
   }
@@ -172,17 +166,11 @@ class Base<
   ): ExistsQuery<TTable, TPrepare>;
   $exists<
     TTable extends TTables[keyof TTables],
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    TWhere extends FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   >(table: TTable, where: TWhere): ExistsQuery<TTable, TPrepare>;
   $exists<TTable extends TTables[keyof TTables]>(
     table: TTable,
-    where?: BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
     return new ExistsQuery(table, where, this.#getExecutor(), this.$.pre);
   }
@@ -198,17 +186,11 @@ class Base<
   ): FirstQuery<TTable, TPrepare>;
   $first<
     TTable extends TTables[keyof TTables],
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    TWhere extends FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   >(table: TTable, where: TWhere): FirstQuery<TTable, TPrepare>;
   $first<TTable extends TTables[keyof TTables]>(
     table: TTable,
-    where?: BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
     return new FirstQuery(table, where, this.#getExecutor(), this.$.pre);
   }
@@ -222,18 +204,15 @@ class Base<
    */
   $sum<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
   ): AggregateQuery<TTable, TColumn, number | null, TPrepare>;
   $sum<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    TColumn extends Valueof<TTable["_"]["columns"]>,
+    TWhere extends FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   >(
     table: TTable,
     column: TColumn,
@@ -241,14 +220,11 @@ class Base<
   ): AggregateQuery<TTable, TColumn, number | null, TPrepare>;
   $sum<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
-    where?: BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
     return new AggregateQuery(
       table,
@@ -269,18 +245,15 @@ class Base<
    */
   $avg<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
   ): AggregateQuery<TTable, TColumn, number | null, TPrepare>;
   $avg<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    TColumn extends Valueof<TTable["_"]["columns"]>,
+    TWhere extends FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   >(
     table: TTable,
     column: TColumn,
@@ -288,14 +261,11 @@ class Base<
   ): AggregateQuery<TTable, TColumn, number | null, TPrepare>;
   $avg<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
-    where?: BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
     return new AggregateQuery(
       table,
@@ -316,18 +286,15 @@ class Base<
    */
   $min<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
   ): AggregateQuery<TTable, TColumn, number | null, TPrepare>;
   $min<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    TColumn extends Valueof<TTable["_"]["columns"]>,
+    TWhere extends FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   >(
     table: TTable,
     column: TColumn,
@@ -335,14 +302,11 @@ class Base<
   ): AggregateQuery<TTable, TColumn, number | null, TPrepare>;
   $min<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
-    where?: BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
     return new AggregateQuery(
       table,
@@ -363,18 +327,15 @@ class Base<
    */
   $max<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
   ): AggregateQuery<TTable, TColumn, number | null, TPrepare>;
   $max<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    TColumn extends Valueof<TTable["_"]["columns"]>,
+    TWhere extends FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   >(
     table: TTable,
     column: TColumn,
@@ -382,14 +343,11 @@ class Base<
   ): AggregateQuery<TTable, TColumn, number | null, TPrepare>;
   $max<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
-    where?: BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
     return new AggregateQuery(
       table,
@@ -410,18 +368,15 @@ class Base<
    */
   $distinct<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
   ): DistinctQuery<TTable, TColumn, TColumn["ValTypeSelect"][], TPrepare>;
   $distinct<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    TColumn extends Valueof<TTable["_"]["columns"]>,
+    TWhere extends FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   >(
     table: TTable,
     column: TColumn,
@@ -429,14 +384,11 @@ class Base<
   ): DistinctQuery<TTable, TColumn, TColumn["ValTypeSelect"][], TPrepare>;
   $distinct<
     TTable extends TTables[keyof TTables],
-    TColumn extends TTable["_"]["columns"][keyof TTable["_"]["columns"]],
+    TColumn extends Valueof<TTable["_"]["columns"]>,
   >(
     table: TTable,
     column: TColumn,
-    where?: BuildFilterExpression<
-      TColsToLeftRight<TTable["_"]["columns"]>,
-      TPrepare
-    >,
+    where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
     return new DistinctQuery(
       table,
@@ -667,7 +619,7 @@ export function database<TEntities extends Record<string, unknown>>(
             infer _x,
             infer _y
           >
-          ? `\"${TSchema}\".\"${TName}\"`
+          ? `"${TSchema}"."${TName}"`
           : never
         : never]: TEntities[Export] extends (
         ...args: unknown[]

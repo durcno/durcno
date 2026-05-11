@@ -1,12 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { BuildFilterExpression } from "../filters/index";
-import type {
-  AnyColumn,
-  TableColumn,
-  TableWithColumns,
-  TColsToLeftRight,
-} from "../table";
-import type { Key } from "../types";
+import type { FilterExpression } from "../filters/index";
+import type { AnyColumn, StdTableColumn, TableWithColumns } from "../table";
+import type { Valueof } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -14,7 +9,7 @@ type AggregateFunction = "SUM" | "AVG" | "MIN" | "MAX";
 
 export class AggregateQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
-  TColumn extends TableColumn<string, string, Key, AnyColumn>,
+  TColumn extends StdTableColumn,
   TReturn extends number | null,
   TPrepare extends boolean = false,
 > extends QueryPromise<TReturn> {
@@ -22,10 +17,7 @@ export class AggregateQuery<
   readonly #$column: TColumn;
   readonly #$fn: AggregateFunction;
   readonly #$where:
-    | BuildFilterExpression<
-        TColsToLeftRight<TTableWC["_"]["columns"]>,
-        TPrepare
-      >
+    | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
     | undefined;
   readonly #$executor: QueryExecutor;
   readonly #$prepare: TPrepare;
@@ -35,10 +27,7 @@ export class AggregateQuery<
     column: TColumn,
     fn: AggregateFunction,
     where:
-      | BuildFilterExpression<
-          TColsToLeftRight<TTableWC["_"]["columns"]>,
-          TPrepare
-        >
+      | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
       | undefined,
     executor: QueryExecutor,
     prepare: TPrepare = false as TPrepare,

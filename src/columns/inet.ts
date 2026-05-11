@@ -8,7 +8,8 @@ type InetConfig = ColumnConfig;
 
 export class InetColumn<TConfig extends InetConfig> extends Column<
   TConfig,
-  InetValType
+  InetValType,
+  "text"
 > {
   static readonly id = "Column.Inet";
 

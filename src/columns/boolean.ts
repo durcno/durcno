@@ -8,7 +8,8 @@ type BooleanConfig = ColumnConfig;
 
 export class BooleanColumn<TConfig extends BooleanConfig> extends Column<
   TConfig,
-  BooleanValType
+  BooleanValType,
+  "boolean"
 > {
   static readonly id = "Column.Boolean";
 
@@ -25,12 +26,12 @@ export class BooleanColumn<TConfig extends BooleanConfig> extends Column<
 
   toDriverScalar(value: BooleanValType | Sql | null) {
     if (value === null) return null;
-    return value instanceof Sql ? value.string : `${value ? "1" : "0"}`;
+    return value instanceof Sql ? value.string : `${value ? "'t'" : "'f'"}`;
   }
 
   toSQLScalar(value: boolean | Sql | null): string {
     if (value === null) return "NULL";
-    return value instanceof Sql ? value.string : `${value ? "'1'" : "'0'"}`;
+    return value instanceof Sql ? value.string : `${value ? "'t'" : "'f'"}`;
   }
 
   fromDriverScalar(value: boolean): BooleanValType | null {

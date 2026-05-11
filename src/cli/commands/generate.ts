@@ -9,10 +9,6 @@ import {
 } from "durcno/migration";
 import prompts from "prompts";
 import type { Connector } from "../../connectors/common";
-import {
-  snapshotExprToCheckBuilderCode,
-  snapshotExprToSQL,
-} from "../../constraints/check";
 import type {
   Snapshot,
   SnapshotColumn,
@@ -513,9 +509,7 @@ export function generateMigration(
         );
       }
       for (const chk of Object.values(currTable.checkConstraints)) {
-        tableBuilder.push(
-          `.check("${chk.name}", ${snapshotExprToCheckBuilderCode(chk.expr)})`,
-        );
+        tableBuilder.push(`.check("${chk.name}", \`${chk.sql}\`)`);
       }
       for (const uc of Object.values(currTable.uniqueConstraints ?? {})) {
         const cols = uc.columns.map((c) => `"${c}"`).join(", ");
@@ -562,7 +556,7 @@ export function generateMigration(
   if (statements.length === 0) return null;
 
   // TypeScript migration file content
-  return `import { type DDLStatement, ddl, sql, type MigrationOptions } from "durcno/migration";
+  return `import { type DDLStatement, ddl, type MigrationOptions } from "durcno/migration";
 
 export const options: MigrationOptions = ${stringifyMigrationOpts(defaultOptions ?? {})};
 
@@ -711,14 +705,8 @@ function generateAlterTableStmts(
     const prevChk = prevTable.checkConstraints[chkName];
     const currChk = currTable.checkConstraints[chkName];
 
-    if (!currChk) {
+    if (!currChk || prevChk.sql !== currChk.sql) {
       alterStatements.push(`.dropConstraint("${chkName}")`);
-    } else {
-      const prevSql = snapshotExprToSQL(prevChk.expr);
-      const currSql = snapshotExprToSQL(currChk.expr);
-      if (prevSql !== currSql) {
-        alterStatements.push(`.dropConstraint("${chkName}")`);
-      }
     }
   }
 
@@ -727,18 +715,8 @@ function generateAlterTableStmts(
     const currChk = currTable.checkConstraints[chkName];
     const prevChk = prevTable.checkConstraints[chkName];
 
-    if (!prevChk) {
-      alterStatements.push(
-        `.addCheck("${chkName}", ${snapshotExprToCheckBuilderCode(currChk.expr)})`,
-      );
-    } else {
-      const prevSql = snapshotExprToSQL(prevChk.expr);
-      const currSql = snapshotExprToSQL(currChk.expr);
-      if (prevSql !== currSql) {
-        alterStatements.push(
-          `.addCheck("${chkName}", ${snapshotExprToCheckBuilderCode(currChk.expr)})`,
-        );
-      }
+    if (!prevChk || prevChk.sql !== currChk.sql) {
+      alterStatements.push(`.addCheck("${chkName}", \`${currChk.sql}\`)`);
     }
   }
 

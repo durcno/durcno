@@ -1,6 +1,6 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { BuildFilterExpression } from "../filters/index";
-import type { AnyColumn, TableWithColumns, TColsToLeftRight } from "../table";
+import type { FilterExpression } from "../filters/index";
+import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key } from "../types";
 import { snakeToCamel } from "../utils";
 import { Query } from "./query";
@@ -42,8 +42,8 @@ class UpdateQuery<
   },
   TPrepare extends boolean,
   TWhere extends
-    | BuildFilterExpression<
-        TColsToLeftRight<TTableWC["_"]["columns"]>,
+    | FilterExpression<
+        TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
         TPrepare
       >
     | undefined,
@@ -96,8 +96,8 @@ class UpdateQuery<
   }
 
   where<
-    TWhere extends BuildFilterExpression<
-      TColsToLeftRight<TTableWC["_"]["columns"]>,
+    TWhere extends FilterExpression<
+      TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
       TPrepare
     >,
   >(where: TWhere) {
@@ -154,7 +154,7 @@ class UpdateQuery<
       const column = this.#table._.columns[colName];
       if (!explicitFields.has(colName) && column.hasUpdateFn) {
         allFields.push(colName);
-        allValues.push(column.getUpdateFnVal());
+        allValues.push(column.getUpdateFnVal);
       }
     }
 
@@ -190,15 +190,16 @@ class UpdateQuery<
   }
 
   handleRows(rows: Record<string, unknown>[]) {
-    const { columns } = this.#table._;
+    const newRows: Record<string, unknown>[] = [];
     rows.forEach((row) => {
+      const newRow: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(row)) {
         const keyCamel = snakeToCamel(key);
-        const column = columns[keyCamel] as AnyColumn;
-        row[keyCamel] = column.fromDriver(value);
-        if (keyCamel !== key) delete row[key];
+        const column = this.#table._.columns[keyCamel];
+        newRow[keyCamel] = column.fromDriver(value);
       }
+      newRows.push(newRow);
     });
-    return rows as TReturn;
+    return newRows as TReturn;
   }
 }

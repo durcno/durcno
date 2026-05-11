@@ -1,4 +1,20 @@
-import { bigint, integer, notNull, pk, table, varchar } from "durcno";
+import {
+  and,
+  bigint,
+  gt,
+  gte,
+  integer,
+  isIn,
+  length,
+  like,
+  lt,
+  lte,
+  notIn,
+  notNull,
+  pk,
+  table,
+  varchar,
+} from "durcno";
 
 export { Migrations } from "durcno";
 
@@ -20,18 +36,14 @@ export const Products = table(
     userName: varchar({ length: 100, notNull }),
   },
   {
-    checkConstraints: (
-      t,
-      check,
-      { gt, lt, and, gte, lte, like, fnGt, fnLte, length },
-    ) => [
+    checkConstraints: (t, check) => [
       check("positive_price", gt(t.price, 0n)),
       check("max_price", lt(t.price, 1_000_000n)),
       check("valid_quantity", and(gte(t.quantity, 0), lte(t.quantity, 10000))),
       check("valid_email", like(t.email, "%@%.%")),
       check(
         "name_length",
-        and(fnGt(length(t.userName), 2), fnLte(length(t.userName), 100)),
+        and(gt(length(t.userName), 2), lte(length(t.userName), 100)),
       ),
     ],
   },
@@ -54,13 +66,13 @@ export const Orders = table(
     array: integer({ notNull, dimension: [null] as const }),
   },
   {
-    checkConstraints: (t, check, { in: inOp, notIn, raw }) => [
-      check("valid_category", inOp(t.categoryId, [1, 2, 3])),
+    checkConstraints: (t, check) => [
+      check("valid_category", isIn(t.categoryId, [1, 2, 3])),
       check("excluded_category", notIn(t.categoryId, [99, 100])),
-      check("valid_status", inOp(t.status, ["active", "pending", "closed"])),
+      check("valid_status", isIn(t.status, ["active", "pending", "closed"])),
       check(
         "valid_array",
-        inOp(t.array, [
+        isIn(t.array, [
           [1, 2],
           [2, 1],
         ]),

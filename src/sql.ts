@@ -1,6 +1,6 @@
 import { isCol } from "./entity";
 import type { Query } from "./query-builders/query";
-import type { AnyTableColumn } from "./table";
+import type { TableAnyColumn } from "./table";
 
 export class Sql {
   readonly #string: string;
@@ -29,7 +29,7 @@ type SqlParam =
   | boolean
   | null
   | undefined
-  | AnyTableColumn;
+  | TableAnyColumn;
 
 export function sql(strings: TemplateStringsArray, ...params: SqlParam[]) {
   let s = "";
@@ -51,7 +51,7 @@ export function toSqlValue(value: SqlParam): string {
   } else if (typeof value === "number" || typeof value === "bigint") {
     return value.toString();
   } else if (typeof value === "boolean") {
-    return value ? "'1'" : "'0'";
+    return value ? "'t'" : "'f'";
   } else if (isCol(value)) {
     return value.fullName;
   } else {

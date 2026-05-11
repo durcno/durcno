@@ -1,6 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { BuildFilterExpression } from "../filters/index";
-import type { AnyColumn, TableWithColumns, TColsToLeftRight } from "../table";
+import type { FilterExpression } from "../filters/index";
+import type { AnyColumn, TableWithColumns } from "../table";
+import type { Valueof } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -10,10 +11,7 @@ export class ExistsQuery<
 > extends QueryPromise<boolean> {
   readonly #$table: TTableWC;
   readonly #$where:
-    | BuildFilterExpression<
-        TColsToLeftRight<TTableWC["_"]["columns"]>,
-        TPrepare
-      >
+    | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
     | undefined;
   readonly #$executor: QueryExecutor;
   readonly #$prepare: TPrepare;
@@ -21,10 +19,7 @@ export class ExistsQuery<
   constructor(
     table: TTableWC,
     where:
-      | BuildFilterExpression<
-          TColsToLeftRight<TTableWC["_"]["columns"]>,
-          TPrepare
-        >
+      | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
       | undefined,
     executor: QueryExecutor,
     prepare: TPrepare = false as TPrepare,

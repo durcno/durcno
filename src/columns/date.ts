@@ -8,7 +8,8 @@ type DateConfig = ColumnConfig;
 
 export class DateColumn<TConfig extends DateConfig> extends Column<
   TConfig,
-  DateValType
+  DateValType,
+  "datetime"
 > {
   static readonly id = "Column.Date";
 

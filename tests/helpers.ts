@@ -8,13 +8,13 @@ export function rmSync(folderPath: string) {
   }
 }
 
-export function runDurcnoCommand(
+export function runDurcno(
   args: string[],
   env: Record<string, string>,
   cwd?: string,
 ) {
   const result = spawnSync("pnpm", ["exec", "durcno", ...args], {
-    stdio: ["inherit", "inherit", "pipe"],
+    stdio: ["ignore", "ignore", "pipe"],
     env: env,
     cwd: cwd ?? __dirname,
   });
@@ -29,11 +29,11 @@ export function runDurcnoCommand(
 }
 
 /**
- * Clean all tables in the database (used in beforeEach).
+ * Truncate all tables in the database.
  * Excludes the migrations table by default.
  * Expects an already-connected $Client instance.
  */
-export async function cleanDatabase(
+export async function truncateTables(
   client: $Client,
   excludeTables: string[] = ["migrations"],
 ): Promise<void> {
@@ -46,9 +46,9 @@ export async function cleanDatabase(
   `);
 
   const rows = client.getRows(result) as { tablename: string }[];
-  for (const row of rows) {
-    await client.query(
-      `TRUNCATE TABLE "${row.tablename}" RESTART IDENTITY CASCADE`,
-    );
-  }
+  await client.query(
+    `TRUNCATE TABLE ${rows
+      .map((r) => `"${r.tablename}"`)
+      .join(", ")} RESTART IDENTITY CASCADE`,
+  );
 }

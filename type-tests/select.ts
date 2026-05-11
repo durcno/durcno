@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "durcno";
+import { and, asc, count, desc, eq, lower, sum } from "durcno";
 import { Comments, db, Posts, UserProfiles, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
@@ -332,3 +332,55 @@ _distinctOnNoJoin.innerJoin(Posts, eq(Users.id, Posts.userId));
 
 // @ts-expect-error - Cannot use columns from a different table in distinctOn
 db.from(Users).distinctOn(Posts.title).select();
+
+// ============================================================================
+// Mixed aggregate + non-aggregate in select (auto GROUP BY)
+// ============================================================================
+
+// Type test: aggregate + plain column infers correct shape
+const mixedColAggQuery = db
+  .from(Users)
+  .select({ type: Users.type, total: count("*") });
+type MixedColAgg = Awaited<typeof mixedColAggQuery>;
+Expect<Equal<MixedColAgg, { type: "admin" | "user"; total: number }[]>>();
+
+// Type test: aggregate + scalar fn infers correct shape
+const mixedFnAggQuery = db
+  .from(Users)
+  .select({ lowerEmail: lower(Users.email), total: count("*") });
+type MixedFnAgg = Awaited<typeof mixedFnAggQuery>;
+Expect<Equal<MixedFnAgg, { lowerEmail: string; total: number }[]>>();
+
+// Type test: multiple aggregates + multiple plain columns
+const multiMixedQuery = db.from(Users).select({
+  type: Users.type,
+  username: Users.username,
+  total: count("*"),
+  totalIds: sum(Users.id),
+});
+type MultiMixed = Awaited<typeof multiMixedQuery>;
+Expect<
+  Equal<
+    MultiMixed,
+    {
+      type: "admin" | "user";
+      username: string;
+      total: number;
+      totalIds: number | null;
+    }[]
+  >
+>();
+
+// Type test: pure aggregates only — no GROUP BY needed, shape is correct
+const pureAggQuery = db
+  .from(Users)
+  .select({ total: count("*"), distinctUsers: count(Users.id) });
+type PureAgg = Awaited<typeof pureAggQuery>;
+Expect<Equal<PureAgg, { total: number; distinctUsers: number }[]>>();
+
+// Type test: pure columns + scalars only — no GROUP BY, shape is correct
+const pureScalarQuery = db
+  .from(Users)
+  .select({ username: Users.username, lowerEmail: lower(Users.email) });
+type PureScalar = Awaited<typeof pureScalarQuery>;
+Expect<Equal<PureScalar, { username: string; lowerEmail: string }[]>>();

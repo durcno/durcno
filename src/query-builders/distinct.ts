@@ -1,28 +1,20 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { BuildFilterExpression } from "../filters/index";
-import type {
-  AnyColumn,
-  TableColumn,
-  TableWithColumns,
-  TColsToLeftRight,
-} from "../table";
-import type { Key } from "../types";
+import type { FilterExpression } from "../filters/index";
+import type { AnyColumn, StdTableColumn, TableWithColumns } from "../table";
+import type { Valueof } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class DistinctQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
-  TColumn extends TableColumn<string, string, Key, AnyColumn>,
+  TColumn extends StdTableColumn,
   TReturn = TColumn["ValTypeSelect"][],
   TPrepare extends boolean = false,
 > extends QueryPromise<TReturn> {
   readonly #$table: TTableWC;
   readonly #$column: TColumn;
   readonly #$where:
-    | BuildFilterExpression<
-        TColsToLeftRight<TTableWC["_"]["columns"]>,
-        TPrepare
-      >
+    | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
     | undefined;
   readonly #$executor: QueryExecutor;
   readonly #$prepare: TPrepare;
@@ -31,10 +23,7 @@ export class DistinctQuery<
     table: TTableWC,
     column: TColumn,
     where:
-      | BuildFilterExpression<
-          TColsToLeftRight<TTableWC["_"]["columns"]>,
-          TPrepare
-        >
+      | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
       | undefined,
     executor: QueryExecutor,
     prepare: TPrepare = false as TPrepare,

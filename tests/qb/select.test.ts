@@ -6,13 +6,13 @@ import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
-  cleanDatabase,
   createTestUser,
   generateMigrationsDirPath,
   runDurcnoCli,
   startPostgresContainer,
   stopPostgresContainer,
   type TestContainerInfo,
+  truncateTables,
 } from "./setup";
 
 describe("SELECT queries", () => {
@@ -58,7 +58,7 @@ describe("SELECT queries", () => {
   }, 120000);
 
   beforeEach(async () => {
-    await cleanDatabase(client);
+    await truncateTables(client);
   });
 
   afterAll(async () => {

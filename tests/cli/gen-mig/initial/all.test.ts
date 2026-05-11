@@ -21,7 +21,7 @@ describe("durcno generate - initial migration", () => {
     }
     // Run generate command
     execSync(`durcno generate --config ${configPath}`, {
-      stdio: "inherit",
+      stdio: ["ignore", "ignore", "pipe"],
     });
   }, 120000);
 
@@ -42,8 +42,8 @@ describe("durcno generate - initial migration", () => {
 
       // Run migrate command with DATABASE_PORT environment variable
       execSync(`durcno migrate --config ${configPath}`, {
+        stdio: ["ignore", "ignore", "pipe"],
         cwd: __dirname,
-        stdio: "inherit",
         env: {
           ...process.env,
           DATABASE_PORT: String(containerInfo.port),

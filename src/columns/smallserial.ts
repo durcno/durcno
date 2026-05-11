@@ -1,22 +1,23 @@
 import * as z from "zod";
 import { Sql } from "../sql";
-import { Column, type ColumnConfig } from "./common";
+import { Column, type ColumnConfig, type GeneratedByDefault } from "./common";
 
 type SmallserialValType = number;
 
 type SmallserialConfig = Pick<ColumnConfig, "primaryKey" | "unique">;
 
-// Internal config type that forces ValTypeInsert and ValTypeSelect to resolve correctly
 type SmallserialInternalConfig<TConfig extends SmallserialConfig> = TConfig & {
-  // Force generated: "BY DEFAULT" to make ValTypeInsert = number | undefined
-  generated: "BY DEFAULT";
   // Force notNull: true to make ValTypeSelect = number (not nullable)
   notNull: true;
 };
 
 export class SmallserialColumn<
   TConfig extends SmallserialConfig,
-> extends Column<SmallserialInternalConfig<TConfig>, SmallserialValType> {
+> extends Column<
+  SmallserialInternalConfig<TConfig>,
+  SmallserialValType,
+  "numeric"
+> {
   static readonly id = "Column.Smallserial";
 
   constructor(config: TConfig) {
@@ -56,6 +57,8 @@ export class SmallserialColumn<
 /** Creates a `smallserial` column. Auto-incrementing 16-bit integer, implicitly `NOT NULL`. Maps to `number`. */
 export function smallserial<TConfig extends SmallserialConfig>(
   config: TConfig,
-): SmallserialColumn<TConfig> {
-  return new SmallserialColumn(config);
+) {
+  return new SmallserialColumn(config) as GeneratedByDefault<
+    SmallserialColumn<TConfig>
+  >;
 }

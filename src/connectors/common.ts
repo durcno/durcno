@@ -209,7 +209,7 @@ abstract class $QueryExecutor {
    * @param q - The {@link Query} object to execute.
    * @returns A promise that resolves with the raw query result.
    */
-  async execQuery(q: Query<any>): Promise<unknown> {
+  async execQuery(q: Query<unknown>): Promise<unknown> {
     const start = performance.now();
     const result = await this.query(q.sql, q.arguments);
     if (this.logger) {

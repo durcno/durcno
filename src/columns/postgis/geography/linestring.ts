@@ -33,7 +33,8 @@ type GetZodType<T extends As | undefined> = z.ZodArray<GetPointZodType<T>>;
 
 export class LineStringColumn<TConfig extends LineStringConfig> extends Column<
   TConfig,
-  GetValType<TConfig["format"]>
+  GetValType<TConfig["format"]>,
+  "geography"
 > {
   static readonly id = "Column.Geography.LineString";
   readonly #srid: number;

@@ -57,12 +57,48 @@ export {
   lt,
   lte,
   ne,
+  notIn,
   or,
 } from "./filters/index";
-export * from "./functions";
+export {
+  stContains,
+  stDWithin,
+  stIntersects,
+  stWithin,
+} from "./filters/postgis";
+export { contains, endsWith, like, startsWith } from "./filters/string";
+export { now, SqlFn, uuidv4, uuidv7 } from "./functions";
+export {
+  avg,
+  count,
+  countDistinct,
+  max,
+  min,
+  sum,
+} from "./functions/aggregate";
+export {
+  abs,
+  ceil,
+  floor,
+  mod,
+  round,
+} from "./functions/numeric";
+export { stDistance } from "./functions/postgis";
+export {
+  left,
+  length,
+  lower,
+  position,
+  right,
+  trim,
+  upper,
+} from "./functions/string";
 export { index, uniqueIndex } from "./indexes";
 export { Migrations, pk } from "./models";
-export { asc, desc } from "./query-builders/orderby-clause";
+export {
+  asc,
+  desc,
+} from "./query-builders/orderby-clause";
 export { Arg, prequery } from "./query-builders/pre";
 export { Query } from "./query-builders/query";
 export { sequence } from "./sequence";
@@ -71,7 +107,6 @@ import { is } from "./entity";
 
 export type { QueryLogger } from "./logger";
 export { Sql, sql } from "./sql";
-export type { AnyTableColumn } from "./table";
 export {
   type AnyColumn,
   fk,
@@ -144,12 +179,4 @@ export type Config<T extends Connector = Connector> = {
   connector: T;
 };
 
-export type {
-  Is,
-  Key,
-  Prettify,
-  SelfOrArray,
-  SelfOrReadonly,
-  UnionToIntersection,
-  Valueof,
-} from "./types";
+export type { Key, Prettify } from "./types";

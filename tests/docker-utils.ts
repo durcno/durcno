@@ -4,7 +4,7 @@ import { Client } from "pg";
 import { v4 as uuid } from "uuid";
 import { type Image, images } from "./images";
 
-export { cleanDatabase } from "./helpers";
+export { truncateTables } from "./helpers";
 
 export interface TestContainerInfo {
   container: Docker.Container;

@@ -24,6 +24,8 @@ export class Arg<TType> {
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnyArg = Arg<any>;
 
+export type IsArg<T> = T extends Arg<any> ? true : false;
+
 export class PreparedStatement<TArgs extends Record<string, AnyArg>, TReturn> {
   readonly #query: Query;
   readonly #args: TArgs;

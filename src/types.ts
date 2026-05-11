@@ -1,3 +1,5 @@
+export type BasicTypes = string | number | bigint | boolean | null;
+
 export type CamelToSnake<S extends string> =
   S extends `${infer Head}${infer Tail}`
     ? Head extends Uppercase<Head>
@@ -12,6 +14,7 @@ export type Valueof<T> = T extends any ? T[keyof T] : never;
 
 export type SelfOrArray<T> = T | T[];
 export type SelfOrReadonly<T> = T | Readonly<T>;
+export type Or<T, U> = T extends true ? true : U extends true ? true : false;
 
 export type UnionToIntersection<U> =
   // biome-ignore lint/suspicious/noExplicitAny: <>

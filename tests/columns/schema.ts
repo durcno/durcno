@@ -326,6 +326,15 @@ export const GeographyMultiPolygonTests = table(
   },
 );
 
+/**
+ * Test table for PostGIS spatial filter integration tests.
+ */
+export const GeographyFilterTests = table("public", "geography_filter_tests", {
+  id: pk(),
+  name: varchar({ length: 100, notNull }),
+  location: geography.point({ notNull }),
+});
+
 // ============================================================================
 // Network Address Column Types (INET, CIDR, MACADDR)
 // ============================================================================

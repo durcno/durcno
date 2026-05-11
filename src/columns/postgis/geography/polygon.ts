@@ -38,7 +38,8 @@ type GetZodType<T extends As | undefined> = z.ZodArray<
 
 export class PolygonColumn<TConfig extends PolygonConfig> extends Column<
   TConfig,
-  GetValType<TConfig["format"]>
+  GetValType<TConfig["format"]>,
+  "geography"
 > {
   static readonly id = "Column.Geography.Polygon";
   readonly #srid: number;

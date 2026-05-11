@@ -1,31 +1,36 @@
 ---
-sidebar_position: 5
+sidebar_position: 2
 ---
 
 # Filters
 
-Durcno provides a set of type-safe filter operators for building WHERE conditions.
+Durcno provides a set of type-safe filter operators for building WHERE and CHECK clauses.
 
 ## Operator Reference
 
-| Operator                      | Description                      | Example                                      |
-| ----------------------------- | -------------------------------- | -------------------------------------------- |
-| `eq(col, val)`                | Equal                            | `eq(Users.type, "admin")`                    |
-| `ne(col, val)`                | Not equal                        | `ne(Users.type, "admin")`                    |
-| `gt(col, val)`                | Greater than                     | `gt(Users.id, 10n)`                          |
-| `gte(col, val)`               | Greater than or equal            | `gte(Users.id, 10n)`                         |
-| `lt(col, val)`                | Less than                        | `lt(Users.id, 10n)`                          |
-| `lte(col, val)`               | Less than or equal               | `lte(Users.id, 10n)`                         |
-| `isNull(col)`                 | IS NULL                          | `isNull(Users.email)`                        |
-| `isNotNull(col)`              | IS NOT NULL                      | `isNotNull(Users.email)`                     |
-| `isIn(col, arrOrSubquery)`    | IN array or subquery             | `isIn(Users.id, [1n, 2n, 3n])`               |
-| `and(...conditions)`          | AND logic                        | `and(eq(...), gte(...))`                     |
-| `or(...conditions)`           | OR logic                         | `or(eq(...), eq(...))`                       |
-| `arrayContains(col, values)`  | Array contains all values (`@>`) | `arrayContains(Posts.tags, ["ts", "pg"])`    |
-| `arrayContainedBy(col, vals)` | Array subset of values (`<@`)    | `arrayContainedBy(Posts.tags, ["ts", "pg"])` |
-| `arrayOverlaps(col, values)`  | Array overlaps values (`&&`)     | `arrayOverlaps(Posts.tags, ["ts"])`          |
-| `arrayHas(col, value)`        | Value exists in array (`ANY`)    | `arrayHas(Posts.tags, "typescript")`         |
-| `arrayAll(col, value)`        | All elements match value (`ALL`) | `arrayAll(Posts.flags, true)`                |
+| Operator                      | Description                                   | Example                                      |
+| ----------------------------- | --------------------------------------------- | -------------------------------------------- |
+| `eq(col, val)`                | Equal                                         | `eq(Users.type, "admin")`                    |
+| `ne(col, val)`                | Not equal                                     | `ne(Users.type, "admin")`                    |
+| `gt(col, val)`                | Greater than                                  | `gt(Users.id, 10n)`                          |
+| `gte(col, val)`               | Greater than or equal                         | `gte(Users.id, 10n)`                         |
+| `lt(col, val)`                | Less than                                     | `lt(Users.id, 10n)`                          |
+| `lte(col, val)`               | Less than or equal                            | `lte(Users.id, 10n)`                         |
+| `isNull(col)`                 | IS NULL                                       | `isNull(Users.email)`                        |
+| `isNotNull(col)`              | IS NOT NULL                                   | `isNotNull(Users.email)`                     |
+| `isIn(col, arrOrSubquery)`    | IN array or subquery                          | `isIn(Users.id, [1n, 2n, 3n])`               |
+| `notIn(col, values)`          | NOT IN array                                  | `notIn(Users.type, ["banned", "deleted"])`   |
+| `startsWith(col, val)`        | Starts with (`starts_with()`, case-sensitive) | `startsWith(Users.username, "admin")`        |
+| `endsWith(col, val)`          | Ends with (case-sensitive)                    | `endsWith(Users.email, "@test.com")`         |
+| `contains(col, val)`          | Contains (case-sensitive)                     | `contains(Users.bio, "typescript")`          |
+| `like(col, pattern)`          | Case-sensitive LIKE pattern                   | `like(Users.code, "US%")`                    |
+| `and(...conditions)`          | AND logic                                     | `and(eq(...), gte(...))`                     |
+| `or(...conditions)`           | OR logic                                      | `or(eq(...), eq(...))`                       |
+| `arrayContains(col, values)`  | Array contains all values (`@>`)              | `arrayContains(Posts.tags, ["ts", "pg"])`    |
+| `arrayContainedBy(col, vals)` | Array subset of values (`<@`)                 | `arrayContainedBy(Posts.tags, ["ts", "pg"])` |
+| `arrayOverlaps(col, values)`  | Array overlaps values (`&&`)                  | `arrayOverlaps(Posts.tags, ["ts"])`          |
+| `arrayHas(col, value)`        | Value exists in array (`ANY`)                 | `arrayHas(Posts.tags, "typescript")`         |
+| `arrayAll(col, value)`        | All elements match value (`ALL`)              | `arrayAll(Posts.flags, true)`                |
 
 ## Comparison Operators
 
@@ -160,6 +165,59 @@ await db
   .select()
   .where(isIn(Users.type, ["admin", "user"]));
 ```
+
+### NOT IN Array (`notIn`)
+
+Check if a column value is not in an array:
+
+```typescript
+import { notIn } from "durcno";
+
+// Exclude specific statuses
+await db
+  .from(Users)
+  .select()
+  .where(notIn(Users.type, ["banned", "deleted"]));
+```
+
+### String Filters
+
+Durcno provides case-sensitive text search operators:
+
+- `startsWith` uses PostgreSQL's `starts_with()` function
+- `endsWith` uses `LIKE('%' || val)`
+- `contains` uses `LIKE('%' || val || '%')`
+
+```typescript
+import { startsWith, endsWith, contains } from "durcno";
+
+// startsWith: Match records starting with a prefix (case-sensitive)
+await db.from(Users).select().where(startsWith(Users.username, "admin"));
+
+// endsWith: Match records ending with a suffix (case-sensitive)
+await db.from(Users).select().where(endsWith(Users.email, "@example.com"));
+
+// contains: Match records containing a substring (case-sensitive)
+await db.from(Users).select().where(contains(Users.bio, "typescript"));
+```
+
+### LIKE (`like`)
+
+Case-sensitive pattern matching using PostgreSQL's `LIKE` operator. Use `%` for any sequence of characters and `_` for any single character:
+
+```typescript
+import { like } from "durcno";
+
+// Match codes starting with "US" (case-sensitive)
+await db.from(Countries).select().where(like(Countries.code, "US%"));
+
+// Match values with exactly 5 characters
+await db.from(Products).select().where(like(Products.sku, "_____"));
+```
+
+:::tip Case sensitivity
+All string filter functions — `like`, `startsWith`, `endsWith`, and `contains` — are case-sensitive. For case-insensitive matching, use the `ILIKE` operator via a raw `sql` template: `.where(sql`${Users.email} ILIKE ${'%@example.com'}`)`.
+:::
 
 ## Logical Operators
 

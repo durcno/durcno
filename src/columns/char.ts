@@ -11,7 +11,8 @@ type CharConfig = ColumnConfig & {
 
 export class CharColumn<TConfig extends CharConfig> extends Column<
   TConfig,
-  CharValType
+  CharValType,
+  "text"
 > {
   static readonly id = "Column.Char";
   readonly #length: number;

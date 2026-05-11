@@ -25,7 +25,7 @@ export const ConstraintTest = table(
     groupId: integer({ notNull }),
     email: varchar({ length: 255, notNull }),
     name: varchar({ length: 100, notNull }),
-    createdAt: timestamp({ notNull, default: now() }),
+    createdAt: timestamp({ notNull }).default(now()),
   },
   {
     uniqueConstraints: (t, unique) => {

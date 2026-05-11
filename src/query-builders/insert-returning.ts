@@ -35,7 +35,7 @@ export class InsertReturningQuery<
     const insertQuery = new InsertQuery(
       this.#$table,
       this.#$values,
-      returningAll as never,
+      returningAll as Record<string, true>,
       this.#$executor,
       false,
     );
@@ -53,15 +53,14 @@ export class InsertReturningQuery<
     return this.handleRows(rows);
   }
 
-  handleRows(rows: Record<string, unknown>[]): TReturn {
+  handleRows(rows: Record<string, unknown>[]) {
     const row = rows[0];
-    const { columns } = this.#$table._;
+    const newRow: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(row)) {
       const keyCamel = snakeToCamel(key);
-      const column = columns[keyCamel] as AnyColumn;
-      row[keyCamel] = column.fromDriver(value as never);
-      if (keyCamel !== key) delete row[key];
+      const column = this.#$table._.columns[keyCamel];
+      newRow[keyCamel] = column.fromDriver(value);
     }
-    return row as TReturn;
+    return newRow as TReturn;
   }
 }

@@ -21,21 +21,21 @@ import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
-  cleanDatabase,
   createTestUser,
   generateMigrationsDirPath,
   runDurcnoCli,
   startPostgresContainer,
   stopPostgresContainer,
   type TestContainerInfo,
+  truncateTables,
 } from "./setup";
 
-describe("WHERE clause operators", () => {
+describe("Filters", () => {
   let containerInfo: TestContainerInfo;
   let container: Docker.Container;
   let db: ReturnType<typeof database<typeof schema>>;
   let client: $Client;
-  const migrationsDirName = generateMigrationsDirPath("where");
+  const migrationsDirName = generateMigrationsDirPath("filters");
 
   beforeAll(async () => {
     containerInfo = await startPostgresContainer({
@@ -74,7 +74,7 @@ describe("WHERE clause operators", () => {
   }, 120000);
 
   beforeEach(async () => {
-    await cleanDatabase(client);
+    await truncateTables(client);
   });
 
   afterAll(async () => {
@@ -616,7 +616,7 @@ describe("WHERE clause operators", () => {
         .insert(schema.Users)
         .values([
           createTestUser({ type: "admin", status: "active", age: 30 }),
-          createTestUser({ type: "user", status: "active", age: 25 }),
+          createTestUser({ type: "user", status: "active", age: 30 }),
           createTestUser({ type: "admin", status: "inactive", age: 35 }),
         ]);
 

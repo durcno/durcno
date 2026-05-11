@@ -21,7 +21,8 @@ type TimestampConfig = ColumnConfig & {
 
 export class TimestampColumn<TConfig extends TimestampConfig> extends Column<
   TConfig,
-  TimestampValType
+  TimestampValType,
+  "datetime"
 > {
   static readonly id = "Column.Timestamp";
   readonly #withTimezone: boolean;

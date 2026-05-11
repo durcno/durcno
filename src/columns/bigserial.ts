@@ -1,22 +1,20 @@
 import * as z from "zod";
 import { Sql } from "../sql";
-import { Column, type ColumnConfig } from "./common";
+import { Column, type ColumnConfig, type GeneratedByDefault } from "./common";
 
 type BigserialValType = bigint;
 
 type BigserialConfig = Pick<ColumnConfig, "primaryKey" | "unique">;
 
-// Internal config type that forces ValTypeInsert and ValTypeSelect to resolve correctly
 type BigserialInternalConfig<TConfig extends BigserialConfig> = TConfig & {
-  // Force generated: "BY DEFAULT" to make ValTypeInsert = number | undefined
-  generated: "BY DEFAULT";
   // Force notNull: true to make ValTypeSelect = number (not nullable)
   notNull: true;
 };
 
 export class BigserialColumn<TConfig extends BigserialConfig> extends Column<
   BigserialInternalConfig<TConfig>,
-  BigserialValType
+  BigserialValType,
+  "numeric"
 > {
   static readonly id = "Column.Bigserial";
 
@@ -57,8 +55,8 @@ export class BigserialColumn<TConfig extends BigserialConfig> extends Column<
 }
 
 /** Creates a `bigserial` column. Auto-incrementing 64-bit integer, implicitly `NOT NULL`. Maps to `bigint`. */
-export function bigserial<TConfig extends BigserialConfig>(
-  config: TConfig,
-): BigserialColumn<TConfig> {
-  return new BigserialColumn(config);
+export function bigserial<TConfig extends BigserialConfig>(config: TConfig) {
+  return new BigserialColumn(config) as GeneratedByDefault<
+    BigserialColumn<TConfig>
+  >;
 }

@@ -1,5 +1,4 @@
-import type { AnyColumn, AnyTableWithColumns, TableColumn } from "../table";
-import type { Key } from "../types";
+import type { StdTable, StdTableColumn } from "../table";
 
 // ============================================================================
 // Primary Key Constraint
@@ -7,12 +6,9 @@ import type { Key } from "../types";
 
 export class PrimaryKeyConstraint {
   readonly #name: string;
-  readonly #columns: TableColumn<string, string, Key, AnyColumn>[];
+  readonly #columns: StdTableColumn[];
 
-  constructor(
-    name: string,
-    columns: TableColumn<string, string, Key, AnyColumn>[],
-  ) {
+  constructor(name: string, columns: StdTableColumn[]) {
     if (columns.length < 2) {
       throw new Error(
         "PRIMARY KEY constraint requires at least two columns. For single-column primary key, use the column-level 'pk()' function instead.",
@@ -22,7 +18,7 @@ export class PrimaryKeyConstraint {
     this.#columns = columns;
   }
 
-  getName<TTable extends AnyTableWithColumns>(table: TTable): string {
+  getName(table: StdTable): string {
     return this.#name.startsWith(`${table._.name}_`)
       ? this.#name
       : `${table._.name}_${this.#name}`;
@@ -50,11 +46,7 @@ export class PrimaryKeyConstraint {
  */
 export function primaryKeyConstraint(
   name: string,
-  columns: [
-    TableColumn<string, string, Key, AnyColumn>,
-    TableColumn<string, string, Key, AnyColumn>,
-    ...TableColumn<string, string, Key, AnyColumn>[],
-  ],
+  columns: [StdTableColumn, StdTableColumn, ...StdTableColumn[]],
 ) {
   return new PrimaryKeyConstraint(name, columns);
 }

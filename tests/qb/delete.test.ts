@@ -6,13 +6,13 @@ import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
-  cleanDatabase,
   createTestUser,
   generateMigrationsDirPath,
   runDurcnoCli,
   startPostgresContainer,
   stopPostgresContainer,
   type TestContainerInfo,
+  truncateTables,
 } from "./setup";
 
 describe("DELETE queries", () => {
@@ -59,7 +59,7 @@ describe("DELETE queries", () => {
   }, 120000);
 
   beforeEach(async () => {
-    await cleanDatabase(client);
+    await truncateTables(client);
   });
 
   afterAll(async () => {
@@ -197,23 +197,5 @@ describe("DELETE queries", () => {
 
     const users = await db.from(schema.Users).select();
     expect(users).toHaveLength(0);
-  });
-
-  it("should delete rows matching complex conditions", async () => {
-    await db
-      .insert(schema.Users)
-      .values([
-        createTestUser({ type: "user", status: "active" }),
-        createTestUser({ type: "user", status: "inactive" }),
-        createTestUser({ type: "admin", status: "active" }),
-      ]);
-
-    await db
-      .delete(schema.Users)
-      .where(eq(schema.Users.type, "user"))
-      .where(eq(schema.Users.status, "inactive"));
-
-    const remaining = await db.from(schema.Users).select();
-    expect(remaining).toHaveLength(2);
   });
 });

@@ -1,13 +1,8 @@
 import type { OnDeleteAction } from "../../columns/common";
-import {
-  MigrationCheckBuilder,
-  type MigrationCheckExprCallback,
-  type SnapshotCheckExpr,
-  snapshotExprToSQL,
-} from "../../constraints/check";
 import type {
   Snapshot,
   SnapshotColumn,
+  SnapshotTableCheck,
   SnapshotTablePrimaryKey,
   SnapshotTableUnique,
 } from "../snapshot";
@@ -60,7 +55,7 @@ interface ColumnDef {
 
 interface CheckDef {
   name: string;
-  expr: SnapshotCheckExpr;
+  sql: string;
 }
 
 interface UniqueConstraintDef {
@@ -149,19 +144,14 @@ export class CreateTableBuilder extends DDLStatement {
   /**
    * Add a CHECK constraint to the table.
    *
-   * Mirrors the `checkConstraints` schema API:
-   * ```typescript
-   * .check("positive_price", ({ gt }) => gt("price", sql`0`))
-   * ```
-   *
    * @param chkName - Constraint name.
-   * @param expr - A callback receiving {@link MigrationCheckBuilder}.
+   * @param sql - The CHECK expression as a SQL string.
    * @returns `this` for chaining.
    */
-  check(chkName: string, expr: MigrationCheckExprCallback): this {
+  check(chkName: string, sql: string): this {
     this.checks.push({
       name: chkName,
-      expr: expr(new MigrationCheckBuilder()),
+      sql,
     });
     return this;
   }
@@ -200,9 +190,7 @@ export class CreateTableBuilder extends DDLStatement {
     }
 
     for (const chk of this.checks) {
-      entries.push(
-        `  CONSTRAINT ${chk.name} CHECK (${snapshotExprToSQL(chk.expr)})`,
-      );
+      entries.push(`  CONSTRAINT ${chk.name} CHECK (${chk.sql})`);
     }
 
     for (const uc of this._uniqueConstraints) {
@@ -246,15 +234,11 @@ export class CreateTableBuilder extends DDLStatement {
     }
 
     const tableKey = `${this.schema}.${this.name}`;
-    const checks: Record<
-      string,
-      { name: string; table: string; expr: SnapshotCheckExpr }
-    > = {};
+    const checkConstraints: Record<string, SnapshotTableCheck> = {};
     for (const chk of this.checks) {
-      checks[chk.name] = {
+      checkConstraints[chk.name] = {
         name: chk.name,
-        table: tableKey,
-        expr: chk.expr,
+        sql: chk.sql,
       };
     }
 
@@ -281,7 +265,7 @@ export class CreateTableBuilder extends DDLStatement {
       name: this.name,
       columns,
       indexes: {},
-      checkConstraints: checks,
+      checkConstraints,
       uniqueConstraints,
       primaryKeyConstraint,
     };
@@ -378,7 +362,7 @@ type AlterTableAction =
   | { type: "dropNotNull"; column: string }
   | { type: "setDefault"; column: string; defaultValue: string }
   | { type: "dropDefault"; column: string }
-  | { type: "addCheck"; name: string; expr: SnapshotCheckExpr }
+  | { type: "addCheck"; name: string; sql: string }
   | { type: "addUniqueConstraint"; name: string; columns: string[] }
   | { type: "addPrimaryKeyConstraint"; name: string; columns: string[] }
   | {
@@ -540,20 +524,15 @@ export class AlterTableBuilder extends DDLStatement {
   /**
    * Add a CHECK constraint to the table.
    *
-   * Mirrors the `checkConstraints` schema API:
-   * ```typescript
-   * .addCheck("max_price", ({ lt }) => lt("price", sql`1000000`))
-   * ```
-   *
    * @param name - Constraint name.
-   * @param expr - A callback receiving {@link MigrationCheckBuilder}.
+   * @param sql - The CHECK expression as a SQL string.
    * @returns `this` for chaining.
    */
-  addCheck(name: string, expr: MigrationCheckExprCallback): this {
+  addCheck(name: string, sql: string): this {
     this.actions.push({
       type: "addCheck",
       name,
-      expr: expr(new MigrationCheckBuilder()),
+      sql,
     });
     return this;
   }
@@ -675,7 +654,7 @@ export class AlterTableBuilder extends DDLStatement {
           break;
         case "addCheck":
           statements.push(
-            `ALTER TABLE ${relation} ADD CONSTRAINT ${action.name} CHECK (${snapshotExprToSQL(action.expr)});`,
+            `ALTER TABLE ${relation} ADD CONSTRAINT ${action.name} CHECK (${action.sql});`,
           );
           break;
         case "addUniqueConstraint": {
@@ -808,11 +787,9 @@ export class AlterTableBuilder extends DDLStatement {
           }
           break;
         case "addCheck": {
-          const tableKey = `${this.schema}.${this.name}`;
           table.checkConstraints[action.name] = {
             name: action.name,
-            table: tableKey,
-            expr: action.expr,
+            sql: action.sql,
           };
           break;
         }

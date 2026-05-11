@@ -223,3 +223,96 @@ Durcno uses **GeoJSON coordinate ordering** (`[longitude, latitude]`) for all ge
 - **PostgreSQL** ↔ EWKT with SRID (the internal wire format)
 
 This means you can work with familiar `[lng, lat]` tuples in your application code while Durcno handles the database serialization transparently.
+
+## Spatial Filters
+
+Durcno provides type-safe spatial filter functions for use in `.where()` clauses. All filters accept a geography column and a reference coordinate typed as the column's `ValType` — so passing the wrong column type is a compile-time error.
+
+```typescript
+import {
+  stContains,
+  stDistance,
+  stDWithin,
+  stIntersects,
+  stWithin,
+} from "durcno";
+```
+
+### Boolean Predicates
+
+These functions return a boolean condition usable in `.where()`:
+
+| Function                               | SQL generated                                                  | Description                                       |
+| -------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------- |
+| `stDWithin(col, point, radius, srid?)` | `ST_DWithin(col, ST_SetSRID(ST_MakePoint(...), srid), radius)` | True if column is within `radius` metres of point |
+| `stIntersects(col, point, srid?)`      | `ST_Intersects(col, ST_SetSRID(ST_MakePoint(...), srid))`      | True if column intersects point                   |
+| `stContains(col, point, srid?)`        | `ST_Contains(col, ST_SetSRID(ST_MakePoint(...), srid))`        | True if column contains point                     |
+| `stWithin(col, point, srid?)`          | `ST_Within(col, ST_SetSRID(ST_MakePoint(...), srid))`          | True if column is within point geometry           |
+
+The `point` argument is typed as `Col["ValType"]` — inferred directly from the column definition.
+
+```typescript
+const Properties = table("public", "properties", {
+  id: pk(),
+  type: varchar({ length: 50, notNull }),
+  location: geography.point({ notNull }),
+  availableFrom: timestamp({ notNull }),
+});
+
+// Find properties near a given location
+const nearby = await db
+  .from(Properties)
+  .select()
+  .where(
+    and(
+      stDWithin(Properties.location, [centerLon, centerLat], input.radius),
+      eq(Properties.type, input.type),
+      lte(Properties.availableFrom, new Date(input.date)),
+    ),
+  );
+```
+
+### `stDistance` — Value Expression
+
+`stDistance` is a **typed SQL value expression** (not a filter) that computes the distance in metres between a geography column and a given point. It can be used in three contexts:
+
+```typescript
+const dist = stDistance(Properties.location, [centerLon, centerLat]);
+
+// 1. In select — adds a computed numeric column to the result
+const rows = await db
+  .from(Properties)
+  .select({ id: Properties.id, distance: dist });
+// rows[0].distance → number (metres)
+
+// 2. In orderBy — order results by proximity
+const byProximity = await db.from(Properties).select().orderBy(asc(dist));
+
+// 3. In where via comparison operators
+const withinRange = await db.from(Properties).select().where(lt(dist, 5000)); // closer than 5 km
+```
+
+All three can be combined:
+
+```typescript
+const dist = stDistance(Properties.location, [centerLon, centerLat]);
+
+const results = await db
+  .from(Properties)
+  .select({ id: Properties.id, type: Properties.type, distance: dist })
+  .orderBy(asc(dist))
+  .where(and(lt(dist, input.radius), eq(Properties.type, input.type)));
+// results[0] → { id: bigint; type: string; distance: number }
+```
+
+### Type Safety
+
+All spatial filter functions are constrained to **geography point columns only**. Passing a non-geography column is a compile-time error:
+
+```typescript
+// ✅ Valid — geography.point column
+stDWithin(Properties.location, [2.29, 48.85], 5000);
+
+// ❌ Compile error — varchar is not a geography column
+stDWithin(Properties.type, [2.29, 48.85], 5000);
+```

@@ -37,7 +37,7 @@ type GetZodType<T extends As | undefined> = z.ZodArray<
 
 export class MultiLineStringColumn<
   TConfig extends MultiLineStringConfig,
-> extends Column<TConfig, GetValType<TConfig["format"]>> {
+> extends Column<TConfig, GetValType<TConfig["format"]>, "geography"> {
   static readonly id = "Column.Geography.MultiLineString";
   readonly #srid: number;
   readonly #as: TConfig["format"];

@@ -1,14 +1,17 @@
 import * as z from "zod";
+import { SqlFn, type StdSqlFn } from "../functions";
 import { Arg } from "../query-builders/pre";
+import type { Query } from "../query-builders/query";
 import { Sql } from "../sql";
 import { entityType } from "../symbols";
-import type { StdTableColumn, TableColumn } from "../table";
+import type { StdTable, StdTableColumn, TableColumn } from "../table";
 import type { Key } from "../types";
 import { camelToSnake } from "../utils";
 
 export const notNull = true as const;
 export const unique = true as const;
 export const primaryKey = true as const;
+export const identity = "IDENTITY" as const;
 
 // Helper type to build a tuple of fixed length
 type Tuple<T, L extends number, Acc extends T[] = []> = Acc["length"] extends L
@@ -70,26 +73,17 @@ interface TableLike {
   };
 }
 
-export type OnDeleteAction =
-  | "CASCADE"
-  | "SET NULL"
-  | "SET DEFAULT"
-  | "RESTRICT"
-  | "NO ACTION";
+export const OnDeleteActions = [
+  "CASCADE",
+  "SET NULL",
+  "SET DEFAULT",
+  "RESTRICT",
+  "NO ACTION",
+] as const;
+
+export type OnDeleteAction = (typeof OnDeleteActions)[number];
 
 export type ColumnConfig = {
-  /**
-   * SQL equivalent: `GENERATED <ALWAYS|BY DEFAULT> AS ...`
-   */
-  generated?: "ALWAYS" | "BY DEFAULT";
-  /**
-   * SQL equivalent: the value following `AS`, e.g. `IDENTITY` or `(START WITH 1)`
-   */
-  as?: "IDENTITY" | `(${string})`;
-  /**
-   * The dimension of the array column.
-   */
-  dimension?: Readonly<[number | null, ...(number | null)[]]>;
   /**
    * SQL equivalent: `PRIMARY KEY`
    */
@@ -102,6 +96,10 @@ export type ColumnConfig = {
    * SQL equivalent: `NOT NULL`
    */
   notNull?: true;
+  /**
+   * The dimension of the array column.
+   */
+  dimension?: Readonly<[number | null, ...(number | null)[]]>;
 };
 
 /**
@@ -109,6 +107,11 @@ export type ColumnConfig = {
  * Used as the return type of `default()` method.
  */
 type HasDefault<C> = C & { hasDefault: true };
+
+export type GeneratedAlways<C> = C & { isGeneratedAlways: true };
+export type GeneratedByDefault<C> = C & {
+  isGeneratedByDefault: true;
+};
 
 /**
  * Type that augments C with a `hasInsertFn` property set to true.
@@ -128,9 +131,9 @@ type HasUpdateFn<C> = C & { hasUpdateFn: true };
  * a resolver and optional `onDelete` action.
  */
 type BuildRef<ValType> =
-  | (() => TableColumn<string, string, Key, Column<any, ValType>>)
+  | (() => TableColumn<string, string, Key, Column<any, ValType, any>>)
   | {
-      column: () => TableColumn<string, string, Key, Column<any, ValType>>;
+      column: () => TableColumn<string, string, Key, Column<any, ValType, any>>;
       onDelete?: OnDeleteAction;
     };
 
@@ -150,11 +153,20 @@ export type SetValueType<C, U> = C & {
   };
 };
 
-export abstract class Column<TConfig extends ColumnConfig, TColVal> {
+export abstract class Column<
+  TConfig extends ColumnConfig,
+  TColVal,
+  TPgType extends string = string,
+> {
   static readonly [entityType] = "Column";
   readonly config: TConfig;
   readonly $!: {
-    ColValType: TColVal;
+    /** Phantom discriminant id for this entity kind. */
+    kind: "column";
+    /** The PostgreSQL type category for this column. */
+    PgType: TPgType;
+    /** The TypeScript type for this column's value. */
+    TsTypeScalar: TColVal;
     ValTypeBase: GetValueArray<TColVal, TConfig>;
     // biome-ignore lint/complexity/noBannedTypes: <>
     HasValTypeOverridde: {};
@@ -164,11 +176,11 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
   readonly ValType!: this["$"]["HasValTypeOverridde"] extends true
     ? this["$"]["ValTypeOverride"]
     : this["$"]["ValTypeBase"];
-  readonly ValTypeInsert!: TConfig extends {
-    generated: "ALWAYS";
+  readonly ValTypeInsert!: this extends {
+    isGeneratedAlways: true;
   }
     ? never
-    : TConfig extends { generated: "BY DEFAULT" }
+    : this extends { isGeneratedByDefault: true }
       ? this["ValType"] | undefined
       : this extends {
             hasDefault: true;
@@ -186,9 +198,13 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
     : TConfig extends { notNull: true }
       ? this["ValType"]
       : this["ValType"] | null;
-  readonly ValTypeSelect!: TConfig extends {
-    generated: string;
-  }
+  readonly ValTypeSelect!: TConfig extends
+    | {
+        isGeneratedAlways: true;
+      }
+    | {
+        isGeneratedByDefault: true;
+      }
     ? this["ValType"]
     : TConfig extends {
           primaryKey: true;
@@ -205,8 +221,8 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
   readonly #primaryKey: boolean;
   readonly #unique: boolean;
   readonly #notNull: boolean;
-  readonly #generated: TConfig["generated"];
-  readonly #as: TConfig["as"];
+  #generated: "ALWAYS" | "BY DEFAULT" | undefined;
+  #generatedAs: string | Sql | StdSqlFn | undefined;
   #references:
     | { column: () => StdTableColumn; onDelete: OnDeleteAction }
     | undefined;
@@ -215,18 +231,14 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
   #name: string | undefined;
   // Stores the snake_case name of the column for SQL usage
   #nameSnake: string | undefined;
-
   // Stores the table reference
-  #table: TableLike | undefined;
+  #table: undefined;
 
   constructor(config: TConfig) {
     this.config = config;
     this.#primaryKey = "primaryKey" in config ? !!config.primaryKey : false;
     this.#unique = "unique" in config ? !!config.unique : false;
     this.#notNull = "notNull" in config ? !!config.notNull : false;
-    this.#generated = "generated" in config ? config.generated : undefined;
-    this.#as = "as" in config ? config.as : undefined;
-    this.#references = undefined;
   }
 
   _ = {
@@ -236,8 +248,8 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
       this.#nameSnake = camelToSnake(name);
     },
     // Setter to set the table reference when the column is added to a table
-    setTable: (table: TableLike) => {
-      this.#table = table;
+    setTable: (table: StdTable) => {
+      this.#table = table as unknown as undefined;
     },
   };
 
@@ -256,28 +268,8 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
     return this.#table;
   }
 
-  get generated() {
-    return this.#generated as TConfig extends { generated: string }
-      ? TConfig["generated"]
-      : undefined;
-  }
-
-  get as() {
-    return this.#as as TConfig extends { as: string }
-      ? TConfig["as"]
-      : undefined;
-  }
-
   get isPrimaryKey() {
     return this.#primaryKey as TConfig extends { primaryKey: true }
-      ? true
-      : false;
-  }
-
-  get isGenerated() {
-    return (typeof this.#generated === "string") as TConfig extends {
-      generated: string;
-    }
       ? true
       : false;
   }
@@ -342,6 +334,10 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
    */
   get fullName(): string {
     return `"${this.table?._.name}"."${this.nameSnake}"`;
+  }
+
+  toQuery(query: Query) {
+    query.sql += this.fullName;
   }
 
   // Abstract methods for scalar (single-value) conversions - to be implemented by each column type
@@ -551,9 +547,56 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
   get hasDefault() {
     return this.#default !== undefined;
   }
-  defaultToSQL(): string | undefined {
+  get getDefaultSqlStr(): string | undefined {
     if (this.#default === undefined) return undefined;
     return this.toSQL(this.#default);
+  }
+
+  /**
+   * Marks this column as always generated (identity or generated always as expression).
+   * SQL equivalent: `GENERATED ALWAYS`
+   * @returns this column instance typed as `GeneratedAlways`
+   */
+  generatedAlways() {
+    this.#generated = "ALWAYS";
+    return this as GeneratedAlways<this>;
+  }
+  get isGeneratedAlways() {
+    return this.#generated === "ALWAYS";
+  }
+  /**
+   * Marks this column as generated by default (identity or generated by default as expression).
+   * SQL equivalent: `GENERATED BY DEFAULT`
+   * @returns this column instance typed as `GeneratedByDefault`
+   */
+  generatedByDefault() {
+    this.#generated = "BY DEFAULT";
+    return this as GeneratedByDefault<this>;
+  }
+  get isGeneratedByDefault() {
+    return this.#generated === "BY DEFAULT";
+  }
+  get getGenerated() {
+    return this.#generated;
+  }
+
+  /**
+   * Sets the SQL expression used for a generated column.
+   * SQL equivalent: `GENERATED (ALWAYS|BY DEFAULT) AS (<expression>)`
+   * @param as - A SQL string or `Sql` expression that defines the generated value
+   * @returns this column instance
+   */
+  as(as: string | Sql) {
+    this.#generatedAs = as;
+    return this;
+  }
+  get getGeneratedAs() {
+    if (this.#generatedAs instanceof Sql) {
+      return this.#generatedAs.string;
+    } else if (this.#generatedAs instanceof SqlFn) {
+      return this.#generatedAs.toSQL();
+    }
+    return this.#generatedAs;
   }
 
   /**
@@ -579,10 +622,10 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
   get hasReferences(): boolean {
     return this.#references !== undefined;
   }
-  get referencesCol(): StdTableColumn | null {
+  get getReferencesCol(): StdTableColumn | null {
     return this.#references ? this.#references.column() : null;
   }
-  get referencesOnDelete(): OnDeleteAction | null {
+  get getReferencesOnDelete(): OnDeleteAction | null {
     return this.#references ? this.#references.onDelete : null;
   }
 
@@ -598,7 +641,7 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
   get hasInsertFn() {
     return this.#insertFn !== undefined;
   }
-  getInsertFnVal(): this["ValType"] | null {
+  get getInsertFnVal(): this["ValType"] | null {
     return this.#insertFn ? this.#insertFn() : null;
   }
 
@@ -614,7 +657,7 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
   get hasUpdateFn() {
     return this.#updateFn !== undefined;
   }
-  getUpdateFnVal(): this["ValType"] | null {
+  get getUpdateFnVal(): this["ValType"] | null {
     return this.#updateFn ? this.#updateFn() : null;
   }
 
@@ -639,4 +682,4 @@ export abstract class Column<TConfig extends ColumnConfig, TColVal> {
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: A Column value can be anything
-export type StdColumn = Column<ColumnConfig, any>;
+export type StdColumn = Column<ColumnConfig, any, string>;

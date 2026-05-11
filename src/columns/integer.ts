@@ -8,7 +8,8 @@ type IntegerConfig = ColumnConfig;
 
 export class IntegerColumn<TConfig extends IntegerConfig> extends Column<
   TConfig,
-  IntegerValType
+  IntegerValType,
+  "numeric"
 > {
   static readonly id = "Column.Integer";
 

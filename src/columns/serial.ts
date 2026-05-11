@@ -1,22 +1,20 @@
 import * as z from "zod";
 import { Sql } from "../sql";
-import { Column, type ColumnConfig } from "./common";
+import { Column, type ColumnConfig, type GeneratedByDefault } from "./common";
 
 type SerialValType = number;
 
 type SerialConfig = Pick<ColumnConfig, "primaryKey" | "unique">;
 
-// Internal config type that forces ValTypeInsert and ValTypeSelect to resolve correctly
 type SerialInternalConfig<TConfig extends SerialConfig> = TConfig & {
-  // Force generated: "BY DEFAULT" to make ValTypeInsert = number | undefined
-  generated: "BY DEFAULT";
   // Force notNull: true to make ValTypeSelect = number (not nullable)
   notNull: true;
 };
 
 export class SerialColumn<TConfig extends SerialConfig> extends Column<
   SerialInternalConfig<TConfig>,
-  SerialValType
+  SerialValType,
+  "numeric"
 > {
   static readonly id = "Column.Serial";
 
@@ -55,8 +53,6 @@ export class SerialColumn<TConfig extends SerialConfig> extends Column<
 }
 
 /** Creates a `serial` column. Auto-incrementing 32-bit integer, implicitly `NOT NULL`. Maps to `number`. */
-export function serial<TConfig extends SerialConfig>(
-  config: TConfig,
-): SerialColumn<TConfig> {
-  return new SerialColumn(config);
+export function serial<TConfig extends SerialConfig>(config: TConfig) {
+  return new SerialColumn(config) as GeneratedByDefault<SerialColumn<TConfig>>;
 }

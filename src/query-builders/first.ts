@@ -1,6 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { BuildFilterExpression } from "../filters/index";
-import type { AnyColumn, TableWithColumns, TColsToLeftRight } from "../table";
+import type { FilterExpression } from "../filters/index";
+import type { AnyColumn, TableWithColumns } from "../table";
+import type { Valueof } from "../types";
 import { snakeToCamel } from "../utils";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -16,10 +17,7 @@ export class FirstQuery<
 > extends QueryPromise<TReturn> {
   readonly #$table: TTableWC;
   readonly #$where:
-    | BuildFilterExpression<
-        TColsToLeftRight<TTableWC["_"]["columns"]>,
-        TPrepare
-      >
+    | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
     | undefined;
   readonly #$executor: QueryExecutor;
   readonly #$prepare: TPrepare;
@@ -27,10 +25,7 @@ export class FirstQuery<
   constructor(
     table: TTableWC,
     where:
-      | BuildFilterExpression<
-          TColsToLeftRight<TTableWC["_"]["columns"]>,
-          TPrepare
-        >
+      | FilterExpression<Valueof<TTableWC["_"]["columns"]>, TPrepare>
       | undefined,
     executor: QueryExecutor,
     prepare: TPrepare = false as TPrepare,
@@ -61,17 +56,15 @@ export class FirstQuery<
   }
 
   handleRows(rows: Record<string, unknown>[]): TReturn {
-    if (rows.length === 0) {
-      return null as TReturn;
-    }
+    if (rows.length === 0) return null as TReturn;
+
     const row = rows[0];
-    const { columns } = this.#$table._;
+    const newRow: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(row)) {
       const keyCamel = snakeToCamel(key);
-      const column = columns[keyCamel] as AnyColumn;
-      row[keyCamel] = column.fromDriver(value as never);
-      if (keyCamel !== key) delete row[key];
+      const column = this.#$table._.columns[keyCamel] as AnyColumn;
+      newRow[keyCamel] = column.fromDriver(value);
     }
-    return row as TReturn;
+    return newRow as TReturn;
   }
 }

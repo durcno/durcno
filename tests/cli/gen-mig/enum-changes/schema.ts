@@ -37,5 +37,5 @@ export const Users = table("public", "users", {
   id: pk(),
   username: varchar({ length: 50, notNull }),
   role: RoleType.enumed({ notNull }),
-  createdAt: timestamp({ notNull, default: now() }),
+  createdAt: timestamp({ notNull }).default(now()),
 });

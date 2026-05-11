@@ -5,19 +5,19 @@ import { type $Client, database, defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
-  cleanDatabase,
   startPostgresContainer,
   stopPostgresContainer,
   type TestContainerInfo,
+  truncateTables,
 } from "../../docker-utils";
-import { runDurcnoCommand } from "../../helpers";
+import { runDurcno } from "../../helpers";
 import * as schema from "./schema";
 
 const MIGRATIONS_DIR = "migrations.test";
 
 function runDurcnoCli(command: string, containerInfo: TestContainerInfo): void {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
-  runDurcnoCommand([command, "--config", configPath], {
+  runDurcno([command, "--config", configPath], {
     ...process.env,
     DB_PORT: containerInfo.port.toString(),
     DB_NAME: containerInfo.dbName,
@@ -66,7 +66,7 @@ describe("check constraints — insert acceptance and rejection", () => {
   }, 120_000);
 
   beforeEach(async () => {
-    await cleanDatabase(client);
+    await truncateTables(client);
   });
 
   afterAll(async () => {

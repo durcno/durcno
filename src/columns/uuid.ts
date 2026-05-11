@@ -17,7 +17,8 @@ const UUID_REGEX =
 
 export class UuidColumn<TConfig extends UuidConfig> extends Column<
   TConfig,
-  UuidValType
+  UuidValType,
+  "text"
 > {
   static readonly id = "Column.Uuid";
 

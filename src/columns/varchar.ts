@@ -11,7 +11,8 @@ type VarcharConfig = ColumnConfig & {
 
 export class VarcharColumn<TConfig extends VarcharConfig> extends Column<
   TConfig,
-  VarcharValType
+  VarcharValType,
+  "text"
 > {
   static readonly id = "Column.Varchar";
   readonly #length: number;

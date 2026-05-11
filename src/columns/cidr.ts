@@ -8,7 +8,8 @@ type CidrConfig = ColumnConfig;
 
 export class CidrColumn<TConfig extends CidrConfig> extends Column<
   TConfig,
-  CidrValType
+  CidrValType,
+  "text"
 > {
   static readonly id = "Column.Cidr";
 

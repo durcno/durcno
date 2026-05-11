@@ -27,7 +27,7 @@ export const Users = table("public", "users", {
   id: pk(),
   username: varchar({ length: 50, unique, notNull }),
   email: varchar({ length: 100, notNull }),
-  createdAt: timestamp({ notNull, default: now() }),
+  createdAt: timestamp({ notNull }).default(now()),
   // Stage 2: bio and age added; Stage 3+: only age remains
   ...(stage >= 2 && stage <= 2 && { bio: text({}) }),
   ...(stage >= 2 && { age: integer({}) }),
@@ -42,6 +42,6 @@ export const Posts =
         content: text({ notNull }),
         userId: bigint({ notNull }),
         publishedAt: timestamp({}),
-        createdAt: timestamp({ notNull, default: now() }),
+        createdAt: timestamp({ notNull }).default(now()),
       })
     : undefined;

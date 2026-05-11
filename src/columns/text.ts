@@ -8,7 +8,8 @@ type TextConfig = ColumnConfig;
 
 export class TextColumn<TConfig extends TextConfig> extends Column<
   TConfig,
-  TextValType
+  TextValType,
+  "text"
 > {
   static readonly id = "Column.Text";
 

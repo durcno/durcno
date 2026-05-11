@@ -1,16 +1,15 @@
 import { bigint } from "./columns/bigint";
-import { notNull, primaryKey, unique } from "./columns/common";
+import { identity, notNull, primaryKey, unique } from "./columns/common";
 import { timestamp } from "./columns/timestamp";
 import { varchar } from "./columns/varchar";
 import { now } from "./functions";
 import { table } from "./table";
 
 /**
- * Returns a BigintColumn with { primaryKey, generated: "ALWAYS", as: "IDENTITY" }.
+ * Returns a BigintColumn with { primaryKey } and .generatedAlways().as(identity)
  * @returns BigintColumn
  */
-export const pk = () =>
-  bigint({ primaryKey, generated: "ALWAYS", as: "IDENTITY" });
+export const pk = () => bigint({ primaryKey }).generatedAlways().as(identity);
 
 export const Migrations = table("durcno", "migrations", {
   id: pk(),

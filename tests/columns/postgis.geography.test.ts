@@ -1,4 +1,4 @@
-import { eq } from "durcno";
+import { and, asc, eq, lt, stDistance, stDWithin, stIntersects } from "durcno";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -333,6 +333,106 @@ describe("Geography Column Types (PostGIS)", () => {
         .select()
         .where(eq(schema.GeographyMultiPolygonTests.id, insertedId));
       expect(row.multipolygon).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // SPATIAL FILTERS
+  // ==========================================================================
+
+  describe("PostGIS spatial filters", () => {
+    const NYC: [number, number] = [-74.006, 40.7128];
+    const LA: [number, number] = [-118.2437, 34.0522];
+    // Distance NYC ↔ LA is ~3,944 km
+
+    beforeAll(async () => {
+      const db = getDb();
+      await db
+        .insert(schema.GeographyFilterTests)
+        .values({ name: "NYC", location: NYC });
+      await db
+        .insert(schema.GeographyFilterTests)
+        .values({ name: "LA", location: LA });
+    });
+
+    it("stDWithin with small radius returns no results", async () => {
+      const db = getDb();
+      const rows = await db
+        .from(schema.GeographyFilterTests)
+        .select()
+        .where(stDWithin(schema.GeographyFilterTests.location, NYC, 5000));
+      // Only NYC is within 5 km of NYC
+      expect(rows).toHaveLength(1);
+      expect(rows[0].name).toBe("NYC");
+    });
+
+    it("stDWithin with large radius returns all results", async () => {
+      const db = getDb();
+      const rows = await db
+        .from(schema.GeographyFilterTests)
+        .select()
+        .where(stDWithin(schema.GeographyFilterTests.location, NYC, 5_000_000));
+      expect(rows).toHaveLength(2);
+    });
+
+    it("stIntersects on stored point returns the row", async () => {
+      const db = getDb();
+      const rows = await db
+        .from(schema.GeographyFilterTests)
+        .select()
+        .where(stIntersects(schema.GeographyFilterTests.location, NYC));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].name).toBe("NYC");
+    });
+
+    it("stDistance in select returns numeric distance", async () => {
+      const db = getDb();
+      const dist = stDistance(schema.GeographyFilterTests.location, LA);
+      const rows = await db
+        .from(schema.GeographyFilterTests)
+        .select({ name: schema.GeographyFilterTests.name, distance: dist })
+        .where(eq(schema.GeographyFilterTests.name, "NYC"));
+      expect(rows).toHaveLength(1);
+      expect(typeof rows[0].distance).toBe("number");
+      // NYC to LA is ~3,944 km — distance is in meters
+      expect(rows[0].distance).toBeGreaterThan(3_900_000);
+    });
+
+    it("stDistance in orderBy orders by proximity (asc)", async () => {
+      const db = getDb();
+      const dist = stDistance(schema.GeographyFilterTests.location, NYC);
+      const rows = await db
+        .from(schema.GeographyFilterTests)
+        .select({ name: schema.GeographyFilterTests.name, distance: dist })
+        .orderBy(asc(dist));
+      expect(rows[0].name).toBe("NYC");
+      expect(rows[1].name).toBe("LA");
+      expect(rows[0].distance).toBeLessThan(rows[1].distance);
+    });
+
+    it("lt(stDistance(...), threshold) filters by distance", async () => {
+      const db = getDb();
+      const rows = await db
+        .from(schema.GeographyFilterTests)
+        .select()
+        .where(lt(stDistance(schema.GeographyFilterTests.location, NYC), 5000));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].name).toBe("NYC");
+    });
+
+    it("and(stDWithin, eq) combined filter works correctly", async () => {
+      const db = getDb();
+      const rows = await db
+        .from(schema.GeographyFilterTests)
+        .select()
+        .where(
+          and(
+            stDWithin(schema.GeographyFilterTests.location, NYC, 5_000_000),
+            eq(schema.GeographyFilterTests.name, "LA"),
+          ),
+        );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].name).toBe("LA");
     });
   });
 });

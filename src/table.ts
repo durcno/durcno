@@ -1,5 +1,5 @@
 import type { Column } from "./columns/common";
-import type { Check, CheckBuilder, CheckExpr } from "./constraints/check";
+import type { Check, CheckExpression } from "./constraints/check";
 import type {
   PrimaryKeyConstraint,
   PrimaryKeyConstraintFn,
@@ -10,36 +10,10 @@ import type {
 } from "./constraints/unique";
 import type { Index } from "./indexes";
 import { entityType } from "./symbols";
-import type { CamelToSnake, Key } from "./types";
+import type { CamelToSnake, Key, Valueof } from "./types";
 
 // biome-ignore lint/suspicious/noExplicitAny: AnyColumn is a wildcard type for any column
-export type AnyColumn = Column<any, any>;
-
-type InferTColArgs<TColumns extends Record<string, unknown>> = {
-  [ColName in keyof TColumns]: TColumns[ColName] extends TableColumn<
-    infer TTSchema,
-    infer TTName,
-    infer TCName,
-    infer TColumn
-  >
-    ? [TTSchema, TTName, TCName, TColumn]
-    : never;
-};
-
-export type TColsToLeftRight<TColumns extends Record<string, AnyTableColumn>> =
-  {
-    [ColName in keyof TColumns]: TColumns[ColName] extends TableColumn<
-      infer UTSchema,
-      infer UTName,
-      infer UCName,
-      infer UColumn
-    >
-      ? {
-          left: [UTSchema, UTName, UCName, UColumn];
-          right: InferTColArgs<Omit<TColumns, UCName>>;
-        }
-      : never;
-  };
+export type AnyColumn = Column<any, any, any>;
 
 type TableExtra<
   TSchema extends string,
@@ -59,8 +33,12 @@ type TableExtra<
   ) => UniqueConstraint[];
   checkConstraints?: (
     table: TableWithColumns<TSchema, TName, TColumns>,
-    check: (name: string, expr: CheckExpr) => Check,
-    c: CheckBuilder,
+    check: (
+      name: string,
+      expr: CheckExpression<
+        Valueof<TableWithColumns<TSchema, TName, TColumns>["_"]["columns"]>
+      >,
+    ) => Check,
   ) => Check[];
 };
 
@@ -72,7 +50,6 @@ type TableConfig<
   readonly name: TName;
   readonly schema: TSchema;
   readonly fullName: `"${TSchema}"."${TName}"`;
-  readonly cols: TColumns;
   readonly columns: {
     [ColName in keyof TColumns]: TableColumn<
       TSchema,
@@ -100,9 +77,11 @@ export type TableColumn<
 export type StdTableColumn = TableColumn<string, string, Key, AnyColumn>;
 
 // biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnyTableColumn = TableColumn<any, any, any, any>;
+export type TableAnyColumn = TableColumn<any, any, any, AnyColumn>;
 
-export type TableColumnArgs = [string, string, Key, AnyColumn];
+export type AnyScalarTableColumn = TableColumn<any, any, any, AnyColumn> & {
+  config: { dimension?: undefined };
+};
 
 function bindNameNTable(table: StdTable, columns: Record<string, AnyColumn>) {
   for (const [ColName, col] of Object.entries(columns)) {
@@ -136,9 +115,7 @@ export class Table<
     inferSelect: {
       [ColName in keyof TColumns]: TColumns[ColName]["ValTypeSelect"];
     };
-    _: {
-      scmTblColumns: BuildScmTblColumns<TSchema, TName, TColumns>;
-    };
+    columns: TColumns;
   };
   _: TableConfig<TSchema, TName, TColumns>;
 
@@ -153,7 +130,6 @@ export class Table<
       schema,
       name,
       fullName: `"${schema}"."${name}"`,
-      cols: columns,
       columns: columns as {
         [ColName in keyof TColumns]: TableColumn<
           TSchema,
@@ -168,6 +144,9 @@ export class Table<
 }
 
 export type StdTable = Table<string, string, Record<string, AnyColumn>>;
+
+// biome-ignore lint/suspicious/noExplicitAny: <>
+export type AnyTable = Table<any, any, any>;
 
 export type TableWithColumns<
   TTSchema extends string,
@@ -184,6 +163,12 @@ export type StdTableWithColumns = TableWithColumns<
 
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnyTableWithColumns = TableWithColumns<any, any, any>;
+
+export type AnyTableWC = TableWithColumns<
+  string,
+  string,
+  Record<any, AnyColumn>
+>;
 
 export type TableWCorNever<T> =
   T extends TableWithColumns<infer TTSchema, infer TTName, infer TColumns>

@@ -6,7 +6,6 @@ import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
-  cleanDatabase,
   createTestPost,
   createTestUser,
   generateMigrationsDirPath,
@@ -14,6 +13,7 @@ import {
   startPostgresContainer,
   stopPostgresContainer,
   type TestContainerInfo,
+  truncateTables,
 } from "./setup";
 
 describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct, $insertReturning)", () => {
@@ -60,7 +60,7 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
   }, 120000);
 
   beforeEach(async () => {
-    await cleanDatabase(client);
+    await truncateTables(client);
   });
 
   afterAll(async () => {

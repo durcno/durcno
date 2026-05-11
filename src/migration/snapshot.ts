@@ -1,10 +1,6 @@
 import chalk from "chalk";
 import type { OnDeleteAction } from "../columns/common";
-import {
-  CheckBuilder,
-  check,
-  type SnapshotCheckExpr,
-} from "../constraints/check";
+import { check, createCheckTableProxy } from "../constraints/check";
 import { primaryKeyConstraint } from "../constraints/primary-key";
 import { uniqueConstraint } from "../constraints/unique";
 import { is } from "../entity";
@@ -142,10 +138,8 @@ export interface SnapshotTableIndex {
 export interface SnapshotTableCheck {
   /** The constraint name. */
   name: string;
-  /** The `"schema.table"` key of the owning table. */
-  table: string;
-  /** The check expression. */
-  expr: SnapshotCheckExpr;
+  /** The check constraint SQL expression. */
+  sql: string;
 }
 
 /**
@@ -218,11 +212,14 @@ export function snapshot(entities: unknown[]): Snapshot {
         uniqueConstraints: {},
       };
       Object.entries(table._.columns).forEach(([_, col]) => {
-        const { referencesCol, referencesOnDelete } = col;
+        const {
+          getReferencesCol: referencesCol,
+          getReferencesOnDelete: referencesOnDelete,
+        } = col;
         ss.tables[`${table._.schema}.${table._.name}`].columns[col.nameSnake] =
           {
             type: col.sqlType,
-            default: col.defaultToSQL(),
+            default: col.getDefaultSqlStr,
             primaryKey: col.isPrimaryKey || undefined,
             references:
               referencesCol !== null
@@ -235,8 +232,8 @@ export function snapshot(entities: unknown[]): Snapshot {
                 : undefined,
             unique: col.isUnique || undefined,
             notNull: col.isNotNull || undefined,
-            generated: col.generated,
-            as: col.as ?? (col.generated ? "IDENTITY" : undefined),
+            generated: col.getGenerated,
+            as: col.getGeneratedAs,
           };
       });
       (table._.extra.indexes?.(table as StdTableWithColumns) ?? []).forEach(
@@ -252,21 +249,17 @@ export function snapshot(entities: unknown[]): Snapshot {
           };
         },
       );
-      (
-        table._.extra.checkConstraints?.(
-          table as StdTableWithColumns,
-          check,
-          new CheckBuilder(),
-        ) ?? []
-      ).forEach((chk) => {
-        ss.tables[`${table._.schema}.${table._.name}`].checkConstraints[
-          chk.getName()
-        ] = {
-          name: chk.getName(),
-          table: table._.fullName,
-          expr: chk.toSnapshotExpr(),
-        };
-      });
+      const checkProxyTable = createCheckTableProxy(table);
+      (table._.extra.checkConstraints?.(checkProxyTable, check) ?? []).forEach(
+        (chk) => {
+          ss.tables[`${table._.schema}.${table._.name}`].checkConstraints[
+            chk.getName()
+          ] = {
+            name: chk.getName(),
+            sql: chk.toSQL(),
+          };
+        },
+      );
       (
         table._.extra.uniqueConstraints?.(
           table as StdTableWithColumns,

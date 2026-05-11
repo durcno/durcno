@@ -19,7 +19,8 @@ type NumericConfig = ColumnConfig & {
 
 export class NumericColumn<TConfig extends NumericConfig> extends Column<
   TConfig,
-  NumericValType
+  NumericValType,
+  "numeric"
 > {
   static readonly id = "Column.Numeric";
   readonly #precision?: number;

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { rmSync, runDurcnoCommand } from "../../../helpers";
+import { rmSync, runDurcno } from "../../../helpers";
 
 describe("durcno generate/migrate - pglite connector", () => {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
@@ -19,12 +19,12 @@ describe("durcno generate/migrate - pglite connector", () => {
     dbPath = fs.mkdtempSync(path.join(os.tmpdir(), "durcno-pglite-"));
 
     // Generate migrations from the schema
-    runDurcnoCommand(["generate", "--config", configPath], {
+    runDurcno(["generate", "--config", configPath], {
       ...process.env,
     } as Record<string, string>);
 
     // Run migrations using the PGlite connector pointed at the temp dir
-    runDurcnoCommand(
+    runDurcno(
       ["migrate", "--config", configPath],
       {
         ...process.env,

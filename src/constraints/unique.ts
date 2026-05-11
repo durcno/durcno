@@ -1,4 +1,4 @@
-import type { AnyColumn, AnyTableWithColumns, TableColumn } from "../table";
+import type { AnyColumn, StdTable, TableColumn } from "../table";
 import type { Key } from "../types";
 
 // ============================================================================
@@ -22,7 +22,7 @@ export class UniqueConstraint {
     this.#columns = columns;
   }
 
-  getName<TTable extends AnyTableWithColumns>(table: TTable): string {
+  getName(table: StdTable): string {
     return this.#name.startsWith(`${table._.name}_`)
       ? this.#name
       : `${table._.name}_${this.#name}`;

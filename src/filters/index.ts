@@ -1,772 +1,298 @@
 import { is, isTCol } from "../entity";
-import type { Filter } from "../filters/index";
-import { Arg } from "../query-builders/pre";
+import { type AnyScalarSqlFn, SqlFn } from "../functions";
+import { Arg, type IsArg } from "../query-builders/pre";
 import type { Query } from "../query-builders/query";
 import type { SelectQuery } from "../query-builders/select";
-import type { Sql } from "../sql";
-import type {
-  AnyColumn,
-  AnyTableWithColumns,
-  StdTableColumn,
-  TableColumn,
-  TableColumnArgs,
-  TColsToLeftRight,
-} from "../table";
-import type { Key } from "../types";
+import { type Sql, toSqlValue } from "../sql";
+import type { AnyColumn, TableAnyColumn } from "../table";
+import type { BasicTypes, Or } from "../types";
 
-export { Filter } from "./custom";
-
-type ConditionExpression<
-  Left extends TableColumnArgs,
-  Right extends Record<string, TableColumnArgs>,
-  TArg extends boolean = false,
-> =
-  | EqualValCondition<Left[0], Left[1], Left[2], Left[3], Left[3]["ValType"]>
-  | (TArg extends true
-      ? EqualValCondition<
-          Left[0],
-          Left[1],
-          Left[2],
-          Left[3],
-          Arg<Left[3]["ValType"]>
-        >
-      : never)
-  | {
-      [RightKey in keyof Right]: EqualColCondition<
-        Left[0],
-        Left[1],
-        Left[2],
-        Left[3],
-        Right[RightKey][0],
-        Right[RightKey][1],
-        Right[RightKey][2],
-        Right[RightKey][3]
-      >;
-    }[keyof Right]
-  | GreaterEqualValCondition<
-      Left[0],
-      Left[1],
-      Left[2],
-      Left[3],
-      Left[3]["ValType"] | (TArg extends true ? Arg<Left[3]["ValType"]> : never)
-    >
-  | {
-      [RightKey in keyof Right]: GreaterEqualColCondition<
-        Left[0],
-        Left[1],
-        Left[2],
-        Left[3],
-        Right[RightKey][0],
-        Right[RightKey][1],
-        Right[RightKey][2],
-        Right[RightKey][3]
-      >;
-    }[keyof Right]
-  | GreaterThanValCondition<
-      Left[0],
-      Left[1],
-      Left[2],
-      Left[3],
-      Left[3]["ValType"] | (TArg extends true ? Arg<Left[3]["ValType"]> : never)
-    >
-  | {
-      [RightKey in keyof Right]: GreaterThanColCondition<
-        Left[0],
-        Left[1],
-        Left[2],
-        Left[3],
-        Right[RightKey][0],
-        Right[RightKey][1],
-        Right[RightKey][2],
-        Right[RightKey][3]
-      >;
-    }[keyof Right]
-  | LessThanValCondition<
-      Left[0],
-      Left[1],
-      Left[2],
-      Left[3],
-      Left[3]["ValType"] | (TArg extends true ? Arg<Left[3]["ValType"]> : never)
-    >
-  | {
-      [RightKey in keyof Right]: LessThanColCondition<
-        Left[0],
-        Left[1],
-        Left[2],
-        Left[3],
-        Right[RightKey][0],
-        Right[RightKey][1],
-        Right[RightKey][2],
-        Right[RightKey][3]
-      >;
-    }[keyof Right]
-  | LessEqualValCondition<
-      Left[0],
-      Left[1],
-      Left[2],
-      Left[3],
-      Left[3]["ValType"] | (TArg extends true ? Arg<Left[3]["ValType"]> : never)
-    >
-  | {
-      [RightKey in keyof Right]: LessEqualColCondition<
-        Left[0],
-        Left[1],
-        Left[2],
-        Left[3],
-        Right[RightKey][0],
-        Right[RightKey][1],
-        Right[RightKey][2],
-        Right[RightKey][3]
-      >;
-    }[keyof Right]
-  | IsNullCondition<Left[0], Left[1], Left[2], Left[3]>
-  | InCondition<Left[0], Left[1], Left[2], Left[3], TArg>;
-
-export type BuildFilterExpression<
-  TLeftRight extends Record<
-    string,
-    {
-      left: TableColumnArgs;
-      right: Record<string, TableColumnArgs>;
-    }
-  >,
-  TArg extends boolean = false,
-> =
-  | {
-      [LeftKey in keyof TLeftRight]: ConditionExpression<
-        TLeftRight[LeftKey]["left"],
-        TLeftRight[LeftKey]["right"],
-        TArg
-      >;
-    }[keyof TLeftRight]
-  | Filter<
-      {
-        [LeftKey in keyof TLeftRight]: TLeftRight[LeftKey]["left"] extends [
-          infer Schema extends string,
-          infer TblName extends string,
-          infer ColName extends string,
-          infer ColType extends AnyColumn,
-        ]
-          ? TableColumn<Schema, TblName, ColName, ColType>
-          : never;
-      }[keyof TLeftRight]
-    >
-  | Sql
-  | AndCondition<BuildFilterExpression<TLeftRight, TArg>[]>
-  | OrCondition<BuildFilterExpression<TLeftRight, TArg>[]>;
-
-export type StdCondition = BuildFilterExpression<
-  TColsToLeftRight<AnyTableWithColumns["_"]["columns"]>
->;
-
-export class EqualValCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"] | Arg<Col["ValType"]>,
+/** Abstract base class for SQL filter expressions used in `WHERE`/`ON`/`CHECK` clauses. */
+export abstract class Filter<
+  TColumns extends TableAnyColumn = TableAnyColumn,
+  THasArg extends boolean = false,
 > {
-  readonly left: TableColumn<CTSchema, CTName, CName, Col>;
+  /** Phantom field: the columns this filter is applied to. */
+  readonly $Columns!: TColumns;
+  /** Phantom field: `true` when this filter embeds at least one `Arg` placeholder. */
+  readonly $HasArg!: THasArg;
+  abstract toQuery(query: Query): void;
+}
+
+/** Convenience alias for a `Filter` with all type parameters widened to `any`. */
+// biome-ignore lint/suspicious/noExplicitAny: <>
+export type AnyFilter = Filter<any, any>;
+
+/**
+ * Constrains a filter expression to columns allowed in the current query scope.
+ * Accepts either a `Filter` whose `$Columns` is assignable to `TScopeColumns`,
+ * or a raw `Sql` snippet. When `TArg` is `true`, filters carrying `Arg`
+ * placeholders are also accepted (prepared-query context).
+ */
+export type FilterExpression<
+  TScopeColumns extends TableAnyColumn,
+  TPrepare extends boolean = false,
+> = Filter<TScopeColumns, TPrepare extends true ? boolean : false> | Sql;
+
+export type StdCondition = FilterExpression<TableAnyColumn>;
+
+type HasArg<T> = T extends { $HasArg: true } ? true : false;
+
+export class ComparisonLeftIsColumn<
+  TLeft extends TableAnyColumn,
+  TOp extends string,
+  TRight extends
+    | TLeft["ValType"]
+    | Arg<TLeft["ValType"]>
+    | TableAnyColumn
+    | AnyScalarSqlFn,
+> extends Filter<TLeft, Or<IsArg<TRight>, HasArg<TRight>>> {
+  readonly left: TLeft;
+  readonly op: TOp;
   readonly right: TRight;
-  constructor(field: TableColumn<CTSchema, CTName, CName, Col>, right: TRight) {
+  constructor(field: TLeft, op: TOp, right: TRight) {
+    super();
     this.left = field;
+    this.op = op;
     this.right = right;
   }
   toQuery(query: Query) {
-    query.sql += `${this.left.fullName} = `;
-    if (is(this.right, Arg)) {
+    this.left.toQuery(query);
+    query.sql += ` ${this.op} `;
+    if (is(this.right, Arg<TLeft["ValType"]>)) {
       query.addArg(this.right);
+    } else if (isTCol(this.right)) {
+      this.right.toQuery(query);
+    } else if (this.right instanceof SqlFn) {
+      this.right.toQuery(query);
     } else {
       query.sql += this.left.toSQL(this.right);
     }
   }
 }
 
-export class EqualColCondition<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
+export class ComparisonLeftIsSqlFn<
+  TLeft extends AnyScalarSqlFn,
+  TOp extends string,
+  TRight extends BasicTypes | AnyScalarSqlFn,
+> extends Filter<
+  | TLeft["$Columns"]
+  | (TRight extends AnyScalarSqlFn ? TRight["$Columns"] : never),
+  HasArg<TLeft> extends true ? true : HasArg<TRight>
 > {
-  readonly left: TableColumn<C1TSchema, C1TName, C1Name, C1>;
-  readonly right: TableColumn<C2TSchema, C2TName, C2Name, C2>;
-  constructor(
-    field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-    right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-  ) {
+  readonly left: TLeft;
+  readonly op: TOp;
+  readonly right: TRight;
+  constructor(field: TLeft, op: TOp, right: TRight) {
+    super();
     this.left = field;
+    this.op = op;
     this.right = right;
   }
   toQuery(query: Query) {
-    query.sql += `${this.left.fullName} = ${this.right.fullName}`;
+    this.left.toQuery(query);
+    query.sql += ` ${this.op} `;
+    if (this.right instanceof SqlFn) {
+      this.right.toQuery(query);
+    } else {
+      query.sql += toSqlValue(this.right);
+    }
   }
 }
 
 export function eq<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"],
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
-  right: TRight,
-): EqualValCondition<CTSchema, CTName, CName, Col, TRight>;
+  TLeft extends TableAnyColumn,
+  TRight extends TLeft["ValType"],
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "=", TRight>;
 export function eq<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Arg<Col["ValType"]>,
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
+  TLeft extends TableAnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "=", TRight>;
+export function eq<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
   right: TRight,
-): EqualValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function eq<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
->(
-  field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-  right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-): EqualColCondition<
-  C1TSchema,
-  C1TName,
-  C1Name,
-  C1,
-  C2TSchema,
-  C2TName,
-  C2Name,
-  C2
->;
+): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
+export function eq<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
 export function eq(
-  field: StdTableColumn,
-  right: AnyColumn["ValType"] | Arg<AnyColumn["ValType"]> | StdTableColumn,
+  left: TableAnyColumn | AnyScalarSqlFn,
+  right:
+    | AnyColumn["ValType"]
+    | Arg<AnyColumn["ValType"]>
+    | TableAnyColumn
+    | AnyScalarSqlFn,
 ) {
-  if (isTCol(right)) {
-    return new EqualColCondition(field, right);
+  if (isTCol(left)) {
+    return new ComparisonLeftIsColumn(left, "=", right);
   } else {
-    return new EqualValCondition(field, right);
-  }
-}
-
-class NotEqualValCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"] | Arg<Col["ValType"]>,
-> {
-  readonly left: TableColumn<CTSchema, CTName, CName, Col>;
-  readonly right: TRight;
-  constructor(field: TableColumn<CTSchema, CTName, CName, Col>, right: TRight) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} != `;
-    if (is(this.right, Arg)) {
-      query.addArg(this.right);
-    } else {
-      query.sql += this.left.toSQL(this.right);
-    }
-  }
-}
-
-class NotEqualColCondition<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
-> {
-  readonly left: TableColumn<C1TSchema, C1TName, C1Name, C1>;
-  readonly right: TableColumn<C2TSchema, C2TName, C2Name, C2>;
-  constructor(
-    field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-    right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-  ) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} != ${this.right.fullName}`;
+    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, "=", right);
   }
 }
 
 export function ne<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"],
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
+  TLeft extends TableAnyColumn,
+  TRight extends TLeft["ValType"],
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
+export function ne<
+  TLeft extends TableAnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
+export function ne<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
   right: TRight,
-): NotEqualValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function ne<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Arg<Col["ValType"]>,
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
+): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
+export function ne<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
+  left: TLeft,
   right: TRight,
-): NotEqualValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function ne<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
->(
-  field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-  right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-): NotEqualColCondition<
-  C1TSchema,
-  C1TName,
-  C1Name,
-  C1,
-  C2TSchema,
-  C2TName,
-  C2Name,
-  C2
->;
+): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
 export function ne(
-  field: StdTableColumn,
-  right: AnyColumn["ValType"] | Arg<AnyColumn["ValType"]> | StdTableColumn,
+  left: TableAnyColumn | AnyScalarSqlFn,
+  right:
+    | AnyColumn["ValType"]
+    | Arg<AnyColumn["ValType"]>
+    | TableAnyColumn
+    | AnyScalarSqlFn,
 ) {
-  if (isTCol(right)) {
-    return new NotEqualColCondition(field, right);
+  if (isTCol(left)) {
+    return new ComparisonLeftIsColumn(left, "!=", right);
   } else {
-    return new NotEqualValCondition(field, right);
-  }
-}
-
-export class GreaterEqualValCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"] | Arg<Col["ValType"]>,
-> {
-  readonly left: TableColumn<CTSchema, CTName, CName, Col>;
-  readonly right: TRight;
-  constructor(field: TableColumn<CTSchema, CTName, CName, Col>, right: TRight) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} >= `;
-    if (is(this.right, Arg)) {
-      query.addArg(this.right);
-    } else {
-      query.sql += this.left.toSQL(this.right);
-    }
-  }
-}
-
-class GreaterEqualColCondition<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
-> {
-  readonly left: TableColumn<C1TSchema, C1TName, C1Name, C1>;
-  readonly right: TableColumn<C2TSchema, C2TName, C2Name, C2>;
-  constructor(
-    field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-    right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-  ) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} >= ${this.right.fullName}`;
-  }
-}
-
-export function gte<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"],
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
-  right: TRight,
-): GreaterEqualValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function gte<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Arg<Col["ValType"]>,
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
-  right: TRight,
-): GreaterEqualValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function gte<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
->(
-  field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-  right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-): GreaterEqualColCondition<
-  C1TSchema,
-  C1TName,
-  C1Name,
-  C1,
-  C2TSchema,
-  C2TName,
-  C2Name,
-  C2
->;
-export function gte(
-  field: StdTableColumn,
-  right: AnyColumn["ValType"] | Arg<AnyColumn["ValType"]> | StdTableColumn,
-) {
-  if (isTCol(right)) {
-    return new GreaterEqualColCondition(field, right);
-  } else {
-    return new GreaterEqualValCondition(field, right);
-  }
-}
-
-export class GreaterThanValCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"] | Arg<Col["ValType"]>,
-> {
-  readonly left: TableColumn<CTSchema, CTName, CName, Col>;
-  readonly right: TRight;
-  constructor(field: TableColumn<CTSchema, CTName, CName, Col>, right: TRight) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} > `;
-    if (is(this.right, Arg)) {
-      query.addArg(this.right);
-    } else {
-      query.sql += this.left.toSQL(this.right);
-    }
-  }
-}
-
-class GreaterThanColCondition<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
-> {
-  readonly left: TableColumn<C1TSchema, C1TName, C1Name, C1>;
-  readonly right: TableColumn<C2TSchema, C2TName, C2Name, C2>;
-  constructor(
-    field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-    right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-  ) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} > ${this.right.fullName}`;
+    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, "!=", right);
   }
 }
 
 export function gt<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"],
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
-  right: TRight,
-): GreaterThanValCondition<CTSchema, CTName, CName, Col, TRight>;
+  TLeft extends TableAnyColumn,
+  TRight extends TLeft["ValType"],
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">", TRight>;
 export function gt<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Arg<Col["ValType"]>,
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
+  TLeft extends TableAnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">", TRight>;
+export function gt<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
   right: TRight,
-): GreaterThanValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function gt<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
->(
-  field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-  right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-): GreaterThanColCondition<
-  C1TSchema,
-  C1TName,
-  C1Name,
-  C1,
-  C2TSchema,
-  C2TName,
-  C2Name,
-  C2
->;
+): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
+export function gt<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
 export function gt(
-  field: StdTableColumn,
-  right: AnyColumn["ValType"] | Arg<AnyColumn["ValType"]> | StdTableColumn,
+  left: TableAnyColumn | AnyScalarSqlFn,
+  right:
+    | AnyColumn["ValType"]
+    | Arg<AnyColumn["ValType"]>
+    | TableAnyColumn
+    | AnyScalarSqlFn,
 ) {
-  if (isTCol(right)) {
-    return new GreaterThanColCondition(field, right);
+  if (isTCol(left)) {
+    return new ComparisonLeftIsColumn(left, ">", right);
   } else {
-    return new GreaterThanValCondition(field, right);
+    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, ">", right);
   }
 }
 
-class LessEqualValCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"] | Arg<Col["ValType"]>,
-> {
-  readonly left: TableColumn<CTSchema, CTName, CName, Col>;
-  readonly right: TRight;
-  constructor(field: TableColumn<CTSchema, CTName, CName, Col>, right: TRight) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} <= `;
-    if (is(this.right, Arg)) {
-      query.addArg(this.right);
-    } else {
-      query.sql += this.left.toSQL(this.right);
-    }
-  }
-}
-
-class LessEqualColCondition<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
-> {
-  readonly left: TableColumn<C1TSchema, C1TName, C1Name, C1>;
-  readonly right: TableColumn<C2TSchema, C2TName, C2Name, C2>;
-  constructor(
-    field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-    right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-  ) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} <= ${this.right.fullName}`;
-  }
-}
-
-export function lte<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"],
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
+export function gte<
+  TLeft extends TableAnyColumn,
+  TRight extends TLeft["ValType"],
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
+export function gte<
+  TLeft extends TableAnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
+export function gte<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
   right: TRight,
-): LessEqualValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function lte<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Arg<Col["ValType"]>,
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
-  right: TRight,
-): LessEqualValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function lte<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
->(
-  field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-  right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-): LessEqualColCondition<
-  C1TSchema,
-  C1TName,
-  C1Name,
-  C1,
-  C2TSchema,
-  C2TName,
-  C2Name,
-  C2
->;
-export function lte(
-  field: StdTableColumn,
-  right: AnyColumn["ValType"] | Arg<AnyColumn["ValType"]> | StdTableColumn,
+): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
+export function gte<
+  TLeft extends AnyScalarSqlFn,
+  TRight extends AnyScalarSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
+export function gte(
+  left: TableAnyColumn | AnyScalarSqlFn,
+  right:
+    | AnyColumn["ValType"]
+    | Arg<AnyColumn["ValType"]>
+    | TableAnyColumn
+    | AnyScalarSqlFn,
 ) {
-  if (isTCol(right)) {
-    return new LessEqualColCondition(field, right);
+  if (isTCol(left)) {
+    return new ComparisonLeftIsColumn(left, ">=", right);
   } else {
-    return new LessEqualValCondition(field, right);
-  }
-}
-
-export class LessThanValCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"] | Arg<Col["ValType"]>,
-> {
-  readonly left: TableColumn<CTSchema, CTName, CName, Col>;
-  readonly right: TRight;
-  constructor(field: TableColumn<CTSchema, CTName, CName, Col>, right: TRight) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} < `;
-    if (is(this.right, Arg)) {
-      query.addArg(this.right);
-    } else {
-      query.sql += this.left.toSQL(this.right);
-    }
-  }
-}
-
-class LessThanColCondition<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
-> {
-  readonly left: TableColumn<C1TSchema, C1TName, C1Name, C1>;
-  readonly right: TableColumn<C2TSchema, C2TName, C2Name, C2>;
-  constructor(
-    field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-    right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-  ) {
-    this.left = field;
-    this.right = right;
-  }
-  toQuery(query: Query) {
-    query.sql += `${this.left.fullName} < ${this.right.fullName}`;
+    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, ">=", right);
   }
 }
 
 export function lt<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Col["ValType"],
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
+  TLeft extends TableAnyColumn,
+  TRight extends TLeft["ValType"],
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<", TRight>;
+export function lt<
+  TLeft extends TableAnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<", TRight>;
+export function lt<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
   right: TRight,
-): LessThanValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function lt<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
-  TRight extends Arg<Col["ValType"]>,
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
+): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
+export function lt<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
+  left: TLeft,
   right: TRight,
-): LessThanValCondition<CTSchema, CTName, CName, Col, TRight>;
-export function lt<
-  C1TSchema extends string,
-  C1TName extends string,
-  C1Name extends Key,
-  C1 extends AnyColumn,
-  C2TSchema extends string,
-  C2TName extends string,
-  C2Name extends Key,
-  C2 extends AnyColumn,
->(
-  field: TableColumn<C1TSchema, C1TName, C1Name, C1>,
-  right: TableColumn<C2TSchema, C2TName, C2Name, C2>,
-): LessThanColCondition<
-  C1TSchema,
-  C1TName,
-  C1Name,
-  C1,
-  C2TSchema,
-  C2TName,
-  C2Name,
-  C2
->;
+): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
 export function lt(
-  field: StdTableColumn,
-  right: AnyColumn["ValType"] | Arg<AnyColumn["ValType"]> | StdTableColumn,
+  left: TableAnyColumn | AnyScalarSqlFn,
+  right:
+    | AnyColumn["ValType"]
+    | Arg<AnyColumn["ValType"]>
+    | TableAnyColumn
+    | AnyScalarSqlFn,
 ) {
-  if (isTCol(right)) {
-    return new LessThanColCondition(field, right);
+  if (isTCol(left)) {
+    return new ComparisonLeftIsColumn(left, "<", right);
   } else {
-    return new LessThanValCondition(field, right);
+    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, "<", right);
   }
 }
 
-export class IsNullCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
+export function lte<
+  TLeft extends TableAnyColumn,
+  TRight extends TLeft["ValType"],
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
+export function lte<
+  TLeft extends TableAnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
+export function lte<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
+export function lte<
+  TLeft extends AnyScalarSqlFn,
+  TRight extends AnyScalarSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
+export function lte(
+  left: TableAnyColumn | AnyScalarSqlFn,
+  right:
+    | AnyColumn["ValType"]
+    | Arg<AnyColumn["ValType"]>
+    | TableAnyColumn
+    | AnyScalarSqlFn,
+) {
+  if (isTCol(left)) {
+    return new ComparisonLeftIsColumn(left, "<=", right);
+  } else {
+    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, "<=", right);
+  }
+}
+
+export class IsNullCondition<TCol extends TableAnyColumn> extends Filter<
+  TCol,
+  false
 > {
-  readonly field: TableColumn<CTSchema, CTName, CName, Col>;
-  constructor(field: TableColumn<CTSchema, CTName, CName, Col>) {
+  readonly field: TCol;
+  constructor(field: TCol) {
+    super();
     this.field = field;
   }
   toQuery(query: Query) {
@@ -774,24 +300,17 @@ export class IsNullCondition<
   }
 }
 
-export function isNull<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
->(field: TableColumn<CTSchema, CTName, CName, Col>) {
+export function isNull<TCol extends TableAnyColumn>(field: TCol) {
   return new IsNullCondition(field);
 }
 
-export class IsNotNullCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
+export class IsNotNullCondition<TCol extends TableAnyColumn> extends Filter<
+  TCol,
+  false
 > {
-  readonly field: TableColumn<CTSchema, CTName, CName, Col>;
-
-  constructor(field: TableColumn<CTSchema, CTName, CName, Col>) {
+  readonly field: TCol;
+  constructor(field: TCol) {
+    super();
     this.field = field;
   }
 
@@ -800,12 +319,7 @@ export class IsNotNullCondition<
   }
 }
 
-export function isNotNull<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
->(field: TableColumn<CTSchema, CTName, CName, Col>) {
+export function isNotNull<TCol extends TableAnyColumn>(field: TCol) {
   return new IsNotNullCondition(field);
 }
 
@@ -822,18 +336,16 @@ type InSelectQuery<TArg extends boolean, TReturn> = SelectQuery<
 >;
 
 export class InCondition<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
+  TCol extends TableAnyColumn,
   TArg extends boolean,
-> {
-  readonly field: TableColumn<CTSchema, CTName, CName, Col>;
-  readonly values: Col["ValType"][] | InSelectQuery<TArg, Col["ValType"]>;
+> extends Filter<TCol, TArg> {
+  readonly field: TCol;
+  readonly values: TCol["ValType"][] | InSelectQuery<TArg, TCol["ValType"]>;
   constructor(
-    field: TableColumn<CTSchema, CTName, CName, Col>,
-    values: Col["ValType"][] | InSelectQuery<TArg, Col["ValType"]>,
+    field: TCol,
+    values: TCol["ValType"][] | InSelectQuery<TArg, TCol["ValType"]>,
   ) {
+    super();
     this.field = field;
     this.values = values;
   }
@@ -854,64 +366,101 @@ export class InCondition<
   }
 }
 
-export function isIn<
-  CTSchema extends string,
-  CTName extends string,
-  CName extends Key,
-  Col extends AnyColumn,
->(
-  field: TableColumn<CTSchema, CTName, CName, Col>,
-  values: Col["ValType"][] | InSelectQuery<boolean, Col["ValType"]>,
+export function isIn<TCol extends TableAnyColumn>(
+  field: TCol,
+  values: TCol["ValType"][] | InSelectQuery<boolean, TCol["ValType"]>,
 ) {
-  return new InCondition(field, values);
+  return new InCondition(field, values) as InCondition<TCol, false>;
 }
 
-export class AndCondition<
-  // biome-ignore lint/suspicious/noExplicitAny: Recursive evaluation requires any
-  TConditions extends any[],
+export class NotInCondition<TCol extends TableAnyColumn> extends Filter<
+  TCol,
+  false
 > {
+  readonly field: TCol;
+  readonly values: TCol["ValType"][];
+  constructor(field: TCol, values: TCol["ValType"][]) {
+    super();
+    this.field = field;
+    this.values = values;
+  }
+  toQuery(query: Query) {
+    if (this.values.length === 0) {
+      query.sql += "TRUE";
+      return;
+    }
+    query.sql += `${this.field.fullName} NOT IN (`;
+    query.sql += this.values.map((v) => this.field.toSQL(v)).join(", ");
+    query.sql += ")";
+  }
+}
+
+export function notIn<TCol extends TableAnyColumn>(
+  field: TCol,
+  values: TCol["ValType"][],
+): NotInCondition<TCol> {
+  return new NotInCondition(field, values);
+}
+
+/** @internal Union of table columns from all Filter conditions in the array. */
+type ExtractCols<T extends AnyFilter | Sql> =
+  T extends Filter<any, any> ? T["$Columns"] : never;
+
+/** @internal `true` when at least one Filter condition in the array carries an Arg placeholder. */
+type HasArgOf<T extends (AnyFilter | Sql)[]> = [
+  T[number] extends Filter<any, infer H> ? H : false,
+] extends [false]
+  ? false
+  : true;
+
+export class AndCondition<
+  TConditions extends (AnyFilter | Sql)[],
+> extends Filter<ExtractCols<TConditions[number]>, HasArgOf<TConditions>> {
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
+    super();
     this.conditions = conditions;
   }
   toQuery(query: Query) {
+    query.sql += "(";
     for (let i = 0; i < this.conditions.length; i++) {
       this.conditions[i].toQuery(query);
       if (i < this.conditions.length - 1) {
         query.sql += " AND ";
       }
     }
+    query.sql += ")";
   }
 }
 
-export function and<
-  // biome-ignore lint/suspicious/noExplicitAny: Recursive evaluation requires any
-  TConditions extends any[],
->(...conditions: TConditions) {
+export function and<TConditions extends (AnyFilter | Sql)[]>(
+  ...conditions: TConditions
+): AndCondition<TConditions> {
   return new AndCondition(...conditions);
 }
 
 export class OrCondition<
-  // biome-ignore lint/suspicious/noExplicitAny: Recursive evaluation requires any
-  TConditions extends any[],
-> {
+  TConditions extends (AnyFilter | Sql)[],
+> extends Filter<ExtractCols<TConditions[number]>, HasArgOf<TConditions>> {
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
+    super();
     this.conditions = conditions;
   }
   toQuery(query: Query) {
+    query.sql += "(";
     for (let i = 0; i < this.conditions.length; i++) {
       this.conditions[i].toQuery(query);
       if (i < this.conditions.length - 1) {
         query.sql += " OR ";
       }
     }
+    query.sql += ")";
   }
 }
 
-export function or<
-  // biome-ignore lint/suspicious/noExplicitAny: Recursive evaluation requires any
-  TConditions extends any[],
->(...conditions: TConditions) {
+export function or<TConditions extends (AnyFilter | Sql)[]>(
+  ...conditions: TConditions
+): OrCondition<TConditions> {
   return new OrCondition(...conditions);
 }

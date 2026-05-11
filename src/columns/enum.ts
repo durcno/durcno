@@ -8,7 +8,7 @@ export type EnumedConfig = ColumnConfig;
 export class EnumedColumn<
   TValue extends string,
   TConfig extends EnumedConfig,
-> extends Column<TConfig, TValue> {
+> extends Column<TConfig, TValue, "text"> {
   static readonly id = "Column.Enumed";
   readonly #enum: Enum<TValue>;
 

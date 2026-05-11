@@ -1,6 +1,13 @@
 import {
+  and,
   bigint,
+  gt,
+  gte,
   integer,
+  length,
+  like,
+  lt,
+  lte,
   Migrations,
   notNull,
   now,
@@ -28,14 +35,10 @@ export const CheckTest = table(
     quantity: integer({ notNull }),
     email: varchar({ length: 255 }),
     name: varchar({ length: 100, notNull }),
-    createdAt: timestamp({ notNull, default: now() }),
+    createdAt: timestamp({ notNull }).default(now()),
   },
   {
-    checkConstraints: (
-      t,
-      check,
-      { gt, lt, and, gte, lte, like, fnGt, fnLte, length },
-    ) => {
+    checkConstraints: (t, check) => {
       const quantityMax = stage >= 4 ? 1000 : 10000;
 
       const checks = [
@@ -47,7 +50,7 @@ export const CheckTest = table(
         ...(stage <= 2 ? [check("valid_email", like(t.email, "%@%.%"))] : []),
         check(
           "name_length",
-          and(fnGt(length(t.name), 2), fnLte(length(t.name), 100)),
+          and(gt(length(t.name), 2), lte(length(t.name), 100)),
         ),
         ...(stage >= 2 ? [check("max_price", lt(t.price, 1000000n))] : []),
       ];

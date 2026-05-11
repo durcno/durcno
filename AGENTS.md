@@ -284,7 +284,7 @@ How:
 
 - Use Vitest, `dockerode` and existing helpers.
 - Keep tests deterministic and fast; prefer small focused cases.
-- Use `runDurcnoCommand` function for CLI interactions.
+- Use `runDurcno` function for CLI interactions.
 
 Utilities: `tests/helpers.ts`, `tests/docker-utils.ts`.
 

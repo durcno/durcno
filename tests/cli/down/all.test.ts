@@ -54,8 +54,8 @@ describe("durcno down command", () => {
 
     // Generate first migration (Users table only)
     execSync(`durcno generate --config ${configPath}`, {
+      stdio: ["ignore", "ignore", "pipe"],
       cwd: __dirname,
-      stdio: "inherit",
       env: {
         ...process.env,
         MIGRATION_VERSION: "1",
@@ -76,8 +76,8 @@ describe("durcno down command", () => {
 
     // Generate second migration (add Posts table and columns to Users)
     execSync(`durcno generate --config ${configPath}`, {
+      stdio: ["ignore", "ignore", "pipe"],
       cwd: __dirname,
-      stdio: "inherit",
       env: {
         ...process.env,
         MIGRATION_VERSION: "2",
@@ -95,8 +95,8 @@ describe("durcno down command", () => {
 
     // Apply all migrations
     execSync(`durcno migrate --config ${configPath}`, {
+      stdio: ["ignore", "ignore", "pipe"],
       cwd: __dirname,
-      stdio: "inherit",
       env: {
         ...process.env,
         DATABASE_PORT: databasePort,
@@ -152,8 +152,8 @@ describe("durcno down command", () => {
   it("should rollback second migration and remove Posts table", async () => {
     // Run down command to rollback to second migration (inclusive)
     execSync(`durcno down ${secondMigrationName} --config ${configPath}`, {
+      stdio: ["ignore", "ignore", "pipe"],
       cwd: __dirname,
-      stdio: "inherit",
       env: {
         ...process.env,
         DATABASE_PORT: databasePort,
@@ -198,8 +198,8 @@ describe("durcno down command", () => {
   it("should rollback first migration and drop entire schema", async () => {
     // Run down command to rollback first migration (drops everything)
     execSync(`durcno down ${firstMigrationName} --config ${configPath}`, {
+      stdio: ["ignore", "ignore", "pipe"],
       cwd: __dirname,
-      stdio: "inherit",
       env: {
         ...process.env,
         DATABASE_PORT: databasePort,

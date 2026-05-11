@@ -8,7 +8,8 @@ type SmallintConfig = ColumnConfig;
 
 export class SmallintColumn<TConfig extends SmallintConfig> extends Column<
   TConfig,
-  SmallintValType
+  SmallintValType,
+  "numeric"
 > {
   static readonly id = "Column.Smallint";
 

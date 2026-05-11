@@ -21,7 +21,8 @@ type TimeConfig = ColumnConfig & {
 
 export class TimeColumn<TConfig extends TimeConfig> extends Column<
   TConfig,
-  TimeValType
+  TimeValType,
+  "time"
 > {
   static readonly id = "Column.Time";
   readonly #withTimezone: boolean;

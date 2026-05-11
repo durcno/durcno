@@ -29,7 +29,8 @@ type GetZodType<T extends As | undefined> = T extends "xy"
 
 export class PointColumn<TConfig extends PointConfig> extends Column<
   TConfig,
-  GetValType<TConfig["format"]>
+  GetValType<TConfig["format"]>,
+  "geography"
 > {
   static readonly id = "Column.Geography.Point";
   readonly #srid: number;
