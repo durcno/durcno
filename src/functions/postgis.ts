@@ -27,11 +27,11 @@ export class StDistanceFn<
   TPoint extends TCol["ValType"] | Arg<TCol["ValType"]>,
   TSrid extends number | Arg<number> = number,
 > extends SqlFn<
-  number,
   TCol,
   Or<IsArg<TPoint>, IsArg<TSrid>>,
   "scalar",
-  "numeric"
+  "numeric",
+  number
 > {
   constructor(
     private readonly col: TCol,

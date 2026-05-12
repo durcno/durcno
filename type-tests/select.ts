@@ -366,7 +366,7 @@ Expect<
       type: "admin" | "user";
       username: string;
       total: number;
-      totalIds: number | null;
+      totalIds: bigint | null;
     }[]
   >
 >();

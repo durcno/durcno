@@ -13,7 +13,6 @@ export type SqlFnType = "aggregate" | "scalar";
  * - `.orderBy(asc(sqlFn))` — orders by a computed expression
  * - `.where(lt(sqlFn, value))` — compares the expression in a WHERE clause
  *
- * @template TReturn - The TypeScript type this expression evaluates to.
  * @template TColumn - The scoped table column(s) this expression references.
  * @template THasArg - `true` when this expression embeds at least one `Arg` placeholder.
  *   Set to `true` in concrete subclasses that accept `Arg` values; defaults to `false`.
@@ -24,17 +23,18 @@ export type SqlFnType = "aggregate" | "scalar";
  *   (e.g. `"string"`, `"numeric"`). Mirrors `Column.$["PgType"]` so that
  *   a `SqlFn` can be accepted wherever a column of the same category is expected,
  *   enabling type-safe nested function calls (e.g. `lower(trim(col))`).
+ * @template TTsType - The TypeScript type this expression evaluates to.
  */
 export abstract class SqlFn<
-  TReturn,
   TColumn extends TableAnyColumn,
   THasArg extends boolean = false,
   TFnType extends "aggregate" | "scalar" = "aggregate" | "scalar",
   TPgType extends string = string,
+  TTsType = any,
 > {
   readonly $!: {
     kind: "sqlFn";
-    TsType: TReturn;
+    TsType: TTsType;
     PgType: TPgType;
   };
 
@@ -66,47 +66,35 @@ export abstract class SqlFn<
 
   /**
    * Converts a raw driver value returned from PostgreSQL into the TypeScript
-   * value declared by `TReturn`.
+   * value declared by `TTsType`.
    *
    * The default implementation covers the common cases:
    * - `null` → `null`
+   * - `bigint` → `bigint` (passed through as-is to preserve precision)
    * - numeric string (e.g. `"42"`, `"3"`) → `Number(value)`
    * - anything else → `value` as-is
    *
    * Subclasses can override this method to provide custom conversions.
    */
-  fromDriver(value: unknown): TReturn {
-    if (value === null) return null as TReturn;
+  fromDriver(value: unknown) {
+    if (value === null) return null as TTsType;
+    if (typeof value === "bigint") return value as TTsType;
     if (typeof value === "string") {
       const num = Number(value);
-      return (Number.isNaN(num) ? value : num) as TReturn;
+      return (Number.isNaN(num) ? value : num) as TTsType;
     }
-    return value as TReturn;
+    return value as TTsType;
   }
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <>
-export type StdSqlFn = SqlFn<any, StdTableColumn, boolean, SqlFnType, string>;
+export type StdSqlFn = SqlFn<StdTableColumn, boolean, SqlFnType, string, any>;
 
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnySqlFn = SqlFn<any, any, any, any, any>;
 
 // biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnyScalarSqlFn = SqlFn<any, any, any, "scalar", any>;
-
-export type SqlFnFor<
-  TReturn = unknown,
-  TColumn extends TableAnyColumn = TableAnyColumn,
-  TPrepare extends boolean = false,
-  TFnType extends "aggregate" | "scalar" = "aggregate" | "scalar",
-  TPgType extends string = string,
-> = SqlFn<
-  TReturn,
-  TColumn,
-  TPrepare extends true ? boolean : false,
-  TFnType,
-  TPgType
->;
+export type AnyScalarSqlFn = SqlFn<any, any, "scalar", any, any>;
 
 /**
  * Extracts the table column(s) referenced by a scalar expression.

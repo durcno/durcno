@@ -166,6 +166,7 @@ export abstract class Column<
     /** The PostgreSQL type category for this column. */
     PgType: TPgType;
     /** The TypeScript type for this column's value. */
+    TsType: TColVal;
     TsTypeScalar: TColVal;
     ValTypeBase: GetValueArray<TColVal, TConfig>;
     // biome-ignore lint/complexity/noBannedTypes: <>

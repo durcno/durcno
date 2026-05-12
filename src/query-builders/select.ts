@@ -1,6 +1,6 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { FilterExpression, StdCondition } from "../filters/index";
-import type { AnySqlFn, SqlFnFor, StdSqlFn } from "../functions/index";
+import type { AnySqlFn, StdSqlFn } from "../functions/index";
 import { SqlFn } from "../functions/index";
 import type {
   AnyColumn,
@@ -146,16 +146,14 @@ export class SelectBuilder<
       | (TInnerJoins extends unknown[]
           ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
           : never)
-      | SqlFnFor<
-          any,
+      | SqlFn<
           Valueof<
             TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
           >,
           TPrepare
         >
       | (TInnerJoins extends unknown[]
-          ? SqlFnFor<
-              any,
+          ? SqlFn<
               Valueof<TInnerJoins[number]["table"]["_"]["columns"]>,
               TPrepare
             >
@@ -183,16 +181,14 @@ export class SelectBuilder<
           | (TInnerJoins extends unknown[]
               ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
               : never)
-          | SqlFnFor<
-              any,
+          | SqlFn<
               Valueof<
                 TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
               >,
               TPrepare
             >
           | (TInnerJoins extends unknown[]
-              ? SqlFnFor<
-                  any,
+              ? SqlFn<
                   Valueof<TInnerJoins[number]["table"]["_"]["columns"]>,
                   TPrepare
                 >
@@ -238,7 +234,7 @@ export class SelectQuery<
         | (TInnerJoins extends unknown[]
             ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
             : never)
-        | SqlFnFor<any, any, boolean>
+        | SqlFn<any, boolean>
       >
     | undefined,
   TPrepare extends boolean,

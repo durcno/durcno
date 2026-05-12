@@ -1,5 +1,4 @@
 import { avg, count, countDistinct, max, min, sum } from "durcno";
-import type { ExprReturnType } from "../src/functions/index";
 import { ArrayTest, db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
@@ -48,9 +47,9 @@ countDistinct(Users.username);
 const _avgFn = avg(Posts.id);
 Expect<Equal<ReturnType<typeof _avgFn.fromDriver>, string | null>>();
 
-// sum.fromDriver returns number | null
+// sum.fromDriver returns the column's TsType | null (bigint | null for bigserial/bigint columns)
 const _sumFn = sum(Posts.id);
-Expect<Equal<ReturnType<typeof _sumFn.fromDriver>, number | null>>();
+Expect<Equal<ReturnType<typeof _sumFn.fromDriver>, bigint | null>>();
 
 // count.fromDriver returns number
 const _countFn = count(Posts.id);
@@ -60,12 +59,12 @@ Expect<Equal<ReturnType<typeof _countFn.fromDriver>, number>>();
 const _countStarFn = count("*");
 Expect<Equal<ReturnType<typeof _countStarFn.fromDriver>, number>>();
 
-// min.fromDriver return type matches inner column's ExprReturnType
+// min.fromDriver return type matches inner column's TsType
 const _minFn = min(Posts.id);
 type _MinReturn = ReturnType<typeof _minFn.fromDriver>;
-Expect<Equal<_MinReturn, ExprReturnType<typeof Posts.id> | null>>();
+Expect<Equal<_MinReturn, bigint | null>>();
 
-// max.fromDriver return type matches inner column's ExprReturnType
+// max.fromDriver return type matches inner column's TsType
 const _maxFn = max(Posts.id);
 type _MaxReturn = ReturnType<typeof _maxFn.fromDriver>;
-Expect<Equal<_MaxReturn, ExprReturnType<typeof Posts.id> | null>>();
+Expect<Equal<_MaxReturn, bigint | null>>();

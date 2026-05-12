@@ -1,5 +1,5 @@
 import { isTCol } from "../entity";
-import type { AnyScalarSqlFn, SqlFnFor } from "../functions";
+import type { AnyScalarSqlFn, SqlFn } from "../functions";
 import type { AnyTableWC, AnyTableWithColumns, TableAnyColumn } from "../table";
 import type { Valueof } from "../types";
 import type { Query } from "./query";
@@ -66,9 +66,7 @@ export type OrderBy<
 > =
   | Order<Valueof<TTableWC["_"]["columns"]>, "ASC" | "DESC">
   | Order<Extract<keyof TSelects, string>, "ASC" | "DESC">
-  | OrderSqlFn<
-      SqlFnFor<any, Valueof<TTableWC["_"]["columns"]>, TPrepare, "scalar">
-    >;
+  | OrderSqlFn<SqlFn<Valueof<TTableWC["_"]["columns"]>, TPrepare, "scalar">>;
 
 /**
  * Creates an ascending order clause for a column or a `SqlFn` expression.

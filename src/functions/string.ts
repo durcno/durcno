@@ -14,11 +14,11 @@ export class LengthFn<
     $: { PgType: "text" };
   },
 > extends SqlFn<
-  number,
   ExprColumns<TExpr>,
   HasArg<TExpr>,
   "scalar",
-  "numeric"
+  "numeric",
+  number
 > {
   constructor(private readonly expr: TExpr) {
     super();
@@ -48,7 +48,7 @@ export class LowerFn<
   TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
-> extends SqlFn<string, ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text"> {
+> extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -77,7 +77,7 @@ export class UpperFn<
   TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
-> extends SqlFn<string, ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text"> {
+> extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -106,7 +106,7 @@ export class TrimFn<
   TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
-> extends SqlFn<string, ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text"> {
+> extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -137,11 +137,11 @@ export class LeftFn<
   },
   THasArg extends boolean = false,
 > extends SqlFn<
-  string,
   ExprColumns<TExpr>,
   Or<HasArg<TExpr>, THasArg>,
   "scalar",
-  "text"
+  "text",
+  string
 > {
   constructor(
     private readonly expr: TExpr,
@@ -192,11 +192,11 @@ export class RightFn<
   },
   THasArg extends boolean = false,
 > extends SqlFn<
-  string,
   ExprColumns<TExpr>,
   Or<HasArg<TExpr>, THasArg>,
   "scalar",
-  "text"
+  "text",
+  string
 > {
   constructor(
     private readonly expr: TExpr,
@@ -247,11 +247,11 @@ export class PositionFn<
   },
   TSearch extends string | Arg<string>,
 > extends SqlFn<
-  number,
   ExprColumns<TExpr>,
   Or<HasArg<TExpr>, IsArg<TSearch>>,
   "scalar",
-  "numeric"
+  "numeric",
+  number
 > {
   constructor(
     private readonly expr: TExpr,

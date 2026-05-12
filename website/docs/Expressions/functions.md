@@ -12,15 +12,15 @@ Functions can also be **composed**: you can pass the result of one function as t
 
 Aggregate functions collapse multiple rows into a single value. When you mix aggregate and non-aggregate expressions in a single `.select()` call, Durcno automatically generates the appropriate `GROUP BY` clause for the non-aggregate columns.
 
-| Function             | SQL                   | Returns           | Description                                               |
-| -------------------- | --------------------- | ----------------- | --------------------------------------------------------- |
-| `count("*")`         | `count(*)`            | `number`          | Counts all rows including nulls                           |
-| `count(col)`         | `count(col)`          | `number`          | Counts non-null values in the column                      |
-| `countDistinct(col)` | `count(DISTINCT col)` | `number`          | Counts distinct non-null values in the column             |
-| `sum(col)`           | `sum(col)`            | `number \| null`  | Sum of non-null values; `null` if no rows match           |
-| `avg(col)`           | `avg(col)`            | `string \| null`  | Average as a PostgreSQL `numeric` string; `null` if empty |
-| `min(col)`           | `min(col)`            | `ColType \| null` | Minimum value; type follows the column                    |
-| `max(col)`           | `max(col)`            | `ColType \| null` | Maximum value; type follows the column                    |
+| Function             | SQL                   | Returns           | Description                                                              |
+| -------------------- | --------------------- | ----------------- | ------------------------------------------------------------------------ |
+| `count("*")`         | `count(*)`            | `number`          | Counts all rows including nulls                                          |
+| `count(col)`         | `count(col)`          | `number`          | Counts non-null values in the column                                     |
+| `countDistinct(col)` | `count(DISTINCT col)` | `number`          | Counts distinct non-null values in the column                            |
+| `sum(col)`           | `sum(col)`            | `ColType \| null` | Sum of non-null values; type follows the column; `null` if no rows match |
+| `avg(col)`           | `avg(col)`            | `ColType \| null` | Average value; type follows the column; `null` if empty                  |
+| `min(col)`           | `min(col)`            | `ColType \| null` | Minimum value; type follows the column                                   |
+| `max(col)`           | `max(col)`            | `ColType \| null` | Maximum value; type follows the column                                   |
 
 ### `count`
 
@@ -52,7 +52,7 @@ const [{ uniqueTypes }] = await db
 
 ### `sum`
 
-Returns the sum of all non-null values. Returns `null` if no rows match.
+Returns the sum of all non-null values. The return type follows the column's TypeScript type (e.g., `bigint | null` for `bigint`/`bigserial` columns). Returns `null` if no rows match.
 
 ```typescript
 import { sum } from "durcno";
@@ -62,7 +62,7 @@ const [{ total }] = await db.from(Orders).select({ total: sum(Orders.amount) });
 
 ### `avg`
 
-Returns the average as a `string` (PostgreSQL returns `avg` as a `numeric` type). Returns `null` if no rows match.
+Returns the average value. The return type follows the column's TypeScript type (e.g., `number | null` for numeric columns). Returns `null` if no rows match.
 
 ```typescript
 import { avg } from "durcno";
@@ -70,7 +70,7 @@ import { avg } from "durcno";
 const [{ average }] = await db
   .from(Orders)
   .select({ average: avg(Orders.amount) });
-// average is `string | null`, e.g. "2.5000000000"
+// average is `number | null`
 ```
 
 ### `min` / `max`

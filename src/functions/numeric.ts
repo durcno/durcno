@@ -14,11 +14,11 @@ export class AbsFn<
     $: { PgType: "numeric" };
   },
 > extends SqlFn<
-  number,
   ExprColumns<TExpr>,
   HasArg<TExpr>,
   "scalar",
-  "numeric"
+  "numeric",
+  number
 > {
   constructor(private readonly expr: TExpr) {
     super();
@@ -50,11 +50,11 @@ export class ModFn<
   },
   TN extends number | Arg<number>,
 > extends SqlFn<
-  number,
   ExprColumns<TExpr>,
   Or<HasArg<TExpr>, IsArg<TN>>,
   "scalar",
-  "numeric"
+  "numeric",
+  number
 > {
   constructor(
     private readonly expr: TExpr,
@@ -96,11 +96,11 @@ export class RoundFn<
   },
   TDecimals extends number | Arg<number> | undefined = undefined,
 > extends SqlFn<
-  number,
   ExprColumns<TExpr>,
   Or<HasArg<TExpr>, IsArg<TDecimals>>,
   "scalar",
-  "numeric"
+  "numeric",
+  number
 > {
   constructor(
     private readonly expr: TExpr,
@@ -143,11 +143,11 @@ export class CeilFn<
     $: { PgType: "numeric" };
   },
 > extends SqlFn<
-  number,
   ExprColumns<TExpr>,
   HasArg<TExpr>,
   "scalar",
-  "numeric"
+  "numeric",
+  number
 > {
   constructor(private readonly expr: TExpr) {
     super();
@@ -178,11 +178,11 @@ export class FloorFn<
     $: { PgType: "numeric" };
   },
 > extends SqlFn<
-  number,
   ExprColumns<TExpr>,
   HasArg<TExpr>,
   "scalar",
-  "numeric"
+  "numeric",
+  number
 > {
   constructor(private readonly expr: TExpr) {
     super();

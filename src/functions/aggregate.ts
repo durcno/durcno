@@ -1,12 +1,6 @@
 import type { Query } from "../query-builders/query";
-import type { AnyColumn, TableAnyColumn } from "../table";
-import {
-  type AnyScalarSqlFn,
-  type ExprColumns,
-  type ExprReturnType,
-  type HasArg,
-  SqlFn,
-} from ".";
+import type { TableAnyColumn } from "../table";
+import { type AnyScalarSqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
 
 /**
  * Any expression that can be passed to an aggregate function.
@@ -40,10 +34,11 @@ type NumericAggregateInput =
  * @template TExpr - The table column to count.
  */
 export class CountFn<TExpr extends TableAnyColumn> extends SqlFn<
-  number,
   TExpr,
   false,
-  "aggregate"
+  "aggregate",
+  "numeric",
+  number
 > {
   override readonly isAggregate = true;
 
@@ -68,7 +63,13 @@ export class CountFn<TExpr extends TableAnyColumn> extends SqlFn<
  * - `.orderBy(asc(count("*")))` — order by row count
  * - `.where(gt(count("*"), 0))` — filter by row count
  */
-export class CountStarFn extends SqlFn<number, never, false, "aggregate"> {
+export class CountStarFn extends SqlFn<
+  never,
+  false,
+  "aggregate",
+  "numeric",
+  number
+> {
   override readonly isAggregate = true;
 
   /** Appends `count(*)` to the query SQL. */
@@ -87,10 +88,11 @@ export class CountStarFn extends SqlFn<number, never, false, "aggregate"> {
  * @template TExpr - The table column to count distinct values from.
  */
 export class CountDistinctFn<TExpr extends TableAnyColumn> extends SqlFn<
-  number,
   TExpr,
   false,
-  "aggregate"
+  "aggregate",
+  "numeric",
+  number
 > {
   override readonly isAggregate = true;
 
@@ -153,19 +155,21 @@ export function countDistinct<TExpr extends TableAnyColumn>(
 /**
  * SQL aggregate expression: `sum(col)`
  * Returns the sum of all non-null values in the column, or `null` if no rows match.
+ * The return type follows the column's TypeScript type (e.g., `bigint | null` for `bigint` columns).
  *
  * Can be used in:
- * - `.select({ total: sum(col) })` → `{ total: number | null }`
+ * - `.select({ total: sum(col) })` → `{ total: ColType | null }`
  * - `.orderBy(asc(sum(col)))` — order by sum
  * - `.where(gt(sum(col), 100))` — filter by sum
  *
  * @template TExpr - The numeric column or scalar expression to sum.
  */
 export class SumFn<TExpr extends NumericAggregateInput> extends SqlFn<
-  number | null,
   ExprColumns<TExpr>,
   HasArg<TExpr>,
-  "aggregate"
+  "aggregate",
+  "numeric",
+  TExpr["$"]["TsType"] | null
 > {
   override readonly isAggregate = true;
 
@@ -213,10 +217,11 @@ export function sum<TExpr extends NumericAggregateInput>(
  * @template TExpr - The numeric column or scalar expression to average.
  */
 export class AvgFn<TExpr extends NumericAggregateInput> extends SqlFn<
-  string | null,
   ExprColumns<TExpr>,
   HasArg<TExpr>,
-  "aggregate"
+  "aggregate",
+  "numeric",
+  TExpr["$"]["TsType"] | null
 > {
   override readonly isAggregate = true;
 
@@ -275,10 +280,11 @@ export function avg<TExpr extends NumericAggregateInput>(
  * @template TExpr - The column or scalar expression to find the minimum of.
  */
 export class MinFn<TExpr extends AggregateInput> extends SqlFn<
-  ExprReturnType<TExpr> | null,
   ExprColumns<TExpr>,
   HasArg<TExpr>,
-  "aggregate"
+  "aggregate",
+  string,
+  TExpr["$"]["TsType"] | null
 > {
   override readonly isAggregate = true;
 
@@ -290,11 +296,9 @@ export class MinFn<TExpr extends AggregateInput> extends SqlFn<
    * Delegates to the inner expression's own `fromDriver` so that the result
    * is deserialized to the same TypeScript type as the wrapped column/function.
    */
-  override fromDriver(value: unknown): ExprReturnType<TExpr> | null {
+  override fromDriver(value: unknown): TExpr["$"]["TsType"] | null {
     if (value === null) return null;
-    return (this.expr as SqlFn<unknown, never> | AnyColumn).fromDriver(
-      value,
-    ) as ExprReturnType<TExpr>;
+    return this.expr.fromDriver(value) as TExpr["$"]["TsType"];
   }
 
   /** Appends `min(expr)` to the query SQL. */
@@ -336,10 +340,11 @@ export function min<TExpr extends AggregateInput>(expr: TExpr): MinFn<TExpr> {
  * @template TExpr - The column or scalar expression to find the maximum of.
  */
 export class MaxFn<TExpr extends AggregateInput> extends SqlFn<
-  ExprReturnType<TExpr> | null,
   ExprColumns<TExpr>,
   HasArg<TExpr>,
-  "aggregate"
+  "aggregate",
+  string,
+  TExpr["$"]["TsType"] | null
 > {
   override readonly isAggregate = true;
 
@@ -351,11 +356,9 @@ export class MaxFn<TExpr extends AggregateInput> extends SqlFn<
    * Delegates to the inner expression's own `fromDriver` so that the result
    * is deserialized to the same TypeScript type as the wrapped column/function.
    */
-  override fromDriver(value: unknown): ExprReturnType<TExpr> | null {
+  override fromDriver(value: unknown): TExpr["$"]["TsType"] | null {
     if (value === null) return null;
-    return (this.expr as SqlFn<unknown, never> | AnyColumn).fromDriver(
-      value,
-    ) as ExprReturnType<TExpr>;
+    return this.expr.fromDriver(value) as TExpr["$"]["TsType"];
   }
 
   /** Appends `max(expr)` to the query SQL. */
