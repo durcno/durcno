@@ -1,7 +1,7 @@
 import { is, isTCol } from "../entity";
 import { type AnyScalarSqlFn, SqlFn } from "../functions";
 import { Arg, type IsArg } from "../query-builders/pre";
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import type { SelectQuery } from "../query-builders/select";
 import { type Sql, toSqlValue } from "../sql";
 import type { AnyColumn, TableAnyColumn } from "../table";
@@ -16,7 +16,7 @@ export abstract class Filter<
   readonly $Columns!: TColumns;
   /** Phantom field: `true` when this filter embeds at least one `Arg` placeholder. */
   readonly $HasArg!: THasArg;
-  abstract toQuery(query: Query): void;
+  abstract toQuery(query: Query, ctx?: QueryContext): void;
 }
 
 /** Convenience alias for a `Filter` with all type parameters widened to `any`. */
@@ -56,15 +56,15 @@ export class ComparisonLeftIsColumn<
     this.op = op;
     this.right = right;
   }
-  toQuery(query: Query) {
-    this.left.toQuery(query);
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.left.toQuery(query, ctx);
     query.sql += ` ${this.op} `;
     if (is(this.right, Arg<TLeft["ValType"]>)) {
       query.addArg(this.right);
     } else if (isTCol(this.right)) {
-      this.right.toQuery(query);
+      this.right.toQuery(query, ctx);
     } else if (this.right instanceof SqlFn) {
-      this.right.toQuery(query);
+      this.right.toQuery(query, ctx);
     } else {
       query.sql += this.left.toSQL(this.right);
     }
@@ -89,11 +89,11 @@ export class ComparisonLeftIsSqlFn<
     this.op = op;
     this.right = right;
   }
-  toQuery(query: Query) {
-    this.left.toQuery(query);
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.left.toQuery(query, ctx);
     query.sql += ` ${this.op} `;
     if (this.right instanceof SqlFn) {
-      this.right.toQuery(query);
+      this.right.toQuery(query, ctx);
     } else {
       query.sql += toSqlValue(this.right);
     }
@@ -295,8 +295,9 @@ export class IsNullCondition<TCol extends TableAnyColumn> extends Filter<
     super();
     this.field = field;
   }
-  toQuery(query: Query) {
-    query.sql += `${this.field.fullName} IS NULL`;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.field.toQuery(query, ctx);
+    query.sql += " IS NULL";
   }
 }
 
@@ -314,8 +315,9 @@ export class IsNotNullCondition<TCol extends TableAnyColumn> extends Filter<
     this.field = field;
   }
 
-  toQuery(query: Query) {
-    query.sql += `${this.field.fullName} IS NOT NULL`;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.field.toQuery(query, ctx);
+    query.sql += " IS NOT NULL";
   }
 }
 
@@ -349,17 +351,19 @@ export class InCondition<
     this.field = field;
     this.values = values;
   }
-  toQuery(query: Query) {
+  toQuery(query: Query, ctx?: QueryContext): void {
     if (Array.isArray(this.values)) {
       if (this.values.length === 0) {
         query.sql += "FALSE";
         return;
       }
-      query.sql += `${this.field.fullName} IN (`;
+      this.field.toQuery(query, ctx);
+      query.sql += " IN (";
       query.sql += this.values.map((v) => this.field.toSQL(v)).join(", ");
       query.sql += ")";
     } else {
-      query.sql += `${this.field.fullName} IN (`;
+      this.field.toQuery(query, ctx);
+      query.sql += " IN (";
       query.sql += this.values.toQuery();
       query.sql += ")";
     }
@@ -384,12 +388,13 @@ export class NotInCondition<TCol extends TableAnyColumn> extends Filter<
     this.field = field;
     this.values = values;
   }
-  toQuery(query: Query) {
+  toQuery(query: Query, ctx?: QueryContext): void {
     if (this.values.length === 0) {
       query.sql += "TRUE";
       return;
     }
-    query.sql += `${this.field.fullName} NOT IN (`;
+    this.field.toQuery(query, ctx);
+    query.sql += " NOT IN (";
     query.sql += this.values.map((v) => this.field.toSQL(v)).join(", ");
     query.sql += ")";
   }
@@ -421,10 +426,10 @@ export class AndCondition<
     super();
     this.conditions = conditions;
   }
-  toQuery(query: Query) {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "(";
     for (let i = 0; i < this.conditions.length; i++) {
-      this.conditions[i].toQuery(query);
+      this.conditions[i].toQuery(query, ctx);
       if (i < this.conditions.length - 1) {
         query.sql += " AND ";
       }
@@ -447,10 +452,10 @@ export class OrCondition<
     super();
     this.conditions = conditions;
   }
-  toQuery(query: Query) {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "(";
     for (let i = 0; i < this.conditions.length; i++) {
-      this.conditions[i].toQuery(query);
+      this.conditions[i].toQuery(query, ctx);
       if (i < this.conditions.length - 1) {
         query.sql += " OR ";
       }

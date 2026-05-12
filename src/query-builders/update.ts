@@ -161,7 +161,7 @@ class UpdateQuery<
     query.sql += allFields
       .map(
         (field, index) =>
-          `"${this.#table._.columns[field].nameSnake}" = ${this.#table._.columns[field].toSQL(allValues[index], { cast: true })}`,
+          `"${this.#table._.columns[field].nameSql}" = ${this.#table._.columns[field].toSQL(allValues[index], { cast: true })}`,
       )
       .join(", ");
 
@@ -175,7 +175,7 @@ class UpdateQuery<
         (k) => this.#$returning?.[k] === true,
       );
       query.sql += returningFields
-        .map((field) => `"${this.#table._.columns[field].nameSnake}"`)
+        .map((field) => `"${this.#table._.columns[field].nameSql}"`)
         .join(", ");
     }
     query.sql += ";";

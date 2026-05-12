@@ -2,6 +2,23 @@ import type { Arg } from "./pre";
 
 export type SqlArgType = string | number | null;
 
+/**
+ * Rendering context passed to `toQuery` for alias overrides.
+ * Used when building nested relational subqueries where the real table name
+ * is aliased to a path-based alias (e.g. `"posts__comments"`), and in check
+ * constraint expressions where columns must render without a table qualifier.
+ */
+export type QueryContext = {
+  /**
+   * Maps `"schema.table"` (plain dot-separated, e.g. `"public.comments"`) to an SQL alias
+   * string (e.g. `"posts__comments"`) or `null`.
+   * - A string value replaces the default table qualifier in the rendered SQL.
+   * - `null` suppresses the table qualifier entirely, emitting only the quoted column name
+   *   (used for CHECK constraint expressions).
+   */
+  tableAliases?: Map<string, string | null>;
+};
+
 export class Query<TReturn = unknown> {
   readonly returnType!: TReturn;
   sql: string;

@@ -1,7 +1,7 @@
 import type { Column } from "../columns/common";
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import type { TableColumn } from "../table";
 import { Filter } from "./index";
 
@@ -29,8 +29,10 @@ export class StartsWithCondition<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `starts_with(${this.col.fullName}, `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "starts_with(";
+    this.col.toQuery(query, ctx);
+    query.sql += ", ";
     if (is(this.prefix, Arg<string>)) {
       query.addArg(this.prefix);
     } else {
@@ -62,8 +64,9 @@ export class EndsWithCondition<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `${this.col.fullName} LIKE('%' || `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.col.toQuery(query, ctx);
+    query.sql += " LIKE('%' || ";
     if (is(this.suffix, Arg<string>)) {
       query.addArg(this.suffix);
     } else {
@@ -95,8 +98,9 @@ export class ContainsCondition<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `${this.col.fullName} LIKE ('%' || `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.col.toQuery(query, ctx);
+    query.sql += " LIKE ('%' || ";
     if (is(this.substring, Arg<string>)) {
       query.addArg(this.substring);
     } else {
@@ -128,8 +132,9 @@ export class LikeCondition<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `${this.col.fullName} LIKE `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.col.toQuery(query, ctx);
+    query.sql += " LIKE ";
     if (is(this.pattern, Arg<string>)) {
       query.addArg(this.pattern);
     } else {

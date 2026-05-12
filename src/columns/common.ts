@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { SqlFn, type StdSqlFn } from "../functions";
 import { Arg } from "../query-builders/pre";
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import { Sql } from "../sql";
 import { entityType } from "../symbols";
 import type { StdTable, StdTableColumn, TableColumn } from "../table";
@@ -231,7 +231,7 @@ export abstract class Column<
   // Stores the key/name of the column
   #name: string | undefined;
   // Stores the snake_case name of the column for SQL usage
-  #nameSnake: string | undefined;
+  #nameSql: string | undefined;
   // Stores the table reference
   #table: undefined;
 
@@ -246,7 +246,7 @@ export abstract class Column<
     // Setter to set the column key/name when the column is added to a table
     setName: (name: string) => {
       this.#name = name;
-      this.#nameSnake = camelToSnake(name);
+      this.#nameSql = camelToSnake(name);
     },
     // Setter to set the table reference when the column is added to a table
     setTable: (table: StdTable) => {
@@ -260,8 +260,8 @@ export abstract class Column<
   }
 
   // Getter to access the snake_case column key/name for SQL usage
-  get nameSnake() {
-    return this.#nameSnake;
+  get nameSql() {
+    return this.#nameSql;
   }
 
   // Getter to access the table reference
@@ -334,11 +334,20 @@ export abstract class Column<
    * @returns string `"table"."column"`
    */
   get fullName(): string {
-    return `"${this.table?._.name}"."${this.nameSnake}"`;
+    return `"${this.table?._.name}"."${this.nameSql}"`;
   }
 
-  toQuery(query: Query) {
-    query.sql += this.fullName;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    const alias = ctx?.tableAliases?.get(
+      `${this.table?._.schema}.${this.table?._.name}`,
+    );
+    if (alias === undefined) {
+      query.sql += this.fullName;
+    } else if (alias === null) {
+      query.sql += `"${this.nameSql}"`;
+    } else {
+      query.sql += `"${alias}"."${this.nameSql}"`;
+    }
   }
 
   // Abstract methods for scalar (single-value) conversions - to be implemented by each column type

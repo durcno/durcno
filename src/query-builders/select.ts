@@ -16,7 +16,7 @@ import type {
   Valueof,
 } from "../types";
 import { snakeToCamel } from "../utils";
-import type { OrderBy } from "./orderby-clause";
+import type { OrderExpression } from "./orderby-clause";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -248,8 +248,12 @@ export class SelectQuery<
       >
     | undefined,
   TOrderBy extends
-    | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>, TSelects, TPrepare>
-    | OrderBy<
+    | OrderExpression<
+        TableWithColumns<TTSchema, TTName, TTColumns>,
+        TSelects,
+        TPrepare
+      >
+    | OrderExpression<
         TableWithColumns<TTSchema, TTName, TTColumns>,
         TSelects,
         TPrepare
@@ -338,23 +342,31 @@ export class SelectQuery<
   orderBy<
     TOrderBys extends
       | (
-          | OrderBy<
+          | OrderExpression<
               TableWithColumns<TTSchema, TTName, TTColumns>,
               TSelects,
               TPrepare
             >
           | (TInnerJoins extends unknown[]
-              ? OrderBy<TInnerJoins[number]["table"], TSelects, TPrepare>
+              ? OrderExpression<
+                  TInnerJoins[number]["table"],
+                  TSelects,
+                  TPrepare
+                >
               : never)
         )
       | (
-          | OrderBy<
+          | OrderExpression<
               TableWithColumns<TTSchema, TTName, TTColumns>,
               TSelects,
               TPrepare
             >
           | (TInnerJoins extends unknown[]
-              ? OrderBy<TInnerJoins[number]["table"], TSelects, TPrepare>
+              ? OrderExpression<
+                  TInnerJoins[number]["table"],
+                  TSelects,
+                  TPrepare
+                >
               : never)
         )[],
   >(orderBy: TOrderBys) {

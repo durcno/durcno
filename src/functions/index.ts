@@ -1,4 +1,4 @@
-import { Query } from "../query-builders/query";
+import { Query, type QueryContext } from "../query-builders/query";
 import { type Sql, sql } from "../sql";
 import type { StdTableColumn, TableAnyColumn } from "../table";
 
@@ -56,7 +56,7 @@ export abstract class SqlFn<
   readonly isAggregate: boolean = false;
 
   /** Appends the SQL fragment for this expression to the query (no trailing semicolon). */
-  abstract toQuery(query: Query): void;
+  abstract toQuery(query: Query, ctx?: QueryContext): void;
 
   toSQL(): string {
     const query = new Query("", () => []);

@@ -1,6 +1,6 @@
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import type { AnyScalarTableColumn } from "../table";
 import type { Or } from "../types";
 import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
@@ -24,9 +24,9 @@ export class AbsFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "abs(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -63,9 +63,9 @@ export class ModFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "mod(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ", ";
     if (is(this.n, Arg<number>)) {
       query.addArg(this.n);
@@ -109,9 +109,9 @@ export class RoundFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "round(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     if (this.decimals !== undefined) {
       query.sql += ", ";
       if (is(this.decimals, Arg<number>)) {
@@ -153,9 +153,9 @@ export class CeilFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "ceil(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -188,9 +188,9 @@ export class FloorFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "floor(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }

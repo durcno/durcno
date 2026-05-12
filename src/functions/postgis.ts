@@ -1,7 +1,7 @@
 import type { GeographyPointCol } from "../filters/postgis";
 import { pointToQuery } from "../filters/postgis";
 import type { Arg, IsArg } from "../query-builders/pre";
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import type { Or } from "../types";
 import { SqlFn } from ".";
 
@@ -40,8 +40,10 @@ export class StDistanceFn<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `ST_Distance(${this.col.fullName}, `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "ST_Distance(";
+    this.col.toQuery(query, ctx);
+    query.sql += ", ";
     pointToQuery(query, this.point, this.col.toSQL.bind(this.col));
     query.sql += ")";
   }

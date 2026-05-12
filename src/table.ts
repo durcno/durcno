@@ -69,7 +69,7 @@ export type TableColumn<
 > = TColumn & {
   table: StdTable;
   name: TName;
-  nameSnake: CamelToSnake<Extract<TName, string>>;
+  nameSql: CamelToSnake<Extract<TName, string>>;
   tableName: TTName;
   schemaName: TTSchema;
 };
@@ -331,11 +331,11 @@ export function fk<
 
 export type AnyRelation =
   // biome-ignore lint/suspicious/noExplicitAny: uses any for extends
-  | Many<any, any, any, any>
+  | Many<any, any, any, TableAnyColumn>
   // biome-ignore lint/suspicious/noExplicitAny: uses any for extends
-  | One<any, any, any, any>
+  | One<any, any, any, TableAnyColumn>
   // biome-ignore lint/suspicious/noExplicitAny: uses any for extends
-  | Fk<any, any, any, any>;
+  | Fk<any, any, any, TableAnyColumn>;
 
 export class Relations<
   TTSchema extends string,

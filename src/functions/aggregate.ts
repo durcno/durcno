@@ -1,4 +1,4 @@
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import type { TableAnyColumn } from "../table";
 import { type AnyScalarSqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
 
@@ -47,9 +47,9 @@ export class CountFn<TExpr extends TableAnyColumn> extends SqlFn<
   }
 
   /** Appends `count(expr)` to the query SQL. */
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "count(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -73,7 +73,7 @@ export class CountStarFn extends SqlFn<
   override readonly isAggregate = true;
 
   /** Appends `count(*)` to the query SQL. */
-  toQuery(query: Query): void {
+  toQuery(query: Query, _ctx?: QueryContext): void {
     query.sql += "count(*)";
   }
 }
@@ -101,9 +101,9 @@ export class CountDistinctFn<TExpr extends TableAnyColumn> extends SqlFn<
   }
 
   /** Appends `count(DISTINCT expr)` to the query SQL. */
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "count(DISTINCT ";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -178,9 +178,9 @@ export class SumFn<TExpr extends NumericAggregateInput> extends SqlFn<
   }
 
   /** Appends `sum(expr)` to the query SQL. */
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "sum(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -240,9 +240,9 @@ export class AvgFn<TExpr extends NumericAggregateInput> extends SqlFn<
   }
 
   /** Appends `avg(expr)` to the query SQL. */
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "avg(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -302,9 +302,9 @@ export class MinFn<TExpr extends AggregateInput> extends SqlFn<
   }
 
   /** Appends `min(expr)` to the query SQL. */
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "min(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -362,9 +362,9 @@ export class MaxFn<TExpr extends AggregateInput> extends SqlFn<
   }
 
   /** Appends `max(expr)` to the query SQL. */
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "max(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }

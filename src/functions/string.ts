@@ -1,6 +1,6 @@
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import type { AnyScalarTableColumn } from "../table";
 import type { Or } from "../types";
 import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
@@ -24,9 +24,9 @@ export class LengthFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "length(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -53,9 +53,9 @@ export class LowerFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "lower(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -82,9 +82,9 @@ export class UpperFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "upper(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -111,9 +111,9 @@ export class TrimFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "trim(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ")";
   }
 }
@@ -150,9 +150,9 @@ export class LeftFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "left(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ", ";
     if (is(this.n, Arg)) {
       query.addArg(this.n);
@@ -205,9 +205,9 @@ export class RightFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "right(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ", ";
     if (is(this.n, Arg)) {
       query.addArg(this.n);
@@ -260,9 +260,9 @@ export class PositionFn<
     super();
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "strpos(";
-    this.expr.toQuery(query);
+    this.expr.toQuery(query, ctx);
     query.sql += ", ";
     if (is(this.search, Arg<string>)) {
       query.addArg(this.search);

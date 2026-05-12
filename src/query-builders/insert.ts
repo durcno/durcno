@@ -132,7 +132,7 @@ export class InsertQuery<
     const fields = Object.keys(this.#table._.columns);
     query.sql += " ( ";
     query.sql += fields
-      .map((field) => `"${this.#table._.columns[field].nameSnake}"`)
+      .map((field) => `"${this.#table._.columns[field].nameSql}"`)
       .join(", ");
     query.sql += " ) VALUES";
 
@@ -171,7 +171,7 @@ export class InsertQuery<
         (k) => this.#$returning?.[k] === true,
       );
       query.sql += returningFields
-        .map((field) => `"${this.#table._.columns[field].nameSnake}"`)
+        .map((field) => `"${this.#table._.columns[field].nameSql}"`)
         .join(", ");
     }
 

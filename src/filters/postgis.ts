@@ -14,7 +14,7 @@
 import type { PointColumn } from "../columns/postgis/geography/point";
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import type { TableColumn } from "../table";
 import type { Or } from "../types";
 import { Filter } from ".";
@@ -64,8 +64,10 @@ export class StDWithinFilter<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `ST_DWithin(${this.col.fullName}, `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "ST_DWithin(";
+    this.col.toQuery(query, ctx);
+    query.sql += ", ";
     pointToQuery(query, this.point, this.col.toSQL.bind(this.col));
     query.sql += ", ";
     if (is(this.radius, Arg<number>)) {
@@ -125,8 +127,10 @@ export class StIntersectsFilter<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `ST_Intersects(${this.col.fullName}, `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "ST_Intersects(";
+    this.col.toQuery(query, ctx);
+    query.sql += ", ";
     pointToQuery(query, this.point, this.col.toSQL.bind(this.col));
     query.sql += ")";
   }
@@ -170,8 +174,10 @@ export class StContainsFilter<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `ST_Contains(${this.col.fullName}, `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "ST_Contains(";
+    this.col.toQuery(query, ctx);
+    query.sql += ", ";
     pointToQuery(query, this.point, this.col.toSQL.bind(this.col));
     query.sql += ")";
   }
@@ -215,8 +221,10 @@ export class StWithinFilter<
     super();
   }
 
-  toQuery(query: Query): void {
-    query.sql += `ST_Within(${this.col.fullName}, `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "ST_Within(";
+    this.col.toQuery(query, ctx);
+    query.sql += ", ";
     pointToQuery(query, this.point, this.col.toSQL.bind(this.col));
     query.sql += ")";
   }

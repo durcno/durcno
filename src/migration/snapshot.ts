@@ -1,11 +1,12 @@
 import chalk from "chalk";
 import type { OnDeleteAction } from "../columns/common";
-import { check, createCheckTableProxy } from "../constraints/check";
+import { check } from "../constraints/check";
 import { primaryKeyConstraint } from "../constraints/primary-key";
 import { uniqueConstraint } from "../constraints/unique";
 import { is } from "../entity";
 import { Enum } from "../enumtype";
 import type { IndexType } from "../indexes";
+import type { QueryContext } from "../query-builders/query";
 import { Sequence } from "../sequence";
 import { type StdTableWithColumns, Table } from "../table";
 
@@ -122,8 +123,6 @@ export interface SnapshotSequence {
 export interface SnapshotTableIndex {
   /** The index name. */
   name: string;
-  /** The `"schema.table"` key of the owning table. */
-  table: string;
   /** Column names included in the index. */
   columns: string[];
   /** The index method (e.g. `"btree"`, `"hash"`, `"gin"`, `"gist"`). */
@@ -216,25 +215,24 @@ export function snapshot(entities: unknown[]): Snapshot {
           getReferencesCol: referencesCol,
           getReferencesOnDelete: referencesOnDelete,
         } = col;
-        ss.tables[`${table._.schema}.${table._.name}`].columns[col.nameSnake] =
-          {
-            type: col.sqlType,
-            default: col.getDefaultSqlStr,
-            primaryKey: col.isPrimaryKey || undefined,
-            references:
-              referencesCol !== null
-                ? {
-                    schema: referencesCol.table._.schema,
-                    table: referencesCol.table._.name,
-                    column: referencesCol.nameSnake,
-                    onDelete: referencesOnDelete ?? "CASCADE",
-                  }
-                : undefined,
-            unique: col.isUnique || undefined,
-            notNull: col.isNotNull || undefined,
-            generated: col.getGenerated,
-            as: col.getGeneratedAs,
-          };
+        ss.tables[`${table._.schema}.${table._.name}`].columns[col.nameSql] = {
+          type: col.sqlType,
+          default: col.getDefaultSqlStr,
+          primaryKey: col.isPrimaryKey || undefined,
+          references:
+            referencesCol !== null
+              ? {
+                  schema: referencesCol.table._.schema,
+                  table: referencesCol.table._.name,
+                  column: referencesCol.nameSql,
+                  onDelete: referencesOnDelete ?? "CASCADE",
+                }
+              : undefined,
+          unique: col.isUnique || undefined,
+          notNull: col.isNotNull || undefined,
+          generated: col.getGenerated,
+          as: col.getGeneratedAs,
+        };
       });
       (table._.extra.indexes?.(table as StdTableWithColumns) ?? []).forEach(
         (index) => {
@@ -242,24 +240,26 @@ export function snapshot(entities: unknown[]): Snapshot {
             index._.getName(table)
           ] = {
             name: index._.getName(table),
-            table: table._.fullName,
-            columns: index._.getColumns().map((col) => col.nameSnake),
+            columns: index._.getColumns().map((col) => col.nameSql),
             type: index._.getUsing(),
             unique: index._.getUnique(),
           };
         },
       );
-      const checkProxyTable = createCheckTableProxy(table);
-      (table._.extra.checkConstraints?.(checkProxyTable, check) ?? []).forEach(
-        (chk) => {
-          ss.tables[`${table._.schema}.${table._.name}`].checkConstraints[
-            chk.getName()
-          ] = {
-            name: chk.getName(),
-            sql: chk.toSQL(),
-          };
-        },
-      );
+      const checkCtx: QueryContext = {
+        tableAliases: new Map([[`${table._.schema}.${table._.name}`, null]]),
+      };
+      (
+        table._.extra.checkConstraints?.(table as StdTableWithColumns, check) ??
+        []
+      ).forEach((chk) => {
+        ss.tables[`${table._.schema}.${table._.name}`].checkConstraints[
+          chk.getName()
+        ] = {
+          name: chk.getName(),
+          sql: chk.toSQL(checkCtx),
+        };
+      });
       (
         table._.extra.uniqueConstraints?.(
           table as StdTableWithColumns,

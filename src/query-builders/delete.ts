@@ -103,7 +103,7 @@ export class DeleteQuery<
         (k) => this.#$returning?.[k] === true,
       );
       query.sql += returningFields
-        .map((field) => `"${this.#$table._.columns[field].nameSnake}"`)
+        .map((field) => `"${this.#$table._.columns[field].nameSql}"`)
         .join(", ");
     }
     query.sql += ";";
@@ -118,10 +118,9 @@ export class DeleteQuery<
   }
 
   handleRows(rows: Record<string, unknown>[]) {
-    const { columns } = this.#$table._;
     rows.forEach((row) => {
       for (const [key, value] of Object.entries(row)) {
-        const column = columns[key] as AnyColumn;
+        const column = this.#$table._.columns[key];
         row[key] = column.fromDriver(value);
       }
     });

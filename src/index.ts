@@ -100,6 +100,7 @@ export {
   desc,
 } from "./query-builders/orderby-clause";
 export { Arg, prequery } from "./query-builders/pre";
+export type { QueryContext } from "./query-builders/query";
 export { Query } from "./query-builders/query";
 export { sequence } from "./sequence";
 

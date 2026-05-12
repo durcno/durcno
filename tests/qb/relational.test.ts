@@ -1,7 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, asc, database, defineConfig, desc, eq } from "durcno";
+import {
+  type $Client,
+  and,
+  asc,
+  database,
+  defineConfig,
+  desc,
+  eq,
+  lower,
+  or,
+} from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -1102,6 +1112,96 @@ describe("Relational queries", () => {
     });
   });
 
+  describe("Nested orderBy (2-level deep Many relation)", () => {
+    it("should orderBy asc on a 2nd-level nested Many relation", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "nest_order_user" }))
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id, { title: "Nest Post" }))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "zebra" }),
+          createTestComment(post.id, user.id, { body: "apple" }),
+          createTestComment(post.id, user.id, { body: "mango" }),
+        ]);
+
+      const users = await db.query(schema.Users).findMany({
+        columns: { id: true },
+        with: {
+          posts: {
+            columns: { id: true },
+            with: {
+              comments: {
+                columns: { id: true, body: true },
+                // aliasPath is "posts__comments" != table name "comments" — the bug
+                orderBy: asc(schema.Comments.body),
+              },
+            },
+          },
+        },
+        where: eq(schema.Users.id, user.id),
+      });
+
+      expect(users).toHaveLength(1);
+      expect(users[0].posts).toHaveLength(1);
+      expect(users[0].posts[0].comments.map((c) => c.body)).toEqual([
+        "apple",
+        "mango",
+        "zebra",
+      ]);
+    });
+
+    it("should orderBy desc on a 2nd-level nested Many relation", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "nest_order_desc_user" }))
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "alpha" }),
+          createTestComment(post.id, user.id, { body: "gamma" }),
+          createTestComment(post.id, user.id, { body: "beta" }),
+        ]);
+
+      const users = await db.query(schema.Users).findMany({
+        columns: { id: true },
+        with: {
+          posts: {
+            columns: { id: true },
+            with: {
+              comments: {
+                columns: { id: true, body: true },
+                orderBy: desc(schema.Comments.body),
+              },
+            },
+          },
+        },
+        where: eq(schema.Users.id, user.id),
+      });
+
+      expect(users).toHaveLength(1);
+      expect(users[0].posts[0].comments.map((c) => c.body)).toEqual([
+        "gamma",
+        "beta",
+        "alpha",
+      ]);
+    });
+  });
+
   describe("Nested Many relation filtering (where/orderBy/limit)", () => {
     it("should filter nested Many relation rows with where", async () => {
       const [user] = await db
@@ -1356,6 +1456,148 @@ describe("Relational queries", () => {
       expect(postA?.comments[0].body).toBe("p1-edited");
 
       expect(postB?.comments).toHaveLength(0);
+    });
+  });
+
+  describe("2nd-level nested Many relation where filter (QueryContext alias fix)", () => {
+    it("should apply where filter in a 2nd-level nested Many relation", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "ctx_user1" }))
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id, { title: "ctx post" }))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "edited comment" }),
+          createTestComment(post.id, user.id, { body: "normal comment" }),
+        ]);
+
+      await db
+        .update(schema.Comments)
+        .set({ isEdited: true })
+        .where(eq(schema.Comments.body, "edited comment"));
+
+      const users = await db.query(schema.Users).findMany({
+        columns: { id: true, username: true },
+        with: {
+          posts: {
+            columns: { id: true, title: true },
+            with: {
+              comments: {
+                columns: { id: true, body: true, isEdited: true },
+                // This where filter previously rendered "comments"."isEdited" instead
+                // of "posts__comments"."isEdited", breaking 2nd-level nested queries.
+                where: eq(schema.Comments.isEdited, true),
+              },
+            },
+          },
+        },
+        where: eq(schema.Users.username, "ctx_user1"),
+      });
+
+      expect(users).toHaveLength(1);
+      expect(users[0].posts).toHaveLength(1);
+      expect(users[0].posts[0].comments).toHaveLength(1);
+      expect(users[0].posts[0].comments[0].body).toBe("edited comment");
+      expect(users[0].posts[0].comments[0].isEdited).toBe(true);
+    });
+
+    it("should apply and()/or() where in a 2nd-level nested Many relation", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "ctx_user2" }))
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id, { title: "ctx and/or post" }))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "alpha" }),
+          createTestComment(post.id, user.id, { body: "beta" }),
+          createTestComment(post.id, user.id, { body: "gamma" }),
+        ]);
+
+      await db
+        .update(schema.Comments)
+        .set({ isEdited: true })
+        .where(eq(schema.Comments.body, "alpha"));
+
+      const users = await db.query(schema.Users).findMany({
+        columns: { id: true },
+        with: {
+          posts: {
+            columns: { id: true },
+            with: {
+              comments: {
+                columns: { id: true, body: true },
+                // and()/or() must propagate ctx to children
+                where: or(
+                  eq(schema.Comments.isEdited, true),
+                  and(
+                    eq(schema.Comments.isEdited, false),
+                    eq(schema.Comments.body, "beta"),
+                  ),
+                ),
+              },
+            },
+          },
+        },
+        where: eq(schema.Users.username, "ctx_user2"),
+      });
+
+      expect(users).toHaveLength(1);
+      const bodies = users[0].posts[0].comments.map((c) => c.body).sort();
+      expect(bodies).toEqual(["alpha", "beta"]);
+    });
+
+    it("should apply scalar function (lower) in where in a 2nd-level nested Many relation", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "ctx_user3" }))
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id, { title: "ctx fn post" }))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "HELLO" }),
+          createTestComment(post.id, user.id, { body: "world" }),
+        ]);
+
+      const users = await db.query(schema.Users).findMany({
+        columns: { id: true },
+        with: {
+          posts: {
+            columns: { id: true },
+            with: {
+              comments: {
+                columns: { id: true, body: true },
+                // lower() SqlFn must propagate ctx so column renders as "posts__comments"."body"
+                where: eq(lower(schema.Comments.body), "hello"),
+              },
+            },
+          },
+        },
+        where: eq(schema.Users.username, "ctx_user3"),
+      });
+
+      expect(users).toHaveLength(1);
+      expect(users[0].posts[0].comments).toHaveLength(1);
+      expect(users[0].posts[0].comments[0].body).toBe("HELLO");
     });
   });
 });

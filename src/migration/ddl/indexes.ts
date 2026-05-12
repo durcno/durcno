@@ -106,7 +106,6 @@ export class CreateIndexBuilder extends DDLStatement {
 
     table.indexes[this.indexName] = {
       name: this.indexName,
-      table: tableKey,
       columns: [...this.indexColumns],
       type: this.indexType,
       unique: this.isUnique,

@@ -10,7 +10,7 @@
  */
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
-import type { Query } from "../query-builders/query";
+import type { Query, QueryContext } from "../query-builders/query";
 import type { TableAnyColumn } from "../table";
 import { Filter } from ".";
 
@@ -41,8 +41,9 @@ export class ArrayContainsFilter<
     this.values = values;
   }
 
-  toQuery(query: Query): void {
-    query.sql += `${this.left.fullName} @> `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.left.toQuery(query, ctx);
+    query.sql += " @> ";
     if (is(this.values, Arg<TCol["ValType"][]>)) {
       query.addArg(this.values);
     } else {
@@ -90,8 +91,9 @@ export class ArrayContainedByFilter<
     this.values = values;
   }
 
-  toQuery(query: Query): void {
-    query.sql += `${this.left.fullName} <@ `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.left.toQuery(query, ctx);
+    query.sql += " <@ ";
     if (is(this.values, Arg<TCol["ValType"]>)) {
       query.addArg(this.values);
     } else {
@@ -136,8 +138,9 @@ export class ArrayOverlapsFilter<
     this.right = values;
   }
 
-  toQuery(query: Query): void {
-    query.sql += `${this.left.fullName} && `;
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.left.toQuery(query, ctx);
+    query.sql += " && ";
     if (is(this.right, Arg<TCol["ValType"]>)) {
       query.addArg(this.right);
     } else {
@@ -184,13 +187,15 @@ export class ArrayHasFilter<
     this.value = value;
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     if (is(this.value, Arg<TCol["ValType"]>)) {
       query.addArg(this.value);
     } else {
       query.sql += this.left.toSQLScalar(this.value);
     }
-    query.sql += ` = ANY(${this.left.fullName})`;
+    query.sql += " = ANY(";
+    this.left.toQuery(query, ctx);
+    query.sql += ")";
   }
 }
 
@@ -234,13 +239,15 @@ export class ArrayAllFilter<
     this.value = value;
   }
 
-  toQuery(query: Query): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     if (is(this.value, Arg<TCol["ValType"]>)) {
       query.addArg(this.value);
     } else {
       query.sql += this.left.toSQLScalar(this.value);
     }
-    query.sql += ` = ALL(${this.left.fullName})`;
+    query.sql += " = ALL(";
+    this.left.toQuery(query, ctx);
+    query.sql += ")";
   }
 }
 

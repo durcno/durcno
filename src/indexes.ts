@@ -32,7 +32,7 @@ export class Index<Col extends AnyColumn> {
     getUnique: () => this.#unique,
     getName: (table: StdTable) => {
       return `${table._.name}_${this.#columns
-        .map((col) => col.nameSnake)
+        .map((col) => col.nameSql)
         .join("_")}_index`;
     },
   };

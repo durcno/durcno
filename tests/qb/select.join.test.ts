@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, database, defineConfig, eq } from "durcno";
+import { type $Client, asc, database, defineConfig, desc, eq } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -404,5 +404,133 @@ describe("SELECT with INNER JOIN", () => {
     expect(result).toHaveLength(1);
     expect(result[0].username).toBe("full_chain");
     expect(result[0].postTitle).toBe("Post With Comment");
+  });
+
+  describe("ORDER BY with JOIN", () => {
+    it("should order inner join results asc by joined table column", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "order_user" }))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Posts)
+        .values([
+          createTestPost(user.id, { title: "Charlie Post" }),
+          createTestPost(user.id, { title: "Alpha Post" }),
+          createTestPost(user.id, { title: "Beta Post" }),
+        ]);
+
+      const result = await db
+        .from(schema.Users)
+        .innerJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+        .select({
+          postTitle: schema.Posts.title,
+        })
+        .orderBy(asc(schema.Posts.title));
+
+      expect(result.map((r) => r.postTitle)).toEqual([
+        "Alpha Post",
+        "Beta Post",
+        "Charlie Post",
+      ]);
+    });
+
+    it("should order inner join results desc by joined table column", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "order_desc_user" }))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Posts)
+        .values([
+          createTestPost(user.id, { title: "Charlie Post" }),
+          createTestPost(user.id, { title: "Alpha Post" }),
+          createTestPost(user.id, { title: "Beta Post" }),
+        ]);
+
+      const result = await db
+        .from(schema.Users)
+        .innerJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+        .select({
+          postTitle: schema.Posts.title,
+        })
+        .orderBy(desc(schema.Posts.title));
+
+      expect(result.map((r) => r.postTitle)).toEqual([
+        "Charlie Post",
+        "Beta Post",
+        "Alpha Post",
+      ]);
+    });
+
+    it("should order by base table column in inner join", async () => {
+      await db
+        .insert(schema.Users)
+        .values([
+          createTestUser({ username: "zzz_user" }),
+          createTestUser({ username: "aaa_user" }),
+          createTestUser({ username: "mmm_user" }),
+        ]);
+
+      const users = await db.from(schema.Users).select({
+        id: schema.Users.id,
+        username: schema.Users.username,
+      });
+
+      for (const u of users) {
+        await db
+          .insert(schema.Posts)
+          .values(createTestPost(u.id, { title: `Post by ${u.username}` }));
+      }
+
+      const result = await db
+        .from(schema.Users)
+        .innerJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+        .select({
+          username: schema.Users.username,
+          postTitle: schema.Posts.title,
+        })
+        .orderBy(asc(schema.Users.username));
+
+      const usernames = result.map((r) => r.username);
+      expect(usernames).toEqual([...usernames].sort());
+    });
+
+    it("should order double inner join results by comment body", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "triple_join_user" }))
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values(createTestPost(user.id, { title: "Triple Join Post" }))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "z-comment" }),
+          createTestComment(post.id, user.id, { body: "a-comment" }),
+          createTestComment(post.id, user.id, { body: "m-comment" }),
+        ]);
+
+      const result = await db
+        .from(schema.Users)
+        .innerJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+        .innerJoin(schema.Comments, eq(schema.Comments.postId, schema.Posts.id))
+        .select({
+          commentBody: schema.Comments.body,
+        })
+        .orderBy(asc(schema.Comments.body));
+
+      expect(result.map((r) => r.commentBody)).toEqual([
+        "a-comment",
+        "m-comment",
+        "z-comment",
+      ]);
+    });
   });
 });

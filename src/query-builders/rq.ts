@@ -13,8 +13,12 @@ import type {
 } from "../table";
 import type { Valueof } from "../types";
 import { snakeToCamel } from "../utils";
-import type { OrderBy } from "./orderby-clause";
-import { Query } from "./query";
+import type {
+  OrderExpression,
+  StdOrder,
+  StdOrderSqlFn,
+} from "./orderby-clause";
+import { Query, type QueryContext } from "./query";
 import { QueryPromise } from "./query-promise";
 
 type RelationReturnType<O, TRelation extends AnyRelation> =
@@ -91,8 +95,11 @@ type OptionsBase<
     Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
   >;
   orderBy?:
-    | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>, undefined>
-    | OrderBy<TableWithColumns<TTSchema, TTName, TTColumns>, undefined>[];
+    | OrderExpression<TableWithColumns<TTSchema, TTName, TTColumns>, undefined>
+    | OrderExpression<
+        TableWithColumns<TTSchema, TTName, TTColumns>,
+        undefined
+      >[];
   limit?: number;
   with?: keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"] extends never
     ? never
@@ -357,9 +364,9 @@ class RelationQuery<
       options.where.toQuery(query);
     }
     if (options.orderBy) {
-      const orders = Array.isArray(options.orderBy)
-        ? options.orderBy
-        : [options.orderBy];
+      const orders = (
+        Array.isArray(options.orderBy) ? options.orderBy : [options.orderBy]
+      ) as (StdOrder | StdOrderSqlFn)[];
       orderByToQuery(orders, query);
     }
     if (options.limit) query.sql += ` LIMIT ${options.limit}`;
@@ -426,7 +433,7 @@ function getJsonBuildObjectSelects(
     options.columns,
     table._.columns,
   )) {
-    selects.push(`'${colName}', "${alias}"."${column.nameSnake}"`);
+    selects.push(`'${colName}', "${alias}"."${column.nameSql}"`);
   }
 
   // Add nested relation selects
@@ -527,15 +534,20 @@ function buildRelationSubquery(
     const referencedCol = relation.col.getReferencesCol;
     if (!referencedCol) {
       throw new Error(
-        `Relation column "${relation.col.name}" has no .references() definition. ` +
+        `Relation column "${relation.col.name}"/${relation.col.nameSql} has no .references() definition. ` +
           `Columns used in 'many' or 'one' relations must call .references() to define the join target.`,
       );
     }
-    query.sql += ` WHERE "${aliasPath}"."${relation.col.nameSnake}" = "${parentTableAlias}"."${referencedCol.nameSnake}"`;
+    query.sql += ` WHERE "${aliasPath}"."${relation.col.nameSql}" = "${parentTableAlias}"."${referencedCol.nameSql}"`;
     // Apply user-supplied where filter on top of the join condition (Many only)
     if (relation.t === "Many" && options.where) {
+      const ctx: QueryContext = {
+        tableAliases: new Map([
+          [`${relation.table._.schema}.${relation.table._.name}`, aliasPath],
+        ]),
+      };
       query.sql += " AND ";
-      options.where.toQuery(query);
+      options.where.toQuery(query, ctx);
     }
     if (relation.t === "One") {
       query.sql += ` LIMIT 1`;
@@ -546,21 +558,26 @@ function buildRelationSubquery(
     const referencedCol = relation.col.getReferencesCol;
     if (!referencedCol) {
       throw new Error(
-        `Relation column "${relation.col.name}" has no .references() definition. ` +
+        `Relation column "${relation.col.name}"/${relation.col.nameSql} has no .references() definition. ` +
           `Columns used in 'fk' relations must call .references() to define the join target.`,
       );
     }
-    query.sql += ` WHERE "${aliasPath}"."${referencedCol.nameSnake}" = "${parentTableAlias}"."${relation.col.nameSnake}"`;
+    query.sql += ` WHERE "${aliasPath}"."${referencedCol.nameSql}" = "${parentTableAlias}"."${relation.col.nameSql}"`;
     query.sql += ` LIMIT 1`;
   }
 
   // Apply user-supplied orderBy and limit for Many relations
   if (relation.t === "Many") {
     if (options.orderBy) {
-      const orders = Array.isArray(options.orderBy)
-        ? options.orderBy
-        : [options.orderBy];
-      orderByToQuery(orders, query);
+      const orders = (
+        Array.isArray(options.orderBy) ? options.orderBy : [options.orderBy]
+      ) as (StdOrder | StdOrderSqlFn)[];
+      const ctx: QueryContext = {
+        tableAliases: new Map([
+          [`${relation.table._.schema}.${relation.table._.name}`, aliasPath],
+        ]),
+      };
+      orderByToQuery(orders, query, ctx);
     }
     if (options.limit) query.sql += ` LIMIT ${options.limit}`;
   }
@@ -571,12 +588,13 @@ function buildRelationSubquery(
 
 /** Appends an ORDER BY clause for `orders` to `query.sql`. */
 function orderByToQuery(
-  orders: Array<{ toQuery(q: Query): void }>,
+  orders: (StdOrder | StdOrderSqlFn)[],
   query: Query,
+  ctx?: QueryContext,
 ): void {
   query.sql += " ORDER BY ";
   for (let i = 0; i < orders.length; i++) {
-    orders[i].toQuery(query);
+    orders[i].toQuery(query, ctx);
     if (i < orders.length - 1) query.sql += ", ";
   }
 }

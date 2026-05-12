@@ -29,7 +29,7 @@ export class UniqueConstraint {
   }
 
   getColumns(): string[] {
-    return this.#columns.map((col) => col.nameSnake as string);
+    return this.#columns.map((col) => col.nameSql);
   }
 }
 

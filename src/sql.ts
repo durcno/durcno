@@ -1,5 +1,5 @@
 import { isCol } from "./entity";
-import type { Query } from "./query-builders/query";
+import type { Query, QueryContext } from "./query-builders/query";
 import type { TableAnyColumn } from "./table";
 
 export class Sql {
@@ -17,7 +17,7 @@ export class Sql {
     return this.#string;
   }
 
-  toQuery(query: Query) {
+  toQuery(query: Query, _ctx?: QueryContext) {
     query.sql += this.#string;
   }
 }

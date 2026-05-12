@@ -2,7 +2,9 @@ import { isTCol } from "../entity";
 import type { AnyScalarSqlFn, SqlFn } from "../functions";
 import type { AnyTableWC, AnyTableWithColumns, TableAnyColumn } from "../table";
 import type { Valueof } from "../types";
-import type { Query } from "./query";
+import type { Query, QueryContext } from "./query";
+
+export type OrderDirection = "ASC" | "DESC";
 
 class Order<
   TTableColumn extends TableAnyColumn | string,
@@ -16,14 +18,17 @@ class Order<
   }
 
   /** Appends the order fragment to the query SQL. */
-  toQuery(query: Query) {
+  toQuery(query: Query, ctx?: QueryContext) {
     if (typeof this.field === "string") {
       query.sql += `"${this.field}" ${this.dir}`;
     } else {
-      query.sql += `${this.field.fullName} ${this.dir}`;
+      this.field.toQuery(query, ctx);
+      query.sql += ` ${this.dir}`;
     }
   }
 }
+
+export type StdOrder = Order<string, OrderDirection>;
 
 /**
  * Order clause built from a `SqlFn` value expression (e.g. `ST_Distance(...)`).
@@ -44,13 +49,13 @@ export class OrderSqlFn<TSqlFn extends AnyScalarSqlFn> {
   ) {}
 
   /** Appends the order fragment (expression + direction) to the query SQL. */
-  toQuery(query: Query) {
-    this.fn.toQuery(query);
+  toQuery(query: Query, ctx?: QueryContext) {
+    this.fn.toQuery(query, ctx);
     query.sql += ` ${this.dir}`;
   }
 }
 
-export type { Order };
+export type StdOrderSqlFn = OrderSqlFn<AnyScalarSqlFn>;
 
 /**
  * Valid orderBy item for a query on `TTableWC`.
@@ -59,7 +64,7 @@ export type { Order };
  * @template TPrepare - When `true`, `OrderSqlFn` items carrying `Arg` placeholders are allowed.
  *   Defaults to `false` (non-prepared context).
  */
-export type OrderBy<
+export type OrderExpression<
   TTableWC extends AnyTableWithColumns,
   TSelects extends Record<string, any> | undefined,
   TPrepare extends boolean = false,

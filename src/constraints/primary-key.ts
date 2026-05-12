@@ -25,7 +25,7 @@ export class PrimaryKeyConstraint {
   }
 
   getColumns(): string[] {
-    return this.#columns.map((col) => col.nameSnake as string);
+    return this.#columns.map((col) => col.nameSql);
   }
 }
 
