@@ -56,6 +56,7 @@ Expect<
       title: string | null;
       content: string | null;
       tags: string[] | null;
+      metrics: { views: number; likes: number } | null;
     }[]
   >
 >();

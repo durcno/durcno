@@ -468,38 +468,3 @@ export const JsonbTests = table("public", "jsonb_tests", {
   // Nullable jsonb with default
   dataWithDefault: jsonb({}).default({ status: "default" }),
 });
-
-/**
- * Custom type for typed JSON tests
- */
-export interface UserSettings {
-  theme: "light" | "dark";
-  notifications: boolean;
-  language: string;
-}
-
-/**
- * Test table for typed json columns
- */
-export const TypedJsonTests = table("public", "typed_json_tests", {
-  id: pk(),
-  // Nullable typed json
-  settings: json({}).$type<UserSettings>(),
-  // Nullable typed json with default
-  settingsWithDefault: json({})
-    .$type<UserSettings>()
-    .default({ theme: "light", notifications: false, language: "en" }),
-});
-
-/**
- * Test table for typed jsonb columns
- */
-export const TypedJsonbTests = table("public", "typed_jsonb_tests", {
-  id: pk(),
-  // Nullable typed jsonb
-  settings: jsonb({}).$type<UserSettings>(),
-  // Nullable typed jsonb with default
-  settingsWithDefault: jsonb({})
-    .$type<UserSettings>()
-    .default({ theme: "light", notifications: false, language: "en" }),
-});

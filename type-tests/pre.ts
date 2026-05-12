@@ -101,6 +101,7 @@ Expect<
       content: string | null;
       createdAt: Date;
       tags: string[] | null;
+      metrics: { views: number; likes: number } | null;
     }[]
   >
 >();

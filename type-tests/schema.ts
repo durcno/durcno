@@ -11,6 +11,7 @@ import {
   gte,
   inet,
   integer,
+  json,
   length,
   like,
   lte,
@@ -18,6 +19,7 @@ import {
   many,
   notNull,
   now,
+  numeric,
   one,
   pk,
   primaryKey,
@@ -78,6 +80,8 @@ export const Posts = table("public", "posts", {
   createdAt: timestamp({ notNull }).default(now()),
   // Array column: list of tags (nullable)
   tags: varchar({ length: 50, dimension: [null] as const }),
+  // JSON column with $type override for metrics
+  metrics: json({}).$type<{ views: number; likes: number }>(),
 });
 
 export const Comments = table("public", "comments", {
@@ -162,6 +166,10 @@ export const Events = table("public", "events", {
   startTimeWithTz: time({ withTimezone: true }),
   // Time column without precision
   endTime: time({}),
+  // Numeric column with $type override
+  capacity: numeric({}).$type<{ seats: number }>(),
+  // JSON column with $type override
+  eventMetadata: json({}).$type<{ tags: string[] }>(),
 });
 
 // Table for testing check constraints
@@ -228,6 +236,8 @@ export const ArrayTest = table("public", "array_test", {
   vectors: integer({ dimension: [2, null] as const }),
   // // Enum array
   roles: UserTypeEnum.enumed({ dimension: [null] as const }),
+  // Integer column with $type override
+  priority: integer({}).$type<"high" | "medium" | "low">(),
 });
 
 // Table for testing composite primary key constraint

@@ -61,7 +61,7 @@ Expect<Equal<TestInsertType["requiredField"], string | Sql>>();
 
 // Test: Not null with default should be optional (default takes precedence)
 Expect<
-  Equal<TestInsertType["requiredWithDefault"], string | null | undefined | Sql>
+  Equal<TestInsertType["requiredWithDefault"], string | undefined | Sql>
 >();
 
 // Test: Default without not null should be optional
@@ -70,10 +70,10 @@ Expect<
 >();
 
 // Test: Nullable without default should allow the value type and null
-Expect<Equal<TestInsertType["nullable"], string | null | undefined | Sql>>();
+Expect<Equal<TestInsertType["nullable"], string | Sql | null | undefined>>();
 
 // Test: Timestamp with now() default and notNull should be optional
-Expect<Equal<TestInsertType["createdAt"], Date | null | undefined | Sql>>();
+Expect<Equal<TestInsertType["createdAt"], Date | undefined | Sql>>();
 
 // Test actual insert operations work correctly
 db.insert(TestTable).values({
