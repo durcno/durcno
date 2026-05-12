@@ -14,7 +14,7 @@ const config: Config = {
   title: "Durcno",
   tagline:
     "A PostgreSQL Query Builder and Migration Manager for TypeScript, from the future.",
-  favicon: "img/favicon.ico",
+  favicon: "favicon.ico",
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
