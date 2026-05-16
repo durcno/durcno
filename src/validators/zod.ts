@@ -1,5 +1,5 @@
 import * as z from "zod";
-import type { AnyColumn, TableWithColumns } from "../table";
+import type { AnyColumn, TableAnyColumn, TableWithColumns } from "../table";
 
 export type BuildZodRefine<TColumns extends Record<string, AnyColumn>> = {
   [K in keyof TColumns]?: (...args: [TColumns[K]["zodType"]]) => z.ZodType;
@@ -8,24 +8,20 @@ export type BuildZodRefine<TColumns extends Record<string, AnyColumn>> = {
 type InferColInsertZodType<
   TColumn extends AnyColumn,
   ZType extends z.ZodType,
-> = TColumn extends {
-  isGeneratedAlways: true;
-}
+> = TColumn["isGeneratedAlways"] extends true
   ? never
-  : TColumn extends { isGeneratedByDefault: true }
+  : TColumn["isGeneratedByDefault"] extends true
     ? z.ZodOptional<ZType>
-    : TColumn extends { hasDefault: true }
-      ? z.ZodOptional<ZType>
-      : TColumn extends { hasDefaultFn: true }
+    : TColumn["isNotNull"] extends true
+      ? TColumn["hasInsertFn"] | TColumn["hasDefault"] extends true
         ? z.ZodOptional<ZType>
-        : TColumn extends { isNotNull: true }
-          ? ZType
-          : z.ZodOptional<ZType>;
+        : ZType
+      : z.ZodOptional<z.ZodNullable<ZType>>;
 type InferInsertZodShape<
   TColumns extends Record<string, AnyColumn>,
   TRefine extends BuildZodRefine<TColumns> | undefined,
 > = {
-  [K in keyof TColumns]: TRefine extends {}
+  [K in keyof TColumns]: TRefine extends Record<string, unknown>
     ? TRefine[K] extends (...args: any[]) => infer U
       ? U extends z.ZodType
         ? InferColInsertZodType<TColumns[K], U>
@@ -47,12 +43,9 @@ export function createInsertSchema<
 ): z.ZodObject<InferInsertZodShape<TColumns, TRefine>> {
   const shape: Record<string, z.ZodType> = {};
 
-  for (const [columnName, column] of Object.entries(table._.columns)) {
-    // Handle different column configurations for insert operations
-    if (column.generated === "ALWAYS") {
-      // Columns with GENERATED ALWAYS should not be included in insert schema
-      continue;
-    }
+  Object.entries(table._.columns).forEach((entry) => {
+    const [columnName, column] = entry as [string, TableAnyColumn];
+    if (column.isGeneratedAlways) return;
 
     let zodSchema: z.ZodType = column.zodType;
 
@@ -60,17 +53,20 @@ export function createInsertSchema<
       zodSchema = refine[columnName](column.zodType);
     }
 
-    if (
-      column.generated === "BY DEFAULT" ||
-      !column.isNotNull ||
-      column.hasDefault ||
-      column.hasInsertFn
-    ) {
+    if (column.isGeneratedByDefault) {
       zodSchema = zodSchema.optional();
+    } else {
+      if (column.isNotNull) {
+        if (column.hasInsertFn || column.hasDefault) {
+          zodSchema = zodSchema.optional();
+        }
+      } else {
+        zodSchema = zodSchema.nullable().optional();
+      }
     }
 
     shape[columnName] = zodSchema;
-  }
+  });
 
   return z.object(shape) as z.ZodObject<InferInsertZodShape<TColumns, TRefine>>;
 }
@@ -88,7 +84,7 @@ type InferUpdateZodShape<
   TColumns extends Record<string, AnyColumn>,
   TRefine extends BuildZodRefine<TColumns> | undefined,
 > = {
-  [K in keyof TColumns]: TRefine extends {}
+  [K in keyof TColumns]: TRefine extends Record<string, unknown>
     ? TRefine[K] extends (...args: any[]) => infer U
       ? U extends z.ZodType
         ? InferColUpdateZodType<TColumns[K], U>
@@ -110,26 +106,25 @@ export function createUpdateSchema<
 ): z.ZodObject<InferUpdateZodShape<TColumns, TRefine>> {
   const shape: Record<string, z.ZodType> = {};
 
-  for (const [columnName, column] of Object.entries(table._.columns)) {
-    // For update operations, all columns are optional except those with GENERATED ALWAYS
-    if (column.isPrimaryKey) {
-      // Columns with GENERATED ALWAYS should not be included in update schema
-      continue;
-    }
+  Object.entries(table._.columns).forEach((entry) => {
+    const [columnName, column] = entry as [string, TableAnyColumn];
+
+    if (column.isPrimaryKey) return;
 
     let zodSchema: z.ZodType = column.zodType;
 
     if (refine?.[columnName]) {
       zodSchema = refine[columnName](column.zodType);
     }
-    if (!column.isNotNull) {
-      // Nullable columns are nullable
-      zodSchema = zodSchema.nullable();
+
+    if (column.isNotNull) {
+      zodSchema = zodSchema.optional();
+    } else {
+      zodSchema = zodSchema.nullable().optional();
     }
-    zodSchema = zodSchema.optional();
 
     shape[columnName] = zodSchema;
-  }
+  });
 
   return z.object(shape) as z.ZodObject<InferUpdateZodShape<TColumns, TRefine>>;
 }

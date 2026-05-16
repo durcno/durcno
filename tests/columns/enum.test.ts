@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -13,12 +14,18 @@ describe("Enum Column Type", () => {
 
   describe("enum", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.EnumTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ status: "unknown" })).toThrow();
+      expect(() => zodSchema.parse({ status: 123 })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.EnumTests)
-        .values({ status: "active" })
+        .values(zodSchema.parse({ status: "active" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

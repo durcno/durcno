@@ -167,16 +167,14 @@ export abstract class Column<
     PgType: TPgType;
     /** The TypeScript type for this column's value. */
     TsType: TColVal;
-    TsTypeScalar: TColVal;
-    ValTypeBase: GetValueArray<TColVal, TConfig>;
     // biome-ignore lint/complexity/noBannedTypes: <>
     HasValTypeOverridde: {};
     // biome-ignore lint/complexity/noBannedTypes: <>
     ValTypeOverride: {};
   };
   readonly ValType!: this["$"]["HasValTypeOverridde"] extends true
-    ? this["$"]["ValTypeOverride"]
-    : this["$"]["ValTypeBase"];
+    ? GetValueArray<this["$"]["ValTypeOverride"], TConfig>
+    : GetValueArray<TColVal, TConfig>;
   readonly ValTypeInsert!: this extends {
     isGeneratedAlways: true;
   }
@@ -184,38 +182,32 @@ export abstract class Column<
     : this extends { isGeneratedByDefault: true }
       ? this["ValType"] | undefined
       : this extends {
-            hasDefault: true;
+            isNotNull: true;
           }
-        ? this["ValType"] | Sql | null | undefined
-        : this extends { hasInsertFn: true }
-          ? this["ValType"] | Sql | null | undefined
-          : TConfig extends {
-                notNull: true;
-              }
-            ? this["ValType"] | Sql
-            : this["ValType"] | Sql | null | undefined;
-  readonly ValTypeUpdate!: TConfig extends { primaryKey: true }
+        ? this extends { hasInsertFn: true } | { hasDefault: true }
+          ? this["ValType"] | Sql | undefined
+          : this["ValType"] | Sql
+        : this["ValType"] | Sql | null | undefined;
+  readonly ValTypeUpdate!: this extends {
+    isPrimaryKey: true;
+  }
     ? never
-    : TConfig extends { notNull: true }
-      ? this["ValType"]
-      : this["ValType"] | null;
-  readonly ValTypeSelect!: TConfig extends
+    : this extends { isNotNull: true }
+      ? this["ValType"] | undefined
+      : this["ValType"] | undefined | null;
+  readonly ValTypeSelect!: this extends
     | {
         isGeneratedAlways: true;
       }
     | {
         isGeneratedByDefault: true;
       }
+    | {
+        isPrimaryKey: true;
+      }
+    | { isNotNull: true }
     ? this["ValType"]
-    : TConfig extends {
-          primaryKey: true;
-        }
-      ? this["ValType"]
-      : TConfig extends {
-            notNull: true;
-          }
-        ? this["ValType"]
-        : this["ValType"] | null;
+    : this["ValType"] | null;
   #default: this["ValType"] | Sql | undefined;
   #insertFn: (() => this["ValType"]) | undefined;
   #updateFn: (() => this["ValType"]) | undefined;
@@ -320,7 +312,9 @@ export abstract class Column<
     // dimensions are processed left-to-right where first = innermost
     for (const dim of this.config.dimension) {
       if (typeof dim === "number") {
-        schema = z.tuple(Array(dim).map(() => schema) as [z.ZodAny]);
+        schema = z.tuple(
+          Array.from({ length: dim }, () => schema) as [z.ZodAny],
+        );
       } else {
         schema = z.array(schema);
       }
@@ -618,12 +612,12 @@ export abstract class Column<
   references(ref: BuildRef<this["ValType"]>) {
     if (typeof ref === "function") {
       this.#references = {
-        column: ref as () => StdTableColumn,
+        column: ref,
         onDelete: "CASCADE",
       };
     } else {
       this.#references = {
-        column: ref.column as () => StdTableColumn,
+        column: ref.column,
         onDelete: ref.onDelete ?? "CASCADE",
       };
     }

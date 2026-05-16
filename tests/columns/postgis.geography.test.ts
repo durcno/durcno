@@ -1,4 +1,5 @@
 import { and, asc, eq, lt, stDistance, stDWithin, stIntersects } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -17,14 +18,20 @@ describe("Geography Column Types (PostGIS)", () => {
 
   describe("geography point", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.GeographyPointTests);
     const pointA: [number, number] = [-74.006, 40.7128]; // NYC
     const pointB: [number, number] = [-118.2437, 34.0522]; // LA
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ point: "not-a-point" })).toThrow();
+      expect(() => zodSchema.parse({ point: ["a", "b"] })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.GeographyPointTests)
-        .values({ point: pointA })
+        .values(zodSchema.parse({ point: pointA }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -60,6 +67,7 @@ describe("Geography Column Types (PostGIS)", () => {
 
   describe("geography multipoint", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.GeographyMultiPointTests);
     const mpA: [number, number][] = [
       [-74.006, 40.7128],
       [-118.2437, 34.0522],
@@ -69,11 +77,16 @@ describe("Geography Column Types (PostGIS)", () => {
       [-122.4194, 37.7749],
     ];
 
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ multipoint: "x" })).toThrow();
+      expect(() => zodSchema.parse({ multipoint: [["a", "b"]] })).toThrow();
+    });
+
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.GeographyMultiPointTests)
-        .values({ multipoint: mpA })
+        .values(zodSchema.parse({ multipoint: mpA }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -109,6 +122,7 @@ describe("Geography Column Types (PostGIS)", () => {
 
   describe("geography linestring", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.GeographyLineStringTests);
     const lsA: [number, number][] = [
       [-74.006, 40.7128],
       [-87.6298, 41.8781],
@@ -119,11 +133,16 @@ describe("Geography Column Types (PostGIS)", () => {
       [-104.9903, 39.7392],
     ];
 
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ linestring: "x" })).toThrow();
+      expect(() => zodSchema.parse({ linestring: ["a", "b"] })).toThrow();
+    });
+
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.GeographyLineStringTests)
-        .values({ linestring: lsA })
+        .values(zodSchema.parse({ linestring: lsA }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -159,6 +178,7 @@ describe("Geography Column Types (PostGIS)", () => {
 
   describe("geography multilinestring", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.GeographyMultiLineStringTests);
     const mlsA: [number, number][][] = [
       [
         [-74.006, 40.7128],
@@ -176,11 +196,18 @@ describe("Geography Column Types (PostGIS)", () => {
       ],
     ];
 
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ multilinestring: "x" })).toThrow();
+      expect(() =>
+        zodSchema.parse({ multilinestring: [["a", "b"]] }),
+      ).toThrow();
+    });
+
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.GeographyMultiLineStringTests)
-        .values({ multilinestring: mlsA })
+        .values(zodSchema.parse({ multilinestring: mlsA }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -216,6 +243,7 @@ describe("Geography Column Types (PostGIS)", () => {
 
   describe("geography polygon", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.GeographyPolygonTests);
     const polyA: [number, number][][] = [
       [
         [-74.006, 40.7128],
@@ -233,11 +261,16 @@ describe("Geography Column Types (PostGIS)", () => {
       ],
     ];
 
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ polygon: "x" })).toThrow();
+      expect(() => zodSchema.parse({ polygon: ["a", "b", "c"] })).toThrow();
+    });
+
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.GeographyPolygonTests)
-        .values({ polygon: polyA })
+        .values(zodSchema.parse({ polygon: polyA }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -273,6 +306,7 @@ describe("Geography Column Types (PostGIS)", () => {
 
   describe("geography multipolygon", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.GeographyMultiPolygonTests);
     const mpolyA: [number, number][][][] = [
       [
         [
@@ -302,11 +336,16 @@ describe("Geography Column Types (PostGIS)", () => {
       ],
     ];
 
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ multipolygon: "x" })).toThrow();
+      expect(() => zodSchema.parse({ multipolygon: [[["a", "b"]]] })).toThrow();
+    });
+
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.GeographyMultiPolygonTests)
-        .values({ multipolygon: mpolyA })
+        .values(zodSchema.parse({ multipolygon: mpolyA }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

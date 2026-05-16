@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -13,12 +14,18 @@ describe("Boolean Column Type", () => {
 
   describe("boolean", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.BooleanTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ flag: "true" })).toThrow();
+      expect(() => zodSchema.parse({ flag: 1 })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.BooleanTests)
-        .values({ flag: true })
+        .values(zodSchema.parse({ flag: true }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

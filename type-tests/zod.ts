@@ -6,9 +6,9 @@ import {
   pk,
   table,
   timestamp,
+  type UuidVersion,
   uuid,
   varchar,
-  type UuidVersion,
 } from "durcno";
 import { createInsertSchema, createUpdateSchema } from "durcno/validators/zod";
 import type * as z from "zod";
@@ -47,7 +47,9 @@ Expect<
 // Test that optional nullable fields are optional and nullable
 Expect<
   Equal<
-    (typeof insertSchema)["shape"]["optionalField"] extends z.ZodOptional<z.ZodString>
+    (typeof insertSchema)["shape"]["optionalField"] extends z.ZodOptional<
+      z.ZodNullable<z.ZodString>
+    >
       ? true
       : false,
     true

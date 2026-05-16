@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -17,12 +18,13 @@ describe("JSON/JSONB Column Types", () => {
 
   describe("json", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.JsonTests);
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.JsonTests)
-        .values({ data: { key: "value", count: 1 } })
+        .values(zodSchema.parse({ data: { key: "value", count: 1 } }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -58,12 +60,13 @@ describe("JSON/JSONB Column Types", () => {
 
   describe("jsonb", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.JsonbTests);
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.JsonbTests)
-        .values({ data: { key: "value", count: 1 } })
+        .values(zodSchema.parse({ data: { key: "value", count: 1 } }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

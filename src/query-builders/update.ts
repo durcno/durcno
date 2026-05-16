@@ -21,7 +21,10 @@ export class UpdateBuilder<
 
   set<
     TValues extends {
-      [colName in keyof TTableWC["_"]["columns"]]?: TTableWC["_"]["columns"][colName]["ValTypeUpdate"];
+      [colName in keyof TTableWC["_"]["columns"]]?: Exclude<
+        TTableWC["_"]["columns"][colName]["ValTypeUpdate"],
+        undefined
+      >;
     },
   >(values: TValues) {
     return new UpdateQuery(

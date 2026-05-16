@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -17,12 +18,17 @@ describe("Numeric Column Types", () => {
 
   describe("integer", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.IntegerTests);
+
+    it("zod insert schema", () => {
+      expect(zodSchema.parse({ count: 42 })).toMatchObject({ count: 42 });
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.IntegerTests)
-        .values({ count: 42 })
+        .values(zodSchema.parse({ count: 42 }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -58,12 +64,17 @@ describe("Numeric Column Types", () => {
 
   describe("smallint", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.SmallintTests);
+
+    it("zod insert schema", () => {
+      expect(zodSchema.parse({ value: 100 })).toMatchObject({ value: 100 });
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.SmallintTests)
-        .values({ value: 100 })
+        .values(zodSchema.parse({ value: 100 }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -99,12 +110,18 @@ describe("Numeric Column Types", () => {
 
   describe("bigint", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.BigintTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ amount: 3.14 })).toThrow();
+      expect(() => zodSchema.parse({ amount: "abc" })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.BigintTests)
-        .values({ amount: 1000000000n })
+        .values(zodSchema.parse({ amount: 1000000000n }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -140,12 +157,18 @@ describe("Numeric Column Types", () => {
 
   describe("serial", () => {
     let insertedId: number;
+    const zodSchema = createInsertSchema(schema.SerialTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ name: 123 })).toThrow();
+      expect(() => zodSchema.parse({ name: false })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.SerialTests)
-        .values({ name: "test" })
+        .values(zodSchema.parse({ name: "test" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeGreaterThan(0);
@@ -180,12 +203,18 @@ describe("Numeric Column Types", () => {
 
   describe("smallserial", () => {
     let insertedId: number;
+    const zodSchema = createInsertSchema(schema.SmallserialTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ name: 123 })).toThrow();
+      expect(() => zodSchema.parse({ name: false })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.SmallserialTests)
-        .values({ name: "test" })
+        .values(zodSchema.parse({ name: "test" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeGreaterThan(0);
@@ -220,12 +249,18 @@ describe("Numeric Column Types", () => {
 
   describe("bigserial", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.BigserialTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ name: 123 })).toThrow();
+      expect(() => zodSchema.parse({ name: false })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.BigserialTests)
-        .values({ name: "test" })
+        .values(zodSchema.parse({ name: "test" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeGreaterThan(0);
@@ -260,12 +295,18 @@ describe("Numeric Column Types", () => {
 
   describe("numeric", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.NumericTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ value: 42 })).toThrow();
+      expect(() => zodSchema.parse({ value: "abc" })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.NumericTests)
-        .values({ value: "123.45" })
+        .values(zodSchema.parse({ value: "3.14" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -277,7 +318,7 @@ describe("Numeric Column Types", () => {
         .from(schema.NumericTests)
         .select()
         .where(eq(schema.NumericTests.id, insertedId));
-      expect(row.value).toBe("123.45");
+      expect(row.value).toBe("3.14");
       expect(row.valueWithDefault).toBe("0");
     });
 

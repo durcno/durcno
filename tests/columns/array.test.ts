@@ -8,6 +8,7 @@ import {
   isNotNull,
   isNull,
 } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   cleanTestData,
@@ -32,12 +33,30 @@ describe("Array Column Types", () => {
 
   describe("varchar[]", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.SimpleArrayTests);
+
+    it("zod insert schema", () => {
+      expect(() =>
+        zodSchema.parse({
+          requiredTags: "not-an-array",
+          requiredScores: [1, 2],
+        }),
+      ).toThrow();
+      expect(() =>
+        zodSchema.parse({ requiredTags: [1, 2], requiredScores: [1, 2] }),
+      ).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.SimpleArrayTests)
-        .values({ requiredTags: ["a", "b", "c"], requiredScores: [1] })
+        .values(
+          zodSchema.parse({
+            requiredTags: ["a", "b", "c"],
+            requiredScores: [1],
+          }),
+        )
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -153,12 +172,30 @@ describe("Array Column Types", () => {
 
   describe("integer[3]", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.FixedArrayTests);
+
+    it("zod insert schema", () => {
+      expect(() =>
+        zodSchema.parse({ requiredCoords: [1, 2], requiredPair: ["a", "b"] }),
+      ).toThrow();
+      expect(() =>
+        zodSchema.parse({
+          requiredCoords: "not-array",
+          requiredPair: ["a", "b"],
+        }),
+      ).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.FixedArrayTests)
-        .values({ requiredCoords: [10, 20, 30], requiredPair: ["a", "b"] })
+        .values(
+          zodSchema.parse({
+            requiredCoords: [10, 20, 30],
+            requiredPair: ["a", "b"],
+          }),
+        )
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -238,21 +275,39 @@ describe("Array Column Types", () => {
 
   describe("integer[][]", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.MultidimensionalArrayTests);
+
+    it("zod insert schema", () => {
+      expect(() =>
+        zodSchema.parse({
+          requiredMatrix: "not-array",
+          requiredVectors: [[1, 2]],
+        }),
+      ).toThrow();
+      expect(() =>
+        zodSchema.parse({
+          requiredMatrix: [[1, 2]],
+          requiredVectors: "not-array",
+        }),
+      ).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.MultidimensionalArrayTests)
-        .values({
-          requiredMatrix: [
-            [1, 2, 3],
-            [4, 5, 6],
-          ],
-          requiredVectors: [
-            [1, 2],
-            [3, 4],
-          ],
-        })
+        .values(
+          zodSchema.parse({
+            requiredMatrix: [
+              [1, 2, 3],
+              [4, 5, 6],
+            ],
+            requiredVectors: [
+              [1, 2],
+              [3, 4],
+            ],
+          }),
+        )
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -364,15 +419,30 @@ describe("Array Column Types", () => {
 
   describe("StatusEnum[]", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.EnumArrayTests);
+
+    it("zod insert schema", () => {
+      expect(() =>
+        zodSchema.parse({
+          requiredStatuses: ["unknown"],
+          requiredPriorities: ["low"],
+        }),
+      ).toThrow();
+      expect(() =>
+        zodSchema.parse({ requiredStatuses: 123, requiredPriorities: ["low"] }),
+      ).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.EnumArrayTests)
-        .values({
-          requiredStatuses: ["active", "pending"],
-          requiredPriorities: ["high"],
-        })
+        .values(
+          zodSchema.parse({
+            requiredStatuses: ["active", "pending"],
+            requiredPriorities: ["high"],
+          }),
+        )
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

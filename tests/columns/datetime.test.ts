@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -17,6 +18,12 @@ describe("Date/Time Column Types", () => {
 
   describe("timestamp", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.TimestampTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ at: new Date("2021-01-01") })).toThrow();
+      expect(() => zodSchema.parse({ at: 0 })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
@@ -62,12 +69,18 @@ describe("Date/Time Column Types", () => {
 
   describe("date", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.DateTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ date: "2021-01-01" })).toThrow();
+      expect(() => zodSchema.parse({ date: 0 })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.DateTests)
-        .values({ date: new Date("2024-06-15T00:00:00.000Z") })
+        .values(zodSchema.parse({ date: new Date("2024-06-15T00:00:00.000Z") }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -107,12 +120,18 @@ describe("Date/Time Column Types", () => {
 
   describe("time", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.TimeTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ time: 123 })).toThrow();
+      expect(() => zodSchema.parse({ time: false })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.TimeTests)
-        .values({ time: "10:30:00" })
+        .values(zodSchema.parse({ time: "10:30:00" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

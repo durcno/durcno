@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -17,12 +18,18 @@ describe("Network Column Types", () => {
 
   describe("inet", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.InetTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ ip: 123 })).toThrow();
+      expect(() => zodSchema.parse({ ip: true })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.InetTests)
-        .values({ ip: "192.168.1.1" })
+        .values(zodSchema.parse({ ip: "192.168.1.1" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -58,12 +65,18 @@ describe("Network Column Types", () => {
 
   describe("cidr", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.CidrTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ network: 123 })).toThrow();
+      expect(() => zodSchema.parse({ network: [] })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.CidrTests)
-        .values({ network: "10.0.0.0/8" })
+        .values(zodSchema.parse({ network: "10.0.0.0/8" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -99,12 +112,18 @@ describe("Network Column Types", () => {
 
   describe("macaddr", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.MacaddrTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ mac: 123 })).toThrow();
+      expect(() => zodSchema.parse({ mac: false })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.MacaddrTests)
-        .values({ mac: "00:11:22:33:44:55" })
+        .values(zodSchema.parse({ mac: "00:11:22:33:44:55" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

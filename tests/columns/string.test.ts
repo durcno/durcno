@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -17,12 +18,18 @@ describe("String Column Types", () => {
 
   describe("varchar", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.VarcharTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ name: 123 })).toThrow();
+      expect(() => zodSchema.parse({ name: true })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.VarcharTests)
-        .values({ name: "alice" })
+        .values(zodSchema.parse({ name: "alice" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -58,12 +65,18 @@ describe("String Column Types", () => {
 
   describe("text", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.TextTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ content: 123 })).toThrow();
+      expect(() => zodSchema.parse({ content: [] })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.TextTests)
-        .values({ content: "hello world" })
+        .values(zodSchema.parse({ content: "hello world" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -99,12 +112,18 @@ describe("String Column Types", () => {
 
   describe("char", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.CharTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ code: 123 })).toThrow();
+      expect(() => zodSchema.parse({ code: false })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.CharTests)
-        .values({ code: "HELLO" })
+        .values(zodSchema.parse({ code: "HELLO" }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

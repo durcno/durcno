@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -13,14 +14,20 @@ describe("UUID Column Type", () => {
 
   describe("uuid", () => {
     let insertedId: bigint;
-    const uuid1 = "550e8400-e29b-41d4-a716-446655440000";
-    const uuid2 = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    const zodSchema = createInsertSchema(schema.UuidTests);
+    const uuid1 = "01902b6d-f540-7c60-8000-000000000001";
+    const uuid2 = "01902b6d-f540-7c60-9123-000000000002";
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ uuid: "not-a-uuid" })).toThrow();
+      expect(() => zodSchema.parse({ uuid: 123 })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.UuidTests)
-        .values({ uuid: uuid1 })
+        .values(zodSchema.parse({ uuid: uuid1 }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();

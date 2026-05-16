@@ -1,4 +1,5 @@
 import { eq } from "durcno";
+import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { destroyTestContext, getDb, initTestContext, schema } from "./setup";
 
@@ -13,14 +14,20 @@ describe("Bytea Column Type", () => {
 
   describe("bytea", () => {
     let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.ByteaTests);
     const initialData = Buffer.from("hello");
     const updatedData = Buffer.from("world");
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ data: "hello" })).toThrow();
+      expect(() => zodSchema.parse({ data: new Uint8Array([1, 2]) })).toThrow();
+    });
 
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
         .insert(schema.ByteaTests)
-        .values({ data: initialData })
+        .values(zodSchema.parse({ data: Buffer.from("hello") }))
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
