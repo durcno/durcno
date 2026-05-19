@@ -66,6 +66,10 @@ type TableConfig<
       TColumns[ColName]
     >;
   };
+  /** Pre-built index keyed by snake_case SQL column name for fast lookups. */
+  readonly columnsBySql: {
+    readonly [K: string]: TableColumn<TSchema, TName, string, AnyColumn>;
+  };
   readonly extra: TableExtra<TSchema, TName, TColumns>;
 };
 
@@ -144,14 +148,10 @@ export class Table<
       name,
       nameSql: camelToSnake(name),
       fullName: `"${camelToSnake(schema)}"."${camelToSnake(name)}"`,
-      columns: columns as {
-        [ColName in keyof TColumns]: TableColumn<
-          TSchema,
-          TName,
-          ColName,
-          TColumns[ColName]
-        >;
-      },
+      columns: columns as TableConfig<TSchema, TName, TColumns>["columns"],
+      columnsBySql: Object.fromEntries(
+        Object.values(columns).map((col) => [col.nameSql, col]),
+      ) as TableConfig<TSchema, TName, TColumns>["columnsBySql"],
       extra,
     };
   }

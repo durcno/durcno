@@ -15,7 +15,6 @@ import type {
   UnionToIntersection,
   Valueof,
 } from "../types";
-import { snakeToCamel } from "../utils";
 import type { OrderExpression } from "./orderby-clause";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -506,19 +505,18 @@ export class SelectQuery<
       rows.forEach((row) => {
         const newRow: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(row)) {
-          const keyCamel = snakeToCamel(key);
-          let column = this.#table._.columns[keyCamel];
+          let column = this.#table._.columnsBySql[key];
           if (column === undefined) {
             this.#$innerJoins?.forEach((innerJoin) => {
-              const joinCol = innerJoin.table._.columns[keyCamel];
+              const joinCol = innerJoin.table._.columnsBySql[key];
               if (joinCol !== undefined) {
                 column = joinCol;
               }
             });
           }
           if (column === undefined)
-            throw new Error(`Column ${keyCamel} not found in any table`);
-          newRow[keyCamel] = column.fromDriver(value);
+            throw new Error(`Column ${key} not found in any table`);
+          newRow[column.name] = column.fromDriver(value);
         }
         newRows.push(newRow);
       });

@@ -1,6 +1,6 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyColumn, TableWithColumns } from "../table";
-import { snakeToCamel } from "../utils";
+
 import { InsertQuery } from "./insert";
 import type { Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -57,9 +57,8 @@ export class InsertReturningQuery<
     const row = rows[0];
     const newRow: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(row)) {
-      const keyCamel = snakeToCamel(key);
-      const column = this.#$table._.columns[keyCamel];
-      newRow[keyCamel] = column.fromDriver(value);
+      const column = this.#$table._.columnsBySql[key];
+      newRow[column.name] = column.fromDriver(value);
     }
     return newRow as TReturn;
   }

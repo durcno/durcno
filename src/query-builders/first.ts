@@ -2,7 +2,7 @@ import type { QueryExecutor } from "../connectors/common";
 import type { FilterExpression } from "../filters/index";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Valueof } from "../types";
-import { snakeToCamel } from "../utils";
+
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -61,9 +61,8 @@ export class FirstQuery<
     const row = rows[0];
     const newRow: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(row)) {
-      const keyCamel = snakeToCamel(key);
-      const column = this.#$table._.columns[keyCamel] as AnyColumn;
-      newRow[keyCamel] = column.fromDriver(value);
+      const column = this.#$table._.columnsBySql[key];
+      newRow[column.name] = column.fromDriver(value);
     }
     return newRow as TReturn;
   }

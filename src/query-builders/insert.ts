@@ -2,7 +2,6 @@ import type { QueryExecutor } from "../connectors/common";
 import { is } from "../entity";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key } from "../types";
-import { snakeToCamel } from "../utils";
 
 import { Arg } from "./pre";
 import { Query } from "./query";
@@ -191,9 +190,8 @@ export class InsertQuery<
     rows.forEach((row) => {
       const newRow: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(row)) {
-        const keyCamel = snakeToCamel(key);
-        const column = this.#table._.columns[keyCamel];
-        newRow[keyCamel] = column.fromDriver(value);
+        const column = this.#table._.columnsBySql[key];
+        newRow[column.name] = column.fromDriver(value);
       }
       newRows.push(newRow);
     });

@@ -606,15 +606,14 @@ function convert(
 ) {
   for (const key of Object.keys(object)) {
     const value = object[key];
-    const keyCamel = snakeToCamel(key);
-    const column = table._.columns[keyCamel as string];
+    const column = table._.columnsBySql[key];
     if (column) {
-      object[keyCamel] = column.fromDriver(value as never);
-      if (keyCamel !== key) delete object[key];
+      object[column.name] = column.fromDriver(value as never);
+      if (column.name !== key) delete object[key];
     } else {
       const relations = allRelations[table._.fullName];
       if (relations) {
-        const relation = relations.map[keyCamel as any];
+        const relation = relations.map[snakeToCamel(key) as any];
         if (relation) {
           if (relation.t === "Many") {
             for (const row in object[key]) {
