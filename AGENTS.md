@@ -174,6 +174,7 @@ tests/                    # Runtime integration tests
 └── cli/                  # CLI integration tests
 
 website/                  # Website
+├── src/                  # Pages and components
 └── docs/                 # Documentation
 
 scripts/                  # Utility scripts
@@ -185,13 +186,11 @@ dist/                     # Production compiled output
 - **`src/index.ts`**: All public exports - **EXPORT NEW APIS HERE**
 - **`src/db.ts`**: Query builder creator classes
 - **`src/table.ts`**: Table and column types
-- **`src/enumtype.ts`**: Enum builder
-- **`src/sequence.ts`**: PostgreSQL sequence definitions
 - **`src/indexes.ts`**: Database index definitions
-- **`src/sql.ts`**: SQL string building with template literals and parameters
 - **`src/types.ts`**: Shared TypeScript utility types
 - **`src/models.ts`**: Migration tracking table definition
-- **`src/logger.ts`**: Query logger
+- **`src/columns/common.ts`**: Base column class
+- **`src/connectors/common.ts`**: Base connector class
 
 ## Development Workflow
 
@@ -232,8 +231,8 @@ Quick rules:
 
 Commands:
 
-- `pnpm run test-types` — run "Type tests" in `type-tests/`
-- `pnpm run test` — run all integration tests in `tests/`
+- `pnpm run test-types` — runs "Type tests" in `type-tests/`
+- `pnpm run test` — runs all integration tests in `tests/`
 
 > 💡 Tip: Run a single folder or file while running integration tests to speed feedback,
 > by using `pnpm test tests/cli/` or `pnpm test tests/qb/my.test.ts`
@@ -244,12 +243,11 @@ Commands:
 
 Purpose: Assert TypeScript behavior and inference (return types, input types, overloads).
 
-When: REQUIRED for any change that alters types or public api in `src/`, exlcuding `src/cli`.
+When: Add/Update/Remove for any changes that alters types or public api in `src/`, excluding `src/cli`.
 
 How:
 
-- Write focused tests in `type-tests/` using `Expect<Equal<...>>`.
-- Keep tests minimal: assert exact shapes rather than runtime behavior.
+- Keep tests minimal, assert exact shapes rather than runtime behavior.
 - Each test file must include both positive and negative type tests.
 - **Comprehensive negative tests are essential** — ensure invalid usages are properly rejected by the type system.
 - Place `// @ts-expect-error` **directly above the line that causes the error**, not above the entire statement.
@@ -274,11 +272,11 @@ db.from(Users)
 
 ### Integration tests (tests/)
 
-Integrations test are done using Vitest and Docker.
+Integrations test are ran using Vitest and Docker.
 
 Purpose: Verify runtime behavior.
 
-When: Changes in Queries, Columns, migrations, and CLI.
+When: Add/Update/Remove for any changes that affects Schema, Columns, Queries, migrations, and CLI.
 
 How:
 
@@ -318,7 +316,7 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 - **Importing**: Always use `type` modifier for type-only imports
 - **Code Documentation**: Add small and concise jsdoc comments to all internal functions, classes, and methods for better code readability and maintainability.
 - **Node builtins**: Prefix with `node:`
-- **Don't append code at the end of files** — find the right place for it based on its purpose and related code
+- **Don't append code at the end of files** — find the right place for it based on its purpose and related entities
 
 ### Code structuring
 
