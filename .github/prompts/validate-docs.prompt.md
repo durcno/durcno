@@ -1,8 +1,5 @@
 ---
-description: >
-  Validate a documentation page under website/docs/ against the source code in src/.
-  Checks that all documented APIs, functions, arguments, types, options, and examples
-  accurately reflect the current implementation. Fixes any drift by updating the docs.
+description: "Validate a documentation page under website/docs/ against the source code in src/. Checks that all documented APIs, functions, arguments, types, options, and examples accurately reflect the current implementation. Fixes any drift by updating the docs."
 agent: agent
 ---
 
