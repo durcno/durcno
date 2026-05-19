@@ -1,4 +1,4 @@
-import type { StdTable, StdTableColumn } from "../table";
+import type { StdTableColumn } from "../table";
 
 // ============================================================================
 // Primary Key Constraint
@@ -18,10 +18,9 @@ export class PrimaryKeyConstraint {
     this.#columns = columns;
   }
 
-  getName(table: StdTable): string {
-    return this.#name.startsWith(`${table._.name}_`)
-      ? this.#name
-      : `${table._.name}_${this.#name}`;
+  /** Returns the constraint name as-is. */
+  getName(): string {
+    return this.#name;
   }
 
   getColumns(): string[] {
@@ -36,11 +35,13 @@ export class PrimaryKeyConstraint {
  *
  * This function is passed as the second parameter to the `primaryKeyConstraint` callback.
  *
+ * Convention: `pk_<table>`
+ *
  * @example
  * ```ts
- * table("public", "user_roles", { userId: bigint({}), roleId: bigint({}) }, {
+ * table("public", "userRoles", { userId: bigint({}), roleId: bigint({}) }, {
  *   primaryKeyConstraint: (t, primaryKey) =>
- *     primaryKey("pk", [t.userId, t.roleId]),
+ *     primaryKey("pk_user_roles", [t.userId, t.roleId]),
  * });
  * ```
  */

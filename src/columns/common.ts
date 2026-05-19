@@ -70,6 +70,8 @@ interface TableLike {
   _: {
     schema: string;
     name: string;
+    schemaSql: string;
+    nameSql: string;
   };
 }
 
@@ -167,6 +169,9 @@ export abstract class Column<
     PgType: TPgType;
     /** The TypeScript type for this column's value. */
     TsType: TColVal;
+    /** Phantom schema and table references for this column. */
+    schema: string | undefined;
+    table: string | undefined;
     // biome-ignore lint/complexity/noBannedTypes: <>
     HasValTypeOverridde: {};
     // biome-ignore lint/complexity/noBannedTypes: <>
@@ -328,7 +333,7 @@ export abstract class Column<
    * @returns string `"table"."column"`
    */
   get fullName(): string {
-    return `"${this.table?._.name}"."${this.nameSql}"`;
+    return `"${this.table?._.nameSql}"."${this.nameSql}"`;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {

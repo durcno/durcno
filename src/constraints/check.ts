@@ -25,9 +25,9 @@ export class Check {
     this.#expr = expr;
   }
 
-  /** Returns the constraint name, appending `_check` suffix if not already present. */
+  /** Returns the constraint name as-is. */
   getName(): string {
-    return this.#name.includes("check") ? this.#name : `${this.#name}_check`;
+    return this.#name;
   }
 
   /**
@@ -45,7 +45,20 @@ export class Check {
   }
 }
 
-/** Creates a {@link Check} constraint from a filter expression or raw SQL. */
+/**
+ * Creates a {@link Check} constraint from a filter expression or raw SQL.
+ *
+ * Convention: `check_<table>_<col>[_and_<col>]*[_<suffix>]?`
+ *
+ * @example
+ * ```ts
+ * table("public", "projects", { name: varchar({ length: 255 }) }, {
+ *   checkConstraints: (t, check) => [
+ *     check("check_projects_name_length", gte(sql`char_length(${t.name})`, 1)),
+ *   ],
+ * });
+ * ```
+ */
 export function check(name: string, expr: AnyFilter | Sql): Check {
   return new Check(name, expr);
 }

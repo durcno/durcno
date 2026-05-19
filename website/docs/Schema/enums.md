@@ -13,7 +13,7 @@ Create an enum using the `enumtype()` function and export it:
 ```typescript
 import { enumtype } from "durcno";
 
-export const UserRole = enumtype("public", "user_role", [
+export const UserRole = enumtype("public", "userRole", [
   "admin",
   "moderator",
   "user",
@@ -32,7 +32,7 @@ Use the `.enumed()` method to create an enum column in your table:
 ```typescript
 import { table, pk, varchar, enumtype, notNull } from "durcno";
 
-export const UserRole = enumtype("public", "user_role", [
+export const UserRole = enumtype("public", "userRole", [
   "admin",
   "moderator",
   "user",
@@ -118,7 +118,7 @@ Durcno provides full TypeScript type safety for enum columns:
 ### Insert Type Safety
 
 ```typescript
-export const UserRole = enumtype("public", "user_role", [
+export const UserRole = enumtype("public", "userRole", [
   "admin",
   "moderator",
   "user",
@@ -180,13 +180,13 @@ export const Users = table("public", "users", {
 ```typescript
 import { table, pk, varchar, enumtype, timestamp, notNull, now } from "durcno";
 
-export const UserRole = enumtype("public", "user_role", [
+export const UserRole = enumtype("public", "userRole", [
   "admin",
   "moderator",
   "user",
   "guest",
 ]);
-export const AccountStatus = enumtype("public", "account_status", [
+export const AccountStatus = enumtype("public", "accountStatus", [
   "active",
   "suspended",
   "deleted",
@@ -206,7 +206,7 @@ export const Users = table("public", "users", {
 ```typescript
 import { table, pk, varchar, text, enumtype, notNull } from "durcno";
 
-export const TaskStatus = enumtype("public", "task_status", [
+export const TaskStatus = enumtype("public", "taskStatus", [
   "todo",
   "in_progress",
   "review",
@@ -233,7 +233,7 @@ export const Tasks = table("public", "tasks", {
 ```typescript
 import { table, pk, bigint, enumtype, timestamp, notNull, now } from "durcno";
 
-export const OrderStatus = enumtype("public", "order_status", [
+export const OrderStatus = enumtype("public", "orderStatus", [
   "pending",
   "confirmed",
   "processing",
@@ -242,7 +242,7 @@ export const OrderStatus = enumtype("public", "order_status", [
   "cancelled",
 ]);
 
-export const PaymentStatus = enumtype("public", "payment_status", [
+export const PaymentStatus = enumtype("public", "paymentStatus", [
   "pending",
   "paid",
   "failed",
@@ -264,12 +264,12 @@ export const Orders = table("public", "orders", {
 
 ```typescript
 // ✅ Good: Clear, descriptive names
-export const OrderStatus = enumtype("public", "order_status", [
+export const OrderStatus = enumtype("public", "orderStatus", [
   "pending",
   "shipped",
   "delivered",
 ]);
-export const UserRole = enumtype("public", "user_role", ["admin", "user"]);
+export const UserRole = enumtype("public", "userRole", ["admin", "user"]);
 
 // ❌ Avoid: Vague or abbreviated names
 export const S = enumtype("public", "s", ["a", "b", "c"]);
@@ -280,7 +280,7 @@ export const Type = enumtype("public", "type", ["1", "2"]);
 
 ```typescript
 // ✅ Good: Consistent snake_case values
-export const TaskStatus = enumtype("public", "task_status", [
+export const TaskStatus = enumtype("public", "taskStatus", [
   "not_started",
   "in_progress",
   "completed",
@@ -307,7 +307,7 @@ If an enum is used in multiple files, export it from a central location:
 
 ```typescript
 // db/enums.ts
-export const UserRole = enumtype("public", "user_role", ["admin", "user"]);
+export const UserRole = enumtype("public", "userRole", ["admin", "user"]);
 export const Status = enumtype("public", "status", ["active", "inactive"]);
 
 // db/users.ts

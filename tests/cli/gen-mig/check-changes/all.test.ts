@@ -122,11 +122,11 @@ describe("durcno generate - check constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(1);
 
     const checks = await getCheckConstraints("check_test");
-    expect(checks["positive_price_check"]).toBeDefined();
-    expect(checks["valid_quantity_check"]).toBeDefined();
-    expect(checks["valid_email_check"]).toBeDefined();
-    expect(checks["name_length_check"]).toBeDefined();
-    expect(checks["max_price_check"]).toBeUndefined();
+    expect(checks["check_check_test_positive_price"]).toBeDefined();
+    expect(checks["check_check_test_valid_quantity"]).toBeDefined();
+    expect(checks["check_check_test_valid_email"]).toBeDefined();
+    expect(checks["check_check_test_name_length"]).toBeDefined();
+    expect(checks["check_check_test_max_price"]).toBeUndefined();
 
     // Valid data should insert
     await client.query(`
@@ -160,8 +160,8 @@ describe("durcno generate - check constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(2);
 
     const checks = await getCheckConstraints("check_test");
-    expect(checks["max_price_check"]).toBeDefined();
-    expect(checks["max_price_check"]).toContain("1000000");
+    expect(checks["check_check_test_max_price"]).toBeDefined();
+    expect(checks["check_check_test_max_price"]).toContain("1000000");
 
     // Price >= 1000000 should now fail
     await expect(
@@ -185,11 +185,11 @@ describe("durcno generate - check constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(3);
 
     const checks = await getCheckConstraints("check_test");
-    expect(checks["valid_email_check"]).toBeUndefined();
-    expect(checks["positive_price_check"]).toBeDefined();
-    expect(checks["valid_quantity_check"]).toBeDefined();
-    expect(checks["name_length_check"]).toBeDefined();
-    expect(checks["max_price_check"]).toBeDefined();
+    expect(checks["check_check_test_valid_email"]).toBeUndefined();
+    expect(checks["check_check_test_positive_price"]).toBeDefined();
+    expect(checks["check_check_test_valid_quantity"]).toBeDefined();
+    expect(checks["check_check_test_name_length"]).toBeDefined();
+    expect(checks["check_check_test_max_price"]).toBeDefined();
 
     // Invalid email format should now be allowed
     await client.query(`
@@ -205,9 +205,9 @@ describe("durcno generate - check constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(4);
 
     const checks = await getCheckConstraints("check_test");
-    expect(checks["valid_quantity_check"]).toBeDefined();
-    expect(checks["valid_quantity_check"]).toContain("1000");
-    expect(checks["valid_quantity_check"]).not.toContain("10000");
+    expect(checks["check_check_test_valid_quantity"]).toBeDefined();
+    expect(checks["check_check_test_valid_quantity"]).toContain("1000");
+    expect(checks["check_check_test_valid_quantity"]).not.toContain("10000");
 
     // Quantity > 1000 should now fail
     await expect(

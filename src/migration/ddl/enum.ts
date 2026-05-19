@@ -1,3 +1,5 @@
+import type { SnakeCase } from "../../types";
+import { camelToSnake } from "../../utils";
 import type { Snapshot } from "../snapshot";
 import { DDLStatement } from "./statement";
 
@@ -16,18 +18,20 @@ import { DDLStatement } from "./statement";
  */
 export class CreateEnumStatement extends DDLStatement {
   readonly type = "createEnum" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
+  private readonly values: string[];
 
   /**
    * @param schema - The schema the enum belongs to.
    * @param name - The name of the enum type to create.
    * @param values - Ordered list of allowed enum values.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-    private readonly values: string[],
-  ) {
+  constructor(schema: string, name: string, values: string[]) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
+    this.values = values;
   }
 
   toSQL(): string {
@@ -71,6 +75,10 @@ export class CreateEnumStatement extends DDLStatement {
  */
 export class AlterEnumAddValueStatement extends DDLStatement {
   readonly type = "alterEnum" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
+  private readonly value: string;
+  private readonly position?: { after?: string; before?: string };
 
   /**
    * @param schema - The schema the enum belongs to.
@@ -79,12 +87,16 @@ export class AlterEnumAddValueStatement extends DDLStatement {
    * @param position - Optional positioning: `{ after: 'val' }` or `{ before: 'val' }`.
    */
   constructor(
-    private readonly schema: string,
-    private readonly name: string,
-    private readonly value: string,
-    private readonly position?: { after?: string; before?: string },
+    schema: string,
+    name: string,
+    value: string,
+    position?: { after?: string; before?: string },
   ) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
+    this.value = value;
+    this.position = position;
   }
 
   toSQL(): string {
@@ -137,16 +149,17 @@ export class AlterEnumAddValueStatement extends DDLStatement {
  */
 export class DropEnumStatement extends DDLStatement {
   readonly type = "dropEnum" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
 
   /**
    * @param schema - The schema the enum belongs to.
    * @param name - The enum type name to drop.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-  ) {
+  constructor(schema: string, name: string) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
   }
 
   toSQL(): string {

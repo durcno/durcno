@@ -1,9 +1,20 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: <> */
-export function camelToSnake(str: string): string {
+import type { CamelToSnake, SnakeCase } from "./types";
+
+/**
+ * Converts a camelCase or PascalCase string to snake_case.
+ * Returns a {@link SnakeCase}-branded value so the type system can distinguish
+ * converted identifiers from raw user-supplied strings.
+ *
+ * @param str - The camelCase or PascalCase identifier to convert.
+ * @returns The snake_case equivalent, branded as {@link SnakeCase}.
+ */
+export function camelToSnake<T extends string>(
+  str: T,
+): SnakeCase<CamelToSnake<T>> {
   return str
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2") // handles consecutive caps: "XMLParser" → "xml_parser"
     .replace(/([a-z])([A-Z])/g, "$1_$2") // handles standard: "camelCase" → "camel_case"
-    .toLowerCase();
+    .toLowerCase() as SnakeCase<CamelToSnake<T>>;
 }
 
 export function snakeToCamel(str: string): string {

@@ -1,4 +1,4 @@
-import type { AnyColumn, StdTable, TableColumn } from "../table";
+import type { AnyColumn, TableColumn } from "../table";
 import type { Key } from "../types";
 
 // ============================================================================
@@ -22,10 +22,9 @@ export class UniqueConstraint {
     this.#columns = columns;
   }
 
-  getName(table: StdTable): string {
-    return this.#name.startsWith(`${table._.name}_`)
-      ? this.#name
-      : `${table._.name}_${this.#name}`;
+  /** Returns the constraint name as-is. */
+  getName(): string {
+    return this.#name;
   }
 
   getColumns(): string[] {
@@ -39,11 +38,13 @@ export class UniqueConstraint {
  *
  * This function is passed as the second parameter to the `uniqueConstraints` callback.
  *
+ * Convention: `unique_<table>_<col1>[_and_<col2>]*`
+ *
  * @example
  * ```ts
- * table("public", "user_roles", { userId: bigint({}), roleId: bigint({}) }, {
+ * table("public", "userRoles", { userId: bigint({}), roleId: bigint({}) }, {
  *   uniqueConstraints: (t, unique) => [
- *     unique("unique_user_role", [t.userId, t.roleId]),
+ *     unique("unique_user_roles_user_id_and_role_id", [t.userId, t.roleId]),
  *   ],
  * });
  * ```

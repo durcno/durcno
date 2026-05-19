@@ -28,7 +28,7 @@ const stage = Number(process.env.STAGE ?? 1);
 
 export const CheckTest = table(
   "public",
-  "check_test",
+  "checkTest",
   {
     id: pk(),
     price: bigint({ notNull }),
@@ -42,17 +42,21 @@ export const CheckTest = table(
       const quantityMax = stage >= 4 ? 1000 : 10000;
 
       const checks = [
-        check("positive_price", gt(t.price, 0n)),
+        check("check_check_test_positive_price", gt(t.price, 0n)),
         check(
-          "valid_quantity",
+          "check_check_test_valid_quantity",
           and(gte(t.quantity, 0), lte(t.quantity, quantityMax)),
         ),
-        ...(stage <= 2 ? [check("valid_email", like(t.email, "%@%.%"))] : []),
+        ...(stage <= 2
+          ? [check("check_check_test_valid_email", like(t.email, "%@%.%"))]
+          : []),
         check(
-          "name_length",
+          "check_check_test_name_length",
           and(gt(length(t.name), 2), lte(length(t.name), 100)),
         ),
-        ...(stage >= 2 ? [check("max_price", lt(t.price, 1000000n))] : []),
+        ...(stage >= 2
+          ? [check("check_check_test_max_price", lt(t.price, 1000000n))]
+          : []),
       ];
 
       return checks;

@@ -1,5 +1,18 @@
 export type BasicTypes = string | number | bigint | boolean | null;
 
+declare const camelCaseBrand: unique symbol;
+declare const snakeCaseBrand: unique symbol;
+
+/** A string branded as being in camelCase form. */
+export type CamelCase<T extends string = string> = T & {
+  readonly [camelCaseBrand]: true;
+};
+
+/** A string branded as being in snake_case form. Produced by {@link camelToSnake}. */
+export type SnakeCase<T extends string = string> = T & {
+  readonly [snakeCaseBrand]: true;
+};
+
 export type CamelToSnake<S extends string> =
   S extends `${infer Head}${infer Tail}`
     ? Head extends Uppercase<Head>

@@ -4,7 +4,7 @@ import type { Equal } from "./utils";
 import { Expect } from "./utils";
 
 // Test basic sequence creation with all options
-export const customSequence = sequence("public", "order_seq", {
+export const customSequence = sequence("public", "orderSeq", {
   startWith: 100,
   maxValue: 10000,
   minValue: 100,
@@ -14,10 +14,10 @@ export const customSequence = sequence("public", "order_seq", {
 });
 
 // Test sequence creation with no options
-export const simpleSequence = sequence("public", "simple_seq", {});
+export const simpleSequence = sequence("public", "simpleSeq", {});
 
 // Test sequence creation with schema
-const schemaSequence = sequence("public", "schema_seq", {
+const schemaSequence = sequence("public", "schemaSeq", {
   startWith: 1,
   increment: 1,
 });
@@ -67,16 +67,16 @@ Expect<Equal<HasOrderNumberColumn, true>>();
 customSequence.setval("not_a_number");
 
 // @ts-expect-error - sequence options with invalid startWith type should not compile
-sequence("public", "invalid_seq", { startWith: "100" });
+sequence("public", "invalidSeq", { startWith: "100" });
 
 // @ts-expect-error - sequence options with invalid maxValue type should not compile
-sequence("public", "invalid_seq2", { maxValue: "10000" });
+sequence("public", "invalidSeq2", { maxValue: "10000" });
 
 // @ts-expect-error - sequence options with invalid increment type should not compile
-sequence("public", "invalid_seq3", { increment: "2" });
+sequence("public", "invalidSeq3", { increment: "2" });
 
 // @ts-expect-error - sequence options with invalid cache type should not compile
-sequence("public", "invalid_seq4", { cache: "10" });
+sequence("public", "invalidSeq4", { cache: "10" });
 
 // @ts-expect-error - sequence options with invalid cycle type should not compile
-sequence("public", "invalid_seq5", { cycle: "true" });
+sequence("public", "invalidSeq5", { cycle: "true" });

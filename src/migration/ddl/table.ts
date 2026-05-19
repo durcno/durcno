@@ -1,4 +1,6 @@
 import type { OnDeleteAction } from "../../columns/common";
+import type { SnakeCase } from "../../types";
+import { camelToSnake } from "../../utils";
 import type {
   Snapshot,
   SnapshotColumn,
@@ -13,7 +15,7 @@ import { DDLStatement } from "./statement";
  *
  * @see {@link ColumnOptions["references"]}
  */
-export interface ColumnReference {
+interface ColumnReference {
   /** Schema of the referenced table. */
   schema: string;
   /** Name of the referenced table. */
@@ -112,6 +114,8 @@ function toColumnDef(
  */
 export class CreateTableBuilder extends DDLStatement {
   readonly type = "createTable" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
   private columns: ColumnDef[] = [];
   private checks: CheckDef[] = [];
   private _uniqueConstraints: UniqueConstraintDef[] = [];
@@ -121,11 +125,10 @@ export class CreateTableBuilder extends DDLStatement {
    * @param schema - The PostgreSQL schema to create the table in.
    * @param name - The table name.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-  ) {
+  constructor(schema: string, name: string) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
   }
 
   /**
@@ -224,9 +227,9 @@ export class CreateTableBuilder extends DDLStatement {
       if (col.options.as) colSnapshot.as = col.options.as;
       if (col.options.references) {
         colSnapshot.references = {
-          schema: col.options.references.schema,
-          table: col.options.references.table,
-          column: col.options.references.column,
+          schema: camelToSnake(col.options.references.schema),
+          table: camelToSnake(col.options.references.table),
+          column: camelToSnake(col.options.references.column),
           onDelete: col.options.references.onDelete,
         };
       }
@@ -285,16 +288,17 @@ export class CreateTableBuilder extends DDLStatement {
  */
 export class DropTableStatement extends DDLStatement {
   readonly type = "dropTable" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
 
   /**
    * @param schema - The schema of the table.
    * @param name - The table name to drop.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-  ) {
+  constructor(schema: string, name: string) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
   }
 
   toSQL(): string {
@@ -321,18 +325,20 @@ export class DropTableStatement extends DDLStatement {
  */
 export class RenameTableStatement extends DDLStatement {
   readonly type = "renameTable" as const;
+  private readonly schema: SnakeCase;
+  private readonly oldName: SnakeCase;
+  private readonly newName: SnakeCase;
 
   /**
    * @param schema - The schema of the table.
    * @param oldName - The current table name.
    * @param newName - The new table name.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly oldName: string,
-    private readonly newName: string,
-  ) {
+  constructor(schema: string, oldName: string, newName: string) {
     super();
+    this.schema = camelToSnake(schema);
+    this.oldName = camelToSnake(oldName);
+    this.newName = camelToSnake(newName);
   }
 
   toSQL(): string {
@@ -393,17 +399,18 @@ type AlterTableAction =
  */
 export class AlterTableBuilder extends DDLStatement {
   readonly type = "alterTable" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
   private actions: AlterTableAction[] = [];
 
   /**
    * @param schema - The schema of the table to alter.
    * @param name - The table name.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-  ) {
+  constructor(schema: string, name: string) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
   }
 
   /**
@@ -711,9 +718,9 @@ export class AlterTableBuilder extends DDLStatement {
           if (action.options.as) colSnapshot.as = action.options.as;
           if (action.options.references) {
             colSnapshot.references = {
-              schema: action.options.references.schema,
-              table: action.options.references.table,
-              column: action.options.references.column,
+              schema: camelToSnake(action.options.references.schema),
+              table: camelToSnake(action.options.references.table),
+              column: camelToSnake(action.options.references.column),
               onDelete: action.options.references.onDelete,
             };
           }
@@ -815,9 +822,9 @@ export class AlterTableBuilder extends DDLStatement {
         case "addForeignKey": {
           if (table.columns[action.column]) {
             table.columns[action.column].references = {
-              schema: action.references.schema,
-              table: action.references.table,
-              column: action.references.column,
+              schema: camelToSnake(action.references.schema),
+              table: camelToSnake(action.references.table),
+              column: camelToSnake(action.references.column),
               onDelete: action.references.onDelete,
             };
           }

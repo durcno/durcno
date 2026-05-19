@@ -22,7 +22,7 @@ export { Migrations } from "durcno";
 
 // Comprehensive test enums and tables of a practical scenario
 
-export const UserTypeEnum = enumtype("public", "user_type", ["admin", "user"]);
+export const UserTypeEnum = enumtype("public", "userType", ["admin", "user"]);
 export const StatusEnum = enumtype("public", "status", [
   "active",
   "inactive",
@@ -71,7 +71,7 @@ export const UsersRelations = relations(Users, () => ({
 }));
 
 // User profiles for one-to-one relationship testing
-export const UserProfiles = table("public", "user_profiles", {
+export const UserProfiles = table("public", "userProfiles", {
   id: pk(),
   userId: bigint({ unique, notNull }).references({
     column: () => Users.id,

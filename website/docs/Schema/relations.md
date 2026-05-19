@@ -156,7 +156,7 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, notNull }),
 });
 
-export const UserProfiles = table("public", "user_profiles", {
+export const UserProfiles = table("public", "userProfiles", {
   id: pk(),
   userId: bigint({ unique, notNull }).references(() => Users.id),
   bio: varchar({ length: 500 }),
@@ -228,7 +228,7 @@ export const Users = table("public", "users", {
 });
 
 // User profiles (one-to-one with users)
-export const UserProfiles = table("public", "user_profiles", {
+export const UserProfiles = table("public", "userProfiles", {
   id: pk(),
   userId: bigint({ unique, notNull }).references(() => Users.id),
   bio: varchar({ length: 500 }),
@@ -378,7 +378,7 @@ export const Orders = table("public", "orders", {
   createdAt: timestamp({ notNull }).default(now()),
 });
 
-export const OrderItems = table("public", "order_items", {
+export const OrderItems = table("public", "orderItems", {
   id: pk(),
   orderId: bigint({ notNull }).references(() => Orders.id),
   productId: bigint({ notNull }).references(() => Products.id),

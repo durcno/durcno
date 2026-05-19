@@ -1,3 +1,5 @@
+import type { SnakeCase } from "../../types";
+import { camelToSnake } from "../../utils";
 import type { Snapshot } from "../snapshot";
 import { DDLStatement } from "./statement";
 
@@ -28,7 +30,7 @@ export interface SequenceOptions {
  *
  * @example
  * ```typescript
- * ddl.createSequence('public', 'order_seq', {
+ * ddl.createSequence('public', 'orderSeq', {
  *   startWith: 1000,
  *   increment: 1,
  *   cache: 10,
@@ -38,18 +40,20 @@ export interface SequenceOptions {
  */
 export class CreateSequenceStatement extends DDLStatement {
   readonly type = "createSequence" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
+  private readonly options: SequenceOptions;
 
   /**
    * @param schema - The schema the sequence belongs to.
    * @param name - The sequence name.
    * @param options - Optional sequence configuration.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-    private readonly options: SequenceOptions = {},
-  ) {
+  constructor(schema: string, name: string, options: SequenceOptions = {}) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
+    this.options = options;
   }
 
   toSQL(): string {
@@ -90,7 +94,7 @@ export class CreateSequenceStatement extends DDLStatement {
  *
  * @example
  * ```typescript
- * ddl.dropSequence('public', 'order_seq');
+ * ddl.dropSequence('public', 'orderSeq');
  * // DROP SEQUENCE "public"."order_seq";
  * ```
  */

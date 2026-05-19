@@ -51,7 +51,7 @@ export const PriorityEnum = enumtype("public", "priority", [
 /**
  * Test table for varchar column type
  */
-export const VarcharTests = table("public", "varchar_tests", {
+export const VarcharTests = table("public", "varcharTests", {
   id: pk(),
   // Nullable varchar
   name: varchar({ length: 100 }),
@@ -62,7 +62,7 @@ export const VarcharTests = table("public", "varchar_tests", {
 /**
  * Test table for text column type
  */
-export const TextTests = table("public", "text_tests", {
+export const TextTests = table("public", "textTests", {
   id: pk(),
   // Nullable text
   content: text({}),
@@ -73,7 +73,7 @@ export const TextTests = table("public", "text_tests", {
 /**
  * Test table for char column type
  */
-export const CharTests = table("public", "char_tests", {
+export const CharTests = table("public", "charTests", {
   id: pk(),
   // Nullable char
   code: char({ length: 5 }),
@@ -88,7 +88,7 @@ export const CharTests = table("public", "char_tests", {
 /**
  * Test table for integer column type
  */
-export const IntegerTests = table("public", "integer_tests", {
+export const IntegerTests = table("public", "integerTests", {
   id: pk(),
   // Nullable integer
   count: integer({}),
@@ -99,7 +99,7 @@ export const IntegerTests = table("public", "integer_tests", {
 /**
  * Test table for smallint column type
  */
-export const SmallintTests = table("public", "smallint_tests", {
+export const SmallintTests = table("public", "smallintTests", {
   id: pk(),
   // Nullable smallint
   value: smallint({}),
@@ -110,7 +110,7 @@ export const SmallintTests = table("public", "smallint_tests", {
 /**
  * Test table for bigint column type
  */
-export const BigintTests = table("public", "bigint_tests", {
+export const BigintTests = table("public", "bigintTests", {
   id: pk(),
   // Nullable bigint
   amount: bigint({}),
@@ -121,7 +121,7 @@ export const BigintTests = table("public", "bigint_tests", {
 /**
  * Test table for serial column type (auto-increment)
  */
-export const SerialTests = table("public", "serial_tests", {
+export const SerialTests = table("public", "serialTests", {
   id: serial({}),
   name: varchar({ length: 100 }),
 });
@@ -129,7 +129,7 @@ export const SerialTests = table("public", "serial_tests", {
 /**
  * Test table for smallserial column type (auto-increment)
  */
-export const SmallserialTests = table("public", "smallserial_tests", {
+export const SmallserialTests = table("public", "smallserialTests", {
   id: smallserial({}),
   name: varchar({ length: 100 }),
 });
@@ -137,7 +137,7 @@ export const SmallserialTests = table("public", "smallserial_tests", {
 /**
  * Test table for bigserial column type (auto-increment)
  */
-export const BigserialTests = table("public", "bigserial_tests", {
+export const BigserialTests = table("public", "bigserialTests", {
   id: bigserial({}),
   name: varchar({ length: 100 }),
 });
@@ -145,7 +145,7 @@ export const BigserialTests = table("public", "bigserial_tests", {
 /**
  * Test table for numeric column type (arbitrary precision)
  */
-export const NumericTests = table("public", "numeric_tests", {
+export const NumericTests = table("public", "numericTests", {
   id: pk(),
   // Nullable numeric
   value: numeric({}),
@@ -160,7 +160,7 @@ export const NumericTests = table("public", "numeric_tests", {
 /**
  * Test table for boolean column type
  */
-export const BooleanTests = table("public", "boolean_tests", {
+export const BooleanTests = table("public", "booleanTests", {
   id: pk(),
   // Nullable boolean
   flag: boolean({}),
@@ -175,7 +175,7 @@ export const BooleanTests = table("public", "boolean_tests", {
 /**
  * Test table for timestamp column type
  */
-export const TimestampTests = table("public", "timestamp_tests", {
+export const TimestampTests = table("public", "timestampTests", {
   id: pk(),
   // Nullable timestamp
   at: timestamp({}),
@@ -186,7 +186,7 @@ export const TimestampTests = table("public", "timestamp_tests", {
 /**
  * Test table for date column type
  */
-export const DateTests = table("public", "date_tests", {
+export const DateTests = table("public", "dateTests", {
   id: pk(),
   // Nullable date
   date: date({}),
@@ -197,7 +197,7 @@ export const DateTests = table("public", "date_tests", {
 /**
  * Test table for time column type
  */
-export const TimeTests = table("public", "time_tests", {
+export const TimeTests = table("public", "timeTests", {
   id: pk(),
   // Nullable time
   time: time({}),
@@ -212,7 +212,7 @@ export const TimeTests = table("public", "time_tests", {
 /**
  * Test table for uuid column type
  */
-export const UuidTests = table("public", "uuid_tests", {
+export const UuidTests = table("public", "uuidTests", {
   id: pk(),
   // Nullable uuid
   uuid: uuid({}),
@@ -227,7 +227,7 @@ export const UuidTests = table("public", "uuid_tests", {
 /**
  * Test table for bytea column type
  */
-export const ByteaTests = table("public", "bytea_tests", {
+export const ByteaTests = table("public", "byteaTests", {
   id: pk(),
   // Nullable bytea
   data: bytea({}),
@@ -240,7 +240,7 @@ export const ByteaTests = table("public", "bytea_tests", {
 /**
  * Test table for enum column type
  */
-export const EnumTests = table("public", "enum_tests", {
+export const EnumTests = table("public", "enumTests", {
   id: pk(),
   // Nullable enum
   status: StatusEnum.enumed({}),
@@ -255,7 +255,7 @@ export const EnumTests = table("public", "enum_tests", {
 /**
  * Test table for geography point column type
  */
-export const GeographyPointTests = table("public", "geography_point_tests", {
+export const GeographyPointTests = table("public", "geographyPointTests", {
   id: pk(),
   // Nullable point
   point: geography.point({}),
@@ -266,7 +266,7 @@ export const GeographyPointTests = table("public", "geography_point_tests", {
  */
 export const GeographyMultiPointTests = table(
   "public",
-  "geography_multipoint_tests",
+  "geographyMultipointTests",
   {
     id: pk(),
     // Nullable multipoint
@@ -279,7 +279,7 @@ export const GeographyMultiPointTests = table(
  */
 export const GeographyLineStringTests = table(
   "public",
-  "geography_linestring_tests",
+  "geographyLinestringTests",
   {
     id: pk(),
     // Nullable linestring
@@ -292,7 +292,7 @@ export const GeographyLineStringTests = table(
  */
 export const GeographyMultiLineStringTests = table(
   "public",
-  "geography_multilinestring_tests",
+  "geographyMultilinestringTests",
   {
     id: pk(),
     // Nullable multilinestring
@@ -305,7 +305,7 @@ export const GeographyMultiLineStringTests = table(
  */
 export const GeographyPolygonTests = table(
   "public",
-  "geography_polygon_tests",
+  "geographyPolygonTests",
   {
     id: pk(),
     // Nullable polygon
@@ -318,7 +318,7 @@ export const GeographyPolygonTests = table(
  */
 export const GeographyMultiPolygonTests = table(
   "public",
-  "geography_multipolygon_tests",
+  "geographyMultipolygonTests",
   {
     id: pk(),
     // Nullable multipolygon
@@ -329,7 +329,7 @@ export const GeographyMultiPolygonTests = table(
 /**
  * Test table for PostGIS spatial filter integration tests.
  */
-export const GeographyFilterTests = table("public", "geography_filter_tests", {
+export const GeographyFilterTests = table("public", "geographyFilterTests", {
   id: pk(),
   name: varchar({ length: 100, notNull }),
   location: geography.point({ notNull }),
@@ -342,7 +342,7 @@ export const GeographyFilterTests = table("public", "geography_filter_tests", {
 /**
  * Test table for inet column type (IPv4/IPv6 host addresses)
  */
-export const InetTests = table("public", "inet_tests", {
+export const InetTests = table("public", "inetTests", {
   id: pk(),
   // Nullable inet
   ip: inet({}),
@@ -353,7 +353,7 @@ export const InetTests = table("public", "inet_tests", {
 /**
  * Test table for cidr column type (IPv4/IPv6 network addresses)
  */
-export const CidrTests = table("public", "cidr_tests", {
+export const CidrTests = table("public", "cidrTests", {
   id: pk(),
   // Nullable cidr
   network: cidr({}),
@@ -364,7 +364,7 @@ export const CidrTests = table("public", "cidr_tests", {
 /**
  * Test table for macaddr column type (MAC addresses)
  */
-export const MacaddrTests = table("public", "macaddr_tests", {
+export const MacaddrTests = table("public", "macaddrTests", {
   id: pk(),
   // Nullable macaddr
   mac: macaddr({}),
@@ -379,7 +379,7 @@ export const MacaddrTests = table("public", "macaddr_tests", {
 /**
  * Test table for simple array column types (1D variable-length)
  */
-export const SimpleArrayTests = table("public", "simple_array_tests", {
+export const SimpleArrayTests = table("public", "simpleArrayTests", {
   id: pk(),
   // Required string array
   requiredTags: varchar({ length: 100, notNull, dimension: [null] as const }),
@@ -394,7 +394,7 @@ export const SimpleArrayTests = table("public", "simple_array_tests", {
 /**
  * Test table for fixed-length array column types (1D fixed-length)
  */
-export const FixedArrayTests = table("public", "fixed_array_tests", {
+export const FixedArrayTests = table("public", "fixedArrayTests", {
   id: pk(),
   // Required 3-element integer tuple (like coordinates)
   requiredCoords: integer({ notNull, dimension: [3] as const }),
@@ -411,7 +411,7 @@ export const FixedArrayTests = table("public", "fixed_array_tests", {
  */
 export const MultidimensionalArrayTests = table(
   "public",
-  "multidimensional_array_tests",
+  "multidimensionalArrayTests",
   {
     id: pk(),
     // 2D variable-length array: number[][] (matrix)
@@ -428,7 +428,7 @@ export const MultidimensionalArrayTests = table(
 /**
  * Test table for enum array column types
  */
-export const EnumArrayTests = table("public", "enum_array_tests", {
+export const EnumArrayTests = table("public", "enumArrayTests", {
   id: pk(),
   // Required enum array
   requiredStatuses: StatusEnum.enumed({ notNull, dimension: [null] as const }),
@@ -450,7 +450,7 @@ export const EnumArrayTests = table("public", "enum_array_tests", {
 /**
  * Test table for json column type (basic untyped JSON)
  */
-export const JsonTests = table("public", "json_tests", {
+export const JsonTests = table("public", "jsonTests", {
   id: pk(),
   // Nullable json
   data: json({}),
@@ -461,7 +461,7 @@ export const JsonTests = table("public", "json_tests", {
 /**
  * Test table for jsonb column type (basic untyped JSONB)
  */
-export const JsonbTests = table("public", "jsonb_tests", {
+export const JsonbTests = table("public", "jsonbTests", {
   id: pk(),
   // Nullable jsonb
   data: jsonb({}),

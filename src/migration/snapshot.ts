@@ -9,6 +9,7 @@ import type { IndexType } from "../indexes";
 import type { QueryContext } from "../query-builders/query";
 import { Sequence } from "../sequence";
 import { type StdTableWithColumns, Table } from "../table";
+import type { SnakeCase } from "../types";
 
 const { red } = chalk;
 
@@ -32,9 +33,9 @@ export interface Snapshot {
  */
 export interface SnapshotTable {
   /** The PostgreSQL schema this table belongs to (e.g. `"public"`). */
-  schema: string;
+  schema: SnakeCase<string>;
   /** The table name. */
-  name: string;
+  name: SnakeCase<string>;
   /** Columns in the table, keyed by column name. */
   columns: Record<string, SnapshotColumn>;
   /** Indexes on the table, keyed by index name. */
@@ -52,11 +53,11 @@ export interface SnapshotTable {
  */
 export interface SnapshotColumnRef {
   /** Schema of the referenced table. */
-  schema: string;
+  schema: SnakeCase<string>;
   /** Name of the referenced table. */
-  table: string;
+  table: SnakeCase<string>;
   /** Name of the referenced column. */
-  column: string;
+  column: SnakeCase<string>;
   /** The `ON DELETE` action for this foreign key. */
   onDelete: OnDeleteAction;
 }
@@ -88,9 +89,9 @@ export interface SnapshotColumn {
  */
 export interface SnapshotEnum {
   /** The schema the enum belongs to. */
-  schema: string;
+  schema: SnakeCase<string>;
   /** The enum type name. */
-  name: string;
+  name: SnakeCase<string>;
   /** Ordered list of allowed values. */
   values: string[];
 }
@@ -100,9 +101,9 @@ export interface SnapshotEnum {
  */
 export interface SnapshotSequence {
   /** The schema the sequence belongs to. */
-  schema: string;
+  schema: SnakeCase<string>;
   /** The sequence name. */
-  name: string;
+  name: SnakeCase<string>;
   /** `START WITH` value. */
   startWith?: number;
   /** `INCREMENT BY` value. */
@@ -195,16 +196,16 @@ export function snapshot(entities: unknown[]): Snapshot {
   for (const entity of entities) {
     if (is(entity, Enum)) {
       const enm = entity;
-      ss.enums[`${enm.schema}.${enm.name}`] = {
-        schema: enm.schema,
-        name: enm.name,
+      ss.enums[`${enm.schemaSql}.${enm.nameSql}`] = {
+        schema: enm.schemaSql,
+        name: enm.nameSql,
         values: [...enm.values],
       };
     } else if (is(entity, Table)) {
       const table = entity;
-      ss.tables[`${table._.schema}.${table._.name}`] = {
-        schema: table._.schema,
-        name: table._.name,
+      ss.tables[`${table._.schemaSql}.${table._.nameSql}`] = {
+        schema: table._.schemaSql,
+        name: table._.nameSql,
         columns: {},
         indexes: {},
         checkConstraints: {},
@@ -215,15 +216,17 @@ export function snapshot(entities: unknown[]): Snapshot {
           getReferencesCol: referencesCol,
           getReferencesOnDelete: referencesOnDelete,
         } = col;
-        ss.tables[`${table._.schema}.${table._.name}`].columns[col.nameSql] = {
+        ss.tables[`${table._.schemaSql}.${table._.nameSql}`].columns[
+          col.nameSql
+        ] = {
           type: col.sqlType,
           default: col.getDefaultSqlStr,
           primaryKey: col.isPrimaryKey || undefined,
           references:
             referencesCol !== null
               ? {
-                  schema: referencesCol.table._.schema,
-                  table: referencesCol.table._.name,
+                  schema: referencesCol.table._.schemaSql,
+                  table: referencesCol.table._.nameSql,
                   column: referencesCol.nameSql,
                   onDelete: referencesOnDelete ?? "CASCADE",
                 }
@@ -236,7 +239,7 @@ export function snapshot(entities: unknown[]): Snapshot {
       });
       (table._.extra.indexes?.(table as StdTableWithColumns) ?? []).forEach(
         (index) => {
-          ss.tables[`${table._.schema}.${table._.name}`].indexes[
+          ss.tables[`${table._.schemaSql}.${table._.nameSql}`].indexes[
             index._.getName(table)
           ] = {
             name: index._.getName(table),
@@ -247,13 +250,15 @@ export function snapshot(entities: unknown[]): Snapshot {
         },
       );
       const checkCtx: QueryContext = {
-        tableAliases: new Map([[`${table._.schema}.${table._.name}`, null]]),
+        tableAliases: new Map([
+          [`${table._.schemaSql}.${table._.nameSql}`, null],
+        ]),
       };
       (
         table._.extra.checkConstraints?.(table as StdTableWithColumns, check) ??
         []
       ).forEach((chk) => {
-        ss.tables[`${table._.schema}.${table._.name}`].checkConstraints[
+        ss.tables[`${table._.schemaSql}.${table._.nameSql}`].checkConstraints[
           chk.getName()
         ] = {
           name: chk.getName(),
@@ -266,10 +271,10 @@ export function snapshot(entities: unknown[]): Snapshot {
           uniqueConstraint,
         ) ?? []
       ).forEach((uc) => {
-        ss.tables[`${table._.schema}.${table._.name}`].uniqueConstraints[
-          uc.getName(table)
+        ss.tables[`${table._.schemaSql}.${table._.nameSql}`].uniqueConstraints[
+          uc.getName()
         ] = {
-          name: uc.getName(table),
+          name: uc.getName(),
           table: table._.fullName,
           columns: uc.getColumns(),
         };
@@ -281,27 +286,29 @@ export function snapshot(entities: unknown[]): Snapshot {
       if (pkConstraint) {
         // Validate: no column-level primaryKey should coexist with table-level primaryKeyConstraint
         const hasColumnLevelPK = Object.values(
-          ss.tables[`${table._.schema}.${table._.name}`].columns,
+          ss.tables[`${table._.schemaSql}.${table._.nameSql}`].columns,
         ).some((col) => col.primaryKey);
         if (hasColumnLevelPK) {
           console.error(
             red(
-              `[Error] Table "${table._.schema}"."${table._.name}" has both a column-level primaryKey and a table-level primaryKeyConstraint. Remove one of them.`,
+              `[Error] Table "${table._.schemaSql}"."${table._.nameSql}" has both a column-level primaryKey and a table-level primaryKeyConstraint. Remove one of them.`,
             ),
           );
           process.exit(1);
         }
-        ss.tables[`${table._.schema}.${table._.name}`].primaryKeyConstraint = {
-          name: pkConstraint.getName(table),
+        ss.tables[
+          `${table._.schemaSql}.${table._.nameSql}`
+        ].primaryKeyConstraint = {
+          name: pkConstraint.getName(),
           table: table._.fullName,
           columns: pkConstraint.getColumns(),
         };
       }
     } else if (is(entity, Sequence)) {
       const seq = entity;
-      ss.sequences[`${seq.schema}.${seq.name}`] = {
-        schema: seq.schema,
-        name: seq.name,
+      ss.sequences[`${seq.schemaSql}.${seq.nameSql}`] = {
+        schema: seq.schemaSql,
+        name: seq.nameSql,
         startWith: seq.config.startWith,
         increment: seq.config.increment,
         minValue: seq.config.minValue,

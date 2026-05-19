@@ -272,7 +272,7 @@ export const Schedules = table("public", "schedules", {
 ```typescript
 import { table, enumtype, pk, notNull } from "durcno";
 
-export const UserRole = enumtype("public", "user_role", [
+export const UserRole = enumtype("public", "userRole", [
   "admin",
   "moderator",
   "user",
@@ -404,7 +404,7 @@ Use `inet` for individual host addresses (with optional netmask for routing info
 ```typescript
 import { table, macaddr, pk, notNull, unique, varchar } from "durcno";
 
-export const NetworkDevices = table("public", "network_devices", {
+export const NetworkDevices = table("public", "networkDevices", {
   id: pk(),
   name: varchar({ length: 100, notNull }),
   // Required MAC address
@@ -450,7 +450,7 @@ To create an array column, pass the `dimension` property to the column configura
 ```typescript
 import { table, integer, varchar, pk } from "durcno";
 
-export const SensorReadings = table("public", "sensor_readings", {
+export const SensorReadings = table("public", "sensorReadings", {
   id: pk(),
 
   // 1D Array: integer[]

@@ -115,7 +115,7 @@ describe("SQL Injection Protection (String JS Type Columns)", () => {
   ]);
 
   describe("enum column", () => {
-    const TestEnum = enumtype("public", "test_enum", [
+    const TestEnum = enumtype("public", "testEnum", [
       "value1",
       "value2",
       "value3",

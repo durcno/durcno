@@ -19,7 +19,7 @@ const stage = Number(process.env.STAGE ?? 1);
 
 export const ConstraintTest = table(
   "public",
-  "constraint_test",
+  "constraintTest",
   {
     userId: integer({ notNull }),
     groupId: integer({ notNull }),
@@ -29,8 +29,11 @@ export const ConstraintTest = table(
   },
   {
     uniqueConstraints: (t, unique) => {
-      const emailNameUnique = unique("unique_email_name", [t.email, t.name]);
-      const nameCreatedUnique = unique("unique_name_created", [
+      const emailNameUnique = unique("unique_email_and_name", [
+        t.email,
+        t.name,
+      ]);
+      const nameCreatedUnique = unique("unique_name_and_created_at", [
         t.name,
         t.createdAt,
       ]);
@@ -44,9 +47,9 @@ export const ConstraintTest = table(
     },
     primaryKeyConstraint: (t, primaryKey) => {
       if (stage >= 4) {
-        return primaryKey("pk", [t.userId, t.groupId, t.email]);
+        return primaryKey("pk_constraint_test", [t.userId, t.groupId, t.email]);
       }
-      return primaryKey("pk", [t.userId, t.groupId]);
+      return primaryKey("pk_constraint_test", [t.userId, t.groupId]);
     },
   },
 );

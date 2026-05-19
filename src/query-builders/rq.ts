@@ -337,7 +337,7 @@ class RelationQuery<
     query.sql += selects.join(", ");
 
     query.sql += " FROM";
-    query.sql += ` ${this.#table._.fullName} "${this.#table._.name}"`;
+    query.sql += ` ${this.#table._.fullName} "${this.#table._.nameSql}"`;
     if (options.with) {
       for (const key in options.with) {
         const o = options.with[key];
@@ -346,11 +346,11 @@ class RelationQuery<
           const relation = relations.map[key];
           if (relation) {
             // Use path-based alias: top-level is just the key, nested use "__" separator
-            // Parent table alias is the root table name for top-level relations
+            // Parent table alias is the root table name (snake_case) for top-level relations
             buildRelationSubquery(
               query,
               key, // aliasPath at top level is just the key
-              this.#table._.name, // parent table alias is the root table name
+              this.#table._.nameSql, // parent table alias is the root table name (snake_case)
               o as StdOptionsBase,
               relation,
               this.#allRelations,

@@ -1,3 +1,5 @@
+import type { SnakeCase } from "../../types";
+import { camelToSnake } from "../../utils";
 import type { Snapshot } from "../snapshot";
 import { DDLStatement } from "./statement";
 
@@ -16,18 +18,20 @@ import { DDLStatement } from "./statement";
  */
 export class CreateTypeStatement extends DDLStatement {
   readonly type = "createType" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
+  private readonly definition: { asEnum: string[] };
 
   /**
    * @param schema - The schema the type belongs to.
    * @param name - The type name to create.
    * @param definition - The type definition. Currently only `{ asEnum: string[] }` is supported.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-    private readonly definition: { asEnum: string[] },
-  ) {
+  constructor(schema: string, name: string, definition: { asEnum: string[] }) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
+    this.definition = definition;
   }
 
   toSQL(): string {
@@ -59,16 +63,17 @@ export class CreateTypeStatement extends DDLStatement {
  */
 export class DropTypeStatement extends DDLStatement {
   readonly type = "dropType" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
 
   /**
    * @param schema - The schema the type belongs to.
    * @param name - The type name to drop.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-  ) {
+  constructor(schema: string, name: string) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
   }
 
   toSQL(): string {
@@ -117,17 +122,18 @@ type AlterTypeAction =
  */
 export class AlterTypeBuilder extends DDLStatement {
   readonly type = "alterType" as const;
+  private readonly schema: SnakeCase;
+  private readonly name: SnakeCase;
   private readonly actions: AlterTypeAction[] = [];
 
   /**
    * @param schema - The schema the type belongs to.
    * @param name - The type name.
    */
-  constructor(
-    private readonly schema: string,
-    private readonly name: string,
-  ) {
+  constructor(schema: string, name: string) {
     super();
+    this.schema = camelToSnake(schema);
+    this.name = camelToSnake(name);
   }
 
   /**

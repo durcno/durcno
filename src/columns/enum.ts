@@ -18,7 +18,7 @@ export class EnumedColumn<
   }
 
   get sqlTypeScalar() {
-    return `"${this.#enum.schema}"."${this.#enum.name}"`;
+    return `"${this.#enum.schemaSql}"."${this.#enum.nameSql}"`;
   }
 
   get sqlCastScalar() {

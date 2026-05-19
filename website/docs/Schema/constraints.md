@@ -55,17 +55,20 @@ export const Products = table(
   {
     checkConstraints: (t, check) => [
       // Price must be positive
-      check("positive_price", gt(t.price, 0n)),
+      check("check_products_positive_price", gt(t.price, 0n)),
 
       // Quantity must be between 0 and 10000
-      check("valid_quantity", and(gte(t.quantity, 0), lte(t.quantity, 10000))),
+      check(
+        "check_products_valid_quantity",
+        and(gte(t.quantity, 0), lte(t.quantity, 10000)),
+      ),
 
       // Email must contain @
-      check("valid_email", like(t.email, "%@%.%")),
+      check("check_products_valid_email", like(t.email, "%@%.%")),
 
       // Name must be between 2 and 200 characters
       check(
-        "name_length",
+        "check_products_name_length",
         and(gt(length(t.name), 2), lte(length(t.name), 200)),
       ),
     ],
@@ -81,7 +84,7 @@ For expressions not covered by the filter functions, pass a `sql` tagged templat
 import { sql } from "durcno";
 
 checkConstraints: (t, check) => [
-  check("status_allowed", sql`"status" IN ('active','inactive')`),
+  check("check_orders_status_allowed", sql`"status" IN ('active','inactive')`),
 ];
 ```
 
@@ -91,8 +94,8 @@ checkConstraints: (t, check) => [
 import { isIn, notIn } from "durcno";
 
 checkConstraints: (t, check) => [
-  check("valid_status", isIn(t.status, ["active", "pending", "closed"])),
-  check("excluded_category", notIn(t.categoryId, [99, 100])),
+  check("check_orders_valid_status", isIn(t.status, ["active", "pending", "closed"])),
+  check("check_items_excluded_category", notIn(t.categoryId, [99, 100])),
 ],
 ```
 
@@ -134,7 +137,7 @@ import { table, bigint, varchar, notNull } from "durcno";
 
 export const UserProfiles = table(
   "public",
-  "user_profiles",
+  "userProfiles",
   {
     userId: bigint({ notNull }),
     platform: varchar({ length: 50, notNull }),
@@ -143,7 +146,10 @@ export const UserProfiles = table(
   {
     uniqueConstraints: (t, unique) => [
       // One profile per user per platform
-      unique("unique_user_platform", [t.userId, t.platform]),
+      unique("unique_user_profiles_user_id_and_platform", [
+        t.userId,
+        t.platform,
+      ]),
     ],
   },
 );
@@ -166,8 +172,8 @@ A table can have any number of unique constraints:
 
 ```typescript
 uniqueConstraints: (t, unique) => [
-  unique("uq_email_org", [t.email, t.orgId]),
-  unique("uq_username_org", [t.username, t.orgId]),
+  unique("unique_memberships_email_and_org_id", [t.email, t.orgId]),
+  unique("unique_memberships_username_and_org_id", [t.username, t.orgId]),
 ],
 ```
 
@@ -196,7 +202,7 @@ export const UserRoles = table(
   },
   {
     primaryKeyConstraint: (t, primaryKey) =>
-      primaryKey("pk", [t.userId, t.roleId]),
+      primaryKey("pk_user_roles", [t.userId, t.roleId]),
   },
 );
 ```
@@ -208,7 +214,7 @@ CREATE TABLE "public"."user_roles" (
   "user_id" bigint NOT NULL,
   "role_id" integer NOT NULL,
   "assigned_at" timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT user_roles_pk PRIMARY KEY ("user_id", "role_id")
+  CONSTRAINT pk_user_roles PRIMARY KEY ("user_id", "role_id")
 );
 ```
 
@@ -239,10 +245,10 @@ export const UserRoles = table(
   },
   {
     uniqueConstraints: (t, unique) => [
-      unique("unique_user_role", [t.userId, t.roleId]),
+      unique("unique_user_roles_user_id_and_role_id", [t.userId, t.roleId]),
     ],
     primaryKeyConstraint: (t, primaryKey) =>
-      primaryKey("pk", [t.userId, t.roleId]),
+      primaryKey("pk_user_roles", [t.userId, t.roleId]),
   },
 );
 ```
@@ -251,13 +257,15 @@ export const UserRoles = table(
 
 ## Constraint Naming
 
-All constraint names are **automatically prefixed** with the table name. This keeps names unique across tables:
+Constraint names are used **exactly as you provide them** — no prefix or suffix is added automatically. You are responsible for choosing names that are unique within the database.
 
-| Definition                                         | Generated Constraint Name |
-| -------------------------------------------------- | ------------------------- |
-| `check("positive_price", ...)` on table `products` | `products_positive_price` |
-| `unique("uq_email", ...)` on table `users`         | `users_uq_email`          |
-| `primaryKey("pk", ...)` on table `user_roles`      | `user_roles_pk`           |
+Durcno recommends these conventions to avoid collisions and keep migrations readable:
+
+| Constraint type | Convention                                     | Example                                     |
+| --------------- | ---------------------------------------------- | ------------------------------------------- |
+| Check           | `check_<table>_<col>[_and_<col>]*[_<suffix>]?` | `check_products_positive_price`             |
+| Unique          | `unique_<table>_<col1>[_and_<col2>]*`          | `unique_user_profiles_user_id_and_platform` |
+| Primary key     | `pk_<table>`                                   | `pk_user_roles`                             |
 
 Use clear, descriptive names so migrations are easy to read.
 
@@ -275,7 +283,7 @@ When a table with constraints is created, they are included in the `CREATE TABLE
 CREATE TABLE "public"."products" (
   "id" bigserial PRIMARY KEY NOT NULL,
   "price" bigint NOT NULL,
-  CONSTRAINT products_positive_price CHECK ("price" > 0)
+  CONSTRAINT check_products_positive_price CHECK ("price" > 0)
 );
 ```
 
@@ -284,8 +292,8 @@ CREATE TABLE "public"."products" (
 When you add a new constraint to an existing table, a migration is generated:
 
 ```sql
-ALTER TABLE "public"."products" ADD CONSTRAINT products_max_price CHECK ("price" < 1000000);
-ALTER TABLE "public"."user_roles" ADD CONSTRAINT user_roles_unique_email UNIQUE ("email");
+ALTER TABLE "public"."products" ADD CONSTRAINT check_products_max_price CHECK ("price" < 1000000);
+ALTER TABLE "public"."user_roles" ADD CONSTRAINT unique_user_roles_user_id_and_email UNIQUE ("user_id", "email");
 ```
 
 ### Removing a Constraint
@@ -293,7 +301,7 @@ ALTER TABLE "public"."user_roles" ADD CONSTRAINT user_roles_unique_email UNIQUE 
 When you remove a constraint from the schema, a `DROP CONSTRAINT` migration is generated:
 
 ```sql
-ALTER TABLE "public"."products" DROP CONSTRAINT products_max_price;
+ALTER TABLE "public"."products" DROP CONSTRAINT check_products_max_price;
 ```
 
 ### Modifying a Constraint
@@ -302,9 +310,9 @@ When you change a constraint's expression (check) or columns (unique/PK), Durcno
 
 ```sql
 -- Drop old version
-ALTER TABLE "public"."products" DROP CONSTRAINT products_valid_quantity;
+ALTER TABLE "public"."products" DROP CONSTRAINT check_products_valid_quantity;
 -- Add new version
-ALTER TABLE "public"."products" ADD CONSTRAINT products_valid_quantity CHECK ("quantity" >= 0 AND "quantity" <= 1000);
+ALTER TABLE "public"."products" ADD CONSTRAINT check_products_valid_quantity CHECK ("quantity" >= 0 AND "quantity" <= 1000);
 ```
 
 ---
@@ -313,12 +321,13 @@ ALTER TABLE "public"."products" ADD CONSTRAINT products_valid_quantity CHECK ("q
 
 ### Name Constraints Clearly
 
-Use descriptive names like `positive_price`, `unique_email_org`, or `pk` so migrations are easy to read:
+Follow the recommended naming conventions and use descriptive names so migrations are easy to read:
 
 ```typescript
-// ✅ Good: descriptive names
-check("positive_price", gt(t.price, 0));
-unique("unique_user_platform", [t.userId, t.platform]);
+// ✅ Good: follows convention, descriptive
+check("check_products_positive_price", gt(t.price, 0));
+unique("unique_user_profiles_user_id_and_platform", [t.userId, t.platform]);
+primaryKey("pk_user_roles", [t.userId, t.roleId]);
 
 // ❌ Bad: vague names
 check("c1", gt(t.price, 0));
@@ -338,7 +347,7 @@ export const Users = table("public", "users", {
 
 // ✅ Correct: table-level for composite (two or more columns)
 uniqueConstraints: (t, unique) => [
-  unique("unique_user_platform", [t.userId, t.platform]),
+  unique("unique_user_profiles_user_id_and_platform", [t.userId, t.platform]),
 ];
 
 // ❌ Error: single column not allowed in table-level constraint

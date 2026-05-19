@@ -10,7 +10,8 @@ import type {
 } from "./constraints/unique";
 import type { Index } from "./indexes";
 import { entityType } from "./symbols";
-import type { CamelToSnake, Key, Valueof } from "./types";
+import type { CamelToSnake, Key, SnakeCase, Valueof } from "./types";
+import { camelToSnake } from "./utils";
 
 // biome-ignore lint/suspicious/noExplicitAny: AnyColumn is a wildcard type for any column
 export type AnyColumn = Column<any, any, any>;
@@ -47,9 +48,16 @@ type TableConfig<
   TName extends string,
   TColumns extends Record<string, AnyColumn>,
 > = {
+  /** The raw table name as provided by the user (may be camelCase). */
   readonly name: TName;
+  /** The snake_case version of {@link name} used in generated SQL. */
+  readonly nameSql: SnakeCase<CamelToSnake<TName>>;
+  /** The raw schema identifier as provided by the user (may be camelCase). */
   readonly schema: TSchema;
-  readonly fullName: `"${TSchema}"."${TName}"`;
+  /** The snake_case version of {@link schema} used in generated SQL. */
+  readonly schemaSql: SnakeCase<CamelToSnake<TSchema>>;
+  /** Fully-qualified table name as a double-quoted SQL identifier: `"schema"."table"`. */
+  readonly fullName: `"${CamelToSnake<TSchema>}"."${CamelToSnake<TName>}"`;
   readonly columns: {
     [ColName in keyof TColumns]: TableColumn<
       TSchema,
@@ -67,11 +75,15 @@ export type TableColumn<
   TName extends Key,
   TColumn extends AnyColumn,
 > = TColumn & {
-  table: StdTable;
+  /** Phantom type markers carrying the schema and table name for inference. */
+  $: {
+    schema: TTSchema;
+    table: TTName;
+  };
   name: TName;
-  nameSql: CamelToSnake<Extract<TName, string>>;
-  tableName: TTName;
-  schemaName: TTSchema;
+  /** The snake_case column name used in generated SQL. */
+  nameSql: SnakeCase<CamelToSnake<Extract<TName, string>>>;
+  table: StdTable;
 };
 
 export type StdTableColumn = TableColumn<string, string, Key, AnyColumn>;
@@ -128,8 +140,10 @@ export class Table<
     bindNameNTable(this as unknown as StdTable, columns);
     this._ = {
       schema,
+      schemaSql: camelToSnake(schema),
       name,
-      fullName: `"${schema}"."${name}"`,
+      nameSql: camelToSnake(name),
+      fullName: `"${camelToSnake(schema)}"."${camelToSnake(name)}"`,
       columns: columns as {
         [ColName in keyof TColumns]: TableColumn<
           TSchema,

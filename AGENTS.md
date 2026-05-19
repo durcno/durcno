@@ -65,7 +65,7 @@ import { table, pk, varchar, enumtype, notNull, unique } from "durcno";
 
 export { Migrations } from "durcno"; // Required for migrations tracking
 
-export const UserTypeEnm = enumtype("public", "user_type", ["admin", "user"]);
+export const UserTypeEnm = enumtype("public", "userType", ["admin", "user"]);
 
 export const Users = table("public", "users", {
   id: pk(),

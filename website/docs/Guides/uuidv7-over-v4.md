@@ -63,7 +63,7 @@ When you specifically need UUIDv4, set the `version` option and use the `uuidv4(
 import { table, pk, uuid, notNull } from "durcno";
 import { uuidv4 } from "durcno/functions";
 
-export const ApiKeys = table("public", "api_keys", {
+export const ApiKeys = table("public", "apiKeys", {
   id: pk(),
   // v4: fully random, unpredictable
   key: uuid({ notNull, unique, version: "v4" }).default(uuidv4()),

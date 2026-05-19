@@ -131,16 +131,15 @@ describe("durcno generate - unique/primary key constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(1);
 
     const uniqueConstraints = await getConstraints("constraint_test", "u");
-    expect(
-      uniqueConstraints["constraint_test_unique_email_name"],
-    ).toBeDefined();
-    expect(
-      uniqueConstraints["constraint_test_unique_email_name"].columns,
-    ).toEqual(["email", "name"]);
+    expect(uniqueConstraints["unique_email_and_name"]).toBeDefined();
+    expect(uniqueConstraints["unique_email_and_name"].columns).toEqual([
+      "email",
+      "name",
+    ]);
 
     const pkConstraints = await getConstraints("constraint_test", "p");
-    expect(pkConstraints["constraint_test_pk"]).toBeDefined();
-    expect(pkConstraints["constraint_test_pk"].columns).toEqual([
+    expect(pkConstraints["pk_constraint_test"]).toBeDefined();
+    expect(pkConstraints["pk_constraint_test"].columns).toEqual([
       "user_id",
       "group_id",
     ]);
@@ -181,12 +180,11 @@ describe("durcno generate - unique/primary key constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(2);
 
     const uniqueConstraints = await getConstraints("constraint_test", "u");
-    expect(
-      uniqueConstraints["constraint_test_unique_name_created"],
-    ).toBeDefined();
-    expect(
-      uniqueConstraints["constraint_test_unique_name_created"].columns,
-    ).toEqual(["name", "created_at"]);
+    expect(uniqueConstraints["unique_name_and_created_at"]).toBeDefined();
+    expect(uniqueConstraints["unique_name_and_created_at"].columns).toEqual([
+      "name",
+      "created_at",
+    ]);
 
     // Duplicate (name, createdAt) should now fail
     await client.query(`
@@ -208,12 +206,8 @@ describe("durcno generate - unique/primary key constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(3);
 
     const uniqueConstraints = await getConstraints("constraint_test", "u");
-    expect(
-      uniqueConstraints["constraint_test_unique_email_name"],
-    ).toBeUndefined();
-    expect(
-      uniqueConstraints["constraint_test_unique_name_created"],
-    ).toBeDefined();
+    expect(uniqueConstraints["unique_email_and_name"]).toBeUndefined();
+    expect(uniqueConstraints["unique_name_and_created_at"]).toBeDefined();
 
     // Duplicate (email, name) should now be allowed
     await client.query(`
@@ -233,8 +227,8 @@ describe("durcno generate - unique/primary key constraint changes", () => {
     expect(getMigrationFolders()).toHaveLength(4);
 
     const pkConstraints = await getConstraints("constraint_test", "p");
-    expect(pkConstraints["constraint_test_pk"]).toBeDefined();
-    expect(pkConstraints["constraint_test_pk"].columns).toEqual([
+    expect(pkConstraints["pk_constraint_test"]).toBeDefined();
+    expect(pkConstraints["pk_constraint_test"].columns).toEqual([
       "user_id",
       "group_id",
       "email",
