@@ -1,10 +1,16 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import chalk from "chalk";
+import { database, eq, Migrations } from "durcno";
 import { createEmptySnapshot, type DDLStatement } from "durcno/migration";
 
+import type { $Client } from "../../connectors/common";
 import type { Options } from "..";
-import { ensureMigrationsDirExists, getMigrationFolderNames } from "../checks";
+import {
+  ensureMigrationsDirExists,
+  getMigrationFolderNames,
+  migrationsTableExists,
+} from "../checks";
 import { DEFAULT_MIGRATIONS_DIR } from "../consts";
 import { loadConfig, resolveConfigPath } from "../helpers";
 import { generateMigration } from "./generate";
@@ -13,6 +19,8 @@ const { bgGreen, bgRed, yellow, red, green, cyan, gray } = chalk;
 
 export interface SquashOptions extends Options {
   force?: boolean;
+  /** Skip all database interaction (no validation, no tracking update). */
+  skipDb?: boolean;
 }
 
 export async function squash(
@@ -75,6 +83,45 @@ export async function squash(
   if (range.length <= 1) {
     console.log(yellow("Only one migration in range. Nothing to squash."));
     process.exit(0);
+  }
+
+  // DB-state validation: check for mixed applied/unapplied range
+  let client: $Client | null = null;
+  let rangeAllApplied = false;
+
+  if (!options.skipDb) {
+    client = config.connector.getClient();
+    await client.connect();
+
+    if (await migrationsTableExists(client)) {
+      config.connector.options.pool = {
+        ...config.connector.options.pool,
+        max: 1,
+      };
+      config.connector.options.logger = undefined;
+      const db = database({ Migrations }, config);
+      const records = await db.from(Migrations).select();
+      await db.close();
+
+      const appliedNames = new Set(records.map((r) => r.name));
+      const appliedInRange = range.filter((m) => appliedNames.has(m));
+      const unappliedInRange = range.filter((m) => !appliedNames.has(m));
+
+      if (appliedInRange.length > 0 && unappliedInRange.length > 0) {
+        await client.close();
+        console.error(
+          bgRed.white("[ERROR]") +
+            " " +
+            red("Cannot squash a mix of applied and unapplied migrations.") +
+            gray(`\n  Applied in range:   ${appliedInRange.join(", ")}`) +
+            gray(`\n  Unapplied in range: ${unappliedInRange.join(", ")}`),
+        );
+        process.exit(1);
+      }
+
+      rangeAllApplied = unappliedInRange.length === 0;
+    }
+    // If migrations table doesn't exist → treat as all-unapplied (rangeAllApplied stays false)
   }
 
   // Scan for custom statements in range
@@ -156,6 +203,25 @@ export async function squash(
   mkdirSync(squashedDir, { recursive: true });
   writeFileSync(join(squashedDir, "up.ts"), squashedUpTs);
   writeFileSync(join(squashedDir, "down.ts"), squashedDownTs);
+
+  // Update durcno.migrations tracking if the range was fully applied
+  if (client !== null && rangeAllApplied) {
+    config.connector.options.pool = {
+      ...config.connector.options.pool,
+      max: 1,
+    };
+    config.connector.options.logger = undefined;
+    const db = database({ Migrations }, config);
+    for (const migrationName of range) {
+      await db.delete(Migrations).where(eq(Migrations.name, migrationName));
+    }
+    await db.insert(Migrations).values({ name: start, createdAt: new Date() });
+    await db.close();
+  }
+
+  if (client !== null) {
+    await client.close();
+  }
 
   console.log(
     bgGreen.white.bold("[SQUASHED]") +

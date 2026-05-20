@@ -87,9 +87,17 @@ program
   .command("squash <start> <end>")
   .option(...Options.config)
   .option("--force", "Squash even if custom statements exist")
+  .option(
+    "--skip-db",
+    "Skip all database interaction (no validation, no tracking update)",
+  )
   .description("squash a range of migrations into a single migration")
   .action(
-    async (start: string, end: string, opts: Options & { force?: boolean }) => {
+    async (
+      start: string,
+      end: string,
+      opts: Options & { force?: boolean; skipDb?: boolean },
+    ) => {
       await squash(start, end, opts);
     },
   );

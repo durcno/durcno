@@ -18,6 +18,9 @@ export { Migrations };
 // "1" = initial schema (Users only)
 // "2" = add bio and age columns to Users
 // "3" = add Posts table
+// "4" = add Comments table
+// "5" = add views column to Posts
+// "6" = add slug column to Posts
 const migrationVersion = parseInt(process.env.MIGRATION_VERSION || "1", 10);
 
 export const Users = table("public", "users", {
@@ -41,6 +44,25 @@ export const Posts =
           notNull,
         }).references({ column: () => Users.id, onDelete: "CASCADE" }),
         publishedAt: timestamp({}),
+        createdAt: timestamp({ notNull }).default(now()),
+        ...(migrationVersion >= 5 && {
+          views: integer({}),
+        }),
+        ...(migrationVersion >= 6 && {
+          slug: varchar({ length: 255 }),
+        }),
+      })
+    : undefined;
+
+export const Comments =
+  migrationVersion >= 4
+    ? table("public", "comments", {
+        id: pk(),
+        postId: bigint({ notNull }).references({
+          column: () => (Posts as NonNullable<typeof Posts>).id,
+          onDelete: "CASCADE",
+        }),
+        body: text({ notNull }),
         createdAt: timestamp({ notNull }).default(now()),
       })
     : undefined;

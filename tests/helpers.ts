@@ -12,20 +12,20 @@ export function runDurcno(
   args: string[],
   env: Record<string, string>,
   cwd?: string,
-) {
+): string {
   const result = spawnSync("pnpm", ["exec", "durcno", ...args], {
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: ["ignore", "pipe", "pipe"],
+    encoding: "utf8",
     env: env,
     cwd: cwd ?? __dirname,
   });
-  if (result.stderr?.length) {
-    console.error(result.stderr.toString());
-  }
+  const output = (result.stdout ?? "") + (result.stderr ?? "");
   if (result.status !== 0) {
     throw new Error(
-      `durcno ${args.join(" ")} failed with exit code ${result.status}`,
+      `durcno ${args.join(" ")} failed with exit code ${result.status}: ${result.stderr ?? ""}`,
     );
   }
+  return output;
 }
 
 /**

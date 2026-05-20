@@ -15,7 +15,7 @@ Why use it
 Usage
 
 ```bash npm2yarn
-npm exec durcno squash <start> <end> [--config path/to/durcno.config.ts] [--force]
+npm exec durcno squash <start> <end> [--config path/to/durcno.config.ts] [--force] [--skip-db]
 ```
 
 Arguments
@@ -27,6 +27,7 @@ Common options
 
 - `--config <path>` — Path to config file (defaults to `durcno.config.ts`).
 - `--force` — Squash even if custom statements (`ddl.custom(...)`) exist in the migration range. Without this flag, the command will abort when custom statements are detected because they cannot be preserved during squash.
+- `--skip-db` — Skip all database interaction. No mixed-state validation is performed and the `durcno.migrations` tracking table is not updated. Useful in CI environments or when the database is unavailable.
 
 What it does
 
@@ -35,6 +36,7 @@ What it does
 3. Generates a single squashed `up.ts` and `down.ts` by diffing the two snapshots.
 4. Deletes all migration folders in the range.
 5. Writes the squashed migration into a single folder using the **start** migration's timestamp as its name.
+6. If the database is reachable and all migrations in the range are applied, removes the individual `durcno.migrations` tracking records and inserts a single record for the squashed migration.
 
 Example
 
@@ -57,15 +59,19 @@ Result:
 
 ```
 migrations/
-└── 2025-10-01T10-00-00.000Z/   # creates users table with bio and age
+└── 2025-10-03T09-15-00.000Z/   # creates users table with bio and age
 ```
 
 The squashed migration's `up.ts` contains the full combined effect of all three original migrations, and its `down.ts` reverses everything back.
 
+:::warning
+Do not squash migrations that have already been deployed to production or any shared environment. Other databases running those migrations will have no record of the squashed result, causing `durcno migrate` to fail or apply duplicate changes. Only squash migrations that exist exclusively in your local or development environment.
+:::
+
 Important notes
 
 - **Custom statements**: If any migration in the range contains `ddl.custom(...)` statements, the squash will abort unless you pass `--force`. Custom statements cannot be automatically preserved because they are opaque to the snapshot diffing process.
-- **Only unapplied migrations**: Squash operates on migration files only. If the migrations in the range have already been applied to a database, the squashed result will be equivalent but the migration history in that database will still reference the original individual migrations.
-- **Single migration range**: If the range contains only one migration, the command exits early with no changes.
+- **Mixed applied/unapplied migrations**: If the range contains a mix of applied and unapplied migrations, the command exits with an error listing which are in each bucket. Either apply all pending migrations first, or pass `--skip-db` to bypass the check.
+- **Tracking sync**: When all migrations in the range are applied, the command connects to the database, deletes the individual tracking records from `durcno.migrations`, and inserts a single record pointing to the squashed migration. Pass `--skip-db` to skip this update.
 
 Next: verify the result with `durcno status`.

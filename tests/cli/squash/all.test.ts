@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { MIGRATION_NAME_REGEX } from "durcno/migration";
@@ -9,7 +8,7 @@ import {
   stopPostgresContainer,
   type TestContainerInfo,
 } from "../../docker-utils";
-import { rmSync } from "../../helpers";
+import { rmSync, runDurcno } from "../../helpers";
 
 describe("durcno squash command", () => {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
@@ -20,9 +19,13 @@ describe("durcno squash command", () => {
   let databasePort: string;
   let databaseName: string;
 
-  let migration1: string;
-  let migration2: string;
-  let migration3: string;
+  // Migration names assigned incrementally across all 6 generate calls
+  let m1: string;
+  let m2: string;
+  let m3: string;
+  let m4: string;
+  let m5: string;
+  let m6: string;
 
   function getMigrationFolders(): string[] {
     if (!fs.existsSync(migrationsDir)) return [];
@@ -33,58 +36,78 @@ describe("durcno squash command", () => {
   }
 
   function runGenerate(version: number): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: __dirname,
-      env: {
-        ...process.env,
-        MIGRATION_VERSION: String(version),
-        DATABASE_PORT: databasePort,
-        DB_NAME: databaseName,
-      },
-    });
-    return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
-    };
+    try {
+      const output = runDurcno(
+        ["generate", "--config", configPath],
+        {
+          ...process.env,
+          MIGRATION_VERSION: String(version),
+          DATABASE_PORT: databasePort,
+          DB_NAME: databaseName,
+        },
+        __dirname,
+      );
+      return { success: true, output };
+    } catch (e) {
+      return {
+        success: false,
+        output: e instanceof Error ? e.message : String(e),
+      };
+    }
   }
 
   function runMigrate(): { success: boolean; output: string } {
-    const result = spawnSync("durcno", ["migrate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: __dirname,
-      env: {
-        ...process.env,
-        DATABASE_PORT: databasePort,
-        DB_NAME: databaseName,
-      },
-    });
-    return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
-    };
+    try {
+      const output = runDurcno(
+        ["migrate", "--config", configPath],
+        {
+          ...process.env,
+          DATABASE_PORT: databasePort,
+          DB_NAME: databaseName,
+        },
+        __dirname,
+      );
+      return { success: true, output };
+    } catch (e) {
+      return {
+        success: false,
+        output: e instanceof Error ? e.message : String(e),
+      };
+    }
   }
 
   function runSquash(
     start: string,
     end: string,
-    opts?: { force?: boolean },
+    opts?: { force?: boolean; skipDb?: boolean },
   ): { success: boolean; output: string } {
     const args = ["squash", start, end, "--config", configPath];
     if (opts?.force) args.push("--force");
-    const result = spawnSync("durcno", args, {
-      encoding: "utf8",
-      cwd: __dirname,
-      env: {
-        ...process.env,
-        DATABASE_PORT: databasePort,
-        DB_NAME: databaseName,
-      },
-    });
-    return {
-      success: result.status === 0,
-      output: result.stdout + result.stderr,
-    };
+    if (opts?.skipDb) args.push("--skip-db");
+    try {
+      const output = runDurcno(
+        args,
+        {
+          ...process.env,
+          DATABASE_PORT: databasePort,
+          DB_NAME: databaseName,
+        },
+        __dirname,
+      );
+      return { success: true, output };
+    } catch (e) {
+      return {
+        success: false,
+        output: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+
+  async function getAppliedNames(): Promise<string[]> {
+    const result = await client.query<{ name: string }>(
+      "SELECT name FROM durcno.migrations ORDER BY created_at",
+    );
+    return result.rows.map((r) => r.name);
   }
 
   beforeAll(async () => {
@@ -106,66 +129,98 @@ describe("durcno squash command", () => {
     await stopPostgresContainer(containerInfo.container);
   });
 
-  it("[step 1] should generate initial migration creating users table", () => {
+  // ── PHASE 1: Generate all 6 migrations ─────────────────────────────────────
+  // Versions 1–3 are generated and immediately applied so the DB ends up with
+  // m1–m3 applied and m4–m6 unapplied — the initial state for all squash tests.
+
+  it("[gen 1] should generate and apply initial migration (users table)", () => {
     const result = runGenerate(1);
     expect(result.success).toBe(true);
 
     const folders = getMigrationFolders();
     expect(folders).toHaveLength(1);
-    migration1 = folders[0];
+    m1 = folders[0];
+
+    expect(runMigrate().success).toBe(true);
   });
 
-  it("[step 2] should generate migration adding bio and age to users", async () => {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
+  it("[gen 2] should generate and apply migration adding bio and age to users", async () => {
     const result = runGenerate(2);
     expect(result.success).toBe(true);
 
     const folders = getMigrationFolders();
     expect(folders).toHaveLength(2);
-    migration2 = folders[1];
+    m2 = folders[1];
+
+    expect(runMigrate().success).toBe(true);
   });
 
-  it("[step 3] should generate migration creating posts table", async () => {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
+  it("[gen 3] should generate and apply migration creating posts table", async () => {
     const result = runGenerate(3);
     expect(result.success).toBe(true);
 
     const folders = getMigrationFolders();
     expect(folders).toHaveLength(3);
-    migration3 = folders[2];
+    m3 = folders[2];
+
+    expect(runMigrate().success).toBe(true);
   });
 
+  it("[gen 4-6] should generate remaining migrations without applying", async () => {
+    const r4 = runGenerate(4);
+    expect(r4.success).toBe(true);
+    m4 = getMigrationFolders()[3];
+
+    const r5 = runGenerate(5);
+    expect(r5.success).toBe(true);
+    m5 = getMigrationFolders()[4];
+
+    const r6 = runGenerate(6);
+    expect(r6.success).toBe(true);
+    const folders = getMigrationFolders();
+    m6 = folders[5];
+
+    // 6 folders on disk; only m1–m3 applied in DB
+    expect(folders).toHaveLength(6);
+    expect(await getAppliedNames()).toEqual([m1, m2, m3]);
+  });
+
+  // ── PHASE 2: Squash validation errors ──────────────────────────────────────
+  // Pure validation: none of these tests modify the filesystem or DB.
+
   it("[error] should fail when start migration does not exist", () => {
-    const result = runSquash("1999-01-01T00-00-00.000Z", migration2);
+    const result = runSquash("1999-01-01T00-00-00.000Z", m2);
     expect(result.success).toBe(false);
     expect(result.output).toContain("not found");
-    expect(getMigrationFolders()).toHaveLength(3);
+    expect(getMigrationFolders()).toHaveLength(6);
   });
 
   it("[error] should fail when end migration does not exist", () => {
-    const result = runSquash(migration1, "2099-01-01T00-00-00.000Z");
+    const result = runSquash(m1, "2099-01-01T00-00-00.000Z");
     expect(result.success).toBe(false);
     expect(result.output).toContain("not found");
-    expect(getMigrationFolders()).toHaveLength(3);
+    expect(getMigrationFolders()).toHaveLength(6);
   });
 
   it("[error] should fail when start comes after end", () => {
-    const result = runSquash(migration3, migration1);
+    const result = runSquash(m3, m1);
     expect(result.success).toBe(false);
     expect(result.output).toContain("must come before");
-    expect(getMigrationFolders()).toHaveLength(3);
+    expect(getMigrationFolders()).toHaveLength(6);
   });
 
   it("[error] should exit when only one migration in range", () => {
-    const result = runSquash(migration1, migration1);
+    const result = runSquash(m1, m1);
     expect(result.output).toContain("Nothing to squash");
-    expect(getMigrationFolders()).toHaveLength(3);
+    expect(getMigrationFolders()).toHaveLength(6);
   });
 
+  // ── PHASE 3: Custom statements and --force ─────────────────────────────────
+  // State: 6 folders [m1…m6], DB: {m1, m2, m3} applied.
+  // Squashing applied migrations also updates durcno.migrations records.
+
   it("[custom] should inject custom statement into migration 2", () => {
-    const upPath = path.join(migrationsDir, migration2, "up.ts");
+    const upPath = path.join(migrationsDir, m2, "up.ts");
     const originalContent = fs.readFileSync(upPath, "utf8");
     const withCustom = originalContent.replace(
       /];(\s*)$/,
@@ -178,116 +233,107 @@ describe("durcno squash command", () => {
   });
 
   it("[custom] should fail squash when custom statements exist without --force", () => {
-    const result = runSquash(migration1, migration2);
+    const result = runSquash(m1, m2);
     expect(result.success).toBe(false);
     expect(result.output).toContain("Custom statements");
     expect(result.output).toContain("--force");
-    expect(getMigrationFolders()).toHaveLength(3);
+    expect(getMigrationFolders()).toHaveLength(6);
   });
 
-  it("[custom] should squash migrations 1+2 with --force skipping custom statements", () => {
-    const result = runSquash(migration1, migration2, { force: true });
+  it("[custom] should squash m1+m2 with --force, skipping custom statements", async () => {
+    // Both m1 and m2 are applied; the squash removes the m2 DB record.
+    const result = runSquash(m1, m2, { force: true });
     expect(result.success).toBe(true);
     expect(result.output).toContain("2");
 
+    const folders = getMigrationFolders();
+    expect(folders).toHaveLength(5);
+    expect(folders[0]).toBe(m1);
+
+    // m2 record removed; m1 and m3 remain applied
+    const applied = await getAppliedNames();
+    expect(applied).toHaveLength(2);
+    expect(applied).toContain(m1);
+    expect(applied).toContain(m3);
+  });
+
+  // State: 5 folders [m1, m3, m4, m5, m6], DB: {m1, m3} applied.
+
+  // ── PHASE 4: DB-aware squash ───────────────────────────────────────────────
+
+  it("[db step 1] should fail when squashing a mix of applied and unapplied migrations", async () => {
+    const result = runSquash(m3, m4);
+    expect(result.success).toBe(false);
+    expect(result.output).toContain("mix of applied and unapplied");
+
+    // Filesystem and DB must be unchanged
+    expect(getMigrationFolders()).toHaveLength(5);
+    const applied = await getAppliedNames();
+    expect(applied).toHaveLength(2);
+    expect(applied).toContain(m1);
+    expect(applied).toContain(m3);
+  });
+
+  // State: unchanged (step 1 made no changes).
+
+  it("[db step 2] --skip-db should bypass mixed-state validation", async () => {
+    const result = runSquash(m3, m4, { skipDb: true });
+    expect(result.success).toBe(true);
+
+    // m3 + m4 merged into m3 folder; m5, m6 remain → 4 folders
+    const folders = getMigrationFolders();
+    expect(folders).toHaveLength(4);
+    expect(folders[1]).toBe(m3);
+
+    // DB: unchanged — --skip-db skips all DB operations
+    const applied = await getAppliedNames();
+    expect(applied).toContain(m1);
+    expect(applied).toContain(m3);
+    expect(applied).not.toContain(m4);
+  });
+
+  // State: 4 folders [m1, m3, m5, m6]; DB: {m1, m3} applied.
+
+  it("[db step 3] should update durcno.migrations when squashing all-applied migrations", async () => {
+    const result = runSquash(m1, m3);
+    expect(result.success).toBe(true);
+
+    // m1 + m3 squashed into m1 folder; m5, m6 remain → 3 folders
+    const folders = getMigrationFolders();
+    expect(folders).toHaveLength(3);
+    expect(folders[0]).toBe(m1);
+
+    // DB: m3 record removed; only m1 remains
+    const applied = await getAppliedNames();
+    expect(applied).toHaveLength(1);
+    expect(applied[0]).toBe(m1);
+  });
+
+  // State: 3 folders [m1, m5, m6]; only m1 applied in DB.
+
+  it("[db step 4] should not touch durcno.migrations when squashing all-unapplied migrations", async () => {
+    const appliedBefore = await getAppliedNames();
+    expect(appliedBefore).toEqual([m1]);
+
+    const result = runSquash(m5, m6);
+    expect(result.success).toBe(true);
+
+    // m5 + m6 squashed into m5 folder; m1 remains → 2 folders
     const folders = getMigrationFolders();
     expect(folders).toHaveLength(2);
-    // Squashed migration uses the start migration's timestamp
-    expect(folders[0]).toBe(migration1);
-    // migration3 is now the second remaining migration
-    migration2 = folders[1];
+    expect(folders[1]).toBe(m5);
+
+    // DB: unchanged
+    const applied = await getAppliedNames();
+    expect(applied).toEqual(appliedBefore);
   });
 
-  it("[squash] should squash remaining two migrations into one", () => {
-    const result = runSquash(migration1, migration2);
-    expect(result.success).toBe(true);
-    expect(result.output).toContain("2");
+  // ── PHASE 5: Final verification ────────────────────────────────────────────
+  // State: 2 folders [m1, m5]; snapshot in m5 reflects the full v6 schema.
 
-    const folders = getMigrationFolders();
-    expect(folders).toHaveLength(1);
-    expect(folders[0]).toBe(migration1);
-  });
-
-  it("[squash] squashed migration should have up.ts and down.ts", () => {
-    const squashedDir = path.join(migrationsDir, migration1);
-    expect(fs.existsSync(path.join(squashedDir, "up.ts"))).toBe(true);
-    expect(fs.existsSync(path.join(squashedDir, "down.ts"))).toBe(true);
-  });
-
-  it("[squash] should apply squashed migration and create full schema", async () => {
-    const migrateResult = runMigrate();
-    expect(migrateResult.success).toBe(true);
-
-    // Verify users table with all columns (v1 + v2)
-    const usersColumnsResult = await client.query(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-      AND table_name = 'users'
-      ORDER BY ordinal_position;
-    `);
-    const userColNames = usersColumnsResult.rows.map(
-      (row: { column_name: string }) => row.column_name,
-    );
-    expect(userColNames).toContain("id");
-    expect(userColNames).toContain("username");
-    expect(userColNames).toContain("email");
-    expect(userColNames).toContain("created_at");
-    expect(userColNames).toContain("bio");
-    expect(userColNames).toContain("age");
-
-    // Verify posts table (v3)
-    const tablesResult = await client.query(`
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-      AND table_type = 'BASE TABLE'
-      ORDER BY table_name;
-    `);
-    const tableNames = tablesResult.rows.map(
-      (row: { table_name: string }) => row.table_name,
-    );
-    expect(tableNames).toContain("users");
-    expect(tableNames).toContain("posts");
-
-    // Verify posts columns
-    const postsColumnsResult = await client.query(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-      AND table_name = 'posts'
-      ORDER BY ordinal_position;
-    `);
-    const postColNames = postsColumnsResult.rows.map(
-      (row: { column_name: string }) => row.column_name,
-    );
-    expect(postColNames).toContain("id");
-    expect(postColNames).toContain("title");
-    expect(postColNames).toContain("content");
-    expect(postColNames).toContain("author_id");
-
-    // Verify foreign key
-    const fkResult = await client.query(`
-      SELECT
-        kcu.column_name,
-        ccu.table_name AS foreign_table_name,
-        ccu.column_name AS foreign_column_name
-      FROM information_schema.table_constraints tc
-      JOIN information_schema.key_column_usage kcu
-        ON tc.constraint_name = kcu.constraint_name
-      JOIN information_schema.constraint_column_usage ccu
-        ON ccu.constraint_name = tc.constraint_name
-      WHERE tc.constraint_type = 'FOREIGN KEY'
-      AND tc.table_name = 'posts';
-    `);
-    expect(fkResult.rows).toHaveLength(1);
-    expect(fkResult.rows[0].column_name).toBe("author_id");
-    expect(fkResult.rows[0].foreign_table_name).toBe("users");
-  });
-
-  it("[squash] should detect no changes when schema is unchanged", () => {
-    const result = runGenerate(3);
+  it("[final] should detect no changes when schema matches current state", () => {
+    const result = runGenerate(6);
     expect(result.output).toContain("No changes detected");
-    expect(getMigrationFolders()).toHaveLength(1);
+    expect(getMigrationFolders()).toHaveLength(2);
   });
 });
