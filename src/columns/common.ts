@@ -12,6 +12,68 @@ export const unique = true as const;
 export const primaryKey = true as const;
 export const identity = "IDENTITY" as const;
 
+/**
+ * Represents the dimension configuration for an array column.
+ */
+export class Dimension<TDims extends readonly (number | null)[]> {
+  /** The raw dimension tuple (first = innermost dimension). */
+  readonly dims: TDims;
+
+  constructor(dims: TDims) {
+    this.dims = dims;
+  }
+
+  /**
+   * Appends a variable-length (unbounded) outer dimension.
+   * SQL equivalent: `type[]`
+   */
+  array(): Dimension<readonly [...TDims, null]> {
+    return new Dimension([...this.dims, null] as unknown as readonly [
+      ...TDims,
+      null,
+    ]);
+  }
+
+  /**
+   * Appends a fixed-length outer dimension of `size` elements.
+   * SQL equivalent: `type[N]`
+   */
+  tuple<const L extends number>(size: L): Dimension<readonly [...TDims, L]> {
+    return new Dimension([...this.dims, size] as unknown as readonly [
+      ...TDims,
+      L,
+    ]);
+  }
+}
+
+/**
+ * Creates a variable-length (unbounded) 1D array dimension.
+ * SQL equivalent: `type[]`
+ *
+ * @example
+ * ```typescript
+ * tags: varchar({ length: 50, dimension: array() })
+ * ```
+ */
+export function array(): Dimension<readonly [null]> {
+  return new Dimension([null] as const);
+}
+
+/**
+ * Creates a fixed-length 1D array dimension of `size` elements.
+ * SQL equivalent: `type[N]`
+ *
+ * @example
+ * ```typescript
+ * coordinates: integer({ dimension: tuple(3) })
+ * ```
+ */
+export function tuple<const L extends number>(
+  size: L,
+): Dimension<readonly [L]> {
+  return new Dimension([size] as const);
+}
+
 // Helper type to build a tuple of fixed length
 type Tuple<T, L extends number, Acc extends T[] = []> = Acc["length"] extends L
   ? Acc
@@ -34,9 +96,11 @@ type MultiDimValueArray<
   : T;
 
 // Helper type to extract array value type from TConfig
-type GetValueArray<T, TConfig> = TConfig extends { dimension: infer D }
-  ? D extends readonly (number | null)[]
-    ? MultiDimValueArray<T, D>
+type GetValueArray<T, TConfig> = TConfig extends {
+  dimension: Dimension<infer Dims>;
+}
+  ? Dims extends readonly (number | null)[]
+    ? MultiDimValueArray<T, Dims>
     : T
   : T;
 
@@ -58,10 +122,10 @@ type MultiDimZodTypeArray<
 
 // Helper type to extract array Zod type from TConfig
 type GetZodTypeArray<T extends z.ZodType, TConfig> = TConfig extends {
-  dimension: infer D;
+  dimension: Dimension<infer Dims>;
 }
-  ? D extends readonly (number | null)[]
-    ? MultiDimZodTypeArray<T, D>
+  ? Dims extends readonly (number | null)[]
+    ? MultiDimZodTypeArray<T, Dims>
     : T
   : T;
 
@@ -99,8 +163,9 @@ export type ColumnConfig = {
   notNull?: true;
   /**
    * The dimension of the array column.
+   * Use the `array()` or `tuple(size)` helpers to define dimensions.
    */
-  dimension?: Readonly<[number | null, ...(number | null)[]]>;
+  dimension?: Dimension<readonly (number | null)[]>;
 };
 
 /**
@@ -279,13 +344,24 @@ export abstract class Column<
     return this.#notNull as TConfig extends { notNull: true } ? true : false;
   }
 
+  /**
+   * Returns the raw dimension tuple from the column config, or `undefined` if not set.
+   */
+  get dimensions():
+    | Readonly<[number | null, ...(number | null)[]]>
+    | undefined {
+    return this.config.dimension?.dims as
+      | Readonly<[number | null, ...(number | null)[]]>
+      | undefined;
+  }
+
   abstract get sqlTypeScalar(): string;
   get sqlType() {
     const base = this.sqlTypeScalar;
-    if (!this.config.dimension) return base;
+    if (!this.dimensions) return base;
 
     // For each configured dimension, append either `[N]` (fixed size) or `[]` (unspecified)
-    const suffix = this.config.dimension
+    const suffix = this.dimensions
       .map((d) => (d === null ? "[]" : `[${d}]`))
       .join("");
     return `${base}${suffix}`;
@@ -298,9 +374,9 @@ export abstract class Column<
   get sqlCast(): string | null {
     const base = this.sqlCastScalar;
     if (base === null) return null;
-    if (!this.config.dimension) return base;
+    if (!this.dimensions) return base;
 
-    const suffix = this.config.dimension
+    const suffix = this.dimensions
       .map((d) => (d === null ? "[]" : `[${d}]`))
       .join("");
     return `${base}${suffix}`;
@@ -309,12 +385,12 @@ export abstract class Column<
   abstract get zodTypeScaler(): z.ZodType;
   get zodType() {
     let schema: z.ZodType = this.zodTypeScaler;
-    if (!this.config.dimension) {
+    if (!this.dimensions) {
       return schema as GetZodTypeArray<this["zodTypeScaler"], this["config"]>;
     }
 
     // dimensions are processed left-to-right where first = innermost
-    for (const dim of this.config.dimension) {
+    for (const dim of this.dimensions) {
       if (typeof dim === "number") {
         schema = z.tuple(
           Array.from({ length: dim }, () => schema) as [z.ZodAny],
@@ -361,7 +437,7 @@ export abstract class Column<
     if (value === null) return null;
     if (value instanceof Sql) return value.string;
 
-    if (!this.config.dimension) {
+    if (!this.dimensions) {
       // No dimensions - delegate to scalar implementation
       return this.toDriverScalar(value as TColVal | Sql | null);
     }
@@ -376,7 +452,7 @@ export abstract class Column<
    * Helper to recursively process multi-dimensional arrays for toDriver.
    */
   #toDriverArrayElement(value: unknown, dimIndex: number): unknown {
-    const dimensions = this.config.dimension as unknown as (number | null)[];
+    const dimensions = this.dimensions as readonly (number | null)[];
     if (dimIndex >= dimensions.length - 1) {
       // Innermost dimension - use scalar method
       return this.toDriverScalar(value as TColVal | Sql | null);
@@ -397,7 +473,7 @@ export abstract class Column<
     if (value === null) return "NULL";
     if (value instanceof Sql) return value.string;
 
-    if (!this.config.dimension) {
+    if (!this.dimensions) {
       if (!options?.cast || !this.sqlCastScalar) return this.toSQLScalar(value);
       return `${this.toSQLScalar(value)}::${this.sqlCastScalar}`;
     }
@@ -414,7 +490,7 @@ export abstract class Column<
     dimIndex: number,
     options?: { cast?: boolean },
   ): string {
-    const dimensions = this.config.dimension as unknown as (number | null)[];
+    const dimensions = this.dimensions as readonly (number | null)[];
     if (arr.length === 0) {
       return "'{}'";
     }
@@ -443,7 +519,7 @@ export abstract class Column<
   fromDriver(value: unknown): this["ValType"] | null {
     if (value === null) return null;
 
-    if (!this.config.dimension) {
+    if (!this.dimensions) {
       return this.fromDriverScalar(value) as this["ValType"] | null;
     }
 
@@ -530,7 +606,7 @@ export abstract class Column<
    * Helper to recursively process multi-dimensional arrays for fromDriver.
    */
   #fromDriverArray(arr: unknown[], dimIndex: number): unknown[] {
-    const dimensions = this.config.dimension as unknown as (number | null)[];
+    const dimensions = this.dimensions as readonly (number | null)[];
     if (dimIndex >= dimensions.length - 1) {
       // Innermost dimension - convert scalars
       return arr.map((item) => this.fromDriverScalar(item));

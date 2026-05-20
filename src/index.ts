@@ -7,10 +7,13 @@ export { bytea } from "./columns/bytea";
 export { char } from "./columns/char";
 export { cidr } from "./columns/cidr";
 export {
+  array,
   Column,
   type ColumnConfig,
+  Dimension,
   notNull,
   primaryKey,
+  tuple,
   unique,
 } from "./columns/common";
 export { date } from "./columns/date";

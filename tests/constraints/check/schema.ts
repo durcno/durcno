@@ -1,5 +1,6 @@
 import {
   and,
+  array,
   bigint,
   gt,
   gte,
@@ -63,7 +64,7 @@ export const Orders = table(
     id: pk(),
     categoryId: integer({ notNull }),
     status: varchar({ length: 50, notNull }),
-    array: integer({ notNull, dimension: [null] as const }),
+    array: integer({ notNull, dimension: array() }),
   },
   {
     checkConstraints: (t, check) => [

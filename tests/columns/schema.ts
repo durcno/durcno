@@ -1,4 +1,5 @@
 import {
+  array,
   bigint,
   bigserial,
   boolean,
@@ -23,6 +24,7 @@ import {
   text,
   time,
   timestamp,
+  tuple,
   uuid,
   varchar,
 } from "durcno";
@@ -303,15 +305,11 @@ export const GeographyMultiLineStringTests = table(
 /**
  * Test table for geography polygon column type
  */
-export const GeographyPolygonTests = table(
-  "public",
-  "geographyPolygonTests",
-  {
-    id: pk(),
-    // Nullable polygon
-    polygon: geography.polygon({}),
-  },
-);
+export const GeographyPolygonTests = table("public", "geographyPolygonTests", {
+  id: pk(),
+  // Nullable polygon
+  polygon: geography.polygon({}),
+});
 
 /**
  * Test table for geography multipolygon column type
@@ -382,13 +380,13 @@ export const MacaddrTests = table("public", "macaddrTests", {
 export const SimpleArrayTests = table("public", "simpleArrayTests", {
   id: pk(),
   // Required string array
-  requiredTags: varchar({ length: 100, notNull, dimension: [null] as const }),
+  requiredTags: varchar({ length: 100, notNull, dimension: array() }),
   // Optional string array
-  optionalTags: varchar({ length: 100, dimension: [null] as const }),
+  optionalTags: varchar({ length: 100, dimension: array() }),
   // Required integer array
-  requiredScores: integer({ notNull, dimension: [null] as const }),
+  requiredScores: integer({ notNull, dimension: array() }),
   // Optional integer array
-  optionalScores: integer({ dimension: [null] as const }),
+  optionalScores: integer({ dimension: array() }),
 });
 
 /**
@@ -397,13 +395,13 @@ export const SimpleArrayTests = table("public", "simpleArrayTests", {
 export const FixedArrayTests = table("public", "fixedArrayTests", {
   id: pk(),
   // Required 3-element integer tuple (like coordinates)
-  requiredCoords: integer({ notNull, dimension: [3] as const }),
+  requiredCoords: integer({ notNull, dimension: tuple(3) }),
   // Optional 3-element integer tuple
-  optionalCoords: integer({ dimension: [3] as const }),
+  optionalCoords: integer({ dimension: tuple(3) }),
   // Required 2-element string tuple
-  requiredPair: varchar({ length: 50, notNull, dimension: [2] as const }),
+  requiredPair: varchar({ length: 50, notNull, dimension: tuple(2) }),
   // Optional 2-element string tuple
-  optionalPair: varchar({ length: 50, dimension: [2] as const }),
+  optionalPair: varchar({ length: 50, dimension: tuple(2) }),
 });
 
 /**
@@ -415,13 +413,13 @@ export const MultidimensionalArrayTests = table(
   {
     id: pk(),
     // 2D variable-length array: number[][] (matrix)
-    requiredMatrix: integer({ notNull, dimension: [null, null] as const }),
+    requiredMatrix: integer({ notNull, dimension: array().array() }),
     // Optional 2D variable-length array
-    optionalMatrix: integer({ dimension: [null, null] as const }),
+    optionalMatrix: integer({ dimension: array().array() }),
     // 2D with fixed inner array: [number, number][]
-    requiredVectors: integer({ notNull, dimension: [2, null] as const }),
+    requiredVectors: integer({ notNull, dimension: tuple(2).array() }),
     // Optional 2D with fixed inner array
-    optionalVectors: integer({ dimension: [2, null] as const }),
+    optionalVectors: integer({ dimension: tuple(2).array() }),
   },
 );
 
@@ -431,16 +429,16 @@ export const MultidimensionalArrayTests = table(
 export const EnumArrayTests = table("public", "enumArrayTests", {
   id: pk(),
   // Required enum array
-  requiredStatuses: StatusEnum.enumed({ notNull, dimension: [null] as const }),
+  requiredStatuses: StatusEnum.enumed({ notNull, dimension: array() }),
   // Optional enum array
-  optionalStatuses: StatusEnum.enumed({ dimension: [null] as const }),
+  optionalStatuses: StatusEnum.enumed({ dimension: array() }),
   // Required priority array
   requiredPriorities: PriorityEnum.enumed({
     notNull,
-    dimension: [null] as const,
+    dimension: array(),
   }),
   // Optional priority array
-  optionalPriorities: PriorityEnum.enumed({ dimension: [null] as const }),
+  optionalPriorities: PriorityEnum.enumed({ dimension: array() }),
 });
 
 // ============================================================================

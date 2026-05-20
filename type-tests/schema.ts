@@ -1,5 +1,6 @@
 import {
   and,
+  array,
   bigint,
   bigserial,
   bytea,
@@ -29,6 +30,7 @@ import {
   table,
   time,
   timestamp,
+  tuple,
   unique,
   uuid,
   varchar,
@@ -69,7 +71,7 @@ export const UserProfiles = table("public", "userProfiles", {
   // Optional bytea for thumbnail
   thumbnailData: bytea({}),
   // Array column: list of skills (nullable)
-  skills: varchar({ length: 50, dimension: [null] as const }),
+  skills: varchar({ length: 50, dimension: array() }),
 });
 
 export const Posts = table("public", "posts", {
@@ -79,7 +81,7 @@ export const Posts = table("public", "posts", {
   content: varchar({ length: 1000 }),
   createdAt: timestamp({ notNull }).default(now()),
   // Array column: list of tags (nullable)
-  tags: varchar({ length: 50, dimension: [null] as const }),
+  tags: varchar({ length: 50, dimension: array() }),
   // JSON column with $type override for metrics
   metrics: json({}).$type<{ views: number; likes: number }>(),
 });
@@ -220,22 +222,22 @@ export const NetworkDevices = table("public", "network_devices", {
   // MACADDR column: optional backup MAC
   backupMac: macaddr({}),
   // Array column: list of allowed IP addresses (nullable)
-  allowedIps: inet({ dimension: [null] as const }),
+  allowedIps: inet({ dimension: array() }),
 });
 
 // Table for testing array column types
 export const ArrayTest = table("public", "array_test", {
   id: pk(),
   // 1D variable-length array: string[]
-  tags: varchar({ length: 100, dimension: [null] as const }),
+  tags: varchar({ length: 100, dimension: array() }),
   // // 1D fixed-length array: [number, number, number]
-  coordinates: integer({ dimension: [3] as const }),
+  coordinates: integer({ dimension: tuple(3) }),
   // // 2D variable-length array: number[][]
-  matrix: integer({ dimension: [null, null] as const }),
+  matrix: integer({ dimension: array().array() }),
   // // Mixed: fixed inner, variable outer: [number, number][]
-  vectors: integer({ dimension: [2, null] as const }),
+  vectors: integer({ dimension: tuple(2).array() }),
   // // Enum array
-  roles: UserTypeEnum.enumed({ dimension: [null] as const }),
+  roles: UserTypeEnum.enumed({ dimension: array() }),
   // Integer column with $type override
   priority: integer({}).$type<"high" | "medium" | "low">(),
 });
