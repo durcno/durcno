@@ -2,15 +2,10 @@ import type { Column } from "../columns/common";
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
-import type { TableColumn } from "../table";
+import type { TableAnyColumn } from "../table";
 import { Filter } from "./index";
 
-export type TextScalarTableColumn = TableColumn<
-  any,
-  any,
-  any,
-  Column<any, any, "text">
-> & {
+export type TextScalarTableColumn = TableAnyColumn<Column<any, any, "text">> & {
   config: { dimension?: undefined };
 };
 

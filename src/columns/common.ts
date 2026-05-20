@@ -4,8 +4,7 @@ import { Arg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
 import { Sql } from "../sql";
 import { entityType } from "../symbols";
-import type { StdTable, StdTableColumn, TableColumn } from "../table";
-import type { Key } from "../types";
+import type { StdTable, StdTableColumn } from "../table";
 import { camelToSnake } from "../utils";
 
 export const notNull = true as const;
@@ -133,9 +132,9 @@ type HasUpdateFn<C> = C & { hasUpdateFn: true };
  * a resolver and optional `onDelete` action.
  */
 type BuildRef<ValType> =
-  | (() => TableColumn<string, string, Key, Column<any, ValType, any>>)
+  | (() => StdTableColumn<Column<any, ValType>>)
   | {
-      column: () => TableColumn<string, string, Key, Column<any, ValType, any>>;
+      column: () => StdTableColumn<Column<any, ValType>>;
       onDelete?: OnDeleteAction;
     };
 

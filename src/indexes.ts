@@ -1,5 +1,4 @@
-import type { AnyColumn, StdTable, TableColumn } from "./table";
-import type { Key } from "./types";
+import type { AnyColumn, StdTable, StdTableColumn } from "./table";
 
 export type IndexType =
   | "btree"
@@ -13,11 +12,11 @@ export type IndexType =
   | (string & {});
 
 export class Index<Col extends AnyColumn> {
-  readonly #columns: TableColumn<string, string, Key, Col>[];
+  readonly #columns: StdTableColumn<Col>[];
   #using: IndexType;
   #unique: boolean;
   constructor(
-    columns: TableColumn<string, string, Key, Col>[],
+    columns: StdTableColumn<Col>[],
     using: IndexType,
     unique: boolean,
   ) {
@@ -56,14 +55,14 @@ export class Index<Col extends AnyColumn> {
 }
 
 export function index<Col extends AnyColumn>(
-  columns: TableColumn<string, string, Key, Col>[],
+  columns: StdTableColumn<Col>[],
   using?: IndexType,
 ) {
   return new Index(columns, using ?? "btree", false);
 }
 
 export function uniqueIndex<Col extends AnyColumn>(
-  columns: TableColumn<string, string, Key, Col>[],
+  columns: StdTableColumn<Col>[],
   using?: IndexType,
 ) {
   return new Index(columns, using ?? "btree", true);

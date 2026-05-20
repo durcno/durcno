@@ -1,5 +1,4 @@
-import type { AnyColumn, TableColumn } from "../table";
-import type { Key } from "../types";
+import type { StdTableColumn } from "../table";
 
 // ============================================================================
 // Unique Constraint
@@ -7,12 +6,9 @@ import type { Key } from "../types";
 
 export class UniqueConstraint {
   readonly #name: string;
-  readonly #columns: TableColumn<string, string, Key, AnyColumn>[];
+  readonly #columns: StdTableColumn[];
 
-  constructor(
-    name: string,
-    columns: TableColumn<string, string, Key, AnyColumn>[],
-  ) {
+  constructor(name: string, columns: StdTableColumn[]) {
     if (columns.length < 2) {
       throw new Error(
         "UNIQUE constraint requires at least two columns. For single-column unique, use the column-level 'unique' modifier instead.",
@@ -51,11 +47,7 @@ export class UniqueConstraint {
  */
 export function uniqueConstraint(
   name: string,
-  columns: [
-    TableColumn<string, string, Key, AnyColumn>,
-    TableColumn<string, string, Key, AnyColumn>,
-    ...TableColumn<string, string, Key, AnyColumn>[],
-  ],
+  columns: [StdTableColumn, StdTableColumn, ...StdTableColumn[]],
 ) {
   return new UniqueConstraint(name, columns);
 }

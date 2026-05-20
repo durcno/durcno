@@ -90,12 +90,21 @@ export type TableColumn<
   table: StdTable;
 };
 
-export type StdTableColumn = TableColumn<string, string, Key, AnyColumn>;
+export type StdTableColumn<TCol extends AnyColumn = AnyColumn> = TableColumn<
+  string,
+  string,
+  Key,
+  TCol
+>;
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type TableAnyColumn = TableColumn<any, any, any, AnyColumn>;
+export type TableAnyColumn<TCol extends AnyColumn = AnyColumn> = TableColumn<
+  any,
+  any,
+  any,
+  TCol
+>;
 
-export type AnyScalarTableColumn = TableColumn<any, any, any, AnyColumn> & {
+export type AnyScalarTableColumn = TableAnyColumn & {
   config: { dimension?: undefined };
 };
 
@@ -106,20 +115,6 @@ function bindNameNTable(table: StdTable, columns: Record<string, AnyColumn>) {
   }
   return columns;
 }
-
-export type BuildScmTblColumns<
-  TSchema extends string,
-  TName extends string,
-  TColumns extends Record<string, AnyColumn>,
-> = {
-  [ColName in keyof TColumns &
-    string as `${TSchema}_${TName}_${ColName}`]: TableColumn<
-    TSchema,
-    TName,
-    ColName,
-    TColumns[ColName]
-  >;
-};
 
 export class Table<
   TSchema extends string,
@@ -309,7 +304,7 @@ export class Fk<
   TTSchema extends string,
   TTName extends string,
   TTColumns extends Record<string, AnyColumn>,
-  TCol extends TableColumn<any, any, any, AnyColumn>,
+  TCol extends TableAnyColumn,
 > {
   readonly t: "Fk" = "Fk";
   readonly col: TCol;
@@ -338,7 +333,7 @@ export function fk<
   TTSchema extends string,
   TTName extends string,
   TTColumns extends Record<string, AnyColumn>,
-  TCol extends TableColumn<any, any, any, AnyColumn>,
+  TCol extends TableAnyColumn,
 >(col: TCol, table: TableWithColumns<TTSchema, TTName, TTColumns>) {
   return new Fk(col, table);
 }
