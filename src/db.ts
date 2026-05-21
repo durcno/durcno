@@ -463,6 +463,7 @@ class Base<
       this.#allRelations[table._.fullName],
       this.#allRelations,
       this.#getExecutor(),
+      this.$.pre,
     );
   }
 

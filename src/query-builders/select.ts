@@ -1,4 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
+import { is } from "../entity";
 import type { FilterExpression, StdCondition } from "../filters/index";
 import type { AnySqlFn, StdSqlFn } from "../functions/index";
 import { SqlFn } from "../functions/index";
@@ -16,6 +17,7 @@ import type {
   Valueof,
 } from "../types";
 import type { OrderExpression } from "./orderby-clause";
+import { type AnyArg, Arg } from "./pre";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -281,8 +283,8 @@ export class SelectQuery<
   readonly #$where: TWhere;
   readonly #$innerJoins: TInnerJoins;
   readonly #$orderBy: TOrderBy;
-  #$limit: number | undefined;
-  #$offset: number | undefined;
+  #$limit: number | bigint | AnyArg | undefined;
+  #$offset: number | bigint | AnyArg | undefined;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
 
@@ -293,8 +295,8 @@ export class SelectQuery<
     distinctOn: StdTableColumn[] | undefined,
     where: TWhere,
     orderBy: TOrderBy,
-    limit: number | undefined,
-    offset: number | undefined,
+    limit: number | bigint | AnyArg | undefined,
+    offset: number | bigint | AnyArg | undefined,
     executor: QueryExecutor,
     prepare: TPrepare,
   ) {
@@ -383,7 +385,11 @@ export class SelectQuery<
     );
   }
 
-  limit(limit: number) {
+  limit(
+    limit: TPrepare extends true
+      ? number | bigint | Arg<number> | Arg<bigint>
+      : number | bigint,
+  ) {
     return new SelectQuery(
       this.#table,
       this.#$innerJoins,
@@ -398,7 +404,11 @@ export class SelectQuery<
     ) as unknown as Omit<this, "limit">;
   }
 
-  offset(offset: number) {
+  offset(
+    offset: TPrepare extends true
+      ? number | bigint | Arg<number> | Arg<bigint>
+      : number | bigint,
+  ) {
     return new SelectQuery(
       this.#table,
       this.#$innerJoins,
@@ -476,8 +486,22 @@ export class SelectQuery<
         if (i < orders.length - 1) query.sql += ", ";
       }
     }
-    if (this.#$limit) query.sql += ` LIMIT ${this.#$limit}`;
-    if (this.#$offset) query.sql += ` OFFSET ${this.#$offset}`;
+    if (this.#$limit !== undefined) {
+      query.sql += " LIMIT ";
+      if (is(this.#$limit, Arg)) {
+        query.addArg(this.#$limit);
+      } else {
+        query.sql += this.#$limit.toString();
+      }
+    }
+    if (this.#$offset !== undefined) {
+      query.sql += " OFFSET ";
+      if (is(this.#$offset, Arg)) {
+        query.addArg(this.#$offset);
+      } else {
+        query.sql += this.#$offset.toString();
+      }
+    }
     return query;
   }
 

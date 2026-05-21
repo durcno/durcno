@@ -1,23 +1,24 @@
 import type { QueryExecutor } from "../connectors/common";
+import { is } from "../entity";
 import type { FilterExpression } from "../filters/index";
 import type {
   AnyColumn,
   AnyRelation,
   Fk,
   Many,
-  One,
   Relations,
   StdRelations,
   StdTableWithColumns,
   TableWithColumns,
 } from "../table";
-import type { Valueof } from "../types";
+import type { SelfOrArray, Valueof } from "../types";
 import { snakeToCamel } from "../utils";
 import type {
   OrderExpression,
   StdOrder,
   StdOrderSqlFn,
 } from "./orderby-clause";
+import { Arg } from "./pre";
 import { Query, type QueryContext } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -30,123 +31,91 @@ type RelationReturnType<O, TRelation extends AnyRelation> =
         : O | null
       : O | null;
 
-/**
- * Shared column-selection fields used across all option types.
- */
-type ColumnsOption<
-  TTSchema extends string,
-  TTName extends string,
-  TTColumns extends Record<string, AnyColumn>,
-> = {
-  columns?:
-    | Partial<
-        Record<
-          keyof TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"],
-          true
-        >
-      >
-    | Partial<
-        Record<
-          keyof TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"],
-          false
-        >
-      >;
+type AllOtps = {
+  where: true;
+  limit: true;
+  offset: true;
+  orderBy: true;
 };
 
-/**
- * Options allowed for a nested `Fk` or `One` relation.
- * `where`, `orderBy`, and `limit` are excluded because the join condition
- * already uniquely identifies the row — further filtering is meaningless.
- */
-type NestedOptionsFkOne<
-  TTSchema extends string,
-  TTName extends string,
-  TTColumns extends Record<string, AnyColumn>,
-  TAllRelations extends Record<string, StdRelations>,
-> = ColumnsOption<TTSchema, TTName, TTColumns> & {
-  with?: keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"] extends never
-    ? never
-    : {
-        [TRelationName in keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"]]?: TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName] extends
-          | Fk<any, any, any, any>
-          | One<any, any, any, any>
-          ? NestedOptionsFkOne<
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
-              TAllRelations
-            >
-          : OptionsBase<
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
-              TAllRelations
-            >;
-      };
+type NoOtps = {
+  where: false;
+  limit: false;
+  offset: false;
+  orderBy: false;
 };
-
-type OptionsBase<
-  TTSchema extends string,
-  TTName extends string,
-  TTColumns extends Record<string, AnyColumn>,
-  TAllRelations extends Record<string, StdRelations>,
-> = ColumnsOption<TTSchema, TTName, TTColumns> & {
-  where?: FilterExpression<
-    Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-  >;
-  orderBy?:
-    | OrderExpression<TableWithColumns<TTSchema, TTName, TTColumns>, undefined>
-    | OrderExpression<
-        TableWithColumns<TTSchema, TTName, TTColumns>,
-        undefined
-      >[];
-  limit?: number;
-  with?: keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"] extends never
-    ? never
-    : {
-        [TRelationName in keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"]]?: TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName] extends
-          | Fk<any, any, any, any>
-          | One<any, any, any, any>
-          ? NestedOptionsFkOne<
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
-              TAllRelations
-            >
-          : OptionsBase<
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
-              TAllRelations
-            >;
-      };
-};
-
-type StdOptionsBase = OptionsBase<
-  string,
-  string,
-  Record<string, AnyColumn>,
-  Record<string, StdRelations>
->;
 
 type Options<
   TTSchema extends string,
   TTName extends string,
   TTColumns extends Record<string, AnyColumn>,
   TAllRelations extends Record<string, StdRelations>,
-  TOffset extends boolean = false,
-> = OptionsBase<TTSchema, TTName, TTColumns, TAllRelations> & {
-  offset?: TOffset extends true ? number : never;
+  TOpts extends {
+    where: boolean;
+    orderBy: boolean;
+    limit: boolean;
+    offset: boolean;
+  } = {
+    where: boolean;
+    orderBy: boolean;
+    limit: boolean;
+    offset: boolean;
+  },
+  TPrepare extends boolean = boolean,
+> = {
+  columns?:
+    | Partial<Record<keyof TTColumns, true>>
+    | Partial<Record<keyof TTColumns, false>>;
+  where?: TOpts["where"] extends true
+    ? FilterExpression<
+        Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
+      >
+    : never;
+  orderBy?: TOpts["orderBy"] extends true
+    ? SelfOrArray<
+        OrderExpression<
+          TableWithColumns<TTSchema, TTName, TTColumns>,
+          undefined
+        >
+      >
+    : never;
+  limit?: TOpts["limit"] extends true
+    ?
+        | number
+        | bigint
+        | (TPrepare extends true ? Arg<number> | Arg<bigint> : never)
+    : never;
+  offset?: TOpts["offset"] extends true
+    ?
+        | number
+        | bigint
+        | (TPrepare extends true ? Arg<number> | Arg<bigint> : never)
+    : never;
+  with?: keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"] extends never
+    ? never
+    : {
+        [TRelationName in keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"]]?: Options<
+          TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
+          TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
+          TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
+          TAllRelations,
+          TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["t"] extends "Many"
+            ? AllOtps
+            : NoOtps,
+          TPrepare
+        >;
+      };
 };
 
 type StdOptions = Options<
   string,
   string,
   Record<string, AnyColumn>,
-  Record<string, StdRelations>
+  Record<string, StdRelations>,
+  any
 >;
 
-type Object<
+type Row<
   TTSchema extends string,
   TTName extends string,
   TTColumns extends Record<string, AnyColumn>,
@@ -154,7 +123,14 @@ type Object<
     string,
     Relations<any, any, Record<any, any>, Record<any, AnyRelation>>
   >,
-  TOptions extends OptionsBase<TTSchema, TTName, TTColumns, TAllRelations>,
+  TOptions extends Options<
+    TTSchema,
+    TTName,
+    TTColumns,
+    TAllRelations,
+    any,
+    any
+  >,
 > = (keyof TOptions["columns"] extends never
   ? TableWithColumns<TTSchema, TTName, TTColumns>["$"]["inferSelect"]
   : TOptions["columns"] extends Record<string, true>
@@ -174,21 +150,23 @@ type Object<
     ? Record<never, never>
     : {
         [TWith in keyof TOptions["with"]]: TOptions["with"][TWith] extends infer TNestedOptions
-          ? TNestedOptions extends OptionsBase<
+          ? TNestedOptions extends Options<
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["schema"],
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["name"],
               TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["$"]["columns"],
-              TAllRelations
+              TAllRelations,
+              any,
+              any
             >
             ? RelationReturnType<
                 {
-                  [K in keyof Object<
+                  [K in keyof Row<
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["schema"],
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["name"],
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["$"]["columns"],
                     TAllRelations,
                     TNestedOptions
-                  >]: Object<
+                  >]: Row<
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["schema"],
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["name"],
                     TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["$"]["columns"],
@@ -213,25 +191,36 @@ export class RelationQueryBuilder<
     Record<any, AnyRelation>
   >,
   TAllRelations extends Record<string, StdRelations>,
+  TPrepare extends boolean = false,
 > {
   readonly #table: TableWithColumns<TTSchema, TTName, TTColumns>;
   readonly #relations: TTRelations;
   readonly #allRelations: TAllRelations;
   readonly #executor: QueryExecutor;
+  readonly #prepare: TPrepare;
   constructor(
     table: TableWithColumns<TTSchema, TTName, TTColumns>,
     relations: TTRelations,
     allRelations: TAllRelations,
     executor: QueryExecutor,
+    prepare: TPrepare,
   ) {
     this.#table = table;
     this.#relations = relations;
     this.#allRelations = allRelations;
     this.#executor = executor;
+    this.#prepare = prepare;
   }
 
   findMany<
-    TOptions extends Options<TTSchema, TTName, TTColumns, TAllRelations, true>,
+    TOptions extends Options<
+      TTSchema,
+      TTName,
+      TTColumns,
+      TAllRelations,
+      AllOtps,
+      TPrepare
+    >,
   >(options: TOptions) {
     return new RelationQuery(
       this.#table,
@@ -243,7 +232,17 @@ export class RelationQueryBuilder<
   }
 
   async findFirst<
-    TOptions extends Options<TTSchema, TTName, TTColumns, TAllRelations>,
+    TOptions extends Options<
+      TTSchema,
+      TTName,
+      TTColumns,
+      TAllRelations,
+      Omit<NoOtps, "where" | "orderBy"> & {
+        where: true;
+        orderBy: true;
+      },
+      TPrepare
+    >,
   >(options: TOptions) {
     const query = new RelationQuery(
       this.#table,
@@ -253,17 +252,7 @@ export class RelationQueryBuilder<
       this.#executor,
     );
     const result = await query;
-    return (result.at(0) ?? null) as
-      | {
-          [K in keyof Object<
-            TTSchema,
-            TTName,
-            TTColumns,
-            TAllRelations,
-            TOptions
-          >]: Object<TTSchema, TTName, TTColumns, TAllRelations, TOptions>[K];
-        }
-      | null;
+    return (result.at(0) ?? null) as (typeof result)[number] | null;
   }
 }
 
@@ -278,15 +267,22 @@ class RelationQuery<
     Record<any, AnyRelation>
   >,
   TAllRelations extends Record<string, StdRelations>,
-  TOptions extends Options<TTSchema, TTName, TTColumns, TAllRelations, true>,
+  TOptions extends Options<
+    TTSchema,
+    TTName,
+    TTColumns,
+    TAllRelations,
+    any,
+    any
+  >,
   TReturn = {
-    [K in keyof Object<
+    [K in keyof Row<TTSchema, TTName, TTColumns, TAllRelations, TOptions>]: Row<
       TTSchema,
       TTName,
       TTColumns,
       TAllRelations,
       TOptions
-    >]: Object<TTSchema, TTName, TTColumns, TAllRelations, TOptions>[K];
+    >[K];
   }[],
 > extends QueryPromise<TReturn> {
   readonly #table: TableWithColumns<TTSchema, TTName, TTColumns>;
@@ -311,7 +307,7 @@ class RelationQuery<
   }
 
   toQuery() {
-    const options = this.#options as StdOptionsBase;
+    const options = this.#options;
     const query = new Query("SELECT ", this.handleRows.bind(this));
 
     const selects: string[] = [];
@@ -328,8 +324,7 @@ class RelationQuery<
           const relation = relations.map[key];
           if (relation) {
             // Use relation key as alias for top-level relations
-            const select = `"${key}"."data" AS "${key}"`;
-            selects.push(select);
+            selects.push(`"${key}"."data" AS "${key}"`);
           }
         }
       }
@@ -340,7 +335,7 @@ class RelationQuery<
     query.sql += ` ${this.#table._.fullName} "${this.#table._.nameSql}"`;
     if (options.with) {
       for (const key in options.with) {
-        const o = options.with[key];
+        const otps = options.with[key];
         const relations = this.#allRelations[this.#table._.fullName];
         if (relations) {
           const relation = relations.map[key];
@@ -351,7 +346,7 @@ class RelationQuery<
               query,
               key, // aliasPath at top level is just the key
               this.#table._.nameSql, // parent table alias is the root table name (snake_case)
-              o as StdOptionsBase,
+              otps as StdOptions,
               relation,
               this.#allRelations,
             );
@@ -369,10 +364,22 @@ class RelationQuery<
       ) as (StdOrder | StdOrderSqlFn)[];
       orderByToQuery(orders, query);
     }
-    if (options.limit) query.sql += ` LIMIT ${options.limit}`;
-    const optionsWithOffset = this.#options as StdOptions;
-    if (optionsWithOffset.offset)
-      query.sql += ` OFFSET ${optionsWithOffset.offset}`;
+    if (options.limit !== undefined) {
+      query.sql += " LIMIT ";
+      if (is(options.limit, Arg<number | bigint>)) {
+        query.addArg(options.limit);
+      } else {
+        query.sql += options.limit.toString();
+      }
+    }
+    if (options.offset !== undefined) {
+      query.sql += " OFFSET ";
+      if (is(options.offset, Arg<number | bigint>)) {
+        query.addArg(options.offset);
+      } else {
+        query.sql += options.offset.toString();
+      }
+    }
     query.sql += ";";
     return query;
   }
@@ -400,7 +407,7 @@ class RelationQuery<
  * Returns the [colName, column] entries to include based on the columns filter option.
  */
 function getSelectedColumns(
-  columns: StdOptionsBase["columns"],
+  columns: StdOptions["columns"],
   tableColumns: Record<string, AnyColumn>,
 ): [string, AnyColumn][] {
   const entries = Object.entries(tableColumns) as [string, AnyColumn][];
@@ -422,7 +429,7 @@ function getSelectedColumns(
  */
 function getJsonBuildObjectSelects(
   alias: string,
-  options: StdOptionsBase,
+  options: StdOptions,
   table: StdTableWithColumns,
   allRelations: Record<string, StdRelations>,
 ) {
@@ -471,7 +478,7 @@ function buildRelationSubquery(
   query: Query,
   aliasPath: string,
   parentTableAlias: string,
-  options: StdOptionsBase,
+  options: StdOptions,
   relation: AnyRelation,
   allRelations: Record<string, StdRelations>,
 ): void {

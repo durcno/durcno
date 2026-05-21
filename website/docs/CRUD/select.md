@@ -20,13 +20,13 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 
 ### Query methods (SelectQuery)
 
-| Method                  | Description              |
-| ----------------------- | ------------------------ |
-| `.where(condition)`     | Filter results           |
-| `.orderBy(order)`       | Sort by a column         |
-| `.orderBy([...orders])` | Sort by multiple columns |
-| `.limit(n)`             | Limit number of results  |
-| `.offset(n)`            | Skip n results           |
+| Method                  | Description                                               |
+| ----------------------- | --------------------------------------------------------- |
+| `.where(condition)`     | Filter results                                            |
+| `.orderBy(order)`       | Sort by a column                                          |
+| `.orderBy([...orders])` | Sort by multiple columns                                  |
+| `.limit(n)`             | Limit number of results (`n` can be `number` or `bigint`) |
+| `.offset(n)`            | Skip n results (`n` can be `number` or `bigint`)          |
 
 ## Basic Usage
 
@@ -147,7 +147,7 @@ const usersWithPosts = await db
 
 ## Pagination with LIMIT and OFFSET
 
-Use `.limit()` and `.offset()` for pagination:
+Use `.limit()` and `.offset()` for pagination. Both accept `number` or `bigint`:
 
 ```typescript
 // Get first 10 users
@@ -155,6 +155,9 @@ const firstPage = await db.from(Users).select().limit(10);
 
 // Get users 11-20 (second page)
 const secondPage = await db.from(Users).select().limit(10).offset(10);
+
+// Using bigint values
+const page = await db.from(Users).select().limit(10n).offset(20n);
 ```
 
 ## Joining Tables

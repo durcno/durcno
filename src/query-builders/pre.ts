@@ -6,9 +6,12 @@ import { QueryPromise } from "./query-promise";
 
 export class Arg<TType> {
   static readonly [entityType] = "Arg";
-  readonly type!: TType;
+  $!: {
+    TsType: TType;
+  };
   index: number = 0;
   key: string = "";
+  /** Handler function to convert the argument value to a format suitable for the database client. */
   readonly handler: (val: TType) => string | number | null;
   /** PostgreSQL cast type suffix (e.g. `"boolean"`, `"geography"`), or `null` if no cast needed. */
   readonly cast: string | null = null;
@@ -18,6 +21,16 @@ export class Arg<TType> {
   ) {
     this.handler = handler;
     this.cast = cast;
+  }
+
+  /** Creates an Arg that accepts a JS `number`. */
+  static number() {
+    return new Arg<number>((val) => val, null);
+  }
+
+  /** Creates an Arg that accepts a JS `bigint`. */
+  static bigint() {
+    return new Arg<bigint>((val) => val.toString(), null);
   }
 }
 
@@ -33,7 +46,7 @@ export class PreparedStatement<TArgs extends Record<string, AnyArg>, TReturn> {
     this.#query = query;
     this.#args = args;
   }
-  run(db: AnyDBorTX, values: { [K in keyof TArgs]: TArgs[K]["type"] }) {
+  run(db: AnyDBorTX, values: { [K in keyof TArgs]: TArgs[K]["$"]["TsType"] }) {
     const args = [];
     for (const k of this.#query.arguments) {
       args.push(this.#args[k as keyof TArgs].handler(values[k as keyof TArgs]));

@@ -243,6 +243,46 @@ await findUser.run(db, { id: 1n });
 await findUser.run(db, { id: "1" });
 ```
 
+## Parameterized LIMIT and OFFSET
+
+You can parameterize `limit` and `offset` values using `Arg.number()` and `Arg.bigint()`. This is useful when building paginated prepared queries where the page size or offset varies at runtime.
+
+```typescript
+import { prequery, Arg } from "durcno";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
+
+const paginatedUsers = prequery(
+  {
+    lim: Arg.number(),
+    off: Arg.number(),
+  },
+  (args) => {
+    return db.prepare().from(Users).select().limit(args.lim).offset(args.off);
+  },
+);
+
+// Execute with different page sizes and offsets
+const page1 = await paginatedUsers.run(db, { lim: 10, off: 0 });
+const page2 = await paginatedUsers.run(db, { lim: 10, off: 10 });
+```
+
+Use `Arg.bigint()` when your limit or offset values may exceed the safe integer range:
+
+```typescript
+const paginatedUsers = prequery(
+  {
+    lim: Arg.bigint(),
+    off: Arg.bigint(),
+  },
+  (args) => {
+    return db.prepare().from(Users).select().limit(args.lim).offset(args.off);
+  },
+);
+
+const page = await paginatedUsers.run(db, { lim: 10n, off: 20n });
+```
+
 ## Benefits of Prepared Queries
 
 1. **Performance**: SQL is parsed and planned once, then reused
@@ -266,6 +306,22 @@ Creates an argument placeholder for a column, used in prepared queries.
 
 ```typescript
 const arg = Users.username.arg();
+```
+
+### `Arg.number()`
+
+Creates an argument placeholder that accepts a JS `number`. Use with `.limit()` and `.offset()` in prepared queries.
+
+```typescript
+const arg = Arg.number();
+```
+
+### `Arg.bigint()`
+
+Creates an argument placeholder that accepts a JS `bigint`. Use with `.limit()` and `.offset()` in prepared queries when values may exceed the safe integer range.
+
+```typescript
+const arg = Arg.bigint();
 ```
 
 ### `PreparedStatement.run(db, values)`

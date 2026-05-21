@@ -142,9 +142,9 @@ const users = await db.query(Users).findMany({
 // Type: { username: string; posts: { title: string }[] }[]
 ```
 
-### Filtering, Ordering & Limiting Nested Many Relations
+### Filtering, Ordering, Limiting & Offsetting Nested Many Relations
 
-`where`, `orderBy`, and `limit` can be applied inside a `with` block for **`many`** (one-to-many) relations:
+`where`, `orderBy`, `limit`, and `offset` can be applied inside a `with` block for **`many`** (one-to-many) relations:
 
 ```typescript
 import { eq, desc } from "durcno";
@@ -156,14 +156,15 @@ const posts = await db.query(Posts).findMany({
       where: eq(Comments.isEdited, true),
       orderBy: desc(Comments.createdAt),
       limit: 5,
+      offset: 10,
     },
   },
 });
-// Each post includes only edited comments, sorted newest-first, capped at 5
+// Each post includes only edited comments, sorted newest-first, offset by 10, capped at 5
 ```
 
 :::note
-`where`, `orderBy`, and `limit` are **not available** on nested `fk` (many-to-one) or `one` (one-to-one) relations. The join condition already uniquely identifies the related row, so further filtering is not meaningful — the TypeScript compiler will reject such usage.
+`where`, `orderBy`, `limit`, and `offset` are **not available** on nested `fk` (many-to-one) or `one` (one-to-one) relations. The join condition already uniquely identifies the related row, so further filtering is not meaningful — the TypeScript compiler will reject such usage.
 :::
 
 ## Filtering
@@ -203,7 +204,7 @@ const recentUsers = await db.query(Users).findMany({
 
 ## Pagination
 
-Use `limit` and `offset`:
+Use `limit` and `offset`. Both accept `number` or `bigint`:
 
 ```typescript
 // First page
@@ -216,6 +217,12 @@ const page1 = await db.query(Users).findMany({
 const page2 = await db.query(Users).findMany({
   limit: 10,
   offset: 10,
+});
+
+// Using bigint values
+const page3 = await db.query(Users).findMany({
+  limit: 10n,
+  offset: 20n,
 });
 ```
 
@@ -306,8 +313,8 @@ const users = await db.query(Users).findMany({
 | `columns` | Select or exclude columns (`{ col: true }` or `{ col: false }`) |
 | `where`   | Filter condition                                                |
 | `orderBy` | Sort order (`asc(col)` or `desc(col)`)                          |
-| `limit`   | Maximum number of results                                       |
-| `offset`  | Number of results to skip                                       |
+| `limit`   | Maximum number of results (`number` or `bigint`)                |
+| `offset`  | Number of results to skip (`number` or `bigint`)                |
 | `with`    | Related records to include                                      |
 
 ### Nested relation options (inside `with`)
@@ -319,6 +326,7 @@ const users = await db.query(Users).findMany({
 | `where`   |          ✓           |             ✗ (type error)              |
 | `orderBy` |          ✓           |             ✗ (type error)              |
 | `limit`   |          ✓           |             ✗ (type error)              |
+| `offset`  |          ✓           |             ✗ (type error)              |
 
 ## Methods Reference
 
