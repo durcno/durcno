@@ -288,9 +288,6 @@ describe("UPDATE queries", () => {
       new Date("2020-01-01T00:00:00.000Z").getTime(),
     );
 
-    // Wait a bit to ensure time difference
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
     const beforeUpdate = new Date();
 
     // Update the row - updateFn should auto-generate modifiedAt

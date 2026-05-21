@@ -71,9 +71,6 @@ describe("durcno down command", () => {
       .sort();
     firstMigrationName = folders[0];
 
-    // Wait to ensure different timestamp
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
     // Generate second migration (add Posts table and columns to Users)
     execSync(`durcno generate --config ${configPath}`, {
       stdio: ["ignore", "ignore", "pipe"],
