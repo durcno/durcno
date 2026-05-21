@@ -13,7 +13,7 @@ Create a sequence using the `sequence()` function:
 ```typescript
 import { sequence } from "durcno";
 
-export const orderSequence = sequence("public", "order_seq", {
+export const orderSequence = sequence("public", "orderSeq", {
   startWith: 1000,
   increment: 1,
 });
@@ -37,7 +37,7 @@ The `sequence([schema], [name], [Options])` function accepts a configuration obj
 ```typescript
 import { sequence } from "durcno";
 
-export const customSequence = sequence("public", "custom_seq", {
+export const customSequence = sequence("public", "customSeq", {
   startWith: 100,
   increment: 2,
   minValue: 100,
@@ -63,7 +63,7 @@ The most common use case for sequences is as column defaults. Use the `nextval()
 ```typescript
 import { sequence, integer, table, pk, notNull } from "durcno";
 
-export const orderSequence = sequence("public", "order_seq", {
+export const orderSequence = sequence("public", "orderSeq", {
   startWith: 1000,
   increment: 1,
 });
@@ -91,15 +91,15 @@ await db.insert(Orders).values({
 Returns SQL for getting the next value from the sequence. Use this in column defaults or queries.
 
 ```typescript
-const seq = sequence("public", "my_seq", { startWith: 1 });
+const seq = sequence("public", "mySeq", { startWith: 1 });
 
 // As column default
-const Table = table("public", "my_table", {
+const Table = table("public", "myTable", {
   num: integer().default(seq.nextval()),
 });
 
 // In raw SQL queries
-const nextValue = seq.nextval(); // Returns: nextval('"my_seq"')
+const nextValue = seq.nextval(); // Returns: nextval('"public"."my_seq"')
 ```
 
 ### `currval()`
@@ -107,8 +107,8 @@ const nextValue = seq.nextval(); // Returns: nextval('"my_seq"')
 Returns SQL for getting the current value of the sequence (the last value returned by `nextval()` in the current session).
 
 ```typescript
-const seq = sequence("public", "my_seq", { startWith: 1 });
-const currentValue = seq.currval(); // Returns: currval('"my_seq"')
+const seq = sequence("public", "mySeq", { startWith: 1 });
+const currentValue = seq.currval(); // Returns: currval('"public"."my_seq"')
 ```
 
 :::warning
@@ -120,8 +120,8 @@ const currentValue = seq.currval(); // Returns: currval('"my_seq"')
 Returns SQL for setting the sequence to a specific value.
 
 ```typescript
-const seq = sequence("public", "my_seq", { startWith: 1 });
-const resetSql = seq.setval(500); // Returns: setval('"my_seq"', 500)
+const seq = sequence("public", "mySeq", { startWith: 1 });
+const resetSql = seq.setval(500); // Returns: setval('"public"."my_seq"', 500)
 ```
 
 ## Generated Migration SQL
@@ -145,7 +145,7 @@ DROP SEQUENCE "public"."order_seq";
 ### Order Numbers
 
 ```typescript
-export const orderSequence = sequence("public", "order_seq", {
+export const orderSequence = sequence("public", "orderSeq", {
   startWith: 10000,
   increment: 1,
 });
@@ -162,7 +162,7 @@ export const Orders = table("public", "orders", {
 While sequences generate numeric values, you can combine them with string functions for formatted identifiers:
 
 ```typescript
-export const invoiceSequence = sequence("public", "invoice_seq", {
+export const invoiceSequence = sequence("public", "invoiceSeq", {
   startWith: 1,
   increment: 1,
 });
@@ -177,7 +177,7 @@ const invoiceNumber = `INV-${String(sequenceValue).padStart(6, "0")}`;
 For use cases where you need numbers within a specific range that restart:
 
 ```typescript
-export const ticketSequence = sequence("public", "ticket_seq", {
+export const ticketSequence = sequence("public", "ticketSeq", {
   startWith: 1,
   maxValue: 999,
   cycle: true,
@@ -190,7 +190,7 @@ export const ticketSequence = sequence("public", "ticket_seq", {
 For high-throughput applications, use caching to reduce database round-trips:
 
 ```typescript
-export const eventSequence = sequence("public", "event_seq", {
+export const eventSequence = sequence("public", "eventSeq", {
   startWith: 1,
   cache: 100, // Pre-allocate 100 values at a time
 });
@@ -228,7 +228,7 @@ export const Users = table("public", "users", {
 
 ## Best Practices
 
-1. **Use descriptive names**: Name sequences after their purpose (e.g., `order_seq`, `invoice_seq`)
+1. **Use descriptive names**: Name sequences after their purpose (e.g., `orderSeq`, `invoiceSeq`)
 
 2. **Consider starting values**: Start business-facing sequences at meaningful values (e.g., 1000 for order numbers)
 
@@ -239,7 +239,7 @@ export const Users = table("public", "users", {
 ```typescript
 // db/schema.ts
 export { Migrations } from "durcno";
-export const orderSequence = sequence("public", "order_seq", {
+export const orderSequence = sequence("public", "orderSeq", {
   startWith: 1000,
 });
 export const Orders = table("public", "orders", {

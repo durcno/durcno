@@ -183,11 +183,7 @@ Enum columns are automatically converted to Zod enums with the correct literal t
 import { table, pk, varchar, enumtype, notNull } from "durcno";
 import { createInsertSchema } from "durcno/validators/zod";
 
-const UserRole = enumtype("public", "user_role", [
-  "admin",
-  "moderator",
-  "user",
-]);
+const UserRole = enumtype("public", "userRole", ["admin", "moderator", "user"]);
 
 const Users = table("public", "users", {
   id: pk(),

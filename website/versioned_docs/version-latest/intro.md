@@ -32,7 +32,7 @@ import {
 } from "durcno";
 
 // Define an enum type for user roles
-export const UserRole = enumtype("public", "user_role", [
+export const UserRole = enumtype("public", "userRole", [
   "admin",
   "moderator",
   "user",

@@ -272,7 +272,7 @@ export const Schedules = table("public", "schedules", {
 ```typescript
 import { table, enumtype, pk, notNull } from "durcno";
 
-export const UserRole = enumtype("public", "user_role", [
+export const UserRole = enumtype("public", "userRole", [
   "admin",
   "moderator",
   "user",
@@ -404,7 +404,7 @@ Use `inet` for individual host addresses (with optional netmask for routing info
 ```typescript
 import { table, macaddr, pk, notNull, unique, varchar } from "durcno";
 
-export const NetworkDevices = table("public", "network_devices", {
+export const NetworkDevices = table("public", "networkDevices", {
   id: pk(),
   name: varchar({ length: 100, notNull }),
   // Required MAC address
@@ -438,37 +438,35 @@ See the [PostGIS extension page](../Extensions/postgis) for setup instructions, 
 
 ### Array Columns
 
-Durcno supports PostgreSQL arrays for any column type using the `dimension` option. This allows you to store lists, matrices, or multi-dimensional collections of data with full type safety.
+Durcno supports PostgreSQL arrays for any column type using the `dimension` option. Use the `array()` and `tuple(size)` helper functions, and chain them together for multi-dimensional arrays.
+
+- `array()` — Variable-length dimension (e.g., `[]`)
+- `tuple(size)` — Fixed-length dimension (e.g., `[3]`)
 
 #### Usage
 
-To create an array column, pass the `dimension` property to the column configuration. The `dimension` property accepts a tuple defining the shape of the array.
-
-- `null`: Variable-length dimension (e.g., `[]`)
-- `number`: Fixed-length dimension (e.g., `[3]`)
-
 ```typescript
-import { table, integer, varchar, pk } from "durcno";
+import { table, integer, varchar, pk, array, tuple } from "durcno";
 
-export const SensorReadings = table("public", "sensor_readings", {
+export const SensorReadings = table("public", "sensorReadings", {
   id: pk(),
 
   // 1D Array: integer[]
-  temperatures: integer({ dimension: [null] }),
+  temperatures: integer({ dimension: array() }),
 
   // 1D Array with fixed length strings: varchar(10)[]
-  codes: varchar({ length: 10, dimension: [null] }),
+  codes: varchar({ length: 10, dimension: array() }),
 
   // 2D Array (Matrix): integer[][]
-  grid: integer({ dimension: [null, null] }),
+  grid: integer({ dimension: array().array() }),
 
   // Fixed-length Array (Tuple): integer[3]
   // TypeScript defines this as [number, number, number]
-  coordinates: integer({ dimension: [3] }),
+  coordinates: integer({ dimension: tuple(3) }),
 
-  // Mix fixed and variable (Array of Tuples): integer[3][]
+  // Mix fixed and variable (Array of Tuples): integer[2][]
   // The dimensions are defined from innermost to outermost
-  polygonRings: integer({ dimension: [3, null] }),
+  polygonRings: integer({ dimension: tuple(2).array() }),
 });
 ```
 
@@ -476,9 +474,9 @@ export const SensorReadings = table("public", "sensor_readings", {
 
 Durcno automatically infers the correct TypeScript type based on the dimensions:
 
-- `dimension: [null]` → `T[]`
-- `dimension: [null, null]` → `T[][]`
-- `dimension: [3]` → `[T, T, T]` (Fixed-length Tuple)
+- `array()` → `T[]`
+- `array().array()` → `T[][]`
+- `tuple(3)` → `[T, T, T]` (Fixed-length Tuple)
 
 ```typescript
 const readings = await db.from(SensorReadings).select();
@@ -491,9 +489,9 @@ const readings = await db.from(SensorReadings).select();
 
 Durcno appends the array dimensions to the base SQL type:
 
-- `dimension: [null]` maps to `type[]`
-- `dimension: [3]` maps to `type[3]`
-- `dimension: [3, null]` maps to `type[3][]`
+- `array()` maps to `type[]`
+- `tuple(3)` maps to `type[3]`
+- `tuple(3).array()` maps to `type[3][]`
 
 ## Column Modifiers
 

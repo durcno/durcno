@@ -38,7 +38,7 @@ import {
 } from "durcno";
 
 // Define an enum
-export const UserRole = enumtype("public", "user_role", ["admin", "user"]);
+export const UserRole = enumtype("public", "userRole", ["admin", "user"]);
 
 // Define tables
 export const Users = table(
@@ -174,7 +174,7 @@ Enum types define a set of allowed values for a column, providing compile-time v
 ```typescript
 import { enumtype, table, pk, notNull } from "durcno";
 
-export const UserRole = enumtype("public", "user_role", ["admin", "user"]);
+export const UserRole = enumtype("public", "userRole", ["admin", "user"]);
 export const Status = enumtype("public", "status", [
   "active",
   "inactive",
@@ -323,7 +323,7 @@ await db.insert(Users).values({
 ```typescript
 // Tables: PascalCase plural
 export const Users = table("public", "users", {...});
-export const BlogPosts = table("public", "blog_posts", {...});
+export const BlogPosts = table("public", "blogPosts", {...});
 
 // Columns: camelCase
 export const Users = table("public", "users", {
@@ -402,7 +402,7 @@ export const Posts = table(
 ### User Authentication
 
 ```typescript
-export const UserRole = enumtype("public", "user_role", ["admin", "user"]);
+export const UserRole = enumtype("public", "userRole", ["admin", "user"]);
 
 export const Users = table("public", "users", {
   id: pk(),

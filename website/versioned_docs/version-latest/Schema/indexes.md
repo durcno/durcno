@@ -344,7 +344,7 @@ export const Users = table(
 ```typescript
 export const UserProfiles = table(
   "public",
-  "user_profiles",
+  "userProfiles",
   {
     id: pk(),
     userId: bigint({ notNull }),

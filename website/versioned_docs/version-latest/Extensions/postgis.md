@@ -113,7 +113,7 @@ Represents a collection of linestrings.
 - **JS type**: `[number, number][][]` — array of linestrings
 
 ```typescript
-export const TransitRoutes = table("public", "transit_routes", {
+export const TransitRoutes = table("public", "transitRoutes", {
   id: pk(),
   name: varchar({ length: 255, notNull }),
   lines: geography.multilinestring({ notNull }),
@@ -209,7 +209,7 @@ await db.insert(Districts).values({
 By default all geography columns use SRID `4326` (WGS 84, the standard for GPS coordinates). You can specify a different SRID:
 
 ```typescript
-export const LocalPoints = table("public", "local_points", {
+export const LocalPoints = table("public", "localPoints", {
   id: pk(),
   position: geography.point({ srid: 3857, notNull }), // Web Mercator
 });
