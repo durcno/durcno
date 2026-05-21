@@ -302,4 +302,68 @@ describe("INSERT queries", () => {
     expect(result).toHaveLength(1);
     expect(result[0].createdAt.getTime()).toBe(explicitDate.getTime());
   });
+
+  describe("returning('*')", () => {
+    it("should return all columns for a single row insert", async () => {
+      const result = await db
+        .insert(schema.Users)
+        .values({
+          username: "wildcard_user",
+          email: "wildcard@example.com",
+          type: "user",
+          status: "active",
+          role: "user",
+        })
+        .returning("*");
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBeDefined();
+      expect(result[0].username).toBe("wildcard_user");
+      expect(result[0].email).toBe("wildcard@example.com");
+      expect(result[0].type).toBe("user");
+      expect(result[0].createdAt).toBeInstanceOf(Date);
+      expect(result[0].score).toBe(0);
+      expect(result[0].balance).toBe(0n);
+      expect(result[0].isActive).toBe(false);
+    });
+
+    it("should return all columns for a multi-row insert", async () => {
+      const result = await db
+        .insert(schema.Users)
+        .values([
+          createTestUser({ username: "multi1", type: "user" }),
+          createTestUser({ username: "multi2", type: "admin" }),
+        ])
+        .returning("*");
+
+      expect(result).toHaveLength(2);
+      expect(result[0].username).toBe("multi1");
+      expect(result[1].username).toBe("multi2");
+      expect(result[0].id).toBeDefined();
+      expect(result[1].id).toBeDefined();
+      expect(result[1].id).toBeGreaterThan(result[0].id);
+      expect(result[0].createdAt).toBeInstanceOf(Date);
+    });
+
+    it("should include auto-generated values in returned columns", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "autogen_user" }))
+        .returning("*");
+
+      // Use the returned id to seed a related row
+      await db.insert(schema.Posts).values({
+        userId: user.id,
+        title: "Post using returned id",
+      });
+
+      const posts = await db
+        .from(schema.Posts)
+        .select()
+        .where(eq(schema.Posts.userId, user.id));
+
+      expect(posts).toHaveLength(1);
+      expect(posts[0].userId).toEqual(user.id);
+    });
+  });
 });

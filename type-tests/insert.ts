@@ -242,6 +242,77 @@ Expect<
 >();
 
 // ============================================================================
+// returning("*") type tests
+// ============================================================================
+
+// Positive: single row insert with returning("*") returns full row type as array
+const _returningWildcardSingle = db
+  .insert(Users)
+  .values({
+    username: "ghost",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .returning("*");
+type ReturningWildcardSingle = Awaited<typeof _returningWildcardSingle>;
+Expect<
+  Equal<
+    ReturningWildcardSingle,
+    {
+      id: bigint;
+      username: string;
+      email: string | null;
+      type: "admin" | "user";
+      createdAt: Date;
+      externalId: string;
+      trackingId: string | null;
+    }[]
+  >
+>();
+
+// Positive: multi-row insert with returning("*") also returns full row type as array
+const _returningWildcardMulti = db
+  .insert(Users)
+  .values([
+    {
+      username: "user1",
+      type: "user",
+      externalId: "550e8400-e29b-41d4-a716-446655440000",
+    },
+    {
+      username: "user2",
+      type: "admin",
+      externalId: "550e8400-e29b-41d4-a716-446655440001",
+    },
+  ])
+  .returning("*");
+type ReturningWildcardMulti = Awaited<typeof _returningWildcardMulti>;
+Expect<
+  Equal<
+    ReturningWildcardMulti,
+    {
+      id: bigint;
+      username: string;
+      email: string | null;
+      type: "admin" | "user";
+      createdAt: Date;
+      externalId: string;
+      trackingId: string | null;
+    }[]
+  >
+>();
+
+// Negative: parameterized returning still rejects invalid keys
+db.insert(Users)
+  .values({
+    username: "test",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  // @ts-expect-error - Returning non-existent column should not compile
+  .returning({ nonExistentColumn: true });
+
+// ============================================================================
 // Negative type tests - these should cause compile errors
 // ============================================================================
 

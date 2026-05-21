@@ -9,7 +9,6 @@ import { DistinctQuery } from "./query-builders/distinct";
 import { ExistsQuery } from "./query-builders/exists";
 import { FirstQuery } from "./query-builders/first";
 import { InsertBuilder } from "./query-builders/insert";
-import { InsertReturningQuery } from "./query-builders/insert-returning";
 import { Query } from "./query-builders/query";
 import { RawQuery } from "./query-builders/raw";
 import { RelationQueryBuilder } from "./query-builders/rq";
@@ -396,43 +395,6 @@ class Base<
       where,
       this.#getExecutor(),
       this.$.pre,
-    );
-  }
-
-  /**
-   * Insert a row and return the inserted row with all columns.
-   * @param table The table to insert into
-   * @param values The values to insert
-   * @returns Promise<T> - the inserted row with all columns including generated values
-   */
-  $insertReturning<TTable extends TTables[keyof TTables]>(
-    table: TTable,
-    values: {
-      [colName in keyof TTable["_"]["columns"] as TTable["_"]["columns"][colName]["ValTypeInsert"] extends never
-        ? never
-        : undefined extends TTable["_"]["columns"][colName]["ValTypeInsert"]
-          ? never
-          : colName]: TTable["_"]["columns"][colName]["ValTypeInsert"];
-    } & {
-      [colName in keyof TTable["_"]["columns"] as TTable["_"]["columns"][colName]["ValTypeInsert"] extends never
-        ? never
-        : undefined extends TTable["_"]["columns"][colName]["ValTypeInsert"]
-          ? colName
-          : never]?: Exclude<
-        TTable["_"]["columns"][colName]["ValTypeInsert"],
-        undefined
-      >;
-    },
-  ): InsertReturningQuery<
-    TTable,
-    {
-      [ColName in keyof TTable["_"]["columns"]]: TTable["_"]["columns"][ColName]["ValTypeSelect"];
-    }
-  > {
-    return new InsertReturningQuery(
-      table,
-      values as Record<string, unknown>,
-      this.#getExecutor(),
     );
   }
 

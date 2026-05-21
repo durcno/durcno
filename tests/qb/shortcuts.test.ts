@@ -16,7 +16,7 @@ import {
   truncateTables,
 } from "./setup";
 
-describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct, $insertReturning)", () => {
+describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)", () => {
   let containerInfo: TestContainerInfo;
   let container: Docker.Container;
   let db: ReturnType<typeof database<typeof schema>>;
@@ -269,10 +269,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should sum column values", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 }));
@@ -288,10 +288,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should sum with where clause", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 10 }));
@@ -321,10 +321,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should calculate average", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 }));
@@ -340,10 +340,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should calculate average with where clause", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 10 }));
@@ -373,10 +373,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should find minimum value", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 50 }));
@@ -392,10 +392,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should find minimum with where clause", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 50 }));
@@ -425,10 +425,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should find maximum value", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 50 }));
@@ -444,10 +444,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should find maximum with where clause", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 50 }));
@@ -529,10 +529,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
     });
 
     it("should return distinct numeric values", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "test" }))
+        .returning("*");
       await db
         .insert(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 }));
@@ -548,78 +548,6 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct,
         schema.Posts.viewCount,
       );
       expect(distinctViewCounts.sort((a, b) => a - b)).toEqual([10, 20]);
-    });
-  });
-
-  // ==========================================================
-  // $insertReturning tests
-  // ==========================================================
-  describe("$insertReturning", () => {
-    it("should insert and return the row with generated id", async () => {
-      const inserted = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "newuser", email: "new@test.com" }),
-      );
-
-      expect(inserted.id).toBeDefined();
-      expect(typeof inserted.id).toBe("bigint");
-      expect(inserted.username).toBe("newuser");
-      expect(inserted.email).toBe("new@test.com");
-    });
-
-    it("should return all columns including defaults", async () => {
-      const inserted = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test", type: "admin" }),
-      );
-
-      expect(inserted.id).toBeDefined();
-      expect(inserted.username).toBe("test");
-      expect(inserted.type).toBe("admin");
-      expect(inserted.createdAt).toBeInstanceOf(Date);
-    });
-
-    it("should work with Posts table", async () => {
-      const user = await db.$insertReturning(
-        schema.Users,
-        createTestUser({ username: "test" }),
-      );
-
-      const post = await db.$insertReturning(
-        schema.Posts,
-        createTestPost(user.id, { title: "Test Post", viewCount: 5 }),
-      );
-
-      expect(post.id).toBeDefined();
-      expect(post.userId).toBe(user.id);
-      expect(post.title).toBe("Test Post");
-      expect(post.viewCount).toBe(5);
-      expect(post.createdAt).toBeInstanceOf(Date);
-    });
-
-    it("should handle nullable columns correctly", async () => {
-      const inserted = await db.$insertReturning(schema.Users, {
-        username: "nulltest",
-        status: "active",
-        role: "user",
-        type: "user",
-        // email is not provided, should be null
-      });
-
-      expect(inserted.email).toBeNull();
-    });
-
-    it("should work with then/catch pattern", async () => {
-      const inserted = await new Promise<
-        Awaited<ReturnType<typeof db.$insertReturning<typeof schema.Users>>>
-      >((resolve, reject) => {
-        db.$insertReturning(
-          schema.Users,
-          createTestUser({ username: "promisetest" }),
-        ).then(resolve, reject);
-      });
-
-      expect(inserted.username).toBe("promisetest");
     });
   });
 });

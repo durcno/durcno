@@ -218,75 +218,6 @@ const distinctUserIds = db.$distinct(Posts, Posts.userId);
 type DistinctUserIdsResult = Awaited<typeof distinctUserIds>;
 Expect<Equal<DistinctUserIdsResult, bigint[]>>();
 
-// ============================================================
-// $insertReturning tests
-// ============================================================
-
-// Test $insertReturning with required fields
-const insertedUser = db.$insertReturning(Users, {
-  username: "testuser",
-  type: "user",
-  externalId: "550e8400-e29b-41d4-a716-446655440000",
-});
-type InsertedUserResult = Awaited<typeof insertedUser>;
-Expect<
-  Equal<
-    InsertedUserResult,
-    {
-      id: bigint;
-      username: string;
-      email: string | null;
-      type: "admin" | "user";
-      createdAt: Date;
-      externalId: string;
-      trackingId: string | null;
-    }
-  >
->();
-
-// Test $insertReturning with all fields
-const insertedUserFull = db.$insertReturning(Users, {
-  username: "testuser",
-  email: "test@example.com",
-  type: "admin",
-  externalId: "550e8400-e29b-41d4-a716-446655440000",
-});
-type InsertedUserFullResult = Awaited<typeof insertedUserFull>;
-Expect<
-  Equal<
-    InsertedUserFullResult,
-    {
-      id: bigint;
-      username: string;
-      email: string | null;
-      type: "admin" | "user";
-      createdAt: Date;
-      externalId: string;
-      trackingId: string | null;
-    }
-  >
->();
-
-// Test $insertReturning with Posts table
-const insertedPost = db.$insertReturning(Posts, {
-  userId: 1n,
-});
-type InsertedPostResult = Awaited<typeof insertedPost>;
-Expect<
-  Equal<
-    InsertedPostResult,
-    {
-      id: bigint;
-      userId: bigint;
-      title: string | null;
-      content: string | null;
-      createdAt: Date;
-      tags: string[] | null;
-      metrics: { views: number; likes: number } | null;
-    }
-  >
->();
-
 // ============================================================================
 // Negative type tests - these should cause compile errors
 // ============================================================================
@@ -314,12 +245,3 @@ db.$max(Posts, Posts.userId, eq(Posts.id, "not_a_number"));
 
 // @ts-expect-error - $distinct with column from wrong table should not compile
 db.$distinct(Users, Posts.title);
-
-// @ts-expect-error - $insertReturning with missing required field should not compile
-db.$insertReturning(Users, { email: "test@example.com" });
-
-// @ts-expect-error - $insertReturning with wrong type should not compile
-db.$insertReturning(Users, { username: 123, type: "user" });
-
-// @ts-expect-error - $insertReturning with invalid enum value should not compile
-db.$insertReturning(Users, { username: "test", type: "invalid_type" });

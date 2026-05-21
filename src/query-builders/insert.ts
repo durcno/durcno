@@ -65,22 +65,27 @@ export class InsertQuery<
     | {
         [ColName in keyof TTableWC["_"]["columns"]]?: false;
       }
+    | "*"
     | undefined,
-  TReturn = TReturning extends Record<Key, boolean>
-    ? TReturning extends {
-        [ColName in keyof TTableWC["_"]["columns"]]?: false;
-      }
-      ? {
-          [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends false
-            ? never
-            : ColName]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-        }[]
-      : {
-          [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends true
-            ? ColName
-            : never]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-        }[]
-    : null,
+  TReturn = TReturning extends "*"
+    ? {
+        [ColName in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
+      }[]
+    : TReturning extends Record<Key, boolean>
+      ? TReturning extends {
+          [ColName in keyof TTableWC["_"]["columns"]]?: false;
+        }
+        ? {
+            [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends false
+              ? never
+              : ColName]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
+          }[]
+        : {
+            [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends true
+              ? ColName
+              : never]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
+          }[]
+      : null,
 > extends QueryPromise<TReturn> {
   readonly #table: TTableWC;
   readonly #$values: Record<string, unknown> | Record<string, unknown>[];
@@ -103,6 +108,9 @@ export class InsertQuery<
     this.#prepare = prepare;
   }
 
+  /** Return all columns using `RETURNING *`. */
+  returning(all: "*"): InsertQuery<TTableWC, TPrepare, "*">;
+  /** Return a subset of columns. */
   returning<
     TReturnings extends
       | {
@@ -111,11 +119,14 @@ export class InsertQuery<
       | {
           [ColName in keyof TTableWC["_"]["columns"]]?: false;
         },
-  >(returnings: TReturnings) {
+  >(returnings: TReturnings): InsertQuery<TTableWC, TPrepare, TReturnings>;
+  returning(
+    returnings: "*" | { [ColName in keyof TTableWC["_"]["columns"]]?: boolean },
+  ) {
     return new InsertQuery(
       this.#table,
       this.#$values,
-      returnings,
+      returnings as never,
       this.#executor,
       this.#prepare,
     );
@@ -164,10 +175,12 @@ export class InsertQuery<
       }
     });
 
-    if (this.#$returning) {
+    if (this.#$returning === "*") {
+      query.sql += " RETURNING *";
+    } else if (this.#$returning) {
       query.sql += " RETURNING ";
       const returningFields = Object.keys(this.#$returning).filter(
-        (k) => this.#$returning?.[k] === true,
+        (k) => (this.#$returning as Record<string, boolean>)?.[k] === true,
       );
       query.sql += returningFields
         .map((field) => `"${this.#table._.columns[field].nameSql}"`)

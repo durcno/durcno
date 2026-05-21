@@ -43,7 +43,6 @@ Durcno provides `$`-prefixed utility functions for common query patterns:
 | `db.$exists(table, where?)`           | Check if any rows exist    | `boolean`   |
 | `db.$first(table, where?)`            | Get the first matching row | `T \| null` |
 | `db.$distinct(table, column, where?)` | Get unique column values   | `T[]`       |
-| `db.$insertReturning(table, values)`  | Insert and return the row  | `T`         |
 
 ### Aggregate Functions
 
