@@ -20,7 +20,7 @@
  * };
  *
  * export const statements: DDLStatement[] = [
- *   ddl.createEnum('public', 'user_type', ['admin', 'user']),
+ *   ddl.createType('public', 'user_type', { asEnum: ['admin', 'user'] }),
  *   ddl.createTable('public', 'users')
  *     .column('id', 'serial', { primaryKey: true })
  *     .column('name', 'varchar(255)', { notNull: true }),

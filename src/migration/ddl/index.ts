@@ -1,4 +1,3 @@
-export * from "./enum";
 export * from "./indexes";
 export * from "./schema";
 export * from "./sequence";
@@ -6,11 +5,6 @@ export * from "./statement";
 export * from "./table";
 export * from "./types";
 
-import {
-  AlterEnumAddValueStatement,
-  CreateEnumStatement,
-  DropEnumStatement,
-} from "./enum";
 import { CreateIndexBuilder, DropIndexStatement } from "./indexes";
 import { CreateSchemaStatement, DropSchemaStatement } from "./schema";
 import {
@@ -42,7 +36,7 @@ import {
  * import { ddl, type DDLStatement } from 'durcno/migration';
  *
  * export const statements: DDLStatement[] = [
- *   ddl.createEnum('public', 'user_type', ['admin', 'user']),
+ *   ddl.createType('public', 'user_type', { asEnum: ['admin', 'user'] }),
  *   ddl.createTable('public', 'users')
  *     .column('id', 'serial', { primaryKey: true })
  *     .column('name', 'varchar(255)', { notNull: true }),
@@ -71,24 +65,6 @@ export const ddl = {
   },
 
   /**
-   * Create a new enum type.
-   *
-   * @deprecated Use {@link ddl.createType} instead.
-   *
-   * @param schema - The schema the enum belongs to.
-   * @param name - The enum type name.
-   * @param values - Ordered list of allowed values.
-   * @returns A {@link CreateEnumStatement}.
-   */
-  createEnum(
-    schema: string,
-    name: string,
-    values: string[],
-  ): CreateEnumStatement {
-    return new CreateEnumStatement(schema, name, values);
-  },
-
-  /**
    * Create a new PostgreSQL type.
    *
    * Currently supports enum types only.
@@ -109,42 +85,6 @@ export const ddl = {
     definition: { asEnum: string[] },
   ): CreateTypeStatement {
     return new CreateTypeStatement(schema, name, definition);
-  },
-
-  /**
-   * Add a value to an existing enum.
-   *
-   * @remarks
-   * PostgreSQL does not support removing enum values.
-   *
-   * @deprecated Use {@link ddl.alterType} instead.
-   *
-   * @param schema - The schema the enum belongs to.
-   * @param name - The enum type name.
-   * @param value - The new value to add.
-   * @param position - Optional positioning: `{ after: 'val' }` or `{ before: 'val' }`.
-   * @returns An {@link AlterEnumAddValueStatement}.
-   */
-  alterEnumAddValue(
-    schema: string,
-    name: string,
-    value: string,
-    position?: { after?: string; before?: string },
-  ): AlterEnumAddValueStatement {
-    return new AlterEnumAddValueStatement(schema, name, value, position);
-  },
-
-  /**
-   * Drop an enum type.
-   *
-   * @deprecated Use {@link ddl.dropType} instead.
-   *
-   * @param schema - The schema the enum belongs to.
-   * @param name - The enum type name.
-   * @returns A {@link DropEnumStatement}.
-   */
-  dropEnum(schema: string, name: string): DropEnumStatement {
-    return new DropEnumStatement(schema, name);
   },
 
   /**

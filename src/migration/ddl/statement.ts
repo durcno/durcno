@@ -14,9 +14,6 @@ import type { Snapshot } from "../snapshot";
  * - `"createType"` — {@link CreateTypeStatement}
  * - `"dropType"` — {@link DropTypeStatement}
  * - `"alterType"` — {@link AlterTypeBuilder}
- * - `"createEnum"` — {@link CreateEnumStatement} (deprecated, use `"createType"`)
- * - `"alterEnum"` — {@link AlterEnumAddValueStatement} (deprecated, use `"alterType"`)
- * - `"dropEnum"` — {@link DropEnumStatement} (deprecated, use `"dropType"`)
  * - `"createSequence"` — {@link CreateSequenceStatement}
  * - `"dropSequence"` — {@link DropSequenceStatement}
  * - `"createIndex"` — {@link CreateIndexBuilder}
@@ -33,9 +30,6 @@ export type DDLStatementType =
   | "createType"
   | "dropType"
   | "alterType"
-  | "createEnum"
-  | "alterEnum"
-  | "dropEnum"
   | "createSequence"
   | "dropSequence"
   | "createIndex"
