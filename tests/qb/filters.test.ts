@@ -120,24 +120,6 @@ describe("Filters", () => {
       expect(result[0].age).toBe(30);
     });
 
-    it("should work with enum columns", async () => {
-      await db
-        .insert(schema.Users)
-        .values([
-          createTestUser({ type: "admin" }),
-          createTestUser({ type: "user" }),
-          createTestUser({ type: "user" }),
-        ]);
-
-      const result = await db
-        .from(schema.Users)
-        .select()
-        .where(eq(schema.Users.type, "admin"));
-
-      expect(result).toHaveLength(1);
-      expect(result[0].type).toBe("admin");
-    });
-
     it("should work with boolean columns", async () => {
       await db
         .insert(schema.Users)

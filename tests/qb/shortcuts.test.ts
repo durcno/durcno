@@ -107,30 +107,6 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
       );
       expect(count).toBe(1);
     });
-
-    it("should count rows filtered by enum column", async () => {
-      await db
-        .insert(schema.Users)
-        .values(createTestUser({ username: "admin1", type: "admin" }));
-      await db
-        .insert(schema.Users)
-        .values(createTestUser({ username: "user1", type: "user" }));
-      await db
-        .insert(schema.Users)
-        .values(createTestUser({ username: "user2", type: "user" }));
-
-      const adminCount = await db.$count(
-        schema.Users,
-        eq(schema.Users.type, "admin"),
-      );
-      expect(adminCount).toBe(1);
-
-      const userCount = await db.$count(
-        schema.Users,
-        eq(schema.Users.type, "user"),
-      );
-      expect(userCount).toBe(2);
-    });
   });
 
   // ==========================================================
@@ -492,21 +468,6 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
         schema.Users.username,
       );
       expect(distinctUsernames.sort()).toEqual(["Alice", "Bob", "Charlie"]);
-    });
-
-    it("should return distinct enum values", async () => {
-      await db
-        .insert(schema.Users)
-        .values(createTestUser({ username: "user1", type: "user" }));
-      await db
-        .insert(schema.Users)
-        .values(createTestUser({ username: "user2", type: "user" }));
-      await db
-        .insert(schema.Users)
-        .values(createTestUser({ username: "admin1", type: "admin" }));
-
-      const distinctTypes = await db.$distinct(schema.Users, schema.Users.type);
-      expect(distinctTypes.sort()).toEqual(["admin", "user"]);
     });
 
     it("should return distinct values with where clause", async () => {

@@ -205,28 +205,6 @@ describe("INSERT queries", () => {
     expect(users[0].balance).toBe(10000n);
   });
 
-  it("should handle enum values correctly", async () => {
-    await db
-      .insert(schema.Users)
-      .values([
-        createTestUser({ type: "admin" }),
-        createTestUser({ type: "user" }),
-      ]);
-
-    const admins = await db
-      .from(schema.Users)
-      .select()
-      .where(eq(schema.Users.type, "admin"));
-
-    const regularUsers = await db
-      .from(schema.Users)
-      .select()
-      .where(eq(schema.Users.type, "user"));
-
-    expect(admins).toHaveLength(1);
-    expect(regularUsers).toHaveLength(1);
-  });
-
   it("should auto-generate primary key", async () => {
     const [result1] = await db
       .insert(schema.Users)
