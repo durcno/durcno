@@ -59,10 +59,6 @@ checkConstraints: (t, check, { raw }) => [
 ],
 ```
 
-## Migrations
-
-Durcno captures CHECK constraints and will generate migrations that add/drop or modify table constraints when you run `durcno generate`.
-
 ## Recommendation
 
 - Choose **ENUMs** when the set of values is stable and you want strong TypeScript guarantees and a named database type.

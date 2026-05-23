@@ -109,9 +109,28 @@ const inserted = await db
 // Type: { id: bigint; username: string; type: "admin" | "user"; createdAt: Date }[]
 ```
 
-### Returning with Multiple Inserts
+### Returning All Columns
 
-When inserting multiple rows, `.returning()` returns an array with data for each inserted row:
+Pass `"*"` to `.returning()` to get back every column, including auto-generated values like IDs and timestamps:
+
+```typescript
+const [user] = await db
+  .insert(Users)
+  .values({ username: "john_doe", type: "user" })
+  .returning("*");
+// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
+
+console.log(user.id); // Auto-generated ID
+console.log(user.createdAt); // Auto-generated timestamp
+
+// Use the ID for a related insert
+await db.insert(Posts).values({
+  userId: user.id,
+  title: "First Post",
+});
+```
+
+This also works with multiple rows:
 
 ```typescript
 const inserted = await db
@@ -120,9 +139,8 @@ const inserted = await db
     { username: "john", type: "user" },
     { username: "jane", type: "admin" },
   ])
-  .returning({ id: true, username: true });
-// Type: { id: bigint; username: string }[]
-// Returns: [{ id: 1n, username: "john" }, { id: 2n, username: "jane" }]
+  .returning("*");
+// Returns all columns for every inserted row
 ```
 
 ## Auto-generated Values with `.$insertFn()`
@@ -189,166 +207,4 @@ await db.insert(Users).values({
   username: "john",
   type: "superadmin", // Not in enum
 });
-```
-
----
-
-## $insertReturning
-
-Use `db.$insertReturning()` to insert a single row and immediately get back the inserted row with all columns, including auto-generated values like IDs and timestamps.
-
-:::tip
-This is a shortcut for inserting a **single row** and returning the full object. For inserting multiple rows with returning, use the fluent `.insert().values([...]).returning()` pattern.
-:::
-
-### Basic Usage
-
-```typescript
-import { db } from "./db/index.ts";
-import { Users } from "./db/schema.ts";
-
-const newUser = await db.$insertReturning(Users, {
-  username: "johndoe",
-  email: "john@example.com",
-  type: "user",
-});
-
-// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date; }
-console.log(newUser.id); // Auto-generated ID
-console.log(newUser.createdAt); // Auto-generated timestamp
-```
-
-```sql
-INSERT INTO "public"."users" ("username", "email", "type")
-VALUES ('johndoe', 'john@example.com', 'user')
-RETURNING *;
-```
-
-### Why Use $insertReturning?
-
-**Get Auto-Generated Values:**
-
-```typescript
-// The inserted user has the generated ID
-const user = await db.$insertReturning(Users, {
-  username: "newuser",
-  type: "user",
-});
-
-// Now you can use the ID immediately
-console.log(`Created user with ID: ${user.id}`);
-
-// Use it for related inserts
-await db.insert(Posts).values({
-  userId: user.id,
-  title: "First Post",
-});
-```
-
-**Get Default Values:**
-
-```typescript
-// Schema with defaults
-const Posts = table("public", "posts", {
-  id: pk(),
-  title: varchar({ length: 200, notNull }),
-  viewCount: integer({ notNull }).default(0),
-  isPublished: boolean({ notNull }).default(false),
-  createdAt: timestamp({ notNull }).default(now()),
-});
-
-// Insert with minimal data
-const post = await db.$insertReturning(Posts, {
-  title: "My Post",
-});
-
-// All defaults are populated
-console.log(post.viewCount); // 0
-console.log(post.isPublished); // false
-console.log(post.createdAt); // Date object
-```
-
-### Comparison: $insertReturning vs .returning()
-
-| Aspect           | `$insertReturning`  | `.insert().values().returning()` |
-| ---------------- | ------------------- | -------------------------------- |
-| Rows             | Single row only     | Single or multiple rows          |
-| Return type      | `T` (single object) | `T[]` (array)                    |
-| Columns returned | All columns (`*`)   | Configurable                     |
-
-```typescript
-// $insertReturning - returns single object
-const user = await db.$insertReturning(Users, {
-  username: "john",
-  type: "user",
-});
-// Type: User
-
-// .returning() - returns array
-const [user] = await db
-  .insert(Users)
-  .values({ username: "john", type: "user" })
-  .returning({ id: true, username: true });
-// Type: { id: bigint; username: string }[]
-```
-
-### Use Cases
-
-**Create and Redirect:**
-
-```typescript
-// API handler
-async function createPost(data: CreatePostInput) {
-  const post = await db.$insertReturning(Posts, {
-    title: data.title,
-    content: data.content,
-    userId: data.userId,
-  });
-
-  // Redirect to the new post
-  return redirect(`/posts/${post.id}`);
-}
-```
-
-**Create with Relations:**
-
-```typescript
-async function createUserWithProfile(userData: UserInput) {
-  // Create user and get the ID
-  const user = await db.$insertReturning(Users, {
-    username: userData.username,
-    email: userData.email,
-    type: "user",
-  });
-
-  // Create profile with the user ID
-  const profile = await db.$insertReturning(UserProfiles, {
-    userId: user.id,
-    bio: userData.bio,
-    avatarUrl: userData.avatar,
-  });
-
-  return { user, profile };
-}
-```
-
-**Audit Logging:**
-
-```typescript
-const record = await db.$insertReturning(AuditLogs, {
-  action: "user.created",
-  userId: actorId,
-  targetId: targetUserId,
-});
-
-console.log(`Audit log ${record.id} created at ${record.createdAt}`);
-```
-
-### Type Signature
-
-```typescript
-$insertReturning(
-  table: Table,
-  values: InsertValues<Table>
-): Promise<InferSelect<Table>>
 ```
