@@ -310,52 +310,6 @@ Use clear, descriptive names so migrations are easy to read.
 
 ---
 
-## Migrations
-
-Durcno's migration generator automatically detects constraint changes and produces the appropriate SQL.
-
-### Initial Table Creation
-
-When a table with constraints is created, they are included in the `CREATE TABLE` statement:
-
-```sql
-CREATE TABLE "public"."products" (
-  "id" bigserial PRIMARY KEY NOT NULL,
-  "price" bigint NOT NULL,
-  CONSTRAINT check_products_positive_price CHECK ("price" > 0)
-);
-```
-
-### Adding a Constraint
-
-When you add a new constraint to an existing table, a migration is generated:
-
-```sql
-ALTER TABLE "public"."products" ADD CONSTRAINT check_products_max_price CHECK ("price" < 1000000);
-ALTER TABLE "public"."user_roles" ADD CONSTRAINT unique_user_roles_user_id_and_email UNIQUE ("user_id", "email");
-```
-
-### Removing a Constraint
-
-When you remove a constraint from the schema, a `DROP CONSTRAINT` migration is generated:
-
-```sql
-ALTER TABLE "public"."products" DROP CONSTRAINT check_products_max_price;
-```
-
-### Modifying a Constraint
-
-When you change a constraint's expression (check) or columns (unique/PK), Durcno generates a **drop-then-add** migration:
-
-```sql
--- Drop old version
-ALTER TABLE "public"."products" DROP CONSTRAINT check_products_valid_quantity;
--- Add new version
-ALTER TABLE "public"."products" ADD CONSTRAINT check_products_valid_quantity CHECK ("quantity" >= 0 AND "quantity" <= 1000);
-```
-
----
-
 ## Best Practices
 
 ### Name Constraints Clearly

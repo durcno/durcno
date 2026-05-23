@@ -124,22 +124,6 @@ const seq = sequence("public", "mySeq", { startWith: 1 });
 const resetSql = seq.setval(500); // Returns: setval('"public"."my_seq"', 500)
 ```
 
-## Generated Migration SQL
-
-When you run `durcno generate`, sequences are automatically included in your migrations:
-
-**up.ts:** — exports an array of DDL statement objects; the equivalent SQL is shown here for reference
-
-```sql
-CREATE SEQUENCE "public"."order_seq" START WITH 1000 INCREMENT BY 1;
-```
-
-**down.ts:** — exports rollback DDL statement objects; the equivalent SQL is shown here for reference
-
-```sql
-DROP SEQUENCE "public"."order_seq";
-```
-
 ## Common Patterns
 
 ### Order Numbers

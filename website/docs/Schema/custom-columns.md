@@ -104,7 +104,10 @@ Durcno's `Column` now exposes _scalar_ abstract methods and helpers. The `Column
   - Return the PostgreSQL type name for a single scalar value (e.g. `varchar(255)`, `jsonb`, `uuid`). The `Column` class will append array suffixes (like `[]` or `[N]`) automatically when `config.dimension` is present.
 
 - `get sqlCastScalar(): string | null`
-  - Return the PostgreSQL type to use as a cast suffix on prepared-statement placeholders (e.g. `$1::uuid`), or `null` if PostgreSQL can infer the type without an explicit cast. The derived `sqlCast` property on `Column` applies array suffixes automatically when `config.dimension` is set. Return `null` for plain numeric and string-compatible types (`integer`, `numeric`, `varchar`, `text`, `char`); return a type string for types that require an explicit hint (`boolean`, `uuid`, `bytea`, `json`, `jsonb`, `date`, `timestamp`, `cidr`, `inet`, `macaddr`, enum types, PostGIS geography, etc.). When the cast type is the same as your SQL type, you can simply `return this.sqlTypeScalar`.
+  - Return the PostgreSQL type to use as a cast suffix on prepared-statement placeholders (e.g. `$1::uuid`), or `null` if PostgreSQL can infer the type without an explicit cast. The derived `sqlCast` property on `Column` applies array suffixes automatically when `config.dimension` is set.
+    - **Returns `null`**: plain numeric and string-compatible types — `integer`, `numeric`, `varchar`, `text`, `char`
+    - **Returns a type string**: types that require an explicit hint — `boolean`, `uuid`, `bytea`, `json`, `jsonb`, `date`, `timestamp`, `cidr`, `inet`, `macaddr`, enum types, PostGIS geography, etc.
+    - When the cast type is the same as your SQL type, you can simply `return this.sqlTypeScalar`.
 
 - `get zodTypeScaler(): z.ZodType`
   - Return a Zod schema for a single scalar value. `Column.zodType` will wrap this in tuples/arrays according to `config.dimension`.

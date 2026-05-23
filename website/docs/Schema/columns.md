@@ -15,7 +15,15 @@ Durcno allows two ways to configure columns:
   - **`unique`**: Adds a UNIQUE constraint
   - **`primaryKey`**: Marks the column as a primary key
   - **`dimension`**: Specifies array dimensions
-- **Chainable modifiers** (methods you call on the column instance): `.default()` for SQL defaults, `.references()` for foreign keys, `.check()` for column-level CHECK constraints, `.generatedAlways()` / `.generatedByDefault()` / `.as()` for identity/generated columns, `.$insertFn()` / `.$updateFn()` for runtime value generation, and `.$type<T>()` to override the inferred TypeScript type.
+- **Chainable modifiers** (methods you call on the column instance): Common chainable modifiers include:
+  - **`.default(value)`**: Sets a SQL `DEFAULT` clause
+  - **`.references(ref)`**: Creates a foreign key reference
+  - **`.check(expr)`**: Adds a column-level CHECK constraint
+  - **`.generatedAlways()` / `.generatedByDefault()`**: Marks the column as a PostgreSQL identity column
+  - **`.as(expr)`**: Sets the expression following `GENERATED ... AS`
+  - **`.$insertFn(fn)`**: Runs a JS function on INSERT when no value is provided
+  - **`.$updateFn(fn)`**: Runs a JS function on UPDATE when no value is provided
+  - **`.$type<T>()`**: Overrides the inferred TypeScript type (compile-time only)
 
 :::info
 Columns are nullable by default unless `notNull` is specified.
