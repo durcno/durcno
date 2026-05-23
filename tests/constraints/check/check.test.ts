@@ -3,6 +3,7 @@ import path from "node:path";
 import type Docker from "dockerode";
 import { type $Client, database, defineConfig } from "durcno";
 import { pg } from "durcno/connectors/pg";
+import { snapshot } from "durcno/migration";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   startPostgresContainer,
@@ -227,6 +228,69 @@ describe("check constraints — insert acceptance and rejection", () => {
           db.insert(schema.Orders).values({ ...validRow, array: dimensions }),
         ).rejects.toThrow();
       }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  describe("Employees table — column-level check constraints", () => {
+    const validRow = {
+      salary: 50000,
+      age: 30,
+      code: "EMP-001",
+    };
+
+    it("accepts a valid row", async () => {
+      await expect(
+        db.insert(schema.Employees).values(validRow),
+      ).resolves.not.toThrow();
+    });
+
+    it("rejects salary = -1 (salary >= 0)", async () => {
+      await expect(
+        db.insert(schema.Employees).values({ ...validRow, salary: -1 }),
+      ).rejects.toThrow();
+    });
+
+    it("accepts salary = 0 (boundary)", async () => {
+      await expect(
+        db.insert(schema.Employees).values({ ...validRow, salary: 0 }),
+      ).resolves.not.toThrow();
+    });
+
+    it("rejects age = 17 (age >= 18)", async () => {
+      await expect(
+        db.insert(schema.Employees).values({ ...validRow, age: 17 }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects age = 121 (age <= 120)", async () => {
+      await expect(
+        db.insert(schema.Employees).values({ ...validRow, age: 121 }),
+      ).rejects.toThrow();
+    });
+
+    it("accepts age = 18 and age = 120 (boundaries)", async () => {
+      await expect(
+        db.insert(schema.Employees).values({ ...validRow, age: 18 }),
+      ).resolves.not.toThrow();
+
+      await expect(
+        db.insert(schema.Employees).values({ ...validRow, age: 120 }),
+      ).resolves.not.toThrow();
+    });
+
+    it("rejects code not matching LIKE 'EMP-%'", async () => {
+      await expect(
+        db.insert(schema.Employees).values({ ...validRow, code: "XXXX" }),
+      ).rejects.toThrow();
+    });
+
+    it("verifies snapshot has correctly named column-level check constraints", () => {
+      const ss = snapshot([schema.Employees]);
+      const tableChecks = ss.tables["public.employees"].checkConstraints;
+      expect(tableChecks).toHaveProperty("employees_salary_check");
+      expect(tableChecks).toHaveProperty("employees_age_check");
+      expect(tableChecks).toHaveProperty("employees_code_check");
     });
   });
 });

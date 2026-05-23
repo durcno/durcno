@@ -15,7 +15,7 @@ Durcno allows two ways to configure columns:
   - **`unique`**: Adds a UNIQUE constraint
   - **`primaryKey`**: Marks the column as a primary key
   - **`dimension`**: Specifies array dimensions
-- **Chainable modifiers** (methods you call on the column instance): `.default()` for SQL defaults, `.references()` for foreign keys, `.generatedAlways()` / `.generatedByDefault()` / `.as()` for identity/generated columns, `.$insertFn()` / `.$updateFn()` for runtime value generation, and `.$type<T>()` to override the inferred TypeScript type.
+- **Chainable modifiers** (methods you call on the column instance): `.default()` for SQL defaults, `.references()` for foreign keys, `.check()` for column-level CHECK constraints, `.generatedAlways()` / `.generatedByDefault()` / `.as()` for identity/generated columns, `.$insertFn()` / `.$updateFn()` for runtime value generation, and `.$type<T>()` to override the inferred TypeScript type.
 
 :::info
 Columns are nullable by default unless `notNull` is specified.

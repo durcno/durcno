@@ -1,5 +1,5 @@
 import type { Query, QueryContext } from "../query-builders/query";
-import type { TableAnyColumn } from "../table";
+import type { AnyColumn } from "../table";
 import { type AnyScalarSqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
 
 /**
@@ -7,12 +7,12 @@ import { type AnyScalarSqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
  * Restricts nested expressions to scalars, preventing illegal
  * aggregate-in-aggregate nesting at the type level.
  */
-type AggregateInput = TableAnyColumn | AnyScalarSqlFn;
+type AggregateInput = AnyColumn | AnyScalarSqlFn;
 
 // Numeric aggregate input: columns or scalar SqlFns returning numeric values.
 // Columns must be scalar (non-array): ValType is narrowed to exclude array types.
 type NumericAggregateInput =
-  | (TableAnyColumn & {
+  | (AnyColumn & {
       $: { PgType: "numeric" };
       config: { dimension?: undefined };
     })
@@ -33,7 +33,7 @@ type NumericAggregateInput =
  *
  * @template TExpr - The table column to count.
  */
-export class CountFn<TExpr extends TableAnyColumn> extends SqlFn<
+export class CountFn<TExpr extends AnyColumn> extends SqlFn<
   TExpr,
   false,
   "aggregate",
@@ -87,7 +87,7 @@ export class CountStarFn extends SqlFn<
  *
  * @template TExpr - The table column to count distinct values from.
  */
-export class CountDistinctFn<TExpr extends TableAnyColumn> extends SqlFn<
+export class CountDistinctFn<TExpr extends AnyColumn> extends SqlFn<
   TExpr,
   false,
   "aggregate",
@@ -123,10 +123,8 @@ export function count(star: "*"): CountStarFn;
  * @example
  * db.from(Orders).select({ total: count(Orders.id) });
  */
-export function count<TExpr extends TableAnyColumn>(
-  expr: TExpr,
-): CountFn<TExpr>;
-export function count<TExpr extends TableAnyColumn>(
+export function count<TExpr extends AnyColumn>(expr: TExpr): CountFn<TExpr>;
+export function count<TExpr extends AnyColumn>(
   expr: TExpr | "*",
 ): CountFn<TExpr> | CountStarFn {
   if (expr === "*") return new CountStarFn();
@@ -142,7 +140,7 @@ export function count<TExpr extends TableAnyColumn>(
  * @example
  * db.from(Orders).select({ uniqueUsers: countDistinct(Orders.userId) });
  */
-export function countDistinct<TExpr extends TableAnyColumn>(
+export function countDistinct<TExpr extends AnyColumn>(
   expr: TExpr,
 ): CountDistinctFn<TExpr> {
   return new CountDistinctFn(expr);

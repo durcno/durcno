@@ -6,8 +6,9 @@ import { uniqueConstraint } from "../constraints/unique";
 import { is } from "../entity";
 import { Enum } from "../enumtype";
 import type { IndexType } from "../indexes";
-import type { QueryContext } from "../query-builders/query";
+import { Query, type QueryContext } from "../query-builders/query";
 import { Sequence } from "../sequence";
+import { Sql } from "../sql";
 import { type StdTableWithColumns, Table } from "../table";
 import type { SnakeCase } from "../types";
 
@@ -265,6 +266,22 @@ export function snapshot(entities: unknown[]): Snapshot {
           sql: chk.toSQL(checkCtx),
         };
       });
+      for (const [colName, col] of Object.entries(table._.columns)) {
+        if (!col.getCheckFn) continue;
+        const constraintName = `${table._.nameSql}_${col.nameSql}_check`;
+        const expr = col.getCheckFn(table._.columns[colName]);
+        let sql: string;
+        if (expr instanceof Sql) {
+          sql = expr.string;
+        } else {
+          const q = new Query("", () => []);
+          expr.toQuery(q, checkCtx);
+          sql = q.sql;
+        }
+        ss.tables[`${table._.schemaSql}.${table._.nameSql}`].checkConstraints[
+          constraintName
+        ] = { name: constraintName, sql };
+      }
       (
         table._.extra.uniqueConstraints?.(
           table as StdTableWithColumns,

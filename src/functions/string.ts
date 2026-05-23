@@ -1,7 +1,7 @@
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
-import type { AnyScalarTableColumn } from "../table";
+import type { AnyScalarColumn } from "../table";
 import type { Or } from "../types";
 import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
 
@@ -10,7 +10,7 @@ import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
 // ============================================================================
 
 export class LengthFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 > extends SqlFn<
@@ -33,7 +33,7 @@ export class LengthFn<
 
 /** Returns the number of characters in a string expression. */
 export function length<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr): LengthFn<TExpr> {
@@ -45,7 +45,7 @@ export function length<
 // ============================================================================
 
 export class LowerFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 > extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
@@ -62,7 +62,7 @@ export class LowerFn<
 
 /** Converts a string expression to lower case. */
 export function lower<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr): LowerFn<TExpr> {
@@ -74,7 +74,7 @@ export function lower<
 // ============================================================================
 
 export class UpperFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 > extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
@@ -91,7 +91,7 @@ export class UpperFn<
 
 /** Converts a string expression to upper case. */
 export function upper<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr): UpperFn<TExpr> {
@@ -103,7 +103,7 @@ export function upper<
 // ============================================================================
 
 export class TrimFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 > extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
@@ -120,7 +120,7 @@ export class TrimFn<
 
 /** Removes leading and trailing whitespace from a string expression. */
 export function trim<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr): TrimFn<TExpr> {
@@ -132,7 +132,7 @@ export function trim<
 // ============================================================================
 
 export class LeftFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
   THasArg extends boolean = false,
@@ -165,17 +165,17 @@ export class LeftFn<
 
 /** Returns the first `n` characters of a string expression. */
 export function left<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr, n: number): LeftFn<TExpr, false>;
 export function left<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr, n: Arg<number>): LeftFn<TExpr, true>;
 export function left<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr, n: number | Arg<number>): LeftFn<TExpr, boolean> {
@@ -187,7 +187,7 @@ export function left<
 // ============================================================================
 
 export class RightFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
   THasArg extends boolean = false,
@@ -220,17 +220,17 @@ export class RightFn<
 
 /** Returns the last `n` characters of a string expression. */
 export function right<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr, n: number): RightFn<TExpr, false>;
 export function right<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr, n: Arg<number>): RightFn<TExpr, true>;
 export function right<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
 >(expr: TExpr, n: number | Arg<number>): RightFn<TExpr, boolean> {
@@ -242,7 +242,7 @@ export function right<
 // ============================================================================
 
 export class PositionFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
   TSearch extends string | Arg<string>,
@@ -275,7 +275,7 @@ export class PositionFn<
 
 /** Returns the 1-based position of `search` within a string expression, or 0 if not found. */
 export function position<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "text" };
   },
   TSearch extends string | Arg<string>,

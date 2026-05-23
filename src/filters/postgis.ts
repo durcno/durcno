@@ -15,12 +15,11 @@ import type { PointColumn } from "../columns/postgis/geography/point";
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
-import type { TableAnyColumn } from "../table";
 import type { Or } from "../types";
 import { Filter } from ".";
 
 /** Constrains `TCol` to geography point columns only. */
-export type GeographyPointCol = TableAnyColumn<PointColumn<any>>;
+export type GeographyPointCol = PointColumn<any>;
 
 /** Writes `ST_PointFromText(point)` into `query.sql`, supporting `Arg<string>` for point. */
 export function pointToQuery(

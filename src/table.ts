@@ -50,11 +50,11 @@ type TableConfig<
 > = {
   /** The raw table name as provided by the user (may be camelCase). */
   readonly name: TName;
-  /** The snake_case version of {@link name} used in generated SQL. */
+  /** The snake_case version of {@link TableConfig.name} used in generated SQL. */
   readonly nameSql: SnakeCase<CamelToSnake<TName>>;
   /** The raw schema identifier as provided by the user (may be camelCase). */
   readonly schema: TSchema;
-  /** The snake_case version of {@link schema} used in generated SQL. */
+  /** The snake_case version of {@link TableConfig.schema} used in generated SQL. */
   readonly schemaSql: SnakeCase<CamelToSnake<TSchema>>;
   /** Fully-qualified table name as a double-quoted SQL identifier: `"schema"."table"`. */
   readonly fullName: `"${CamelToSnake<TSchema>}"."${CamelToSnake<TName>}"`;
@@ -104,7 +104,7 @@ export type TableAnyColumn<TCol extends AnyColumn = AnyColumn> = TableColumn<
   TCol
 >;
 
-export type AnyScalarTableColumn = TableAnyColumn & {
+export type AnyScalarColumn = AnyColumn & {
   config: { dimension?: undefined };
 };
 

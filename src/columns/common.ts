@@ -1,4 +1,6 @@
 import * as z from "zod";
+import type { CheckExpression } from "../constraints/check";
+import type { AnyFilter } from "../filters/index";
 import { SqlFn, type StdSqlFn } from "../functions";
 import { Arg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
@@ -288,6 +290,7 @@ export abstract class Column<
   #references:
     | { column: () => StdTableColumn; onDelete: OnDeleteAction }
     | undefined;
+  #check: ((c: StdTableColumn) => AnyFilter | Sql) | undefined;
 
   // Stores the key/name of the column
   #name: string | undefined;
@@ -711,6 +714,20 @@ export abstract class Column<
   }
   get getReferencesOnDelete(): OnDeleteAction | null {
     return this.#references ? this.#references.onDelete : null;
+  }
+
+  /**
+   * Attaches a column-level CHECK constraint.
+   * SQL equivalent: `CONSTRAINT "{table}_{col}_check" CHECK (<expr>)`
+   * @param fn - Function receiving the column and returning a filter or SQL expression.
+   */
+  check(fn: (c: this) => CheckExpression<this>) {
+    this.#check = fn as unknown as (c: StdTableColumn) => AnyFilter | Sql;
+    return this;
+  }
+
+  get getCheckFn() {
+    return this.#check;
   }
 
   /**

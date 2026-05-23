@@ -1,13 +1,13 @@
 import type { AnyFilter, Filter } from "../filters/index";
 import { Query, type QueryContext } from "../query-builders/query";
 import { Sql } from "../sql";
-import type { TableAnyColumn } from "../table";
+import type { AnyColumn, TableAnyColumn } from "../table";
 
 /**
  * A check constraint expression that can be a filter condition or a raw SQL snippet.
  * Used in `checkConstraints` table extra to define `CHECK` constraints.
  */
-export type CheckExpression<TScopeColumns extends TableAnyColumn> =
+export type CheckExpression<TScopeColumns extends TableAnyColumn | AnyColumn> =
   | Filter<TScopeColumns, false>
   | Sql;
 
@@ -54,7 +54,7 @@ export class Check {
  * ```ts
  * table("public", "projects", { name: varchar({ length: 255 }) }, {
  *   checkConstraints: (t, check) => [
- *     check("check_projects_name_length", gte(sql`char_length(${t.name})`, 1)),
+ *     check("check_projects_name_length", gte(length(t.name), 1)),
  *   ],
  * });
  * ```

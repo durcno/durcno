@@ -81,3 +81,16 @@ export const Orders = table(
     ],
   },
 );
+
+/**
+ * Table covering column-level check constraints:
+ * - gte on integer (salary)
+ * - and(gte, lte) on integer (age)
+ * - LIKE on varchar (code)
+ */
+export const Employees = table("public", "employees", {
+  id: pk(),
+  salary: integer({ notNull }).check((c) => gte(c, 0)),
+  age: integer({ notNull }).check((c) => and(gte(c, 18), lte(c, 120))),
+  code: varchar({ length: 10, notNull }).check((c) => like(c, "EMP-%")),
+});

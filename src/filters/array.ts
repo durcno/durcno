@@ -11,7 +11,7 @@
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
-import type { TableAnyColumn } from "../table";
+import type { AnyColumn } from "../table";
 import { Filter } from ".";
 
 /**
@@ -29,7 +29,7 @@ type ArrayElement<T> = T extends readonly (infer E)[]
  * Returns true if the array column contains all the specified values.
  */
 export class ArrayContainsFilter<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[] | Arg<TCol["ValType"]>,
 > extends Filter<TCol, IsArg<TValues>> {
   readonly left: TCol;
@@ -60,15 +60,15 @@ export class ArrayContainsFilter<
  * db.from(Posts).select().where(arrayContains(Posts.tags, ['typescript', 'postgres']))
  */
 export function arrayContains<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[],
 >(column: TCol, values: TValues): ArrayContainsFilter<TCol, TValues>;
 export function arrayContains<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends Arg<TCol["ValType"]>,
 >(column: TCol, values: TValues): ArrayContainsFilter<TCol, TValues>;
 export function arrayContains<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[] | Arg<TCol["ValType"]>,
 >(column: TCol, values: TValues): ArrayContainsFilter<TCol, TValues> {
   return new ArrayContainsFilter(column, values);
@@ -79,7 +79,7 @@ export function arrayContains<
  * Returns true if the array column is contained by (is a subset of) the specified values.
  */
 export class ArrayContainedByFilter<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[] | Arg<TCol["ValType"]>,
 > extends Filter<TCol, IsArg<TValues>> {
   readonly left: TCol;
@@ -107,15 +107,15 @@ export class ArrayContainedByFilter<
  * SQL: column <@ ARRAY[values]
  */
 export function arrayContainedBy<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[],
 >(column: TCol, values: TValues): ArrayContainedByFilter<TCol, TValues>;
 export function arrayContainedBy<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends Arg<TCol["ValType"]>,
 >(column: TCol, values: TValues): ArrayContainedByFilter<TCol, TValues>;
 export function arrayContainedBy<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[] | Arg<TCol["ValType"]>,
 >(column: TCol, values: TValues): ArrayContainedByFilter<TCol, TValues> {
   return new ArrayContainedByFilter(column, values);
@@ -126,7 +126,7 @@ export function arrayContainedBy<
  * Returns true if the arrays have any elements in common.
  */
 export class ArrayOverlapsFilter<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[] | Arg<TCol["ValType"]>,
 > extends Filter<TCol, IsArg<TValues>> {
   readonly left: TCol;
@@ -154,15 +154,15 @@ export class ArrayOverlapsFilter<
  * SQL: column && ARRAY[values]
  */
 export function arrayOverlaps<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[],
 >(column: TCol, values: TValues): ArrayOverlapsFilter<TCol, TValues>;
 export function arrayOverlaps<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends Arg<TCol["ValType"]>,
 >(column: TCol, values: TValues): ArrayOverlapsFilter<TCol, TValues>;
 export function arrayOverlaps<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TValues extends ArrayElement<TCol["ValType"]>[] | Arg<TCol["ValType"]>,
 >(column: TCol, values: TValues): ArrayOverlapsFilter<TCol, TValues> {
   return new ArrayOverlapsFilter(column, values);
@@ -173,7 +173,7 @@ export function arrayOverlaps<
  * Returns true if the value exists in the array column.
  */
 export class ArrayHasFilter<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TRight extends
     | ArrayElement<TCol["ValType"]>
     | Arg<ArrayElement<TCol["ValType"]>>,
@@ -204,15 +204,15 @@ export class ArrayHasFilter<
  * SQL: value = ANY(column)
  */
 export function arrayHas<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TRight extends ArrayElement<TCol["ValType"]>,
 >(column: TCol, value: TRight): ArrayHasFilter<TCol, TRight>;
 export function arrayHas<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TRight extends Arg<ArrayElement<TCol["ValType"]>>,
 >(column: TCol, value: TRight): ArrayHasFilter<TCol, TRight>;
 export function arrayHas<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TRight extends
     | ArrayElement<TCol["ValType"]>
     | Arg<ArrayElement<TCol["ValType"]>>,
@@ -225,7 +225,7 @@ export function arrayHas<
  * Returns true if all elements in the array column equal the value.
  */
 export class ArrayAllFilter<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TRight extends
     | ArrayElement<TCol["ValType"]>
     | Arg<ArrayElement<TCol["ValType"]>>,
@@ -256,15 +256,15 @@ export class ArrayAllFilter<
  * SQL: value = ALL(column)
  */
 export function arrayAll<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TRight extends ArrayElement<TCol["ValType"]>,
 >(column: TCol, value: TRight): ArrayAllFilter<TCol, TRight>;
 export function arrayAll<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TRight extends Arg<ArrayElement<TCol["ValType"]>>,
 >(column: TCol, value: TRight): ArrayAllFilter<TCol, TRight>;
 export function arrayAll<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TRight extends
     | ArrayElement<TCol["ValType"]>
     | Arg<ArrayElement<TCol["ValType"]>>,

@@ -8,14 +8,16 @@ Durcno provides type-safe APIs for defining PostgreSQL constraints on tables. Co
 
 Durcno supports three types of table-level constraints:
 
-| Constraint      | Purpose                                              | API                                      |
-| --------------- | ---------------------------------------------------- | ---------------------------------------- |
-| **Check**       | Validate column values with expressions              | `check(name, expr)` via callback         |
-| **Unique**      | Prevent duplicate values across two or more columns  | `unique(name, columns)` via callback     |
-| **Primary Key** | Define a composite primary key (two or more columns) | `primaryKey(name, columns)` via callback |
+| Constraint      | Purpose                                              | API                                                              |
+| --------------- | ---------------------------------------------------- | ---------------------------------------------------------------- |
+| **Check**       | Validate column values with expressions              | `check(name, expr)` via callback **or** `.check(fn)` on a column |
+| **Unique**      | Prevent duplicate values across two or more columns  | `unique(name, columns)` via callback                             |
+| **Primary Key** | Define a composite primary key (two or more columns) | `primaryKey(name, columns)` via callback                         |
 
 :::tip Column-Level vs Table-Level
 For **single-column** primary keys and unique constraints, use the column-level flags `primaryKey` and `unique` directly on the column definition. Table-level `unique()` and `primaryKey()` (passed as callback parameters) require **two or more columns** and are designed for composite (multi-column) cases.
+
+For **single-column check constraints**, you can use the column-level `.check(fn)` chainable modifier instead of `checkConstraints`. The constraint name is auto-generated as `{table}_{column}_check`.
 :::
 
 ---
@@ -75,6 +77,42 @@ export const Products = table(
   },
 );
 ```
+
+### Column-Level Check Constraints
+
+For a check that applies to a **single column**, you can attach it directly on the column definition using the `.check()` chainable modifier instead of the `checkConstraints` callback. The constraint name is auto-generated as `{table}_{column}_check`.
+
+```typescript
+import {
+  and,
+  gte,
+  integer,
+  like,
+  lte,
+  notNull,
+  pk,
+  table,
+  varchar,
+} from "durcno";
+
+export const Employees = table("public", "employees", {
+  id: pk(),
+  // Generates: CONSTRAINT "employees_salary_check" CHECK ("salary" >= 0)
+  salary: integer({ notNull }).check((c) => gte(c, 0)),
+  // Generates: CONSTRAINT "employees_age_check" CHECK ("age" >= 18 AND "age" <= 120)
+  age: integer({ notNull }).check((c) => and(gte(c, 18), lte(c, 120))),
+  // Generates: CONSTRAINT "employees_code_check" CHECK ("code" LIKE 'EMP-%')
+  code: varchar({ length: 10, notNull }).check((c) => like(c, "EMP-%")),
+});
+```
+
+The callback receives the typed column reference as its argument so you keep full type safety and IDE autocomplete.
+
+:::caution Naming
+Column-level check constraint names are automatically generated as `{table}_{column}_check` and cannot be customised. If you need a specific name, use the `checkConstraints` callback instead.
+:::
+
+---
 
 ### Using Raw SQL
 
@@ -261,11 +299,12 @@ Constraint names are used **exactly as you provide them** — no prefix or suffi
 
 Durcno recommends these conventions to avoid collisions and keep migrations readable:
 
-| Constraint type | Convention                                     | Example                                     |
-| --------------- | ---------------------------------------------- | ------------------------------------------- |
-| Check           | `check_<table>_<col>[_and_<col>]*[_<suffix>]?` | `check_products_positive_price`             |
-| Unique          | `unique_<table>_<col1>[_and_<col2>]*`          | `unique_user_profiles_user_id_and_platform` |
-| Primary key     | `pk_<table>`                                   | `pk_user_roles`                             |
+| Constraint type                 | Convention                                     | Example                                     |
+| ------------------------------- | ---------------------------------------------- | ------------------------------------------- |
+| Check (table-level)             | `check_<table>_<col>[_and_<col>]*[_<suffix>]?` | `check_products_positive_price`             |
+| Check (column-level `.check()`) | `<table>_<column>_check` (auto-generated)      | `employees_salary_check`                    |
+| Unique                          | `unique_<table>_<col1>[_and_<col2>]*`          | `unique_user_profiles_user_id_and_platform` |
+| Primary key                     | `pk_<table>`                                   | `pk_user_roles`                             |
 
 Use clear, descriptive names so migrations are easy to read.
 

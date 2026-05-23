@@ -4,12 +4,12 @@ import { Arg, type IsArg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { SelectQuery } from "../query-builders/select";
 import { type Sql, toSqlValue } from "../sql";
-import type { AnyColumn, TableAnyColumn } from "../table";
+import type { AnyColumn } from "../table";
 import type { BasicTypes, Or } from "../types";
 
 /** Abstract base class for SQL filter expressions used in `WHERE`/`ON`/`CHECK` clauses. */
 export abstract class Filter<
-  TColumns extends TableAnyColumn = TableAnyColumn,
+  TColumns extends AnyColumn = AnyColumn,
   THasArg extends boolean = false,
 > {
   /** Phantom field: the columns this filter is applied to. */
@@ -30,21 +30,21 @@ export type AnyFilter = Filter<any, any>;
  * placeholders are also accepted (prepared-query context).
  */
 export type FilterExpression<
-  TScopeColumns extends TableAnyColumn,
+  TScopeColumns extends AnyColumn,
   TPrepare extends boolean = false,
 > = Filter<TScopeColumns, TPrepare extends true ? boolean : false> | Sql;
 
-export type StdCondition = FilterExpression<TableAnyColumn>;
+export type StdCondition = FilterExpression<AnyColumn>;
 
 type HasArg<T> = T extends { $HasArg: true } ? true : false;
 
 export class ComparisonLeftIsColumn<
-  TLeft extends TableAnyColumn,
+  TLeft extends AnyColumn,
   TOp extends string,
   TRight extends
     | TLeft["ValType"]
     | Arg<TLeft["ValType"]>
-    | TableAnyColumn
+    | AnyColumn
     | AnyScalarSqlFn,
 > extends Filter<TLeft, Or<IsArg<TRight>, HasArg<TRight>>> {
   readonly left: TLeft;
@@ -100,13 +100,13 @@ export class ComparisonLeftIsSqlFn<
   }
 }
 
+export function eq<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<TLeft, "=", TRight>;
 export function eq<
-  TLeft extends TableAnyColumn,
-  TRight extends TLeft["ValType"],
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "=", TRight>;
-export function eq<
-  TLeft extends TableAnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+  TLeft extends AnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "=", TRight>;
 export function eq<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
   left: TLeft,
@@ -117,11 +117,11 @@ export function eq<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
 export function eq(
-  left: TableAnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnyScalarSqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
-    | TableAnyColumn
+    | AnyColumn
     | AnyScalarSqlFn,
 ) {
   if (isTCol(left)) {
@@ -131,13 +131,13 @@ export function eq(
   }
 }
 
+export function ne<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
 export function ne<
-  TLeft extends TableAnyColumn,
-  TRight extends TLeft["ValType"],
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
-export function ne<
-  TLeft extends TableAnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+  TLeft extends AnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
 export function ne<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
   left: TLeft,
@@ -148,11 +148,11 @@ export function ne<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
 export function ne(
-  left: TableAnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnyScalarSqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
-    | TableAnyColumn
+    | AnyColumn
     | AnyScalarSqlFn,
 ) {
   if (isTCol(left)) {
@@ -162,13 +162,13 @@ export function ne(
   }
 }
 
+export function gt<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<TLeft, ">", TRight>;
 export function gt<
-  TLeft extends TableAnyColumn,
-  TRight extends TLeft["ValType"],
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">", TRight>;
-export function gt<
-  TLeft extends TableAnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+  TLeft extends AnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">", TRight>;
 export function gt<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
   left: TLeft,
@@ -179,11 +179,11 @@ export function gt<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
 export function gt(
-  left: TableAnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnyScalarSqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
-    | TableAnyColumn
+    | AnyColumn
     | AnyScalarSqlFn,
 ) {
   if (isTCol(left)) {
@@ -193,13 +193,13 @@ export function gt(
   }
 }
 
+export function gte<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
 export function gte<
-  TLeft extends TableAnyColumn,
-  TRight extends TLeft["ValType"],
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
-export function gte<
-  TLeft extends TableAnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+  TLeft extends AnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
 export function gte<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
   left: TLeft,
@@ -210,11 +210,11 @@ export function gte<
   TRight extends AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
 export function gte(
-  left: TableAnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnyScalarSqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
-    | TableAnyColumn
+    | AnyColumn
     | AnyScalarSqlFn,
 ) {
   if (isTCol(left)) {
@@ -224,13 +224,13 @@ export function gte(
   }
 }
 
+export function lt<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<TLeft, "<", TRight>;
 export function lt<
-  TLeft extends TableAnyColumn,
-  TRight extends TLeft["ValType"],
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<", TRight>;
-export function lt<
-  TLeft extends TableAnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+  TLeft extends AnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<", TRight>;
 export function lt<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
   left: TLeft,
@@ -241,11 +241,11 @@ export function lt<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
 export function lt(
-  left: TableAnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnyScalarSqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
-    | TableAnyColumn
+    | AnyColumn
     | AnyScalarSqlFn,
 ) {
   if (isTCol(left)) {
@@ -255,13 +255,13 @@ export function lt(
   }
 }
 
+export function lte<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
 export function lte<
-  TLeft extends TableAnyColumn,
-  TRight extends TLeft["ValType"],
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
-export function lte<
-  TLeft extends TableAnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | TableAnyColumn | AnyScalarSqlFn,
+  TLeft extends AnyColumn,
+  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
 export function lte<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
   left: TLeft,
@@ -272,11 +272,11 @@ export function lte<
   TRight extends AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
 export function lte(
-  left: TableAnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnyScalarSqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
-    | TableAnyColumn
+    | AnyColumn
     | AnyScalarSqlFn,
 ) {
   if (isTCol(left)) {
@@ -286,7 +286,7 @@ export function lte(
   }
 }
 
-export class IsNullCondition<TCol extends TableAnyColumn> extends Filter<
+export class IsNullCondition<TCol extends AnyColumn> extends Filter<
   TCol,
   false
 > {
@@ -301,11 +301,11 @@ export class IsNullCondition<TCol extends TableAnyColumn> extends Filter<
   }
 }
 
-export function isNull<TCol extends TableAnyColumn>(field: TCol) {
+export function isNull<TCol extends AnyColumn>(field: TCol) {
   return new IsNullCondition(field);
 }
 
-export class IsNotNullCondition<TCol extends TableAnyColumn> extends Filter<
+export class IsNotNullCondition<TCol extends AnyColumn> extends Filter<
   TCol,
   false
 > {
@@ -321,7 +321,7 @@ export class IsNotNullCondition<TCol extends TableAnyColumn> extends Filter<
   }
 }
 
-export function isNotNull<TCol extends TableAnyColumn>(field: TCol) {
+export function isNotNull<TCol extends AnyColumn>(field: TCol) {
   return new IsNotNullCondition(field);
 }
 
@@ -338,7 +338,7 @@ type InSelectQuery<TArg extends boolean, TReturn> = SelectQuery<
 >;
 
 export class InCondition<
-  TCol extends TableAnyColumn,
+  TCol extends AnyColumn,
   TArg extends boolean,
 > extends Filter<TCol, TArg> {
   readonly field: TCol;
@@ -370,14 +370,14 @@ export class InCondition<
   }
 }
 
-export function isIn<TCol extends TableAnyColumn>(
+export function isIn<TCol extends AnyColumn>(
   field: TCol,
   values: TCol["ValType"][] | InSelectQuery<boolean, TCol["ValType"]>,
 ) {
   return new InCondition(field, values) as InCondition<TCol, false>;
 }
 
-export class NotInCondition<TCol extends TableAnyColumn> extends Filter<
+export class NotInCondition<TCol extends AnyColumn> extends Filter<
   TCol,
   false
 > {
@@ -400,7 +400,7 @@ export class NotInCondition<TCol extends TableAnyColumn> extends Filter<
   }
 }
 
-export function notIn<TCol extends TableAnyColumn>(
+export function notIn<TCol extends AnyColumn>(
   field: TCol,
   values: TCol["ValType"][],
 ): NotInCondition<TCol> {

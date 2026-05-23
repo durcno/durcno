@@ -1,7 +1,7 @@
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
-import type { AnyScalarTableColumn } from "../table";
+import type { AnyScalarColumn } from "../table";
 import type { Or } from "../types";
 import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
 
@@ -10,7 +10,7 @@ import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
 // ============================================================================
 
 export class AbsFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
 > extends SqlFn<
@@ -33,7 +33,7 @@ export class AbsFn<
 
 /** Returns the absolute value of a numeric expression. */
 export function abs<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
 >(expr: TExpr): AbsFn<TExpr> {
@@ -45,7 +45,7 @@ export function abs<
 // ============================================================================
 
 export class ModFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
   TN extends number | Arg<number>,
@@ -78,7 +78,7 @@ export class ModFn<
 
 /** Returns the remainder of `expr` divided by `n`. */
 export function mod<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
   TN extends number | Arg<number>,
@@ -91,7 +91,7 @@ export function mod<
 // ============================================================================
 
 export class RoundFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
   TDecimals extends number | Arg<number> | undefined = undefined,
@@ -126,7 +126,7 @@ export class RoundFn<
 
 /** Rounds a numeric expression to the nearest integer, or to `decimals` decimal places. */
 export function round<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
   TDecimals extends number | Arg<number> | undefined = undefined,
@@ -139,7 +139,7 @@ export function round<
 // ============================================================================
 
 export class CeilFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
 > extends SqlFn<
@@ -162,7 +162,7 @@ export class CeilFn<
 
 /** Returns the smallest integer greater than or equal to the numeric expression. */
 export function ceil<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
 >(expr: TExpr): CeilFn<TExpr> {
@@ -174,7 +174,7 @@ export function ceil<
 // ============================================================================
 
 export class FloorFn<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
 > extends SqlFn<
@@ -197,7 +197,7 @@ export class FloorFn<
 
 /** Returns the largest integer less than or equal to the numeric expression. */
 export function floor<
-  TExpr extends (AnyScalarTableColumn | AnySqlFn) & {
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
     $: { PgType: "numeric" };
   },
 >(expr: TExpr): FloorFn<TExpr> {

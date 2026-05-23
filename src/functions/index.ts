@@ -1,6 +1,6 @@
 import { Query, type QueryContext } from "../query-builders/query";
 import { type Sql, sql } from "../sql";
-import type { StdTableColumn, TableAnyColumn } from "../table";
+import type { AnyColumn, StdTableColumn } from "../table";
 
 export type SqlFnType = "aggregate" | "scalar";
 
@@ -26,7 +26,7 @@ export type SqlFnType = "aggregate" | "scalar";
  * @template TTsType - The TypeScript type this expression evaluates to.
  */
 export abstract class SqlFn<
-  TColumn extends TableAnyColumn,
+  TColumn extends AnyColumn,
   THasArg extends boolean = false,
   TFnType extends "aggregate" | "scalar" = "aggregate" | "scalar",
   TPgType extends string = string,
@@ -107,7 +107,7 @@ export type AnyScalarSqlFn = SqlFn<any, any, "scalar", any, any>;
  */
 export type ExprColumns<TExpr> = TExpr extends {
   $: { kind: "sqlFn" };
-  $Columns: infer TCol extends TableAnyColumn;
+  $Columns: infer TCol extends AnyColumn;
 }
   ? TCol
   : TExpr extends { $: { kind: "column" } }
