@@ -1,6 +1,6 @@
 import * as z from "zod";
 import { Sql } from "../../sql";
-import { Column, type ColumnConfig, type Tuple } from "../common";
+import { Column, type ColumnConfig } from "../common";
 
 // ============================================================================
 // Vector Column
@@ -10,18 +10,9 @@ export type VectorConfig = ColumnConfig & {
   dimensions?: number;
 };
 
-/** Derives a fixed-length numeric tuple when `dimensions` is a number literal, otherwise `number[]`. */
-type VectorValue<TConfig extends VectorConfig> = TConfig extends {
-  dimensions: infer D extends number;
-}
-  ? number extends D
-    ? number[]
-    : Tuple<number, D>
-  : number[];
-
 export class VectorColumn<TConfig extends VectorConfig> extends Column<
   TConfig,
-  VectorValue<TConfig>,
+  number[],
   "numeric"
 > {
   static readonly id = "Column.Vector";
@@ -40,37 +31,31 @@ export class VectorColumn<TConfig extends VectorConfig> extends Column<
     return this.sqlTypeScalar;
   }
 
-  get zodTypeScaler(): TConfig["dimensions"] extends number
-    ? z.ZodTuple<Tuple<z.ZodNumber, TConfig["dimensions"]>, null>
-    : z.ZodArray<z.ZodNumber> {
-    if (this.#dimensions === undefined) return z.array(z.number()) as any;
-    return z.tuple(
-      Array.from({ length: this.#dimensions }, () => z.number()) as unknown as [
-        z.ZodAny,
-      ],
-    ) as any;
+  get zodTypeScaler() {
+    if (this.#dimensions === undefined) return z.array(z.number());
+    return z.array(z.number()).length(this.#dimensions);
   }
 
-  toDriverScalar(value: VectorValue<TConfig> | Sql | null) {
+  toDriverScalar(value: number[] | Sql | null) {
     if (value === null) return null;
     return value instanceof Sql
       ? value.string
       : `[${(value as number[]).join(",")}]`;
   }
 
-  toSQLScalar(value: VectorValue<TConfig> | Sql | null): string {
+  toSQLScalar(value: number[] | Sql | null): string {
     if (value === null) return "NULL";
     return value instanceof Sql
       ? value.string
       : `'[${(value as number[]).join(",")}]'`;
   }
 
-  fromDriverScalar(value: unknown): VectorValue<TConfig> | null {
+  fromDriverScalar(value: unknown): number[] | null {
     if (value === null) return null;
-    if (Array.isArray(value)) return value as VectorValue<TConfig>;
+    if (Array.isArray(value)) return value as number[];
     if (typeof value === "string") {
       try {
-        return JSON.parse(value) as VectorValue<TConfig>;
+        return JSON.parse(value) as number[];
       } catch {
         return null;
       }
@@ -103,18 +88,9 @@ export type HalfvecConfig = ColumnConfig & {
   dimensions?: number;
 };
 
-/** Derives a fixed-length numeric tuple when `dimensions` is a number literal, otherwise `number[]`. */
-type HalfvecValue<TConfig extends HalfvecConfig> = TConfig extends {
-  dimensions: infer D extends number;
-}
-  ? number extends D
-    ? number[]
-    : Tuple<number, D>
-  : number[];
-
 export class HalfvecColumn<TConfig extends HalfvecConfig> extends Column<
   TConfig,
-  HalfvecValue<TConfig>,
+  number[],
   "numeric"
 > {
   static readonly id = "Column.Halfvec";
@@ -133,37 +109,31 @@ export class HalfvecColumn<TConfig extends HalfvecConfig> extends Column<
     return this.sqlTypeScalar;
   }
 
-  get zodTypeScaler(): TConfig["dimensions"] extends number
-    ? z.ZodTuple<Tuple<z.ZodNumber, TConfig["dimensions"]>, null>
-    : z.ZodArray<z.ZodNumber> {
-    if (this.#dimensions === undefined) return z.array(z.number()) as any;
-    return z.tuple(
-      Array.from({ length: this.#dimensions }, () => z.number()) as unknown as [
-        z.ZodAny,
-      ],
-    ) as any;
+  get zodTypeScaler() {
+    if (this.#dimensions === undefined) return z.array(z.number());
+    return z.array(z.number()).length(this.#dimensions);
   }
 
-  toDriverScalar(value: HalfvecValue<TConfig> | Sql | null) {
+  toDriverScalar(value: number[] | Sql | null) {
     if (value === null) return null;
     return value instanceof Sql
       ? value.string
       : `[${(value as number[]).join(",")}]`;
   }
 
-  toSQLScalar(value: HalfvecValue<TConfig> | Sql | null): string {
+  toSQLScalar(value: number[] | Sql | null): string {
     if (value === null) return "NULL";
     return value instanceof Sql
       ? value.string
       : `'[${(value as number[]).join(",")}]'`;
   }
 
-  fromDriverScalar(value: unknown): HalfvecValue<TConfig> | null {
+  fromDriverScalar(value: unknown): number[] | null {
     if (value === null) return null;
-    if (Array.isArray(value)) return value as HalfvecValue<TConfig>;
+    if (Array.isArray(value)) return value as number[];
     if (typeof value === "string") {
       try {
-        return JSON.parse(value) as HalfvecValue<TConfig>;
+        return JSON.parse(value) as number[];
       } catch {
         return null;
       }
