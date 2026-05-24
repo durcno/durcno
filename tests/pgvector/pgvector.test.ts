@@ -97,7 +97,12 @@ describe("pgvector", () => {
     it("insert", async () => {
       const [row] = await db
         .insert(schema.Items)
-        .values({ vec: [1, 2, 3], hvec: [1.5, 2.5, 3.5], svec: "{1:1,3:2}/3", b: "101" })
+        .values({
+          vec: [1, 2, 3],
+          hvec: [1.5, 2.5, 3.5],
+          svec: "{1:1,3:2}/3",
+          b: "101",
+        })
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -134,7 +139,12 @@ describe("pgvector", () => {
     it("insert", async () => {
       const [row] = await db
         .insert(schema.Items)
-        .values({ vec: [0, 0, 0], hvec: [1.5, 2.5, 3.5], svec: "{1:1}/3", b: "000" })
+        .values({
+          vec: [0, 0, 0],
+          hvec: [1.5, 2.5, 3.5],
+          svec: "{1:1}/3",
+          b: "000",
+        })
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -159,7 +169,12 @@ describe("pgvector", () => {
     it("insert", async () => {
       const [row] = await db
         .insert(schema.Items)
-        .values({ vec: [0, 0, 0], hvec: [0, 0, 0], svec: "{1:1,3:2}/3", b: "000" })
+        .values({
+          vec: [0, 0, 0],
+          hvec: [0, 0, 0],
+          svec: "{1:1,3:2}/3",
+          b: "000",
+        })
         .returning({ id: true });
       insertedId = row.id;
       expect(insertedId).toBeDefined();
@@ -250,7 +265,10 @@ describe("pgvector", () => {
       // "111" vs "101" = 1 bit diff, "111" vs "111" = 0, "111" vs "000" = 3
       const rows = await db
         .from(schema.Items)
-        .select({ id: schema.Items.id, dist: hammingDistance(schema.Items.b, "111") })
+        .select({
+          id: schema.Items.id,
+          dist: hammingDistance(schema.Items.b, "111"),
+        })
         .orderBy(asc(hammingDistance(schema.Items.b, "111")));
 
       expect(rows[0].id).toBe(2n); // "111" dist 0

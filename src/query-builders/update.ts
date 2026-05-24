@@ -2,7 +2,6 @@ import type { QueryExecutor } from "../connectors/common";
 import type { FilterExpression } from "../filters/index";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key } from "../types";
-
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
