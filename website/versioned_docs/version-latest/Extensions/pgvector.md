@@ -44,7 +44,7 @@ import {
 Represents a dense vector of floating-point numbers.
 
 - **SQL type**: `vector` or `vector(dimensions)`
-- **JS type**: `number[]` or fixed-length tuple `[number, number, ...]`
+- **JS type**: `number[]`
 
 ```typescript
 import { table, pk, varchar, notNull, pgvector } from "durcno";
@@ -66,22 +66,12 @@ const rows = await db.from(Embeddings).select();
 // rows[0].embedding → [0.1, 0.2, 0.3, ..., 0.5]
 ```
 
-When `dimensions` is specified as a literal number, the JS type is inferred as a fixed-length tuple for better type safety:
-
-```typescript
-const col = pgvector.vector({ dimensions: 3 });
-// JS type: [number, number, number]
-
-const row = await db.from(Embeddings).select().where(...);
-// row.embedding has type [number, number, number]
-```
-
 ### `pgvector.halfvec`
 
 Represents a half-precision (16-bit) vector for memory-efficient storage.
 
 - **SQL type**: `halfvec` or `halfvec(dimensions)`
-- **JS type**: `number[]` or fixed-length tuple
+- **JS type**: `number[]`
 
 ```typescript
 export const Embeddings = table("public", "embeddings", {
