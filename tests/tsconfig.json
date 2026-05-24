@@ -28,6 +28,7 @@
     "./cli/**/*.ts",
     "./columns/**/*.ts",
     "./constraints/**/*.ts",
+    "./pgvector/**/*.ts",
     "./qb/**/*.ts",
     "./logger/**/*.ts",
     "../tsdown.config.ts",

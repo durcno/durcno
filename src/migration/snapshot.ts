@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import type { OnDeleteAction } from "../columns/common";
+import { IndexOn, type OnDeleteAction } from "../columns/common";
 import { check } from "../constraints/check";
 import { primaryKeyConstraint } from "../constraints/primary-key";
 import { uniqueConstraint } from "../constraints/unique";
@@ -120,13 +120,23 @@ export interface SnapshotSequence {
 }
 
 /**
+ * Snapshot of a table index column.
+ */
+export interface SnapshotTableIndexColumn {
+  /** The column name. */
+  name: string;
+  /** Optional operator class for this specific column. */
+  opclass?: string;
+}
+
+/**
  * Snapshot of a table index.
  */
 export interface SnapshotTableIndex {
   /** The index name. */
   name: string;
-  /** Column names included in the index. */
-  columns: string[];
+  /** Columns included in the index. */
+  columns: SnapshotTableIndexColumn[];
   /** The index method (e.g. `"btree"`, `"hash"`, `"gin"`, `"gist"`). */
   type: IndexType;
   /** Whether this is a unique index. */
@@ -244,7 +254,12 @@ export function snapshot(entities: unknown[]): Snapshot {
             index._.getName(table)
           ] = {
             name: index._.getName(table),
-            columns: index._.getColumns().map((col) => col.nameSql),
+            columns: index._.getColumns().map((col) => {
+              if (col instanceof IndexOn) {
+                return { name: col.column.nameSql, opclass: col.opclassStr };
+              }
+              return { name: col.nameSql };
+            }),
             type: index._.getUsing(),
             unique: index._.getUnique(),
           };

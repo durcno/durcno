@@ -1,3 +1,4 @@
+import { IndexOn } from "./columns/common";
 import type { AnyColumn, StdTable, StdTableColumn } from "./table";
 
 export type IndexType =
@@ -12,11 +13,12 @@ export type IndexType =
   | (string & {});
 
 export class Index<Col extends AnyColumn> {
-  readonly #columns: StdTableColumn<Col>[];
+  readonly #columns: (StdTableColumn<Col> | IndexOn<Col>)[];
   #using: IndexType;
   #unique: boolean;
+
   constructor(
-    columns: StdTableColumn<Col>[],
+    columns: (StdTableColumn<Col> | IndexOn<Col>)[],
     using: IndexType,
     unique: boolean,
   ) {
@@ -31,7 +33,9 @@ export class Index<Col extends AnyColumn> {
     getUnique: () => this.#unique,
     getName: (table: StdTable) => {
       return `${table._.nameSql}_${this.#columns
-        .map((col) => col.nameSql)
+        .map((col) =>
+          col instanceof IndexOn ? col.column.nameSql : col.nameSql,
+        )
         .join("_")}_index`;
     },
   };
@@ -55,14 +59,14 @@ export class Index<Col extends AnyColumn> {
 }
 
 export function index<Col extends AnyColumn>(
-  columns: StdTableColumn<Col>[],
+  columns: (StdTableColumn<Col> | IndexOn<Col>)[],
   using?: IndexType,
 ) {
   return new Index(columns, using ?? "btree", false);
 }
 
 export function uniqueIndex<Col extends AnyColumn>(
-  columns: StdTableColumn<Col>[],
+  columns: (StdTableColumn<Col> | IndexOn<Col>)[],
   using?: IndexType,
 ) {
   return new Index(columns, using ?? "btree", true);

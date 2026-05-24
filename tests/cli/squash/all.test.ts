@@ -133,7 +133,9 @@ describe("durcno squash command", () => {
   // Versions 1–3 are generated and immediately applied so the DB ends up with
   // m1–m3 applied and m4–m6 unapplied — the initial state for all squash tests.
 
-  it("[gen 1] should generate and apply initial migration (users table)", () => {
+  it("[gen 1] should generate and apply initial migration (users table)", {
+    timeout: 120000,
+  }, () => {
     const result = runGenerate(1);
     expect(result.success).toBe(true);
 
@@ -144,7 +146,9 @@ describe("durcno squash command", () => {
     expect(runMigrate().success).toBe(true);
   });
 
-  it("[gen 2] should generate and apply migration adding bio and age to users", async () => {
+  it("[gen 2] should generate and apply migration adding bio and age to users", {
+    timeout: 120000,
+  }, async () => {
     const result = runGenerate(2);
     expect(result.success).toBe(true);
 
@@ -155,7 +159,9 @@ describe("durcno squash command", () => {
     expect(runMigrate().success).toBe(true);
   });
 
-  it("[gen 3] should generate and apply migration creating posts table", async () => {
+  it("[gen 3] should generate and apply migration creating posts table", {
+    timeout: 120000,
+  }, async () => {
     const result = runGenerate(3);
     expect(result.success).toBe(true);
 

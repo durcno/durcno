@@ -5,6 +5,7 @@ export const images = {
   "postgres:17-alpine": "postgres:17-alpine",
   "postgres:18-alpine": "postgres:18-alpine",
   "postgis/postgis:18-3.6-alpine": "postgis/postgis:18-3.6-alpine",
+  "pgvector/pgvector:pg16": "pgvector/pgvector:pg16",
 } as const;
 
 export type Image = keyof typeof images;

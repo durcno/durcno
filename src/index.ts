@@ -24,6 +24,7 @@ export { json } from "./columns/json";
 export { jsonb } from "./columns/jsonb";
 export { macaddr } from "./columns/macaddr";
 export { numeric } from "./columns/numeric";
+export { pgvector } from "./columns/pgvector/index";
 export { geography } from "./columns/postgis/geography/index";
 export { serial } from "./columns/serial";
 export { smallint } from "./columns/smallint";
@@ -86,6 +87,14 @@ export {
   mod,
   round,
 } from "./functions/numeric";
+export {
+  cosineDistance,
+  hammingDistance,
+  innerProduct,
+  jaccardDistance,
+  l1Distance,
+  l2Distance,
+} from "./functions/pgvector";
 export { stDistance } from "./functions/postgis";
 export {
   left,

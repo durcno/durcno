@@ -6,7 +6,7 @@ import { Arg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
 import { Sql } from "../sql";
 import { entityType } from "../symbols";
-import type { StdTable, StdTableColumn } from "../table";
+import type { AnyColumn, StdTable, StdTableColumn } from "../table";
 import { camelToSnake } from "../utils";
 
 export const notNull = true as const;
@@ -77,9 +77,11 @@ export function tuple<const L extends number>(
 }
 
 // Helper type to build a tuple of fixed length
-type Tuple<T, L extends number, Acc extends T[] = []> = Acc["length"] extends L
-  ? Acc
-  : Tuple<T, L, [...Acc, T]>;
+export type Tuple<
+  T,
+  L extends number,
+  Acc extends T[] = [],
+> = Acc["length"] extends L ? Acc : Tuple<T, L, [...Acc, T]>;
 
 // Process dimensions from left to right (first = innermost)
 type MultiDimValueArray<
@@ -780,6 +782,24 @@ export abstract class Column<
       this["ValType"]
     >;
   }
+
+  /**
+   * Applies an operator class to this column for index creation.
+   *
+   * @param opclass - The operator class to use (e.g., 'vector_l2_ops').
+   * @returns an IndexOn instance wrapping this column and its opclass.
+   */
+  opclass(opclass: string): IndexOn<this> {
+    return new IndexOn(this as unknown as StdTableColumn<this>, opclass);
+  }
+}
+
+export class IndexOn<TCol extends AnyColumn = AnyColumn> {
+  static readonly [entityType] = "IndexOn";
+  constructor(
+    public readonly column: StdTableColumn<TCol>,
+    public readonly opclassStr: string,
+  ) {}
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: A Column value can be anything

@@ -26,6 +26,7 @@
 - **🔌 Multiple Drivers** — Support for `pg`, `postgres`, `bun`, and `pglite` drivers.
 - **🛡️ Zod Integration** — Built-in Zod validators for schema validation and type inference.
 - **🌍 PostGIS Support** — First-class geographic column types for spatial queries.
+- **🔍 pgvector Support** — Vector similarity search with type-safe distance functions and indexes.
 
 ## Setup
 

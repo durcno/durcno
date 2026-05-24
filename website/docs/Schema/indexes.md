@@ -262,16 +262,20 @@ For AI/ML applications using vector embeddings, Durcno supports pgvector index t
 Hierarchical Navigable Small World index for approximate nearest neighbor search.
 
 ```typescript
+import { table, pk, index, pgvector, notNull } from "durcno";
+
 export const Embeddings = table(
   "public",
   "embeddings",
   {
     id: pk(),
-    embedding: text({ notNull }), // vector(1536) in PostgreSQL
+    embedding: pgvector.vector({ dimensions: 1536, notNull }),
     content: text({ notNull }),
   },
   {
-    indexes: (t) => [index([t.embedding]).using("hnsw")],
+    indexes: (t) => [
+      index([t.embedding.opclass("vector_l2_ops")]).using("hnsw"),
+    ],
   },
 );
 ```
@@ -288,16 +292,20 @@ export const Embeddings = table(
 Inverted File Flat index for approximate nearest neighbor search.
 
 ```typescript
+import { table, pk, index, pgvector, notNull, varchar } from "durcno";
+
 export const Documents = table(
   "public",
   "documents",
   {
     id: pk(),
-    embedding: text({ notNull }), // vector column
+    embedding: pgvector.vector({ dimensions: 1536, notNull }),
     title: varchar({ length: 255, notNull }),
   },
   {
-    indexes: (t) => [index([t.embedding]).using("ivfflat")],
+    indexes: (t) => [
+      index([t.embedding.opclass("vector_l2_ops")]).using("ivfflat"),
+    ],
   },
 );
 ```
@@ -317,6 +325,95 @@ CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
 :::
+
+## Operator Classes
+
+Operator classes allow you to specify how a column should be indexed, enabling specialized index strategies for particular data types or query patterns. Use the `.opclass()` method on a column to apply an operator class when defining an index.
+
+### Basic Usage
+
+```typescript
+import { table, pk, index, pgvector, notNull } from "durcno";
+
+export const Embeddings = table(
+  "public",
+  "embeddings",
+  {
+    id: pk(),
+    embedding: pgvector.vector({ dimensions: 1536, notNull }),
+  },
+  {
+    indexes: (t) => [
+      // Use L2 distance operator class with HNSW index
+      index([t.embedding.opclass("vector_l2_ops")]).using("hnsw"),
+    ],
+  },
+);
+```
+
+### Operator Classes for pgvector
+
+pgvector supports several operator classes for different distance metrics:
+
+| Operator Class       | Distance Metric                      | Use Case                         |
+| -------------------- | ------------------------------------ | -------------------------------- |
+| `vector_l2_ops`      | Euclidean (L2) distance              | Default, most common use case    |
+| `vector_ip_ops`      | Inner product                        | For dot product similarity       |
+| `vector_cosine_ops`  | Cosine similarity                    | For normalized embeddings        |
+| `halfvec_l2_ops`     | L2 distance for half-precision       | For `halfvec` columns            |
+| `halfvec_cosine_ops` | Cosine similarity for half-precision | For `halfvec` columns            |
+| `bit_hamming_ops`    | Hamming distance                     | For binary vectors (bit strings) |
+
+### Multiple Vector Types with Different Operators
+
+```typescript
+import { table, pk, index, pgvector, notNull } from "durcno";
+
+export const Embeddings = table(
+  "public",
+  "embeddings",
+  {
+    id: pk(),
+    embedding: pgvector.vector({ dimensions: 1536, notNull }),
+    halfEmbedding: pgvector.halfvec({ dimensions: 768, notNull }),
+    bits: pgvector.bit({ length: 512, notNull }),
+  },
+  {
+    indexes: (t) => [
+      // L2 distance for dense vectors
+      index([t.embedding.opclass("vector_l2_ops")]).using("hnsw"),
+
+      // Cosine distance for half-precision vectors
+      index([t.halfEmbedding.opclass("halfvec_cosine_ops")]).using("ivfflat"),
+
+      // Hamming distance for binary vectors
+      index([t.bits.opclass("bit_hamming_ops")]).using("hnsw"),
+    ],
+  },
+);
+```
+
+### Combining with Other Index Types
+
+Operator classes work with all index types, not just vector indexes. They can be used with B-Tree, GiST, and other index types for domain-specific optimization:
+
+```typescript
+// Example with B-Tree index and text operators
+export const Users = table(
+  "public",
+  "users",
+  {
+    id: pk(),
+    email: varchar({ length: 255, notNull }),
+  },
+  {
+    indexes: (t) => [
+      // Case-insensitive text search with specific operator class
+      index([t.email.opclass("text_pattern_ops")]).using("btree"),
+    ],
+  },
+);
+```
 
 ## Unique Indexes
 

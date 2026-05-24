@@ -524,7 +524,11 @@ export function generateMigration(
 
       // Create indexes
       for (const idx of Object.values(currTable.indexes)) {
-        const cols = idx.columns.map((c) => `"${c}"`).join(", ");
+        const cols = idx.columns
+          .map((c) =>
+            c.opclass ? `["${c.name}", "${c.opclass}"]` : `"${c.name}"`,
+          )
+          .join(", ");
         let indexStmt = `ddl.createIndex("${idx.name}").on("${currTable.schema}", "${currTable.name}", [${cols}]).using("${idx.type}")`;
         if (idx.unique) indexStmt += ".unique()";
         statements.push(indexStmt);
@@ -693,7 +697,11 @@ function generateAlterTableStmts(
   for (const idxName in currTable.indexes) {
     if (!prevTable.indexes[idxName]) {
       const idx = currTable.indexes[idxName];
-      const cols = idx.columns.map((c) => `"${c}"`).join(", ");
+      const cols = idx.columns
+        .map((c) =>
+          c.opclass ? `["${c.name}", "${c.opclass}"]` : `"${c.name}"`,
+        )
+        .join(", ");
       let indexStmt = `ddl.createIndex("${idx.name}").on("${currTable.schema}", "${currTable.name}", [${cols}]).using("${idx.type}")`;
       if (idx.unique) indexStmt += ".unique()";
       statements.push(indexStmt);

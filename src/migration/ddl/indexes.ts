@@ -22,7 +22,7 @@ export class CreateIndexBuilder extends DDLStatement {
   private tableSchema = "";
   private tableName = "";
   private indexType: IndexType = "btree";
-  private indexColumns: string[] = [];
+  private indexColumns: (string | [string, string])[] = [];
   private isUnique = false;
   private isConcurrent = false;
 
@@ -57,7 +57,11 @@ export class CreateIndexBuilder extends DDLStatement {
    * @param columns - Optional array of column names to index.
    * @returns `this` for chaining.
    */
-  on(schema: string, table: string, columns?: string[]): this {
+  on(
+    schema: string,
+    table: string,
+    columns?: (string | [string, string])[],
+  ): this {
     this.tableSchema = schema;
     this.tableName = table;
     if (columns) {
@@ -73,7 +77,7 @@ export class CreateIndexBuilder extends DDLStatement {
    * @param columns - Optional array of column names to index.
    * @returns `this` for chaining.
    */
-  using(type: IndexType, columns?: string[]): this {
+  using(type: IndexType, columns?: (string | [string, string])[]): this {
     this.indexType = type;
     if (columns) {
       this.indexColumns = columns;
@@ -93,7 +97,13 @@ export class CreateIndexBuilder extends DDLStatement {
 
   toSQL(): string {
     const tableRelation = `"${this.tableSchema}"."${this.tableName}"`;
-    const columns = this.indexColumns.map((c) => `"${c}"`).join(", ");
+    const columns = this.indexColumns
+      .map((c) => {
+        const colName = typeof c === "string" ? c : c[0];
+        const colOpclass = typeof c === "string" ? undefined : c[1];
+        return colOpclass ? `"${colName}" ${colOpclass}` : `"${colName}"`;
+      })
+      .join(", ");
     const uniqueStr = this.isUnique ? " UNIQUE" : "";
     const concurrentlyStr = this.isConcurrent ? " CONCURRENTLY" : "";
     return `CREATE${uniqueStr} INDEX${concurrentlyStr} ${this.indexName} ON ${tableRelation} USING ${this.indexType} (${columns});`;
@@ -106,7 +116,14 @@ export class CreateIndexBuilder extends DDLStatement {
 
     table.indexes[this.indexName] = {
       name: this.indexName,
-      columns: [...this.indexColumns],
+      columns: this.indexColumns.map((c) => {
+        const name = typeof c === "string" ? c : c[0];
+        const colOpclass = typeof c === "string" ? undefined : c[1];
+        return {
+          name,
+          opclass: colOpclass,
+        };
+      }),
       type: this.indexType,
       unique: this.isUnique,
     };

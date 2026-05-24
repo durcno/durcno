@@ -8,9 +8,10 @@ Durcno provides built-in support for popular PostgreSQL extensions through dedic
 
 ## Available Extensions
 
-| Extension            | Description                 | Column Types                                                             |
-| -------------------- | --------------------------- | ------------------------------------------------------------------------ |
-| [PostGIS](./postgis) | Spatial and geographic data | `geography.point`, `geography.linestring`, `geography.polygon`, and more |
+| Extension              | Description                      | Column Types                                                                |
+| ---------------------- | -------------------------------- | --------------------------------------------------------------------------- |
+| [PostGIS](./postgis)   | Spatial and geographic data      | `geography.point`, `geography.linestring`, `geography.polygon`, and more    |
+| [pgvector](./pgvector) | Vector similarity and embeddings | `pgvector.vector`, `pgvector.halfvec`, `pgvector.sparsevec`, `pgvector.bit` |
 
 ## Using Extensions
 
