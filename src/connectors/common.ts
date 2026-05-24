@@ -9,7 +9,7 @@ import type { Query } from "../query-builders/query";
  * This value is used when no explicit pool size is specified in the
  * connector configuration.
  */
-export const DEFAULT_POOL_MAX = 10;
+export const DEFAULT_POOL_MAX = 5;
 
 /**
  * Options passed to connector constructors containing database connection
