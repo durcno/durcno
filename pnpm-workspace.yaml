@@ -2,11 +2,13 @@ packages:
   - tests
   - website
 
-onlyBuiltDependencies:
-  - "@swc/core"
-  - core-js
-  - core-js-pure
-  - cpu-features
-  - esbuild
-  - protobufjs
-  - ssh2
+allowBuilds:
+  "@swc/core": true
+  core-js: true
+  cpu-features: true
+  esbuild: true
+  protobufjs: true
+  ssh2: true
+
+minimumReleaseAgeExclude:
+  - cngpac
