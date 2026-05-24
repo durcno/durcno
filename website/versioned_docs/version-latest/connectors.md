@@ -178,7 +178,7 @@ export default defineConfig({
 
     // Optional: Connection pool settings
     pool: {
-      max: 10, // Maximum connections (default: 10)
+      max: 10, // Maximum connections (default: 5)
     },
   }),
 });
