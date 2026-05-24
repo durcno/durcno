@@ -107,22 +107,31 @@ export const PostsRelations = relations(Posts, () => ({
 }));
 
 // Comments table with multiple foreign keys
-export const Comments = table("public", "comments", {
-  id: pk(),
-  postId: bigint({ notNull }).references({
-    column: () => Posts.id,
-    onDelete: "CASCADE",
-  }),
-  userId: bigint({ notNull }).references({
-    column: () => Users.id,
-    onDelete: "CASCADE",
-  }),
-  parentId: bigint({}), // Self-reference for nested comments
-  body: varchar({ length: 500 }),
-  isEdited: boolean({ notNull }).default(false),
-  createdAt: timestamp({ notNull }).default(now()),
-  editedAt: timestamp({}),
-});
+export const Comments = table(
+  "public",
+  "comments",
+  {
+    id: pk(),
+    postId: bigint({ notNull }).references({
+      column: () => Posts.id,
+      onDelete: "CASCADE",
+    }),
+    userId: bigint({ notNull }).references({
+      column: () => Users.id,
+      onDelete: "CASCADE",
+    }),
+    parentId: bigint({}), // Self-reference for nested comments
+    body: varchar({ length: 500 }),
+    isEdited: boolean({ notNull }).default(false),
+    createdAt: timestamp({ notNull }).default(now()),
+    editedAt: timestamp({}),
+  },
+  {
+    foreignKeys: (t, fk) => [
+      fk(t.parentId).references(t.id).onDelete("SET NULL"),
+    ],
+  },
+);
 
 export const CommentsRelations = relations(Comments, () => ({
   post: fk(Comments.postId, Posts),

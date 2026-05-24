@@ -6,18 +6,21 @@ sidebar_position: 1.45
 
 Durcno provides type-safe APIs for defining PostgreSQL constraints on tables. Constraints enforce rules at the database level, guaranteeing data integrity regardless of application code.
 
-Durcno supports three types of table-level constraints:
+Durcno supports four types of table-level constraints:
 
 | Constraint      | Purpose                                              | API                                                              |
 | --------------- | ---------------------------------------------------- | ---------------------------------------------------------------- |
 | **Check**       | Validate column values with expressions              | `check(name, expr)` via callback **or** `.check(fn)` on a column |
 | **Unique**      | Prevent duplicate values across two or more columns  | `unique(name, columns)` via callback                             |
 | **Primary Key** | Define a composite primary key (two or more columns) | `primaryKey(name, columns)` via callback                         |
+| **Foreign Key** | Enforce referential integrity between tables         | `fk(column).references(refColumn)` via callback                  |
 
 :::tip Column-Level vs Table-Level
 For **single-column** primary keys and unique constraints, use the column-level flags `primaryKey` and `unique` directly on the column definition. Table-level `unique()` and `primaryKey()` (passed as callback parameters) require **two or more columns** and are designed for composite (multi-column) cases.
 
 For **single-column check constraints**, you can use the column-level `.check(fn)` chainable modifier instead of `checkConstraints`. The constraint name is auto-generated as `{table}_{column}_check`.
+
+For **column-level foreign keys**, use the `.references()` chainable modifier. Use the table-level `foreignKeys` callback for **self-referencing** foreign keys (e.g., a `parentId` column that refers back to the same table's `id`).
 :::
 
 ---
@@ -293,6 +296,90 @@ export const UserRoles = table(
 
 ---
 
+## Foreign Keys
+
+Foreign key constraints enforce referential integrity between tables at the database level. Durcno supports two ways to define them:
+
+| Approach                           | When to use                           |
+| ---------------------------------- | ------------------------------------- |
+| Column-level `.references()`       | Cross-table foreign keys (most cases) |
+| Table-level `foreignKeys` callback | Self-referencing foreign keys         |
+
+### Column-Level Foreign Keys
+
+For a foreign key to another table, use the `.references()` chainable modifier directly on the column definition. See the [Columns](./columns.md#referencesref) page for full details.
+
+```typescript
+import { table, pk, bigint, notNull } from "durcno";
+
+export const Users = table("public", "users", { id: pk() });
+
+export const Posts = table("public", "posts", {
+  id: pk(),
+  // Defaults to CASCADE on delete
+  userId: bigint({ notNull }).references(() => Users.id),
+  // With explicit onDelete action
+  reviewerId: bigint({}).references({
+    column: () => Users.id,
+    onDelete: "SET NULL",
+  }),
+});
+```
+
+### Table-Level Foreign Keys (Self-References)
+
+Use the `foreignKeys` callback in the fourth argument to `table()` when a column references the **same table** — for example, a `parentId` column on a comments table that points back to the same table's `id`.
+
+Because the table object is fully constructed before the callback is invoked, column references are available directly without lazy arrow-function wrappers.
+
+```typescript
+import { table, pk, bigint, varchar, notNull } from "durcno";
+
+export const Comments = table(
+  "public",
+  "comments",
+  {
+    id: pk(),
+    parentId: bigint({}), // nullable self-reference
+    body: varchar({ length: 500, notNull }),
+  },
+  {
+    foreignKeys: (t, fk) => [
+      fk(t.parentId).references(t.id).onDelete("SET NULL"),
+    ],
+  },
+);
+```
+
+The `fk` helper is injected by Durcno and works as follows:
+
+1. `fk(sourceColumn)` — selects the column that holds the foreign key value.
+2. `.references(targetColumn)` — specifies the column being referenced (on the same or a different table).
+3. `.onDelete(action)` _(optional)_ — overrides the default `CASCADE` action. Accepts any standard PostgreSQL `ON DELETE` action: `"CASCADE"`, `"SET NULL"`, `"SET DEFAULT"`, `"RESTRICT"`, or `"NO ACTION"`.
+
+#### Available `ON DELETE` Actions
+
+| Action          | Behaviour                                                                  |
+| --------------- | -------------------------------------------------------------------------- |
+| `"CASCADE"`     | Delete child rows when the parent is deleted _(default)_                   |
+| `"SET NULL"`    | Set the foreign key column to `NULL` when the parent is deleted            |
+| `"SET DEFAULT"` | Set the foreign key column to its default value when the parent is deleted |
+| `"RESTRICT"`    | Prevent deletion of the parent if any child rows exist                     |
+| `"NO ACTION"`   | Like `RESTRICT` but checked at the end of the statement                    |
+
+#### Multiple Foreign Keys
+
+You can return multiple entries from the callback:
+
+```typescript
+foreignKeys: (t, fk) => [
+  fk(t.parentId).references(t.id).onDelete("SET NULL"),
+  fk(t.mergedIntoId).references(t.id).onDelete("CASCADE"),
+],
+```
+
+---
+
 ## Constraint Naming
 
 Constraint names are used **exactly as you provide them** — no prefix or suffix is added automatically. You are responsible for choosing names that are unique within the database.
@@ -374,7 +461,7 @@ In PostgreSQL, a unique constraint automatically creates a unique index, so func
 
 ## Related
 
-- [Columns](./columns.md) — Column-level `primaryKey` and `unique` flags
+- [Columns](./columns.md) — Column-level `primaryKey`, `unique`, and `notNull` flags
 - [Filters](../Expressions/filters.md) — All available filters for check constraints
 - [Indexes](./indexes.md) — `uniqueIndex()` for index-level uniqueness
 - [Enums](./enums.md) — Alternative to CHECK for fixed value sets

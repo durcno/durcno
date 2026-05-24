@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { IndexOn, type OnDeleteAction } from "../columns/common";
 import { check } from "../constraints/check";
+import { fk } from "../constraints/foreign-key";
 import { primaryKeyConstraint } from "../constraints/primary-key";
 import { uniqueConstraint } from "../constraints/unique";
 import { is } from "../entity";
@@ -248,6 +249,24 @@ export function snapshot(entities: unknown[]): Snapshot {
           as: col.getGeneratedAs,
         };
       });
+      const tableFks =
+        table._.extra.foreignKeys?.(table as StdTableWithColumns, fk) ?? [];
+      for (const foreignKey of tableFks) {
+        const srcCol = foreignKey._.getColumn();
+        const refCol = foreignKey._.getReference();
+        const colEntry =
+          ss.tables[`${table._.schemaSql}.${table._.nameSql}`].columns[
+            srcCol.nameSql
+          ];
+        if (colEntry) {
+          colEntry.references = {
+            schema: refCol.table._.schemaSql,
+            table: refCol.table._.nameSql,
+            column: refCol.nameSql,
+            onDelete: foreignKey._.getOnDelete(),
+          };
+        }
+      }
       (table._.extra.indexes?.(table as StdTableWithColumns) ?? []).forEach(
         (index) => {
           ss.tables[`${table._.schemaSql}.${table._.nameSql}`].indexes[

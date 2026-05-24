@@ -1,5 +1,6 @@
 import type { Column } from "./columns/common";
 import type { Check, CheckExpression } from "./constraints/check";
+import type { ForeignKey, ForeignKeyFn } from "./constraints/foreign-key";
 import type {
   PrimaryKeyConstraint,
   PrimaryKeyConstraintFn,
@@ -41,6 +42,10 @@ type TableExtra<
       >,
     ) => Check,
   ) => Check[];
+  foreignKeys?: (
+    table: TableWithColumns<TSchema, TName, TColumns>,
+    fk: ForeignKeyFn,
+  ) => ForeignKey[];
 };
 
 type TableConfig<

@@ -572,8 +572,8 @@ export const Posts = table("public", "posts", {
 });
 ```
 
-:::info Lazy References
-Use arrow functions `() => Table.column` to avoid circular dependency issues when tables reference each other.
+:::tip Self-Referencing Foreign Keys
+For foreign keys that point back to **the same table** (e.g., a `parentId` column that references `id` on the same table), use the `foreignKeys` callback in the table's fourth argument instead. See [Foreign Keys](./constraints.md#foreign-keys) in the Constraints page.
 :::
 
 #### `.generatedAlways()`

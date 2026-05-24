@@ -198,4 +198,38 @@ describe("DELETE queries", () => {
     const users = await db.from(schema.Users).select();
     expect(users).toHaveLength(0);
   });
+
+  describe("table-level foreignKeys SET NULL on parent delete", () => {
+    it("should nullify parentId on child comments when parent is deleted", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values({ userId: user.id, title: "Post" })
+        .returning({ id: true });
+
+      const [parent] = await db
+        .insert(schema.Comments)
+        .values({ postId: post.id, userId: user.id, body: "Parent comment" })
+        .returning({ id: true });
+
+      await db.insert(schema.Comments).values({
+        postId: post.id,
+        userId: user.id,
+        parentId: parent.id,
+        body: "Reply comment",
+      });
+
+      // Delete parent comment — should SET NULL on child's parentId
+      await db.delete(schema.Comments).where(eq(schema.Comments.id, parent.id));
+
+      const remaining = await db.from(schema.Comments).select();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].body).toBe("Reply comment");
+      expect(remaining[0].parentId).toBeNull();
+    });
+  });
 });

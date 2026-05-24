@@ -344,4 +344,56 @@ describe("INSERT queries", () => {
       expect(posts[0].userId).toEqual(user.id);
     });
   });
+
+  describe("table-level foreignKeys (self-reference)", () => {
+    it("should insert a reply with a valid parentId", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values({ userId: user.id, title: "Post" })
+        .returning({ id: true });
+
+      const [parent] = await db
+        .insert(schema.Comments)
+        .values({ postId: post.id, userId: user.id, body: "Parent comment" })
+        .returning({ id: true });
+
+      await db.insert(schema.Comments).values({
+        postId: post.id,
+        userId: user.id,
+        parentId: parent.id,
+        body: "Reply comment",
+      });
+
+      const comments = await db.from(schema.Comments).select();
+      expect(comments).toHaveLength(2);
+      const reply = comments.find((c) => c.body === "Reply comment");
+      expect(reply?.parentId).toEqual(parent.id);
+    });
+
+    it("should reject insert with a non-existent parentId", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insert(schema.Posts)
+        .values({ userId: user.id, title: "Post" })
+        .returning({ id: true });
+
+      await expect(
+        db.insert(schema.Comments).values({
+          postId: post.id,
+          userId: user.id,
+          parentId: 999999n,
+          body: "Invalid reply",
+        }),
+      ).rejects.toThrow();
+    });
+  });
 });
