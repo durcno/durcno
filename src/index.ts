@@ -126,7 +126,9 @@ export {
   many,
   one,
   relations,
+  type Table,
   type TableColumn,
+  type TableWithColumns,
   table,
 } from "./table";
 
