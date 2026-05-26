@@ -823,7 +823,9 @@ function orderTables(
             ? `${column.references.schema}.${column.references.table}`
             : undefined,
         )
-        .filter((table) => table !== undefined) as string[];
+        .filter(
+          (table) => table !== undefined && table !== tableName,
+        ) as string[];
       return [tableName, references];
     }),
   );
