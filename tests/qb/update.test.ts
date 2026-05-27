@@ -338,4 +338,28 @@ describe("UPDATE queries", () => {
 
     expect(updated.modifiedAt.getTime()).toBe(explicitDate.getTime());
   });
+
+  it("should update with RETURNING * clause", async () => {
+    const [user] = await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "returnstar" }))
+      .returning({ id: true });
+
+    const result = await db
+      .update(schema.Users)
+      .set({ username: "returnstarchanged" })
+      .where(eq(schema.Users.id, user.id))
+      .returning("*");
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toHaveProperty("id");
+    expect(result[0]).toHaveProperty("username");
+    expect(result[0]).toHaveProperty("email");
+    expect(result[0]).toHaveProperty("score");
+    expect(result[0]).toHaveProperty("age");
+    expect(result[0]).toHaveProperty("isActive");
+    expect(result[0]).toHaveProperty("isVerified");
+    expect(result[0]).toHaveProperty("status");
+    expect(result[0].username).toBe("returnstarchanged");
+  });
 });

@@ -56,22 +56,27 @@ class UpdateQuery<
     | {
         [ColName in keyof TTableWC["_"]["columns"]]?: false;
       }
+    | "*"
     | undefined,
-  TReturn = TReturning extends Record<Key, boolean>
-    ? TReturning extends {
-        [ColName in keyof TTableWC["_"]["columns"]]?: false;
-      }
-      ? {
-          [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends false
-            ? never
-            : ColName]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-        }[]
-      : {
-          [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends true
-            ? ColName
-            : never]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-        }[]
-    : null,
+  TReturn = TReturning extends "*"
+    ? {
+        [ColName in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
+      }[]
+    : TReturning extends Record<Key, boolean>
+      ? TReturning extends {
+          [ColName in keyof TTableWC["_"]["columns"]]?: false;
+        }
+        ? {
+            [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends false
+              ? never
+              : ColName]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
+          }[]
+        : {
+            [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends true
+              ? ColName
+              : never]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
+          }[]
+      : null,
 > extends QueryPromise<TReturn> {
   readonly #table: TTableWC;
   readonly #values: TValues;
@@ -113,6 +118,9 @@ class UpdateQuery<
     );
   }
 
+  /** Return all columns using `RETURNING *`. */
+  returning(all: "*"): UpdateQuery<TTableWC, TValues, TPrepare, TWhere, "*">;
+  /** Return a subset of columns. */
   returning<
     TReturnings extends
       | {
@@ -121,12 +129,17 @@ class UpdateQuery<
       | {
           [ColName in keyof TTableWC["_"]["columns"]]?: false;
         },
-  >(returnings: TReturnings) {
+  >(
+    returnings: TReturnings,
+  ): UpdateQuery<TTableWC, TValues, TPrepare, TWhere, TReturnings>;
+  returning(
+    returnings: "*" | { [ColName in keyof TTableWC["_"]["columns"]]?: boolean },
+  ) {
     return new UpdateQuery(
       this.#table,
       this.#values,
       this.#$where,
-      returnings,
+      returnings as never,
       this.#executor,
       this.#prepare,
     );
@@ -171,10 +184,14 @@ class UpdateQuery<
       query.sql += ` WHERE `;
       this.#$where.toQuery(query);
     }
-    if (this.#$returning) {
+    if (this.#$returning === "*") {
+      query.sql += " RETURNING *";
+    } else if (this.#$returning) {
       query.sql += " RETURNING ";
-      const returningFields = Object.keys(this.#$returning).filter(
-        (k) => this.#$returning?.[k] === true,
+      const returningFields = Object.keys(
+        this.#$returning as Record<string, boolean>,
+      ).filter(
+        (k) => (this.#$returning as Record<string, boolean>)?.[k] === true,
       );
       query.sql += returningFields
         .map((field) => `"${this.#table._.columns[field].nameSql}"`)

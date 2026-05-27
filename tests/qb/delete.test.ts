@@ -232,4 +232,30 @@ describe("DELETE queries", () => {
       expect(remaining[0].parentId).toBeNull();
     });
   });
+
+  it("should delete with RETURNING * clause", async () => {
+    const [user] = await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "returnstardelete" }))
+      .returning({ id: true });
+
+    const deleted = await db
+      .delete(schema.Users)
+      .where(eq(schema.Users.id, user.id))
+      .returning("*");
+
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0]).toHaveProperty("id");
+    expect(deleted[0]).toHaveProperty("username");
+    expect(deleted[0]).toHaveProperty("email");
+    expect(deleted[0]).toHaveProperty("score");
+    expect(deleted[0]).toHaveProperty("age");
+    expect(deleted[0]).toHaveProperty("isActive");
+    expect(deleted[0]).toHaveProperty("isVerified");
+    expect(deleted[0]).toHaveProperty("status");
+    expect(deleted[0].username).toBe("returnstardelete");
+
+    const remaining = await db.from(schema.Users).select();
+    expect(remaining).toHaveLength(0);
+  });
 });

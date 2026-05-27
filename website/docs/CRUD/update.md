@@ -16,10 +16,10 @@ Use `db.update()` to modify existing rows in a table. The update builder provide
 
 ### Query methods (UpdateQuery)
 
-| Method              | Description                            |
-| ------------------- | -------------------------------------- |
-| `.where(condition)` | Filter which rows are updated          |
-| `.returning()`      | Specify columns to return after update |
+| Method              | Description                                                        |
+| ------------------- | ------------------------------------------------------------------ |
+| `.where(condition)` | Filter which rows are updated                                      |
+| `.returning(cols)`  | Specify columns to return after update (use `"*"` for all columns) |
 
 ## Basic Usage
 
@@ -105,6 +105,14 @@ const updated = await db
   .where(eq(Users.id, 1n))
   .returning({ createdAt: false });
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user" }[]
+
+// Return all columns using the wildcard
+const updated = await db
+  .update(Users)
+  .set({ email: "updated@example.com" })
+  .where(eq(Users.id, 1n))
+  .returning("*");
+// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; ... }[]
 ```
 
 ### Without Returning

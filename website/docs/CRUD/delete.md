@@ -10,10 +10,10 @@ Use `db.delete()` to remove rows from a table. The delete builder supports filte
 
 ### Query methods (DeleteQuery)
 
-| Method              | Description                            |
-| ------------------- | -------------------------------------- |
-| `.where(condition)` | Filter which rows will be deleted      |
-| `.returning()`      | Specify columns to return after delete |
+| Method              | Description                                                        |
+| ------------------- | ------------------------------------------------------------------ |
+| `.where(condition)` | Filter which rows will be deleted                                  |
+| `.returning(cols)`  | Specify columns to return after delete (use `"*"` for all columns) |
 
 ## Basic Usage
 
@@ -77,6 +77,10 @@ const deleted = await db
   .where(eq(Users.id, 1n))
   .returning({ createdAt: false });
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user" }[]
+
+// Return all columns using the wildcard
+const deleted = await db.delete(Users).where(eq(Users.id, 1n)).returning("*");
+// Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; ... }[]
 ```
 
 ### Without Returning
