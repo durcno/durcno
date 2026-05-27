@@ -295,6 +295,45 @@ const result = await db.from(Products).select({
 
 ---
 
+## Arithmetic Operators
+
+Arithmetic operators combine two numeric expressions using standard math operators. Both operands can be a numeric column, the result of another numeric function, a plain number literal, or an `Arg<number>`.
+
+| Function    | SQL       | Returns  | Description                           |
+| ----------- | --------- | -------- | ------------------------------------- |
+| `add(a, b)` | `(a + b)` | `number` | Sum of two numeric expressions        |
+| `sub(a, b)` | `(a - b)` | `number` | Difference of two numeric expressions |
+| `mul(a, b)` | `(a * b)` | `number` | Product of two numeric expressions    |
+| `div(a, b)` | `(a / b)` | `number` | Quotient of two numeric expressions   |
+
+### Basic Usage
+
+```typescript
+import { add, sub, mul, div } from "durcno";
+
+const result = await db.from(Orders).select({
+  grossTotal: add(Orders.subtotal, Orders.tax),
+  discount: sub(Orders.price, Orders.discountAmount),
+  doubled: mul(Orders.quantity, 2),
+  half: div(Orders.amount, 2),
+});
+```
+
+### Nesting Arithmetic Operators
+
+Arithmetic results are wrapped in parentheses, so they compose safely:
+
+```typescript
+import { add, mul, sub } from "durcno";
+
+// (age * 2) + (5 - 1)
+const result = await db.from(Users).select({
+  derived: add(mul(Users.age, 2), sub(5, 1)),
+});
+```
+
+---
+
 ## Functions in `orderBy`
 
 All scalar functions can be used with `asc()` / `desc()` in `.orderBy()`:

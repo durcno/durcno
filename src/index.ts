@@ -80,6 +80,7 @@ export {
   min,
   sum,
 } from "./functions/aggregate";
+export { add, div, mul, sub } from "./functions/arithmetic";
 export {
   abs,
   ceil,

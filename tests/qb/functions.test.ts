@@ -4,11 +4,13 @@ import type Docker from "dockerode";
 import {
   type $Client,
   abs,
+  add,
   and,
   ceil,
   contains,
   database,
   defineConfig,
+  div,
   endsWith,
   eq,
   floor,
@@ -18,11 +20,13 @@ import {
   lower,
   lt,
   mod,
+  mul,
   ne,
   position,
   right,
   round,
   startsWith,
+  sub,
   trim,
   upper,
 } from "durcno";
@@ -236,5 +240,35 @@ describe("String and Numeric Functions and Filters", () => {
         ),
       );
     expect(lenLt.length).toBe(1);
+  });
+
+  it("Arithmetic functions (add, sub, mul, div) evaluate correctly", async () => {
+    const baseValue = 10;
+    const [user] = await db
+      .insert(schema.Users)
+      .values([
+        createTestUser({
+          username: "ArithmeticTest",
+          age: baseValue,
+        }),
+      ])
+      .returning({ id: true });
+
+    const result = await db
+      .from(schema.Users)
+      .select({
+        added: add(schema.Users.age, 5),
+        subtracted: sub(schema.Users.age, 3),
+        multiplied: mul(schema.Users.age, 2),
+        divided: div(schema.Users.age, 2),
+        nested: add(mul(schema.Users.age, 2), sub(5, 1)), // (age * 2) + (5 - 1)
+      })
+      .where(eq(schema.Users.id, user.id));
+
+    expect(Number(result[0].added)).toBe(baseValue + 5); // 15
+    expect(Number(result[0].subtracted)).toBe(baseValue - 3); // 7
+    expect(Number(result[0].multiplied)).toBe(baseValue * 2); // 20
+    expect(Number(result[0].divided)).toBe(baseValue / 2); // 5
+    expect(Number(result[0].nested)).toBe(baseValue * 2 + (5 - 1)); // 24
   });
 });
