@@ -4,18 +4,23 @@ import type Docker from "dockerode";
 import {
   type $Client,
   and,
+  contains,
   database,
   defineConfig,
+  endsWith,
   eq,
   gt,
   gte,
   isIn,
   isNotNull,
   isNull,
+  length,
+  lower,
   lt,
   lte,
   ne,
   or,
+  startsWith,
 } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -636,6 +641,92 @@ describe("Filters", () => {
         );
 
       expect(result).toHaveLength(2);
+    });
+  });
+
+  describe("startsWith / endsWith / contains", () => {
+    it("should filter rows with string pattern filters", async () => {
+      const uniqueVal = Date.now().toString();
+      await db.insert(schema.Users).values(
+        createTestUser({
+          username: `prefix_${uniqueVal}_suffix`,
+          email: `filter${uniqueVal}@example.com`,
+        }),
+      );
+
+      const byStarts = await db
+        .from(schema.Users)
+        .select({ id: schema.Users.id })
+        .where(startsWith(schema.Users.username, `prefix_${uniqueVal}`));
+      expect(byStarts.length).toBe(1);
+
+      const byEnds = await db
+        .from(schema.Users)
+        .select({ id: schema.Users.id })
+        .where(endsWith(schema.Users.username, `${uniqueVal}_suffix`));
+      expect(byEnds.length).toBe(1);
+
+      const byContains = await db
+        .from(schema.Users)
+        .select({ id: schema.Users.id })
+        .where(contains(schema.Users.username, uniqueVal));
+      expect(byContains.length).toBe(1);
+    });
+  });
+
+  describe("with SqlFn values", () => {
+    it("should support SqlFn as filter argument", async () => {
+      const uniqueEmail = `mixedCASE${Date.now()}@test.com`;
+      const otherEmail = `other${Date.now()}@test.com`;
+
+      await db.insert(schema.Users).values([
+        createTestUser({
+          username: "SqlFn Filter Test",
+          email: uniqueEmail,
+        }),
+        createTestUser({
+          username: "SqlFn Filter Test 2",
+          email: otherEmail,
+        }),
+      ]);
+
+      // eq with lower
+      const eqResult = await db
+        .from(schema.Users)
+        .select({ email: schema.Users.email })
+        .where(eq(lower(schema.Users.email), uniqueEmail.toLowerCase()));
+      expect(eqResult.length).toBe(1);
+
+      // ne with lower
+      const neResult = await db
+        .from(schema.Users)
+        .select({ email: schema.Users.email })
+        .where(ne(lower(schema.Users.email), uniqueEmail.toLowerCase()));
+      expect(neResult.length).toBeGreaterThan(0);
+      expect(neResult.find((u) => u.email === uniqueEmail)).toBeUndefined();
+
+      // gt, lt with length
+      const lenGt = await db
+        .from(schema.Users)
+        .select({ email: schema.Users.email })
+        .where(
+          and(
+            eq(schema.Users.email, uniqueEmail),
+            gt(length(schema.Users.email), uniqueEmail.length - 1),
+          ),
+        );
+      expect(lenGt.length).toBe(1);
+
+      const lenLt = await db
+        .from(schema.Users)
+        .select({ email: schema.Users.email })
+        .where(
+          and(
+            eq(schema.Users.email, uniqueEmail),
+            lt(length(schema.Users.email), uniqueEmail.length + 1),
+          ),
+        );
+      expect(lenLt.length).toBe(1);
     });
   });
 });

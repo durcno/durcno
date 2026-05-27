@@ -99,42 +99,6 @@ describe("Filters with Functions", () => {
   // String function + scalar value
   // ──────────────────────────────────────────────────────────
 
-  describe("lower(col) & value", () => {
-    it("eq: matches case-insensitively", async () => {
-      await db
-        .insert(schema.Users)
-        .values([
-          createTestUser({ email: "Alice@Example.COM" }),
-          createTestUser({ email: "bob@example.com" }),
-        ]);
-
-      const result = await db
-        .from(schema.Users)
-        .select({ email: schema.Users.email })
-        .where(eq(lower(schema.Users.email), "alice@example.com"));
-
-      expect(result).toHaveLength(1);
-      expect(result[0].email).toBe("Alice@Example.COM");
-    });
-
-    it("ne: excludes matched row", async () => {
-      await db
-        .insert(schema.Users)
-        .values([
-          createTestUser({ email: "Alice@Example.COM" }),
-          createTestUser({ email: "bob@example.com" }),
-        ]);
-
-      const result = await db
-        .from(schema.Users)
-        .select({ email: schema.Users.email })
-        .where(ne(lower(schema.Users.email), "alice@example.com"));
-
-      expect(result).toHaveLength(1);
-      expect(result[0].email).toBe("bob@example.com");
-    });
-  });
-
   describe("upper(col) & value", () => {
     it("eq: matches uppercased value", async () => {
       await db
@@ -191,23 +155,6 @@ describe("Filters with Functions", () => {
       expect(result[0].username).toBe("abc");
     });
 
-    it("gt: matches longer strings", async () => {
-      await db
-        .insert(schema.Users)
-        .values([
-          createTestUser({ username: "ab" }),
-          createTestUser({ username: "abcde" }),
-          createTestUser({ username: "abcdefgh" }),
-        ]);
-
-      const result = await db
-        .from(schema.Users)
-        .select({ username: schema.Users.username })
-        .where(gt(length(schema.Users.username), 4));
-
-      expect(result).toHaveLength(2);
-    });
-
     it("gte: includes boundary length", async () => {
       await db
         .insert(schema.Users)
@@ -223,23 +170,6 @@ describe("Filters with Functions", () => {
         .where(gte(length(schema.Users.username), 3));
 
       expect(result).toHaveLength(2);
-    });
-
-    it("lt: matches shorter strings", async () => {
-      await db
-        .insert(schema.Users)
-        .values([
-          createTestUser({ username: "ab" }),
-          createTestUser({ username: "abcde" }),
-        ]);
-
-      const result = await db
-        .from(schema.Users)
-        .select({ username: schema.Users.username })
-        .where(lt(length(schema.Users.username), 5));
-
-      expect(result).toHaveLength(1);
-      expect(result[0].username).toBe("ab");
     });
 
     it("lte: includes boundary length", async () => {
@@ -349,67 +279,6 @@ describe("Filters with Functions", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].email).toBe("a@example.com");
-    });
-  });
-
-  // ──────────────────────────────────────────────────────────
-  // String filter functions (startsWith / endsWith / contains)
-  // ──────────────────────────────────────────────────────────
-
-  describe("startsWith(col, prefix)", () => {
-    it("matches rows whose column starts with prefix", async () => {
-      await db
-        .insert(schema.Users)
-        .values([
-          createTestUser({ username: "prefixABC" }),
-          createTestUser({ username: "notprefixABC" }),
-        ]);
-
-      const result = await db
-        .from(schema.Users)
-        .select({ username: schema.Users.username })
-        .where(startsWith(schema.Users.username, "prefix"));
-
-      expect(result).toHaveLength(1);
-      expect(result[0].username).toBe("prefixABC");
-    });
-  });
-
-  describe("endsWith(col, suffix)", () => {
-    it("matches rows whose column ends with suffix", async () => {
-      await db
-        .insert(schema.Users)
-        .values([
-          createTestUser({ username: "ABCsuffix" }),
-          createTestUser({ username: "ABCother" }),
-        ]);
-
-      const result = await db
-        .from(schema.Users)
-        .select({ username: schema.Users.username })
-        .where(endsWith(schema.Users.username, "suffix"));
-
-      expect(result).toHaveLength(1);
-      expect(result[0].username).toBe("ABCsuffix");
-    });
-  });
-
-  describe("contains(col, substring)", () => {
-    it("matches rows whose column contains substring", async () => {
-      await db
-        .insert(schema.Users)
-        .values([
-          createTestUser({ username: "helloworld" }),
-          createTestUser({ username: "goodbye" }),
-        ]);
-
-      const result = await db
-        .from(schema.Users)
-        .select({ username: schema.Users.username })
-        .where(contains(schema.Users.username, "low"));
-
-      expect(result).toHaveLength(1);
-      expect(result[0].username).toBe("helloworld");
     });
   });
 

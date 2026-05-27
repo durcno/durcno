@@ -5,27 +5,20 @@ import {
   type $Client,
   abs,
   add,
-  and,
   ceil,
-  contains,
   database,
   defineConfig,
   div,
-  endsWith,
   eq,
   floor,
-  gt,
   left,
   length,
   lower,
-  lt,
   mod,
   mul,
-  ne,
   position,
   right,
   round,
-  startsWith,
   sub,
   trim,
   upper,
@@ -43,7 +36,7 @@ import {
   truncateTables,
 } from "./setup";
 
-describe("String and Numeric Functions and Filters", () => {
+describe("String and Numeric Functions", () => {
   let containerInfo: TestContainerInfo;
   let container: Docker.Container;
   let db: ReturnType<typeof database<typeof schema>>;
@@ -159,87 +152,6 @@ describe("String and Numeric Functions and Filters", () => {
     expect(Number(result[0].r)).toBe(age);
     expect(Number(result[0].c)).toBe(age);
     expect(Number(result[0].f)).toBe(age);
-  });
-
-  it("String filters (startsWith, endsWith, contains) work correctly", async () => {
-    const uniqueVal = Date.now().toString();
-    await db.insert(schema.Users).values(
-      createTestUser({
-        username: `prefix_${uniqueVal}_suffix`,
-        email: `filter${uniqueVal}@example.com`,
-      }),
-    );
-
-    const byStarts = await db
-      .from(schema.Users)
-      .select({ id: schema.Users.id })
-      .where(startsWith(schema.Users.username, `prefix_${uniqueVal}`));
-    expect(byStarts.length).toBe(1);
-
-    const byEnds = await db
-      .from(schema.Users)
-      .select({ id: schema.Users.id })
-      .where(endsWith(schema.Users.username, `${uniqueVal}_suffix`));
-    expect(byEnds.length).toBe(1);
-    const byContains = await db
-      .from(schema.Users)
-      .select({ id: schema.Users.id })
-      .where(contains(schema.Users.username, uniqueVal));
-    expect(byContains.length).toBe(1);
-  });
-
-  it("Filters support SqlFn values", async () => {
-    const uniqueEmail = `mixedCASE${Date.now()}@test.com`;
-    const otherEmail = `other${Date.now()}@test.com`;
-
-    await db.insert(schema.Users).values([
-      createTestUser({
-        username: "SqlFn Filter Test",
-        email: uniqueEmail,
-      }),
-      createTestUser({
-        username: "SqlFn Filter Test 2",
-        email: otherEmail,
-      }),
-    ]);
-
-    // eq with lower
-    const eqResult = await db
-      .from(schema.Users)
-      .select({ email: schema.Users.email })
-      .where(eq(lower(schema.Users.email), uniqueEmail.toLowerCase()));
-    expect(eqResult.length).toBe(1);
-
-    // ne with lower
-    const neResult = await db
-      .from(schema.Users)
-      .select({ email: schema.Users.email })
-      .where(ne(lower(schema.Users.email), uniqueEmail.toLowerCase()));
-    expect(neResult.length).toBeGreaterThan(0);
-    expect(neResult.find((u) => u.email === uniqueEmail)).toBeUndefined();
-
-    // gt, gte, lt, lte with length
-    const lenGt = await db
-      .from(schema.Users)
-      .select({ email: schema.Users.email })
-      .where(
-        and(
-          eq(schema.Users.email, uniqueEmail),
-          gt(length(schema.Users.email), uniqueEmail.length - 1),
-        ),
-      );
-    expect(lenGt.length).toBe(1);
-
-    const lenLt = await db
-      .from(schema.Users)
-      .select({ email: schema.Users.email })
-      .where(
-        and(
-          eq(schema.Users.email, uniqueEmail),
-          lt(length(schema.Users.email), uniqueEmail.length + 1),
-        ),
-      );
-    expect(lenLt.length).toBe(1);
   });
 
   it("Arithmetic functions (add, sub, mul, div) evaluate correctly", async () => {
