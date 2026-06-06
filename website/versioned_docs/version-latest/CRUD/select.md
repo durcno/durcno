@@ -197,6 +197,36 @@ const data = await db
   });
 ```
 
+## Common Table Expressions (WITH)
+
+Durcno supports PostgreSQL Common Table Expressions (CTEs) using `db.with()`. Define a named CTE with `.as()`, then build an outer query with `db.with(cte).from(...)`.
+See the dedicated [WITH page](./with) for full CTE usage, including chained CTEs and DML CTEs with `.returning(...)`.
+
+```typescript
+import { asc, eq } from "durcno";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
+
+const activeUsers = db
+  .with("activeUsers")
+  .as(
+    db
+      .from(Users)
+      .select({ id: Users.id, username: Users.username })
+      .where(eq(Users.status, "active")),
+  );
+
+const rows = await db
+  .with(activeUsers)
+  .from((ctes) => ctes.activeUsers)
+  .select()
+  .orderBy(asc(activeUsers.username));
+
+// Type: { id: bigint; username: string }[]
+```
+
+CTEs can also wrap DML queries with `.returning(...)`, such as `INSERT`, `UPDATE`, or `DELETE`, and then be queried by an outer `SELECT`.
+
 ## DISTINCT ON
 
 Use `.distinctOn()` on the `FromBuilder` (before `.select()`) to select only the first row for each unique combination of the specified columns, using PostgreSQL's `DISTINCT ON (...)` syntax.
