@@ -1,4 +1,5 @@
 import type { $Pool, QueryExecutor } from "./connectors/common";
+import { type AnyCteWithColumns, Cte, type CteWithColumns } from "./cte";
 import { is } from "./entity";
 import type { FilterExpression } from "./filters/index";
 import type { Config } from "./index";
@@ -14,6 +15,7 @@ import { RawQuery } from "./query-builders/raw";
 import { RelationQueryBuilder } from "./query-builders/rq";
 import { SelectBuilder } from "./query-builders/select";
 import { UpdateBuilder } from "./query-builders/update";
+import { WithStatement } from "./query-builders/with";
 import {
   type AnyColumn,
   type AnyRelations,
@@ -26,6 +28,11 @@ import {
   type TableWithColumns,
 } from "./table";
 import type { Valueof } from "./types";
+import {
+  type AnySubquery,
+  bindVirtualTableColumns,
+  type InferQueryColumns,
+} from "./virtual-table";
 
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnyDBorTX = Base<any, any, any, false>;
@@ -442,6 +449,55 @@ class Base<
     rowsHandler: ((rows: any[]) => TReturn) | undefined,
   ) {
     return new RawQuery(query, args, rowsHandler, this.#getExecutor());
+  }
+
+  /**
+   * Create a CTE definition by name.
+   * @param name The CTE name to be used in the WITH clause
+   * @returns An object with `.as()` to bind a subquery
+   *
+   * @example
+   * const activeCte = db.with("activeUsers").as(db.from(Users).select(...));
+   */
+  with<TCteName extends string>(
+    name: TCteName,
+  ): {
+    as: <TQuery extends AnySubquery>(
+      query: TQuery,
+    ) => CteWithColumns<TCteName, InferQueryColumns<TCteName, TQuery>>;
+  };
+  /**
+   * Attach one or more CTEs to a statement.
+   * @param ctes One or more CTE instances created via `db.with("name").as(...)`
+   * @returns A `WithStatement` to build the SELECT/INSERT/UPDATE/DELETE against
+   *
+   * @example
+   * const rows = await db.with(activeCte).from(ctes => ctes.activeUsers).select();
+   */
+  with<TCtes extends [AnyCteWithColumns, ...AnyCteWithColumns[]]>(
+    ...ctes: TCtes
+  ): WithStatement<TCtes, TPrepare>;
+  with<TCteName extends string, TCtes extends AnyCteWithColumns[]>(
+    nameOrFirstCte: TCteName | AnyCteWithColumns,
+    ...restCtes: TCtes
+  ) {
+    if (typeof nameOrFirstCte === "string") {
+      return {
+        as: <TQuery extends AnySubquery>(query: TQuery) => {
+          const columns = query.getResolvedColumns();
+          const cte = new Cte(nameOrFirstCte, columns, query);
+          return bindVirtualTableColumns(cte) as unknown as CteWithColumns<
+            TCteName,
+            InferQueryColumns<TCteName, TQuery>
+          >;
+        },
+      };
+    }
+    return new WithStatement(
+      [nameOrFirstCte, ...restCtes],
+      this.#getExecutor(),
+      this.$.pre,
+    );
   }
 }
 

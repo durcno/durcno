@@ -8,14 +8,10 @@ export type SqlFnType = "aggregate" | "scalar";
  * Abstract base class for typed SQL functions.
  *
  * Analogous to `Filter` but for expressions that produce a **value** rather
- * than a boolean predicate. A `SqlFn` can be used in:
- * - `.select({ alias: sqlFn })` — adds a computed column to the result
- * - `.orderBy(asc(sqlFn))` — orders by a computed expression
- * - `.where(lt(sqlFn, value))` — compares the expression in a WHERE clause
+ * than a boolean predicate.
  *
  * @template TColumn - The scoped table column(s) this expression references.
  * @template THasArg - `true` when this expression embeds at least one `Arg` placeholder.
- *   Set to `true` in concrete subclasses that accept `Arg` values; defaults to `false`.
  *   Arg-bearing expressions are only accepted in prepared queries (`db.prepare()`).
  * @template TFnType - `"aggregate"` for aggregate functions (e.g. `count`, `sum`),
  *   `"scalar"` for scalar functions (e.g. `lower`, `abs`). Defaults to the union.
@@ -64,26 +60,40 @@ export abstract class SqlFn<
     return query.sql;
   }
 
-  /**
-   * Converts a raw driver value returned from PostgreSQL into the TypeScript
-   * value declared by `TTsType`.
-   *
-   * The default implementation covers the common cases:
-   * - `null` → `null`
-   * - `bigint` → `bigint` (passed through as-is to preserve precision)
-   * - numeric string (e.g. `"42"`, `"3"`) → `Number(value)`
-   * - anything else → `value` as-is
-   *
-   * Subclasses can override this method to provide custom conversions.
-   */
-  fromDriver(value: unknown) {
-    if (value === null) return null as TTsType;
-    if (typeof value === "bigint") return value as TTsType;
-    if (typeof value === "string") {
-      const num = Number(value);
-      return (Number.isNaN(num) ? value : num) as TTsType;
-    }
-    return value as TTsType;
+  /** Converts a TypeScript value to a raw driver value (write path). */
+  abstract toDriverValue(value: TTsType | null): unknown;
+
+  /** Converts a TypeScript value to a SQL literal string. */
+  abstract toSQLValue(value: TTsType | null): string;
+
+  /** Converts a raw PostgreSQL driver value to the TypeScript type `TTsType`. */
+  abstract fromDriverValue(value: unknown): TTsType | null;
+
+  // --- Protected shared helpers (DRY for subclasses) ---
+
+  /** Default implementation for numeric-returning functions. */
+  protected static _numericFromDriver(value: unknown): number | null {
+    if (value === null) return null;
+    if (typeof value === "bigint") return Number(value);
+    if (typeof value === "string") return Number(value);
+    return value as number;
+  }
+
+  /** Default implementation for string-returning functions. */
+  protected static _stringFromDriver(value: unknown): string | null {
+    if (value === null) return null;
+    return value as string;
+  }
+
+  /** Default SQL literal for a numeric value. */
+  protected static _numericToSQL(value: number | bigint | null): string {
+    return value === null ? "NULL" : value.toString();
+  }
+
+  /** Default SQL literal for a string value. */
+  protected static _stringToSQL(value: string | null): string {
+    if (value === null) return "NULL";
+    return `'${value.replace(/'/g, "''")}'`;
   }
 }
 

@@ -119,6 +119,8 @@ export { sequence } from "./sequence";
 
 import { is } from "./entity";
 
+export type { AnyCteWithColumns, CtesByName, CteWithColumns } from "./cte";
+export { Cte } from "./cte";
 export type { QueryLogger } from "./logger";
 export { Sql, sql } from "./sql";
 export {
@@ -132,6 +134,7 @@ export {
   type TableWithColumns,
   table,
 } from "./table";
+export type { AnySubquery, InferQueryColumns } from "./virtual-table";
 
 import { Enum } from "./enumtype";
 import { Sequence } from "./sequence";

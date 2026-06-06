@@ -53,3 +53,6 @@ export class Query<TReturn = unknown> {
       : `SQL:\n  ${this.sql}`;
   }
 }
+
+// biome-ignore lint/suspicious/noExplicitAny: widened alias for return type of QueryPromise.then()
+export type AnyQuery = Query<any>;

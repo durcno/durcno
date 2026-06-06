@@ -1,10 +1,13 @@
 import type { QueryExecutor } from "../connectors/common";
+import type { AnyCteWithColumns } from "../cte";
 import { is } from "../entity";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key } from "../types";
+import type { ReturningColumns } from "../virtual-table";
 
+import { buildWithClause, resolveReturningColumns } from "./helpers";
 import { Arg } from "./pre";
-import { Query } from "./query";
+import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class InsertBuilder<
@@ -14,10 +17,17 @@ export class InsertBuilder<
   readonly #table: TTableWC;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
-  constructor(table: TTableWC, executor: QueryExecutor, prepare: TPrepare) {
+  readonly #$ctes: readonly AnyCteWithColumns[] | null;
+  constructor(
+    table: TTableWC,
+    executor: QueryExecutor,
+    prepare: TPrepare,
+    ctes: readonly AnyCteWithColumns[] | null = null,
+  ) {
     this.#table = table;
     this.#executor = executor;
     this.#prepare = prepare;
+    this.#$ctes = ctes;
   }
   values(
     values: {
@@ -51,6 +61,7 @@ export class InsertBuilder<
       undefined,
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     );
   }
 }
@@ -92,6 +103,7 @@ export class InsertQuery<
   readonly #$returning: TReturning;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
+  readonly #$ctes: readonly AnyCteWithColumns[] | null;
 
   constructor(
     table: TTableWC,
@@ -99,6 +111,7 @@ export class InsertQuery<
     returnings: TReturning,
     executor: QueryExecutor,
     prepare: TPrepare,
+    ctes: readonly AnyCteWithColumns[] | null = null,
   ) {
     super();
     this.#table = table;
@@ -106,6 +119,7 @@ export class InsertQuery<
     this.#$returning = returnings;
     this.#executor = executor;
     this.#prepare = prepare;
+    this.#$ctes = ctes;
   }
 
   /** Return all columns using `RETURNING *`. */
@@ -129,11 +143,19 @@ export class InsertQuery<
       returnings as never,
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     );
   }
 
-  toQuery() {
-    const query = new Query("INSERT INTO ", this.handleRows.bind(this));
+  toQuery(parentQuery?: AnyQuery): Query<TReturn> {
+    const isRoot = parentQuery === undefined;
+    const query: Query<TReturn> = parentQuery
+      ? (parentQuery as unknown as Query<TReturn>)
+      : new Query<TReturn>("", this.handleRows.bind(this));
+    if (isRoot && this.#$ctes?.length) {
+      buildWithClause(this.#$ctes, query);
+    }
+    query.sql += "INSERT INTO ";
     query.sql += this.#table._.fullName;
     const valuesArray = Array.isArray(this.#$values)
       ? this.#$values
@@ -187,15 +209,20 @@ export class InsertQuery<
         .join(", ");
     }
 
-    query.sql += ";";
     return query;
   }
 
   async execute(): Promise<TReturn> {
     const query = this.toQuery();
+    query.sql += ";";
     const res = await this.#executor.execQuery(query);
     const rows = this.#executor.getRows(res);
     return this.handleRows(rows);
+  }
+
+  /** Returns the table's columns (used when this INSERT has a RETURNING clause). */
+  getResolvedColumns(): ReturningColumns<TTableWC["_"]["columns"], TReturning> {
+    return resolveReturningColumns(this.#table._.columns, this.#$returning);
   }
 
   handleRows(rows: Record<string, unknown>[]) {

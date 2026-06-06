@@ -40,6 +40,16 @@ export class StDistanceFn<
     super();
   }
 
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "ST_Distance(";
     this.col.toQuery(query, ctx);

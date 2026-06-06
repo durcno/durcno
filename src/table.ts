@@ -140,6 +140,7 @@ export class Table<
     name: TName,
     columns: TColumns,
     extra: TableExtra<TSchema, TName, TColumns>,
+    overrides?: { fullName?: string },
   ) {
     bindNameNTable(this as unknown as StdTable, columns);
     this._ = {
@@ -147,7 +148,12 @@ export class Table<
       schemaSql: camelToSnake(schema),
       name,
       nameSql: camelToSnake(name),
-      fullName: `"${camelToSnake(schema)}"."${camelToSnake(name)}"`,
+      fullName: (overrides?.fullName ??
+        `"${camelToSnake(schema)}"."${camelToSnake(name)}"`) as TableConfig<
+        TSchema,
+        TName,
+        TColumns
+      >["fullName"],
       columns: columns as TableConfig<TSchema, TName, TColumns>["columns"],
       columnsBySql: Object.fromEntries(
         Object.values(columns).map((col) => [col.nameSql, col]),

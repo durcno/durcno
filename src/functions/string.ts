@@ -24,6 +24,16 @@ export class LengthFn<
     super();
   }
 
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "length(";
     this.expr.toQuery(query, ctx);
@@ -51,6 +61,16 @@ export class LowerFn<
 > extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
   constructor(private readonly expr: TExpr) {
     super();
+  }
+
+  toDriverValue(value: string | null): unknown {
+    return value;
+  }
+  toSQLValue(value: string | null): string {
+    return SqlFn._stringToSQL(value);
+  }
+  fromDriverValue(value: unknown): string | null {
+    return SqlFn._stringFromDriver(value);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -82,6 +102,16 @@ export class UpperFn<
     super();
   }
 
+  toDriverValue(value: string | null): unknown {
+    return value;
+  }
+  toSQLValue(value: string | null): string {
+    return SqlFn._stringToSQL(value);
+  }
+  fromDriverValue(value: unknown): string | null {
+    return SqlFn._stringFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "upper(";
     this.expr.toQuery(query, ctx);
@@ -109,6 +139,16 @@ export class TrimFn<
 > extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
   constructor(private readonly expr: TExpr) {
     super();
+  }
+
+  toDriverValue(value: string | null): unknown {
+    return value;
+  }
+  toSQLValue(value: string | null): string {
+    return SqlFn._stringToSQL(value);
+  }
+  fromDriverValue(value: unknown): string | null {
+    return SqlFn._stringFromDriver(value);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -148,6 +188,16 @@ export class LeftFn<
     private readonly n: number | Arg<number>,
   ) {
     super();
+  }
+
+  toDriverValue(value: string | null): unknown {
+    return value;
+  }
+  toSQLValue(value: string | null): string {
+    return SqlFn._stringToSQL(value);
+  }
+  fromDriverValue(value: unknown): string | null {
+    return SqlFn._stringFromDriver(value);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -205,6 +255,16 @@ export class RightFn<
     super();
   }
 
+  toDriverValue(value: string | null): unknown {
+    return value;
+  }
+  toSQLValue(value: string | null): string {
+    return SqlFn._stringToSQL(value);
+  }
+  fromDriverValue(value: unknown): string | null {
+    return SqlFn._stringFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "right(";
     this.expr.toQuery(query, ctx);
@@ -258,6 +318,16 @@ export class PositionFn<
     private readonly search: TSearch,
   ) {
     super();
+  }
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {

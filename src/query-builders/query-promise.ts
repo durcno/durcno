@@ -1,5 +1,5 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <> */
-import type { Query } from "./query";
+import type { AnyQuery, Query } from "./query";
 
 export abstract class QueryPromise<T> implements Promise<T> {
   [Symbol.toStringTag] = "QueryPromise";
@@ -40,7 +40,7 @@ export abstract class QueryPromise<T> implements Promise<T> {
     return this.execute().then(onFulfilled).catch(onRejected);
   }
 
-  abstract toQuery(): Query<T>;
+  abstract toQuery(parentQuery?: AnyQuery): Query<T>;
   abstract execute(): Promise<T>;
   abstract handleRows(rows: any[]): T;
 }

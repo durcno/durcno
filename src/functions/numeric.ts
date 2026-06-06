@@ -24,6 +24,16 @@ export class AbsFn<
     super();
   }
 
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "abs(";
     this.expr.toQuery(query, ctx);
@@ -61,6 +71,16 @@ export class ModFn<
     private readonly n: TN,
   ) {
     super();
+  }
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -109,6 +129,16 @@ export class RoundFn<
     super();
   }
 
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "round(";
     this.expr.toQuery(query, ctx);
@@ -153,6 +183,16 @@ export class CeilFn<
     super();
   }
 
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "ceil(";
     this.expr.toQuery(query, ctx);
@@ -186,6 +226,16 @@ export class FloorFn<
 > {
   constructor(private readonly expr: TExpr) {
     super();
+  }
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {

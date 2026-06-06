@@ -105,6 +105,7 @@ See [Raw SQL](./raw-sql) for comprehensive documentation on raw queries.
 ## Next Steps
 
 - [Select](./select) - Learn about SELECT queries with `db.from()`
+- [WITH](./with) - Learn about Common Table Expressions and reusable subqueries
 - [Insert](./insert) - Learn about INSERT operations with `db.insert()`
 - [Update](./update) - Learn about UPDATE operations with `db.update()`
 - [Delete](./delete) - Learn about DELETE operations with `db.delete()`

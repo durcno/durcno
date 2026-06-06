@@ -1,3 +1,4 @@
+import { isCol } from "../entity";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { AnyColumn } from "../table";
 import { type AnyScalarSqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
@@ -46,6 +47,16 @@ export class CountFn<TExpr extends AnyColumn> extends SqlFn<
     super();
   }
 
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
   /** Appends `count(expr)` to the query SQL. */
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "count(";
@@ -71,6 +82,16 @@ export class CountStarFn extends SqlFn<
   number
 > {
   override readonly isAggregate = true;
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
 
   /** Appends `count(*)` to the query SQL. */
   toQuery(query: Query, _ctx?: QueryContext): void {
@@ -98,6 +119,16 @@ export class CountDistinctFn<TExpr extends AnyColumn> extends SqlFn<
 
   constructor(private readonly expr: TExpr) {
     super();
+  }
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
   }
 
   /** Appends `count(DISTINCT expr)` to the query SQL. */
@@ -175,6 +206,18 @@ export class SumFn<TExpr extends NumericAggregateInput> extends SqlFn<
     super();
   }
 
+  toDriverValue(value: TExpr["$"]["TsType"] | null): unknown {
+    return value;
+  }
+  toSQLValue(value: TExpr["$"]["TsType"] | null): string {
+    return SqlFn._numericToSQL(value as number | bigint | null);
+  }
+  fromDriverValue(value: unknown): TExpr["$"]["TsType"] | null {
+    if (value === null) return null;
+    if (typeof value === "bigint") return value as TExpr["$"]["TsType"];
+    return Number(value) as TExpr["$"]["TsType"];
+  }
+
   /** Appends `sum(expr)` to the query SQL. */
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "sum(";
@@ -227,14 +270,18 @@ export class AvgFn<TExpr extends NumericAggregateInput> extends SqlFn<
     super();
   }
 
+  toDriverValue(value: TExpr["$"]["TsType"] | null): unknown {
+    return value;
+  }
+  toSQLValue(value: TExpr["$"]["TsType"] | null): string {
+    return SqlFn._stringToSQL(value as string | null);
+  }
   /**
    * Preserves the raw PostgreSQL `numeric` string (e.g. `"2.5000000000"`).
-   * The default `SqlFn.fromDriver` would coerce numeric strings to `number`,
-   * which contradicts the declared `string | null` return type.
    */
-  override fromDriver(value: unknown): string | null {
+  fromDriverValue(value: unknown): TExpr["$"]["TsType"] | null {
     if (value === null) return null;
-    return value as string;
+    return value as TExpr["$"]["TsType"];
   }
 
   /** Appends `avg(expr)` to the query SQL. */
@@ -290,13 +337,22 @@ export class MinFn<TExpr extends AggregateInput> extends SqlFn<
     super();
   }
 
+  toDriverValue(value: TExpr["$"]["TsType"] | null): unknown {
+    return value;
+  }
+  toSQLValue(value: TExpr["$"]["TsType"] | null): string {
+    if (isCol(this.expr)) return this.expr.toSQLScalar(value as never);
+    return this.expr.toSQLValue(value as never) as string;
+  }
   /**
-   * Delegates to the inner expression's own `fromDriver` so that the result
+   * Delegates to the inner expression's own conversion so that the result
    * is deserialized to the same TypeScript type as the wrapped column/function.
    */
-  override fromDriver(value: unknown): TExpr["$"]["TsType"] | null {
+  fromDriverValue(value: unknown): TExpr["$"]["TsType"] | null {
     if (value === null) return null;
-    return this.expr.fromDriver(value) as TExpr["$"]["TsType"];
+    if (isCol(this.expr))
+      return this.expr.fromDriverScalar(value) as TExpr["$"]["TsType"];
+    return this.expr.fromDriverValue(value) as TExpr["$"]["TsType"];
   }
 
   /** Appends `min(expr)` to the query SQL. */
@@ -350,13 +406,22 @@ export class MaxFn<TExpr extends AggregateInput> extends SqlFn<
     super();
   }
 
+  toDriverValue(value: TExpr["$"]["TsType"] | null): unknown {
+    return value;
+  }
+  toSQLValue(value: TExpr["$"]["TsType"] | null): string {
+    if (isCol(this.expr)) return this.expr.toSQLScalar(value as never);
+    return this.expr.toSQLValue(value as never) as string;
+  }
   /**
-   * Delegates to the inner expression's own `fromDriver` so that the result
+   * Delegates to the inner expression's own conversion so that the result
    * is deserialized to the same TypeScript type as the wrapped column/function.
    */
-  override fromDriver(value: unknown): TExpr["$"]["TsType"] | null {
+  fromDriverValue(value: unknown): TExpr["$"]["TsType"] | null {
     if (value === null) return null;
-    return this.expr.fromDriver(value) as TExpr["$"]["TsType"];
+    if (isCol(this.expr))
+      return this.expr.fromDriverScalar(value) as TExpr["$"]["TsType"];
+    return this.expr.fromDriverValue(value) as TExpr["$"]["TsType"];
   }
 
   /** Appends `max(expr)` to the query SQL. */

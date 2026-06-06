@@ -364,7 +364,7 @@ export class InCondition<
     } else {
       this.field.toQuery(query, ctx);
       query.sql += " IN (";
-      query.sql += this.values.toQuery();
+      this.values.toQuery(query);
       query.sql += ")";
     }
   }

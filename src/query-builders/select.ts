@@ -1,5 +1,6 @@
 import type { QueryExecutor } from "../connectors/common";
-import { is } from "../entity";
+import type { AnyCteWithColumns } from "../cte";
+import { is, isCol } from "../entity";
 import type { FilterExpression, StdCondition } from "../filters/index";
 import type { AnySqlFn, StdSqlFn } from "../functions/index";
 import { SqlFn } from "../functions/index";
@@ -16,9 +17,11 @@ import type {
   UnionToIntersection,
   Valueof,
 } from "../types";
+import type { MergeJoinedColumns, SelectableSource } from "../virtual-table";
+import { buildWithClause } from "./helpers";
 import type { OrderExpression } from "./orderby-clause";
 import { type AnyArg, Arg } from "./pre";
-import { Query } from "./query";
+import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class SelectBuilder<
@@ -44,6 +47,7 @@ export class SelectBuilder<
   readonly #prepare: TPrepare;
   readonly #$innerJoins: TInnerJoins;
   readonly #$distinctOn: StdTableColumn[] | undefined;
+  readonly #$ctes: readonly AnyCteWithColumns[] | null;
 
   constructor(
     table: TableWithColumns<TTSchema, TTName, TTColumns>,
@@ -51,12 +55,14 @@ export class SelectBuilder<
     distinctOn: StdTableColumn[] | undefined,
     executor: QueryExecutor,
     prepare: TPrepare,
+    ctes: readonly AnyCteWithColumns[] | null = null,
   ) {
     this.#table = table;
     this.#$innerJoins = innerJoins;
     this.#$distinctOn = distinctOn;
     this.#executor = executor;
     this.#prepare = prepare;
+    this.#$ctes = ctes;
   }
 
   innerJoin<
@@ -107,6 +113,7 @@ export class SelectBuilder<
       undefined,
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     );
   }
 
@@ -127,6 +134,7 @@ export class SelectBuilder<
       (Array.isArray(columns) ? columns : [columns]) as StdTableColumn[],
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     );
   }
 
@@ -208,6 +216,7 @@ export class SelectBuilder<
       undefined,
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     );
   }
 }
@@ -287,6 +296,7 @@ export class SelectQuery<
   #$offset: number | bigint | AnyArg | undefined;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
+  readonly #$ctes: readonly AnyCteWithColumns[] | null;
 
   constructor(
     table: TableWithColumns<TTSchema, TTName, TTColumns>,
@@ -299,6 +309,7 @@ export class SelectQuery<
     offset: number | bigint | AnyArg | undefined,
     executor: QueryExecutor,
     prepare: TPrepare,
+    ctes: readonly AnyCteWithColumns[] | null = null,
   ) {
     super();
     this.#table = table;
@@ -311,6 +322,7 @@ export class SelectQuery<
     this.#$offset = offset;
     this.#executor = executor;
     this.#prepare = prepare;
+    this.#$ctes = ctes;
   }
 
   where<
@@ -337,6 +349,7 @@ export class SelectQuery<
       this.#$offset,
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     );
   }
 
@@ -382,6 +395,7 @@ export class SelectQuery<
       this.#$offset,
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     );
   }
 
@@ -401,6 +415,7 @@ export class SelectQuery<
       this.#$offset,
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     ) as unknown as Omit<this, "limit">;
   }
 
@@ -420,11 +435,21 @@ export class SelectQuery<
       offset,
       this.#executor,
       this.#prepare,
+      this.#$ctes,
     ) as unknown as Omit<this, "offset">;
   }
 
-  toQuery(): Query<TReturn> {
-    const query = new Query<TReturn>("SELECT ", this.handleRows.bind(this));
+  toQuery(parentQuery?: AnyQuery): Query<TReturn> {
+    const isRoot = parentQuery === undefined;
+    const query: Query<TReturn> = parentQuery
+      ? (parentQuery as unknown as Query<TReturn>)
+      : new Query<TReturn>("", this.handleRows.bind(this));
+
+    if (isRoot && this.#$ctes?.length) {
+      buildWithClause(this.#$ctes, query);
+    }
+
+    query.sql += "SELECT ";
     if (this.#$distinctOn?.length) {
       query.sql += `DISTINCT ON (${this.#$distinctOn.map((c) => c.fullName).join(", ")}) `;
     }
@@ -513,6 +538,34 @@ export class SelectQuery<
     return this.handleRows(rows);
   }
 
+  /**
+   * Returns the resolved output columns of this query.
+   * When an explicit `.select()` was provided the select-map entries are returned;
+   * otherwise the table's own columns are merged with any joined table columns.
+   */
+  getResolvedColumns(): Prettify<
+    TSelects extends Record<string, SelectableSource>
+      ? TSelects
+      : MergeJoinedColumns<TTColumns, TInnerJoins>
+  > {
+    if (this.#$select) {
+      return { ...this.#$select } as Prettify<
+        TSelects extends Record<string, SelectableSource>
+          ? TSelects
+          : MergeJoinedColumns<TTColumns, TInnerJoins>
+      >;
+    }
+    const cols: Record<string, SelectableSource> = { ...this.#table._.columns };
+    this.#$innerJoins?.forEach((j) => {
+      Object.assign(cols, j.table._.columns);
+    });
+    return cols as Prettify<
+      TSelects extends Record<string, SelectableSource>
+        ? TSelects
+        : MergeJoinedColumns<TTColumns, TInnerJoins>
+    >;
+  }
+
   handleRows(rows: Record<string, unknown>[]) {
     if (this.#$select !== undefined) {
       rows.forEach((row) => {
@@ -520,7 +573,9 @@ export class SelectQuery<
           const colOrFn = (
             this.#$select as Record<string, StdTableColumn | StdSqlFn>
           )[key];
-          row[key] = colOrFn.fromDriver(value);
+          row[key] = isCol(colOrFn)
+            ? colOrFn.fromDriver(value)
+            : colOrFn.fromDriverValue(value);
         }
       });
       return rows as TReturn;

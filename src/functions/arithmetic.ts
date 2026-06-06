@@ -62,6 +62,16 @@ export class AddFn<
     super();
   }
 
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "(";
     numericExprToQuery(query, ctx, this.left);
@@ -98,6 +108,16 @@ export class SubFn<
     private readonly right: TRight,
   ) {
     super();
+  }
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -138,6 +158,16 @@ export class MulFn<
     super();
   }
 
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "(";
     numericExprToQuery(query, ctx, this.left);
@@ -174,6 +204,16 @@ export class DivFn<
     private readonly right: TRight,
   ) {
     super();
+  }
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
