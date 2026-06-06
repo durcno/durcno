@@ -1,7 +1,30 @@
 import type { SnakeCase } from "../../types";
 import { camelToSnake } from "../../utils";
 import type { Snapshot } from "../snapshot";
-import { DDLStatement } from "./statement";
+import { DDLStatement } from "./index";
+
+/**
+ * Create a new PostgreSQL type.
+ *
+ * Currently supports enum types only.
+ *
+ * @param schema - The schema the type belongs to.
+ * @param name - The type name.
+ * @param definition - The type definition. Currently only `{ asEnum: string[] }` is supported.
+ * @returns A {@link CreateTypeStatement}.
+ *
+ * @example
+ * ```typescript
+ * ddl.createType('public', 'user_type', { asEnum: ['admin', 'user'] });
+ * ```
+ */
+export function createType(
+  schema: string,
+  name: string,
+  definition: { asEnum: string[] },
+): CreateTypeStatement {
+  return new CreateTypeStatement(schema, name, definition);
+}
 
 /**
  * DDL statement that creates a new PostgreSQL type.
@@ -48,6 +71,22 @@ export class CreateTypeStatement extends DDLStatement {
       values: [...this.definition.asEnum],
     };
   }
+}
+
+/**
+ * Drop an existing PostgreSQL type.
+ *
+ * @param schema - The schema the type belongs to.
+ * @param name - The type name.
+ * @returns A {@link DropTypeStatement}.
+ *
+ * @example
+ * ```typescript
+ * ddl.dropType('public', 'user_type');
+ * ```
+ */
+export function dropType(schema: string, name: string): DropTypeStatement {
+  return new DropTypeStatement(schema, name);
 }
 
 /**
@@ -99,6 +138,26 @@ type AlterTypeAction =
       from: string;
       to: string;
     };
+
+/**
+ * Alter an existing type. Returns a chainable {@link AlterTypeBuilder}.
+ *
+ * Currently supports enum value operations only.
+ *
+ * @param schema - The schema the type belongs to.
+ * @param name - The type name.
+ * @returns An {@link AlterTypeBuilder} for chaining `.addValue()`.
+ *
+ * @example
+ * ```typescript
+ * ddl.alterType('public', 'user_type')
+ *   .addValue('moderator', { after: 'admin' })
+ *   .addValue('guest');
+ * ```
+ */
+export function alterType(schema: string, name: string): AlterTypeBuilder {
+  return new AlterTypeBuilder(schema, name);
+}
 
 /**
  * Fluent builder for `ALTER TYPE` DDL statements.

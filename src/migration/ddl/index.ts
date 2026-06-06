@@ -1,29 +1,145 @@
+import type { Snapshot } from "../snapshot";
+
+/**
+ * All possible DDL statement types supported by the migration system.
+ *
+ * Each type corresponds to a concrete {@link DDLStatement} subclass:
+ *
+ * - `"createSchema"` — {@link CreateSchemaStatement}
+ * - `"dropSchema"` — {@link DropSchemaStatement}
+ * - `"createTable"` — {@link CreateTableBuilder}
+ * - `"dropTable"` — {@link DropTableStatement}
+ * - `"renameTable"` — {@link RenameTableStatement}
+ * - `"alterTable"` — {@link AlterTableBuilder}
+ * - `"createType"` — {@link CreateTypeStatement}
+ * - `"dropType"` — {@link DropTypeStatement}
+ * - `"alterType"` — {@link AlterTypeBuilder}
+ * - `"createSequence"` — {@link CreateSequenceStatement}
+ * - `"dropSequence"` — {@link DropSequenceStatement}
+ * - `"createIndex"` — {@link CreateIndexBuilder}
+ * - `"dropIndex"` — {@link DropIndexStatement}
+ * - `"custom"` — {@link CustomStatement}
+ */
+export type DDLStatementType =
+  | "createSchema"
+  | "dropSchema"
+  | "createTable"
+  | "dropTable"
+  | "renameTable"
+  | "alterTable"
+  | "createType"
+  | "dropType"
+  | "alterType"
+  | "createSequence"
+  | "dropSequence"
+  | "createIndex"
+  | "dropIndex"
+  | "custom";
+
+/**
+ * Abstract base class for all DDL (Data Definition Language) statements.
+ *
+ * Every migration statement extends this class and must implement:
+ * - {@link DDLStatement["type"] | type} — a discriminant for the statement kind
+ * - {@link DDLStatement["toSQL"] | toSQL()} — generates the raw SQL string
+ * - {@link DDLStatement["applyToSnapshot"] | applyToSnapshot()} — mutates a {@link Snapshot} in place
+ *
+ * @example
+ * ```typescript
+ * import { ddl, type DDLStatement } from 'durcno/migration';
+ *
+ * const statements: DDLStatement[] = [
+ *   ddl.createTable('public', 'users')
+ *     .column('id', 'serial', { primaryKey: true })
+ *     .column('name', 'varchar(255)', { notNull: true }),
+ * ];
+ * ```
+ */
+export abstract class DDLStatement {
+  /** Discriminant identifying the kind of DDL operation. */
+  abstract readonly type: DDLStatementType;
+
+  /** Whether this is a custom (user-defined) statement. */
+  get isCustom(): boolean {
+    return this.type === "custom";
+  }
+
+  /** Generate the SQL DDL string for this statement. */
+  abstract toSQL(): string;
+
+  /**
+   * Apply this DDL statement's changes to a snapshot object.
+   * Mutates the snapshot in place.
+   *
+   * @param snapshot - The database snapshot to mutate.
+   */
+  abstract applyToSnapshot(snapshot: Snapshot): void;
+}
+
+/**
+ * A wrapper for user-defined custom SQL statements.
+ *
+ * Custom statements are preserved during migration regeneration and
+ * cannot be automatically reflected in the schema snapshot.
+ *
+ * @example
+ * ```typescript
+ * import { ddl } from 'durcno/migration';
+ *
+ * const seedData = ddl.custom("INSERT INTO users (name) VALUES ('admin')");
+ * console.log(seedData.toSQL());
+ * // INSERT INTO users (name) VALUES ('admin')
+ * ```
+ */
+export class CustomStatement extends DDLStatement {
+  readonly type = "custom" as const;
+
+  /**
+   * @param sql - The raw SQL string to execute.
+   */
+  constructor(private readonly sql: string) {
+    super();
+  }
+
+  toSQL(): string {
+    return this.sql;
+  }
+
+  /**
+   * Custom statements cannot be parsed, so this is a no-op.
+   * Users are responsible for ensuring custom SQL is reflected in the schema.
+   */
+  applyToSnapshot(_snapshot: Snapshot): void {
+    // No-op: custom SQL cannot be automatically applied to snapshot
+  }
+}
+
+/**
+ * Create a custom SQL statement. Preserved during migration regeneration.
+ *
+ * @param sql - The raw SQL string.
+ * @returns A {@link CustomStatement}.
+ */
+export function custom(sql: string): CustomStatement {
+  return new CustomStatement(sql);
+}
+
 export * from "./indexes";
 export * from "./schema";
 export * from "./sequence";
-export * from "./statement";
 export * from "./table";
 export * from "./types";
 
-import { CreateIndexBuilder, DropIndexStatement } from "./indexes";
-import { CreateSchemaStatement, DropSchemaStatement } from "./schema";
+import { createIndex, dropIndex } from "./indexes";
+import { createSchema, dropSchema } from "./schema";
+import { createSequence, dropSequence } from "./sequence";
 import {
-  CreateSequenceStatement,
-  DropSequenceStatement,
-  type SequenceOptions,
-} from "./sequence";
-import { CustomStatement } from "./statement";
-import {
-  AlterTableBuilder,
-  CreateTableBuilder,
-  DropTableStatement,
-  RenameTableStatement,
+  alterTable,
+  createTable,
+  dropTable,
+  renameTable,
 } from "./table";
-import {
-  AlterTypeBuilder,
-  CreateTypeStatement,
-  DropTypeStatement,
-} from "./types";
+import { alterType, createType, dropType } from "./types";
 
 /**
  * The main DDL builder entry point.
@@ -44,196 +160,18 @@ import {
  * ```
  */
 export const ddl = {
-  /**
-   * Create a new schema.
-   *
-   * @param name - The schema name.
-   * @returns A {@link CreateSchemaStatement}.
-   */
-  createSchema(name: string): CreateSchemaStatement {
-    return new CreateSchemaStatement(name);
-  },
-
-  /**
-   * Drop a schema.
-   *
-   * @param name - The schema name.
-   * @returns A {@link DropSchemaStatement}.
-   */
-  dropSchema(name: string): DropSchemaStatement {
-    return new DropSchemaStatement(name);
-  },
-
-  /**
-   * Create a new PostgreSQL type.
-   *
-   * Currently supports enum types only.
-   *
-   * @param schema - The schema the type belongs to.
-   * @param name - The type name.
-   * @param definition - The type definition. Currently only `{ asEnum: string[] }` is supported.
-   * @returns A {@link CreateTypeStatement}.
-   *
-   * @example
-   * ```typescript
-   * ddl.createType('public', 'user_type', { asEnum: ['admin', 'user'] });
-   * ```
-   */
-  createType(
-    schema: string,
-    name: string,
-    definition: { asEnum: string[] },
-  ): CreateTypeStatement {
-    return new CreateTypeStatement(schema, name, definition);
-  },
-
-  /**
-   * Drop an existing PostgreSQL type.
-   *
-   * @param schema - The schema the type belongs to.
-   * @param name - The type name.
-   * @returns A {@link DropTypeStatement}.
-   *
-   * @example
-   * ```typescript
-   * ddl.dropType('public', 'user_type');
-   * ```
-   */
-  dropType(schema: string, name: string): DropTypeStatement {
-    return new DropTypeStatement(schema, name);
-  },
-
-  /**
-   * Alter an existing type. Returns a chainable {@link AlterTypeBuilder}.
-   *
-   * Currently supports enum value operations only.
-   *
-   * @param schema - The schema the type belongs to.
-   * @param name - The type name.
-   * @returns An {@link AlterTypeBuilder} for chaining `.addValue()`.
-   *
-   * @example
-   * ```typescript
-   * ddl.alterType('public', 'user_type')
-   *   .addValue('moderator', { after: 'admin' })
-   *   .addValue('guest');
-   * ```
-   */
-  alterType(schema: string, name: string): AlterTypeBuilder {
-    return new AlterTypeBuilder(schema, name);
-  },
-
-  /**
-   * Create a new sequence.
-   *
-   * @param schema - The schema the sequence belongs to.
-   * @param name - The sequence name.
-   * @param options - Optional sequence configuration.
-   * @returns A {@link CreateSequenceStatement}.
-   */
-  createSequence(
-    schema: string,
-    name: string,
-    options?: SequenceOptions,
-  ): CreateSequenceStatement {
-    return new CreateSequenceStatement(schema, name, options);
-  },
-
-  /**
-   * Drop a sequence.
-   *
-   * @param schema - The schema the sequence belongs to.
-   * @param name - The sequence name.
-   * @returns A {@link DropSequenceStatement}.
-   */
-  dropSequence(schema: string, name: string): DropSequenceStatement {
-    return new DropSequenceStatement(schema, name);
-  },
-
-  /**
-   * Create a new table. Returns a chainable {@link CreateTableBuilder}.
-   *
-   * @param schema - The schema to create the table in.
-   * @param name - The table name.
-   * @returns A {@link CreateTableBuilder} for chaining `.column()`, `.check()`, etc.
-   */
-  createTable(schema: string, name: string): CreateTableBuilder {
-    return new CreateTableBuilder(schema, name);
-  },
-
-  /**
-   * Drop a table.
-   *
-   * @param schema - The schema of the table.
-   * @param name - The table name.
-   * @returns A {@link DropTableStatement}.
-   */
-  dropTable(schema: string, name: string): DropTableStatement {
-    return new DropTableStatement(schema, name);
-  },
-
-  /**
-   * Rename a table.
-   *
-   * @param schema - The schema of the table.
-   * @param oldName - The current table name.
-   * @param newName - The new table name.
-   * @returns A {@link RenameTableStatement}.
-   */
-  renameTable(
-    schema: string,
-    oldName: string,
-    newName: string,
-  ): RenameTableStatement {
-    return new RenameTableStatement(schema, oldName, newName);
-  },
-
-  /**
-   * Alter an existing table. Returns a chainable {@link AlterTableBuilder}.
-   *
-   * @param schema - The schema of the table.
-   * @param name - The table name.
-   * @returns An {@link AlterTableBuilder} for chaining `.addColumn()`, `.dropColumn()`, etc.
-   */
-  alterTable(schema: string, name: string): AlterTableBuilder {
-    return new AlterTableBuilder(schema, name);
-  },
-
-  /**
-   * Create an index. Returns a chainable {@link CreateIndexBuilder}.
-   *
-   * @param name - The index name.
-   * @returns A {@link CreateIndexBuilder} for chaining `.on()`, `.using()`, `.unique()`.
-   *
-   * @example
-   * ```typescript
-   * ddl.createIndex('idx_users_email')
-   *   .on('public', 'users', ['email'])
-   *   .using('btree')
-   *   .unique();
-   * ```
-   */
-  createIndex(name: string): CreateIndexBuilder {
-    return new CreateIndexBuilder(name);
-  },
-
-  /**
-   * Drop an index.
-   *
-   * @param name - The index name.
-   * @returns A {@link DropIndexStatement}.
-   */
-  dropIndex(name: string): DropIndexStatement {
-    return new DropIndexStatement(name);
-  },
-
-  /**
-   * Create a custom SQL statement. Preserved during migration regeneration.
-   *
-   * @param sql - The raw SQL string.
-   * @returns A {@link CustomStatement}.
-   */
-  custom(sql: string): CustomStatement {
-    return new CustomStatement(sql);
-  },
+  createSchema,
+  dropSchema,
+  createType,
+  dropType,
+  alterType,
+  createSequence,
+  dropSequence,
+  createTable,
+  dropTable,
+  renameTable,
+  alterTable,
+  createIndex,
+  dropIndex,
+  custom,
 };

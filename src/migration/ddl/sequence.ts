@@ -1,7 +1,7 @@
 import type { SnakeCase } from "../../types";
 import { camelToSnake } from "../../utils";
 import type { Snapshot } from "../snapshot";
-import { DDLStatement } from "./statement";
+import { DDLStatement } from "./index";
 
 /**
  * Options for configuring a PostgreSQL sequence.
@@ -21,6 +21,22 @@ export interface SequenceOptions {
   cycle?: boolean;
   /** Number of sequence values to pre-allocate (`CACHE`). */
   cache?: number;
+}
+
+/**
+ * Create a new sequence.
+ *
+ * @param schema - The schema the sequence belongs to.
+ * @param name - The sequence name.
+ * @param options - Optional sequence configuration.
+ * @returns A {@link CreateSequenceStatement}.
+ */
+export function createSequence(
+  schema: string,
+  name: string,
+  options?: SequenceOptions,
+): CreateSequenceStatement {
+  return new CreateSequenceStatement(schema, name, options);
 }
 
 /**
@@ -85,6 +101,20 @@ export class CreateSequenceStatement extends DDLStatement {
       cache: this.options.cache,
     };
   }
+}
+
+/**
+ * Drop a sequence.
+ *
+ * @param schema - The schema the sequence belongs to.
+ * @param name - The sequence name.
+ * @returns A {@link DropSequenceStatement}.
+ */
+export function dropSequence(
+  schema: string,
+  name: string,
+): DropSequenceStatement {
+  return new DropSequenceStatement(schema, name);
 }
 
 /**

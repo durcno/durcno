@@ -1,6 +1,24 @@
 import type { IndexType } from "../../indexes";
 import type { Snapshot } from "../snapshot";
-import { DDLStatement } from "./statement";
+import { DDLStatement } from "./index";
+
+/**
+ * Create an index. Returns a chainable {@link CreateIndexBuilder}.
+ *
+ * @param name - The index name.
+ * @returns A {@link CreateIndexBuilder} for chaining `.on()`, `.using()`, `.unique()`.
+ *
+ * @example
+ * ```typescript
+ * ddl.createIndex('idx_users_email')
+ *   .on('public', 'users', ['email'])
+ *   .using('btree')
+ *   .unique();
+ * ```
+ */
+export function createIndex(name: string): CreateIndexBuilder {
+  return new CreateIndexBuilder(name);
+}
 
 /**
  * Chainable builder that constructs a `CREATE INDEX` DDL statement.
@@ -128,6 +146,16 @@ export class CreateIndexBuilder extends DDLStatement {
       unique: this.isUnique,
     };
   }
+}
+
+/**
+ * Drop an index.
+ *
+ * @param name - The index name.
+ * @returns A {@link DropIndexStatement}.
+ */
+export function dropIndex(name: string): DropIndexStatement {
+  return new DropIndexStatement(name);
 }
 
 /**

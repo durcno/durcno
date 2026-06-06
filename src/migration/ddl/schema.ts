@@ -1,5 +1,15 @@
 import type { Snapshot } from "../snapshot";
-import { DDLStatement } from "./statement";
+import { DDLStatement } from "./index";
+
+/**
+ * Create a new schema.
+ *
+ * @param name - The schema name.
+ * @returns A {@link CreateSchemaStatement}.
+ */
+export function createSchema(name: string): CreateSchemaStatement {
+  return new CreateSchemaStatement(name);
+}
 
 /**
  * DDL statement that creates a new PostgreSQL schema.
@@ -36,6 +46,16 @@ export class CreateSchemaStatement extends DDLStatement {
 }
 
 /**
+ * Drop a schema.
+ *
+ * @param name - The schema name.
+ * @returns A {@link DropSchemaStatement}.
+ */
+export function dropSchema(name: string): DropSchemaStatement {
+  return new DropSchemaStatement(name);
+}
+
+/**
  * DDL statement that drops an existing PostgreSQL schema.
  *
  * Generates: `DROP SCHEMA <name>;`
@@ -68,3 +88,4 @@ export class DropSchemaStatement extends DDLStatement {
     // No-op: schemas are not tracked in snapshot
   }
 }
+

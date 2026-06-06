@@ -8,7 +8,7 @@ import type {
   SnapshotTablePrimaryKey,
   SnapshotTableUnique,
 } from "../snapshot";
-import { DDLStatement } from "./statement";
+import { DDLStatement } from "./index";
 
 /**
  * Defines a foreign-key reference from a column to another table's column.
@@ -94,6 +94,17 @@ function toColumnDef(
   }
 
   return def;
+}
+
+/**
+ * Create a new table. Returns a chainable {@link CreateTableBuilder}.
+ *
+ * @param schema - The schema to create the table in.
+ * @param name - The table name.
+ * @returns A {@link CreateTableBuilder} for chaining `.column()`, `.check()`, etc.
+ */
+export function createTable(schema: string, name: string): CreateTableBuilder {
+  return new CreateTableBuilder(schema, name);
 }
 
 /**
@@ -276,6 +287,17 @@ export class CreateTableBuilder extends DDLStatement {
 }
 
 /**
+ * Drop a table.
+ *
+ * @param schema - The schema of the table.
+ * @param name - The table name.
+ * @returns A {@link DropTableStatement}.
+ */
+export function dropTable(schema: string, name: string): DropTableStatement {
+  return new DropTableStatement(schema, name);
+}
+
+/**
  * DDL statement that drops an existing table.
  *
  * Generates: `DROP TABLE "schema"."name";`
@@ -310,6 +332,22 @@ export class DropTableStatement extends DDLStatement {
     const key = `${this.schema}.${this.name}`;
     delete snapshot.tables[key];
   }
+}
+
+/**
+ * Rename a table.
+ *
+ * @param schema - The schema of the table.
+ * @param oldName - The current table name.
+ * @param newName - The new table name.
+ * @returns A {@link RenameTableStatement}.
+ */
+export function renameTable(
+  schema: string,
+  oldName: string,
+  newName: string,
+): RenameTableStatement {
+  return new RenameTableStatement(schema, oldName, newName);
 }
 
 /**
@@ -378,6 +416,17 @@ type AlterTableAction =
       references: ColumnReference;
     }
   | { type: "dropForeignKey"; constraintName: string; column: string };
+
+/**
+ * Alter an existing table. Returns a chainable {@link AlterTableBuilder}.
+ *
+ * @param schema - The schema of the table.
+ * @param name - The table name.
+ * @returns An {@link AlterTableBuilder} for chaining `.addColumn()`, `.dropColumn()`, etc.
+ */
+export function alterTable(schema: string, name: string): AlterTableBuilder {
+  return new AlterTableBuilder(schema, name);
+}
 
 /**
  * Chainable builder that constructs `ALTER TABLE` DDL statements.
