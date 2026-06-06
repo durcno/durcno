@@ -162,6 +162,7 @@ src/
 ├── columns/              # Column type implementations
 ├── query-builders/       # Query builder classes
 ├── filters/              # Filter builders
+├── functions/            # SQL function builders
 ├── constraints/          # Constraint builders
 ├── connectors/           # Database connectors
 ├── migration/            # Migration handling
@@ -206,7 +207,7 @@ dist/                     # Production compiled output
 - **`pnpm run tsclint-cli`**: Run CLI TypeScript type checking `src/cli/`
 - **`pnpm run tsclint-all`**: Run all checks (lint + tsclint + tsclint-cli + test-types)
 - **`pnpm run test-types`**: Run only type tests `type-tests/`
-- **`pnpm run test`**: Build src & cli and run integration tests `tests/`
+- **`pnpm run test`**: Build src & cli then run integration tests `tests/`
 
 ### Development Process
 
@@ -221,13 +222,15 @@ dist/                     # Production compiled output
 Durcno uses two clearly separated test suites — **Type tests** and **Integration tests** — with distinct scope and rules.
 
 - **Type tests (`type-tests/`)** — compile-time checks for TypeScript inference (use `Expect`,`Equal` / `@ts-expect-error`). Required for any change that affects exported types or API shapes.
-- **Integration tests (`tests/`)** — runtime tests (Vitest) validating columns, query builders, SQL, migrations, and CLI behavior. Keep them deterministic, and fast.
+- **Integration tests (`tests/`)** — runtime tests (Vitest) validating columns, query builders, migrations, and CLI behavior. Keep them deterministic, and fast.
 
 Quick rules:
 
 - Add/Update/Run **type tests** for type/API validation.
 - Add/Update/Run **integration tests** for runtime behavior validation.
-- Cover positive, negative, and edge cases.
+- Cover positive, negative, and edge cases
+- Separate concerns, and avoid redundancy in tests
+- Always import from `durcno` in tests, not from the root `src` folder.
 
 Commands:
 
@@ -338,7 +341,7 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 
 #### Common Issues
 
-- **Type Errors**: Verify all exports are included in `src/index.ts`
+- **Import Errors**: Verify all public APIs are exported in `src/index.ts`
 - **Test failing**: First validate the test, then proceed to validate the core implementations
 
 ### Critical Reminders
