@@ -1,5 +1,5 @@
 import type { Snapshot } from "../snapshot";
-import { DDLStatement } from "./index";
+import { DDLStatement } from "./statement";
 
 /**
  * Create a new schema.
@@ -88,4 +88,3 @@ export class DropSchemaStatement extends DDLStatement {
     // No-op: schemas are not tracked in snapshot
   }
 }
-

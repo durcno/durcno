@@ -8,7 +8,7 @@ import type {
   SnapshotTablePrimaryKey,
   SnapshotTableUnique,
 } from "../snapshot";
-import { DDLStatement } from "./index";
+import { DDLStatement } from "./statement";
 
 /**
  * Defines a foreign-key reference from a column to another table's column.

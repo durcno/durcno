@@ -1,6 +1,6 @@
 import type { IndexType } from "../../indexes";
 import type { Snapshot } from "../snapshot";
-import { DDLStatement } from "./index";
+import { DDLStatement } from "./statement";
 
 /**
  * Create an index. Returns a chainable {@link CreateIndexBuilder}.

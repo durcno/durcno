@@ -1,7 +1,7 @@
 import type { SnakeCase } from "../../types";
 import { camelToSnake } from "../../utils";
 import type { Snapshot } from "../snapshot";
-import { DDLStatement } from "./index";
+import { DDLStatement } from "./statement";
 
 /**
  * Options for configuring a PostgreSQL sequence.
