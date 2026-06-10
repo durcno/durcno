@@ -243,7 +243,21 @@ export class RelationQueryBuilder<
       },
       TPrepare
     >,
-  >(options: TOptions) {
+  >(
+    options: TOptions,
+  ): Promise<
+    | Awaited<
+        RelationQuery<
+          TTSchema,
+          TTName,
+          TTColumns,
+          TTRelations,
+          TAllRelations,
+          TOptions
+        >
+      >[number]
+    | null
+  > {
     const query = new RelationQuery(
       this.#table,
       this.#relations,
@@ -252,7 +266,8 @@ export class RelationQueryBuilder<
       this.#executor,
     );
     const result = await query;
-    return (result.at(0) ?? null) as (typeof result)[number] | null;
+    // biome-ignore lint/suspicious/noExplicitAny: <>
+    return (result.at(0) ?? null) as any;
   }
 }
 

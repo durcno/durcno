@@ -703,6 +703,48 @@ Expect<
   >
 >();
 
+// Type test: findFirst with 3-level nested with - Posts -> comments -> author
+const firstPostsDeepNestedQr = db.query(Posts).findFirst({
+  columns: {
+    id: true,
+    title: true,
+  },
+  with: {
+    comments: {
+      columns: {
+        id: true,
+        body: true,
+      },
+      with: {
+        author: {
+          columns: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    },
+  },
+});
+type FirstPostsDeepNestedRtrn = Awaited<typeof firstPostsDeepNestedQr>;
+Expect<
+  Equal<
+    FirstPostsDeepNestedRtrn,
+    {
+      id: bigint;
+      title: string | null;
+      comments: {
+        id: bigint;
+        body: string | null;
+        author: {
+          id: bigint;
+          username: string;
+        };
+      }[];
+    } | null
+  >
+>();
+
 // Type test: findFirst with nested with
 const firstUsersDeepNestedQr = db.query(Users).findFirst({
   columns: {
