@@ -23,6 +23,10 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 | Method                  | Description                                               |
 | ----------------------- | --------------------------------------------------------- |
 | `.where(condition)`     | Filter results                                            |
+| `.groupBy(col)`         | Explicit GROUP BY (single column or expression)           |
+| `.groupBy([...cols])`   | Explicit GROUP BY (multiple columns/expressions)          |
+| `.groupBy(callback)`    | GROUP BY using named select aliases (callback form)       |
+| `.having(condition)`    | Filter grouped results (HAVING clause)                    |
 | `.orderBy(order)`       | Sort by a column                                          |
 | `.orderBy([...orders])` | Sort by multiple columns                                  |
 | `.limit(n)`             | Limit number of results (`n` can be `number` or `bigint`) |
@@ -226,6 +230,124 @@ const rows = await db
 ```
 
 CTEs can also wrap DML queries with `.returning(...)`, such as `INSERT`, `UPDATE`, or `DELETE`, and then be queried by an outer `SELECT`.
+
+## GROUP BY and HAVING
+
+### Explicit GROUP BY
+
+Use `.groupBy()` to explicitly set the GROUP BY clause. Explicit GROUP BY **fully replaces** the auto GROUP BY that Durcno generates when aggregate functions are mixed with non-aggregate columns in `.select()`.
+
+**Single column:**
+
+```typescript
+import { count, asc } from "durcno";
+
+const byType = await db
+  .from(Users)
+  .select({ type: Users.type, total: count("*") })
+  .groupBy(Users.type)
+  .orderBy(asc(Users.type));
+// SQL: ... GROUP BY "users"."type" ORDER BY ...
+```
+
+**Multiple columns:**
+
+```typescript
+const byTypeAndStatus = await db
+  .from(Users)
+  .select({ type: Users.type, status: Users.status, total: count("*") })
+  .groupBy([Users.type, Users.status]);
+```
+
+**Scalar expression:**
+
+```typescript
+import { lower, count } from "durcno";
+
+const byLowerUsername = await db
+  .from(Users)
+  .select({ lname: lower(Users.username), total: count("*") })
+  .groupBy(lower(Users.username));
+```
+
+### Callback Form (alias references)
+
+When `.select({ ... })` is called with a named map, `.groupBy()` also accepts a **callback** that receives the select aliases as `GroupByAlias` values. This avoids repeating expressions:
+
+```typescript
+import { lower, count } from "durcno";
+
+const results = await db
+  .from(Users)
+  .select({ lname: lower(Users.username), total: count("*") })
+  .groupBy(({ lname }) => [lname]);
+// SQL: ... GROUP BY "lname"
+```
+
+You can also mix aliases with direct columns:
+
+```typescript
+const results = await db
+  .from(Users)
+  .select({ lname: lower(Users.username), total: count("*") })
+  .groupBy(({ lname }) => [lname, Users.type]);
+// SQL: ... GROUP BY "lname", "users"."type"
+```
+
+:::note
+
+The callback form requires a named `.select({ ... })`. Calling `.groupBy(callback)` after `.select()` (no argument) is a compile-time error.
+
+:::
+
+### HAVING
+
+Use `.having()` to filter grouped results. It supports aggregate-to-literal and aggregate-to-aggregate comparisons:
+
+```typescript
+import { count, gte } from "durcno";
+
+// Only return groups with 2 or more rows
+const busyTypes = await db
+  .from(Users)
+  .select({ type: Users.type, total: count("*") })
+  .groupBy(Users.type)
+  .having(gte(count("*"), 2));
+```
+
+**Aggregate-to-aggregate:**
+
+```typescript
+import { count, sum, gt } from "durcno";
+
+const results = await db
+  .from(Users)
+  .select({ type: Users.type, sumScore: sum(Users.score), total: count("*") })
+  .groupBy(Users.type)
+  .having(gt(sum(Users.score), count("*")));
+```
+
+:::note
+
+`.having()` can be used without explicit `.groupBy()`. In that case, auto GROUP BY still fires (based on non-aggregate columns in `.select()`), and the HAVING clause is appended after it.
+
+:::
+
+### Full Chain
+
+```typescript
+import { eq, count, gte, asc } from "durcno";
+
+const results = await db
+  .from(Users)
+  .select({ type: Users.type, total: count("*") })
+  .where(eq(Users.status, "active"))
+  .groupBy(Users.type)
+  .having(gte(count("*"), 2))
+  .orderBy(asc(Users.type))
+  .limit(10);
+// Clause order: WHERE → GROUP BY → HAVING → ORDER BY → LIMIT
+```
 
 ## DISTINCT ON
 
