@@ -106,6 +106,9 @@ export type AnySqlFn = SqlFn<any, any, any, any, any>;
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnyScalarSqlFn = SqlFn<any, any, "scalar", any, any>;
 
+// biome-ignore lint/suspicious/noExplicitAny: <>
+export type AnyAggregateSqlFn = SqlFn<any, any, "aggregate", any, any>;
+
 /**
  * Extracts the table column(s) referenced by a scalar expression.
  * For a raw column, returns the column itself.

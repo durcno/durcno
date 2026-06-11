@@ -1,5 +1,10 @@
 import { is, isTCol } from "../entity";
-import { type AnyScalarSqlFn, SqlFn } from "../functions";
+import {
+  type AnyAggregateSqlFn,
+  type AnyScalarSqlFn,
+  type AnySqlFn,
+  SqlFn,
+} from "../functions";
 import { Arg, type IsArg } from "../query-builders/pre";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { SelectQuery } from "../query-builders/select";
@@ -35,6 +40,20 @@ export type FilterExpression<
 > = Filter<TScopeColumns, TPrepare extends true ? boolean : false> | Sql;
 
 export type StdCondition = FilterExpression<AnyColumn>;
+
+/**
+ * A HAVING clause expression. Structurally identical to `FilterExpression` but
+ * signals intent — it is used in `.having()` rather than `.where()`.
+ *
+ * Note: TypeScript does not prevent aggregate `SqlFn` expressions from being
+ * passed to `.where()` at the type level (the `$Columns` phantom traces back to
+ * `AnyColumn` regardless of aggregate/scalar kind). PostgreSQL will reject such
+ * queries at runtime. This is a known limitation.
+ */
+export type HavingExpression<
+  TScopeColumns extends AnyColumn,
+  TPrepare extends boolean = false,
+> = FilterExpression<TScopeColumns, TPrepare>;
 
 type HasArg<T> = T extends { $HasArg: true } ? true : false;
 
@@ -72,9 +91,9 @@ export class ComparisonLeftIsColumn<
 }
 
 export class ComparisonLeftIsSqlFn<
-  TLeft extends AnyScalarSqlFn,
+  TLeft extends AnySqlFn,
   TOp extends string,
-  TRight extends BasicTypes | AnyScalarSqlFn,
+  TRight extends BasicTypes | AnySqlFn,
 > extends Filter<
   | TLeft["$Columns"]
   | (TRight extends AnyScalarSqlFn ? TRight["$Columns"] : never),
@@ -116,18 +135,26 @@ export function eq<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
+export function eq<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
+export function eq<
+  TLeft extends AnyAggregateSqlFn,
+  TRight extends AnyAggregateSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
 export function eq(
-  left: AnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnySqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnyScalarSqlFn,
+    | AnySqlFn,
 ) {
   if (isTCol(left)) {
     return new ComparisonLeftIsColumn(left, "=", right);
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, "=", right);
+    return new ComparisonLeftIsSqlFn(left as AnySqlFn, "=", right);
   }
 }
 
@@ -147,18 +174,26 @@ export function ne<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
+export function ne<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
+export function ne<
+  TLeft extends AnyAggregateSqlFn,
+  TRight extends AnyAggregateSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
 export function ne(
-  left: AnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnySqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnyScalarSqlFn,
+    | AnySqlFn,
 ) {
   if (isTCol(left)) {
     return new ComparisonLeftIsColumn(left, "!=", right);
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, "!=", right);
+    return new ComparisonLeftIsSqlFn(left as AnySqlFn, "!=", right);
   }
 }
 
@@ -178,18 +213,26 @@ export function gt<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
+export function gt<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
+export function gt<
+  TLeft extends AnyAggregateSqlFn,
+  TRight extends AnyAggregateSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
 export function gt(
-  left: AnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnySqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnyScalarSqlFn,
+    | AnySqlFn,
 ) {
   if (isTCol(left)) {
     return new ComparisonLeftIsColumn(left, ">", right);
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, ">", right);
+    return new ComparisonLeftIsSqlFn(left as AnySqlFn, ">", right);
   }
 }
 
@@ -209,18 +252,26 @@ export function gte<
   TLeft extends AnyScalarSqlFn,
   TRight extends AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
+export function gte<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
+export function gte<
+  TLeft extends AnyAggregateSqlFn,
+  TRight extends AnyAggregateSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
 export function gte(
-  left: AnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnySqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnyScalarSqlFn,
+    | AnySqlFn,
 ) {
   if (isTCol(left)) {
     return new ComparisonLeftIsColumn(left, ">=", right);
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, ">=", right);
+    return new ComparisonLeftIsSqlFn(left as AnySqlFn, ">=", right);
   }
 }
 
@@ -240,18 +291,26 @@ export function lt<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
+export function lt<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
+export function lt<
+  TLeft extends AnyAggregateSqlFn,
+  TRight extends AnyAggregateSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
 export function lt(
-  left: AnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnySqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnyScalarSqlFn,
+    | AnySqlFn,
 ) {
   if (isTCol(left)) {
     return new ComparisonLeftIsColumn(left, "<", right);
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, "<", right);
+    return new ComparisonLeftIsSqlFn(left as AnySqlFn, "<", right);
   }
 }
 
@@ -271,18 +330,26 @@ export function lte<
   TLeft extends AnyScalarSqlFn,
   TRight extends AnyScalarSqlFn,
 >(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
+export function lte<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
+export function lte<
+  TLeft extends AnyAggregateSqlFn,
+  TRight extends AnyAggregateSqlFn,
+>(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
 export function lte(
-  left: AnyColumn | AnyScalarSqlFn,
+  left: AnyColumn | AnySqlFn,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnyScalarSqlFn,
+    | AnySqlFn,
 ) {
   if (isTCol(left)) {
     return new ComparisonLeftIsColumn(left, "<=", right);
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnyScalarSqlFn, "<=", right);
+    return new ComparisonLeftIsSqlFn(left as AnySqlFn, "<=", right);
   }
 }
 
@@ -332,6 +399,8 @@ type InSelectQuery<TArg extends boolean, TReturn> = SelectQuery<
   any,
   any,
   TArg,
+  any,
+  any,
   any,
   any,
   Record<string, TReturn>[]

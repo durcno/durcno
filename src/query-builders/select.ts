@@ -1,7 +1,11 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
-import type { FilterExpression, StdCondition } from "../filters/index";
+import type {
+  FilterExpression,
+  HavingExpression,
+  StdCondition,
+} from "../filters/index";
 import type { AnySqlFn, StdSqlFn } from "../functions/index";
 import { SqlFn } from "../functions/index";
 import type {
@@ -18,6 +22,15 @@ import type {
   Valueof,
 } from "../types";
 import type { MergeJoinedColumns, SelectableSource } from "../virtual-table";
+import {
+  createGroupBySelectView,
+  type GroupByAlias,
+  type GroupByExpression,
+  type GroupBySelectView,
+  isGroupByAlias,
+  isScalarSqlFn,
+  type StdGroupByExpression,
+} from "./groupby-clause";
 import { buildWithClause } from "./helpers";
 import type { OrderExpression } from "./orderby-clause";
 import { type AnyArg, Arg } from "./pre";
@@ -214,6 +227,8 @@ export class SelectBuilder<
       undefined,
       undefined,
       undefined,
+      undefined,
+      undefined,
       this.#executor,
       this.#prepare,
       this.#$ctes,
@@ -269,6 +284,16 @@ export class SelectQuery<
         TPrepare
       >[]
     | undefined,
+  TGroupBy extends StdGroupByExpression[] | undefined = undefined,
+  THaving extends
+    | HavingExpression<
+        | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
+        | (TInnerJoins extends unknown[]
+            ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
+            : never),
+        TPrepare
+      >
+    | undefined = undefined,
   TReturn = (TSelects extends Record<string, unknown>
     ? {
         [TCol in keyof TSelects]: TSelects[TCol] extends TableAnyColumn
@@ -292,6 +317,8 @@ export class SelectQuery<
   readonly #$where: TWhere;
   readonly #$innerJoins: TInnerJoins;
   readonly #$orderBy: TOrderBy;
+  readonly #$groupBy: TGroupBy;
+  readonly #$having: THaving;
   #$limit: number | bigint | AnyArg | undefined;
   #$offset: number | bigint | AnyArg | undefined;
   readonly #executor: QueryExecutor;
@@ -305,6 +332,8 @@ export class SelectQuery<
     distinctOn: StdTableColumn[] | undefined,
     where: TWhere,
     orderBy: TOrderBy,
+    groupBy: TGroupBy,
+    having: THaving,
     limit: number | bigint | AnyArg | undefined,
     offset: number | bigint | AnyArg | undefined,
     executor: QueryExecutor,
@@ -318,6 +347,8 @@ export class SelectQuery<
     this.#$innerJoins = innerJoins;
     this.#$where = where;
     this.#$orderBy = orderBy;
+    this.#$groupBy = groupBy;
+    this.#$having = having;
     this.#$limit = limit;
     this.#$offset = offset;
     this.#executor = executor;
@@ -345,6 +376,8 @@ export class SelectQuery<
       this.#$distinctOn,
       where,
       this.#$orderBy,
+      this.#$groupBy,
+      this.#$having,
       this.#$limit,
       this.#$offset,
       this.#executor,
@@ -391,12 +424,126 @@ export class SelectQuery<
       this.#$distinctOn,
       this.#$where,
       orderBy,
+      this.#$groupBy,
+      this.#$having,
       this.#$limit,
       this.#$offset,
       this.#executor,
       this.#prepare,
       this.#$ctes,
     );
+  }
+
+  /**
+   * Adds an explicit GROUP BY clause. Overrides auto GROUP BY detection when set.
+   *
+   * **Direct form** — a single column/expression or array:
+   * ```ts
+   * db.from(Users).select({ type: Users.type, total: count('*') }).groupBy(Users.type)
+   * ```
+   *
+   * **Callback form** — references named select-map aliases (requires `.select({...})`):
+   * ```ts
+   * db.from(Users).select({ lname: lower(Users.username) }).groupBy(({ lname }) => [lname])
+   * ```
+   */
+  groupBy<
+    TItems extends
+      | GroupByExpression<
+          TableWithColumns<TTSchema, TTName, TTColumns>,
+          TPrepare,
+          TSelects extends Record<string, SelectableSource>
+            ? TSelects
+            : undefined
+        >
+      | GroupByExpression<
+          TableWithColumns<TTSchema, TTName, TTColumns>,
+          TPrepare,
+          TSelects extends Record<string, SelectableSource>
+            ? TSelects
+            : undefined
+        >[],
+  >(groupBy: TItems): Omit<this, "groupBy">;
+  groupBy(
+    callback: TSelects extends Record<string, SelectableSource>
+      ? (
+          selects: GroupBySelectView<TSelects>,
+        ) => GroupByExpression<
+          TableWithColumns<TTSchema, TTName, TTColumns>,
+          TPrepare,
+          TSelects
+        >[]
+      : never,
+  ): Omit<this, "groupBy">;
+  groupBy(
+    groupByOrCallback:
+      | StdGroupByExpression
+      | StdGroupByExpression[]
+      | ((
+          selects: Record<string, GroupByAlias<string>>,
+        ) => StdGroupByExpression[]),
+  ): Omit<this, "groupBy"> {
+    const items =
+      typeof groupByOrCallback === "function"
+        ? groupByOrCallback(
+            createGroupBySelectView(
+              this.#$select as Record<string, SelectableSource>,
+            ),
+          )
+        : Array.isArray(groupByOrCallback)
+          ? groupByOrCallback
+          : [groupByOrCallback];
+    return new SelectQuery(
+      this.#table,
+      this.#$innerJoins,
+      this.#$select,
+      this.#$distinctOn,
+      this.#$where,
+      this.#$orderBy,
+      items as StdGroupByExpression[],
+      this.#$having,
+      this.#$limit,
+      this.#$offset,
+      this.#executor,
+      this.#prepare,
+      this.#$ctes,
+    ) as unknown as Omit<this, "groupBy">;
+  }
+
+  /**
+   * Adds a HAVING clause to filter grouped results.
+   * Supports aggregate-to-literal and aggregate-to-aggregate comparisons.
+   *
+   * ```ts
+   * db.from(Users).select({ type: Users.type, total: count('*') })
+   *   .groupBy(Users.type)
+   *   .having(gte(count('*'), 2))
+   * ```
+   */
+  having<
+    TH extends HavingExpression<
+      | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
+      | (TInnerJoins extends unknown[]
+          ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
+          : never),
+      TPrepare
+    >,
+  >(having: TH): Omit<this, "having"> {
+    return new SelectQuery(
+      this.#table,
+      this.#$innerJoins,
+      this.#$select,
+      this.#$distinctOn,
+      this.#$where,
+      this.#$orderBy,
+      this.#$groupBy,
+      having,
+      this.#$limit,
+      this.#$offset,
+      this.#executor,
+      this.#prepare,
+      this.#$ctes,
+    ) as unknown as Omit<this, "having">;
   }
 
   limit(
@@ -411,6 +558,8 @@ export class SelectQuery<
       this.#$distinctOn,
       this.#$where,
       this.#$orderBy,
+      this.#$groupBy,
+      this.#$having,
       limit,
       this.#$offset,
       this.#executor,
@@ -431,6 +580,8 @@ export class SelectQuery<
       this.#$distinctOn,
       this.#$where,
       this.#$orderBy,
+      this.#$groupBy,
+      this.#$having,
       this.#$limit,
       offset,
       this.#executor,
@@ -479,7 +630,21 @@ export class SelectQuery<
       query.sql += " WHERE ";
       this.#$where.toQuery(query);
     }
-    if (entries) {
+    if (this.#$groupBy?.length) {
+      // Explicit GROUP BY — bypasses auto GROUP BY detection
+      query.sql += " GROUP BY ";
+      for (let i = 0; i < this.#$groupBy.length; i++) {
+        const expr = this.#$groupBy[i];
+        if (isGroupByAlias(expr)) {
+          expr.toQuery(query); // → "alias"
+        } else if (isScalarSqlFn(expr)) {
+          expr.toQuery(query); // → floor(...)
+        } else {
+          query.sql += (expr as StdTableColumn).fullName; // → "schema"."table"."col"
+        }
+        if (i < this.#$groupBy.length - 1) query.sql += ", ";
+      }
+    } else if (entries) {
       const hasAggregate = entries.some(
         ([, colOrFn]) => colOrFn instanceof SqlFn && colOrFn.isAggregate,
       );
@@ -500,6 +665,11 @@ export class SelectQuery<
           }
         }
       }
+    }
+    // HAVING — emitted after GROUP BY (explicit or auto)
+    if (this.#$having) {
+      query.sql += " HAVING ";
+      this.#$having.toQuery(query);
     }
     if (this.#$orderBy) {
       const orders = Array.isArray(this.#$orderBy)
