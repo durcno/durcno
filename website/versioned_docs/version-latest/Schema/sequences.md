@@ -226,9 +226,7 @@ export { Migrations } from "durcno";
 export const orderSequence = sequence("public", "orderSeq", {
   startWith: 1000,
 });
-export const Orders = table("public", "orders", {
-  /* ... */
-});
+export const Orders = table("public", "orders", {/* ... */});
 ```
 
 5. **Don't rely on gap-free sequences**: Sequences may have gaps due to rollbacks, caching, or crashes. If you need gap-free numbers, use a different approach.
