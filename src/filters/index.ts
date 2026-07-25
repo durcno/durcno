@@ -477,19 +477,22 @@ export function notIn<TCol extends AnyColumn>(
 }
 
 /** @internal Union of table columns from all Filter conditions in the array. */
-type ExtractCols<T extends AnyFilter | Sql> =
+type Filters = AnyFilter | Sql | null | undefined;
+
+type ExtractCols<T extends Filters> =
   T extends Filter<any, any> ? T["$Columns"] : never;
 
 /** @internal `true` when at least one Filter condition in the array carries an Arg placeholder. */
-type HasArgOf<T extends (AnyFilter | Sql)[]> = [
+type HasArgOf<T extends Filters[]> = [
   T[number] extends Filter<any, infer H> ? H : false,
 ] extends [false]
   ? false
   : true;
 
-export class AndCondition<
-  TConditions extends (AnyFilter | Sql)[],
-> extends Filter<ExtractCols<TConditions[number]>, HasArgOf<TConditions>> {
+export class AndCondition<TConditions extends Filters[]> extends Filter<
+  ExtractCols<TConditions[number]>,
+  HasArgOf<TConditions>
+> {
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
     super();
@@ -497,25 +500,27 @@ export class AndCondition<
   }
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "(";
-    for (let i = 0; i < this.conditions.length; i++) {
-      this.conditions[i].toQuery(query, ctx);
-      if (i < this.conditions.length - 1) {
-        query.sql += " AND ";
-      }
+    let first = true;
+    for (const condition of this.conditions) {
+      if (condition === null || condition === undefined) continue;
+      if (!first) query.sql += " AND ";
+      first = false;
+      condition.toQuery(query, ctx);
     }
     query.sql += ")";
   }
 }
 
-export function and<TConditions extends (AnyFilter | Sql)[]>(
+export function and<TConditions extends Filters[]>(
   ...conditions: TConditions
 ): AndCondition<TConditions> {
   return new AndCondition(...conditions);
 }
 
-export class OrCondition<
-  TConditions extends (AnyFilter | Sql)[],
-> extends Filter<ExtractCols<TConditions[number]>, HasArgOf<TConditions>> {
+export class OrCondition<TConditions extends Filters[]> extends Filter<
+  ExtractCols<TConditions[number]>,
+  HasArgOf<TConditions>
+> {
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
     super();
@@ -523,17 +528,18 @@ export class OrCondition<
   }
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "(";
-    for (let i = 0; i < this.conditions.length; i++) {
-      this.conditions[i].toQuery(query, ctx);
-      if (i < this.conditions.length - 1) {
-        query.sql += " OR ";
-      }
+    let first = true;
+    for (const condition of this.conditions) {
+      if (condition === null || condition === undefined) continue;
+      if (!first) query.sql += " OR ";
+      first = false;
+      condition.toQuery(query, ctx);
     }
     query.sql += ")";
   }
 }
 
-export function or<TConditions extends (AnyFilter | Sql)[]>(
+export function or<TConditions extends Filters[]>(
   ...conditions: TConditions
 ): OrCondition<TConditions> {
   return new OrCondition(...conditions);

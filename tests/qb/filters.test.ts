@@ -143,6 +143,30 @@ describe("Filters", () => {
     });
   });
 
+  it("should ignore nullish conditions in and/or combinators", async () => {
+    await db
+      .insert(schema.Users)
+      .values([
+        createTestUser({ username: "alice", type: "admin" }),
+        createTestUser({ username: "bob", type: "user" }),
+      ]);
+
+    const andResult = await db
+      .from(schema.Users)
+      .select({ username: schema.Users.username })
+      .where(and(eq(schema.Users.type, "admin"), undefined, null));
+
+    const orResult = await db
+      .from(schema.Users)
+      .select({ username: schema.Users.username })
+      .where(or(undefined, eq(schema.Users.type, "admin"), null));
+
+    expect(andResult).toHaveLength(1);
+    expect(andResult[0].username).toBe("alice");
+    expect(orResult).toHaveLength(1);
+    expect(orResult[0].username).toBe("alice");
+  });
+
   describe("ne (not equals)", () => {
     it("should filter rows with ne operator", async () => {
       await db
