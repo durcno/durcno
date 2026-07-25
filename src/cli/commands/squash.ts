@@ -30,6 +30,11 @@ export async function squash(
 ): Promise<void> {
   const configPath = resolveConfigPath(options.config);
   const config = await loadConfig(configPath);
+  config.connector.options.pool = {
+    ...config.connector.options.pool,
+    max: 1,
+  };
+  config.connector.options.logger = undefined;
   const migrationsDir = resolve(
     dirname(configPath),
     config.out || DEFAULT_MIGRATIONS_DIR,
@@ -94,11 +99,6 @@ export async function squash(
     await client.connect();
 
     if (await migrationsTableExists(client)) {
-      config.connector.options.pool = {
-        ...config.connector.options.pool,
-        max: 1,
-      };
-      config.connector.options.logger = undefined;
       const db = database({ Migrations }, config);
       const records = await db.from(Migrations).select();
       await db.close();
@@ -206,11 +206,6 @@ export async function squash(
 
   // Update durcno.migrations tracking if the range was fully applied
   if (client !== null && rangeAllApplied) {
-    config.connector.options.pool = {
-      ...config.connector.options.pool,
-      max: 1,
-    };
-    config.connector.options.logger = undefined;
     const db = database({ Migrations }, config);
     for (const migrationName of range) {
       await db.delete(Migrations).where(eq(Migrations.name, migrationName));

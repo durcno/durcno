@@ -18,6 +18,11 @@ const { bgGreen, dim, cyan, yellow, red } = chalk;
 export async function down(m: string, options: Options): Promise<void> {
   const configPath = resolveConfigPath(options.config);
   const config = await loadConfig(configPath);
+  config.connector.options.pool = {
+    ...config.connector.options.pool,
+    max: 1,
+  };
+  config.connector.options.logger = undefined;
   const { connector } = config;
   const migrationsDir = resolve(
     dirname(configPath),
@@ -33,6 +38,7 @@ export async function down(m: string, options: Options): Promise<void> {
   if (await migrationsTableExists(client)) {
     const db = database({ Migrations }, config);
     const migrations = await db.from(Migrations).select();
+    await db.close();
     const migrationDirsReversed = migrationDirNames.sort().reverse();
     for (let i = 0; i < migrationDirsReversed.length; i++) {
       const migrationDirName = migrationDirsReversed[i];
@@ -50,12 +56,10 @@ export async function down(m: string, options: Options): Promise<void> {
         );
         if (migration.name === m) {
           await client.close();
-          await db.close();
           process.exit(0);
         }
       }
     }
-    await db.close();
   }
   await client.close();
   process.exit(0);
@@ -104,11 +108,6 @@ export async function runDownMigration(
     }
 
     if (!isFirstMigration) {
-      config.connector.options.pool = {
-        ...config.connector.options.pool,
-        max: 1,
-      };
-      config.connector.options.logger = undefined;
       const db = database({ Migrations }, config);
       await db.delete(Migrations).where(eq(Migrations.name, migrationName));
       await db.close();

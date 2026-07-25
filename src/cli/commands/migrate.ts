@@ -20,6 +20,11 @@ export async function migrate(options: Options): Promise<void> {
   // normalize configuration file path so we can reuse it multiple times
   const configPath = resolveConfigPath(options.config);
   const config = await loadConfig(configPath);
+  config.connector.options.pool = {
+    ...config.connector.options.pool,
+    max: 1,
+  };
+  config.connector.options.logger = undefined;
   const { connector } = config;
   const migrationsDir = resolve(
     dirname(configPath),
@@ -39,6 +44,7 @@ export async function migrate(options: Options): Promise<void> {
     if (await migrationsTableExists(client)) {
       const db = database({ Migrations }, config);
       const records = await db.from(Migrations).select();
+      await db.close();
       previouslyApplied = records.map((r) => r.name);
     }
 
@@ -118,11 +124,6 @@ export async function runUpMigration(
         dim("."),
     );
 
-    config.connector.options.pool = {
-      ...config.connector.options.pool,
-      max: 1,
-    };
-    config.connector.options.logger = undefined;
     const db = database({ Migrations }, config);
     await db.insert(Migrations).values({
       name: migrationDirName,
