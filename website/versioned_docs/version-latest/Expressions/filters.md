@@ -8,29 +8,29 @@ Durcno provides a set of type-safe filter operators for building WHERE and CHECK
 
 ## Operator Reference
 
-| Operator                      | Description                                   | Example                                      |
-| ----------------------------- | --------------------------------------------- | -------------------------------------------- |
-| `eq(col, val)`                | Equal                                         | `eq(Users.type, "admin")`                    |
-| `ne(col, val)`                | Not equal                                     | `ne(Users.type, "admin")`                    |
-| `gt(col, val)`                | Greater than                                  | `gt(Users.id, 10n)`                          |
-| `gte(col, val)`               | Greater than or equal                         | `gte(Users.id, 10n)`                         |
-| `lt(col, val)`                | Less than                                     | `lt(Users.id, 10n)`                          |
-| `lte(col, val)`               | Less than or equal                            | `lte(Users.id, 10n)`                         |
-| `isNull(col)`                 | IS NULL                                       | `isNull(Users.email)`                        |
-| `isNotNull(col)`              | IS NOT NULL                                   | `isNotNull(Users.email)`                     |
-| `isIn(col, arrOrSubquery)`    | IN array or subquery                          | `isIn(Users.id, [1n, 2n, 3n])`               |
-| `notIn(col, values)`          | NOT IN array                                  | `notIn(Users.type, ["banned", "deleted"])`   |
-| `startsWith(col, val)`        | Starts with (`starts_with()`, case-sensitive) | `startsWith(Users.username, "admin")`        |
-| `endsWith(col, val)`          | Ends with (case-sensitive)                    | `endsWith(Users.email, "@test.com")`         |
-| `contains(col, val)`          | Contains (case-sensitive)                     | `contains(Users.bio, "typescript")`          |
-| `like(col, pattern)`          | Case-sensitive LIKE pattern                   | `like(Users.code, "US%")`                    |
-| `and(...conditions)`          | AND logic                                     | `and(eq(...), gte(...))`                     |
-| `or(...conditions)`           | OR logic                                      | `or(eq(...), eq(...))`                       |
-| `arrayContains(col, values)`  | Array contains all values (`@>`)              | `arrayContains(Posts.tags, ["ts", "pg"])`    |
-| `arrayContainedBy(col, vals)` | Array subset of values (`<@`)                 | `arrayContainedBy(Posts.tags, ["ts", "pg"])` |
-| `arrayOverlaps(col, values)`  | Array overlaps values (`&&`)                  | `arrayOverlaps(Posts.tags, ["ts"])`          |
-| `arrayHas(col, value)`        | Value exists in array (`ANY`)                 | `arrayHas(Posts.tags, "typescript")`         |
-| `arrayAll(col, value)`        | All elements match value (`ALL`)              | `arrayAll(Posts.flags, true)`                |
+| Operator                      | Description                                    | Example                                      |
+| ----------------------------- | ---------------------------------------------- | -------------------------------------------- |
+| `eq(col, val)`                | Equal                                          | `eq(Users.type, "admin")`                    |
+| `ne(col, val)`                | Not equal                                      | `ne(Users.type, "admin")`                    |
+| `gt(col, val)`                | Greater than                                   | `gt(Users.id, 10n)`                          |
+| `gte(col, val)`               | Greater than or equal                          | `gte(Users.id, 10n)`                         |
+| `lt(col, val)`                | Less than                                      | `lt(Users.id, 10n)`                          |
+| `lte(col, val)`               | Less than or equal                             | `lte(Users.id, 10n)`                         |
+| `isNull(col)`                 | IS NULL                                        | `isNull(Users.email)`                        |
+| `isNotNull(col)`              | IS NOT NULL                                    | `isNotNull(Users.email)`                     |
+| `isIn(col, arrOrSubquery)`    | IN array or subquery                           | `isIn(Users.id, [1n, 2n, 3n])`               |
+| `notIn(col, values)`          | NOT IN array                                   | `notIn(Users.type, ["banned", "deleted"])`   |
+| `startsWith(col, val)`        | Starts with (`starts_with()`, case-sensitive)  | `startsWith(Users.username, "admin")`        |
+| `endsWith(col, val)`          | Ends with (case-sensitive)                     | `endsWith(Users.email, "@test.com")`         |
+| `contains(col, val)`          | Contains (case-sensitive)                      | `contains(Users.bio, "typescript")`          |
+| `like(col, pattern)`          | Case-sensitive LIKE pattern                    | `like(Users.code, "US%")`                    |
+| `and(...conditions)`          | AND logic; ignores `null`, `undefined` entries | `and(eq(...), gte(...))`                     |
+| `or(...conditions)`           | OR logic; ignores `null`, `undefined` entries  | `or(eq(...), eq(...))`                       |
+| `arrayContains(col, values)`  | Array contains all values (`@>`)               | `arrayContains(Posts.tags, ["ts", "pg"])`    |
+| `arrayContainedBy(col, vals)` | Array subset of values (`<@`)                  | `arrayContainedBy(Posts.tags, ["ts", "pg"])` |
+| `arrayOverlaps(col, values)`  | Array overlaps values (`&&`)                   | `arrayOverlaps(Posts.tags, ["ts"])`          |
+| `arrayHas(col, value)`        | Value exists in array (`ANY`)                  | `arrayHas(Posts.tags, "typescript")`         |
+| `arrayAll(col, value)`        | All elements match value (`ALL`)               | `arrayAll(Posts.flags, true)`                |
 
 ## Comparison Operators
 
@@ -220,6 +220,8 @@ All string filter functions — `like`, `startsWith`, `endsWith`, and `contains`
 :::
 
 ## Logical Operators
+
+Both `and()` and `or()` ignore `null` and `undefined` entries, so you can pass optional filters without generating invalid SQL.
 
 ### AND (`and`)
 
