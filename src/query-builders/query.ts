@@ -1,4 +1,4 @@
-import type { Arg } from "./pre";
+import type { AnyArg } from "./pre";
 
 export type SqlArgType = string | number | null;
 
@@ -23,14 +23,14 @@ export class Query<TReturn = unknown> {
   readonly returnType!: TReturn;
   sql: string;
   arguments: SqlArgType[] = [];
-  rowsHandler: (rows: any[]) => TReturn;
+  rowsHandler: (rows: unknown[]) => TReturn;
   constructor(sql: string, rowsHandler: (rows: any[]) => TReturn) {
     this.sql = sql;
     this.rowsHandler = rowsHandler;
   }
 
   /** Appends a prepared-query `Arg` placeholder with optional cast suffix. */
-  addArg(arg: Arg<any>) {
+  addArg(arg: AnyArg) {
     const castSuffix = arg.cast ? `::${arg.cast}` : "";
     this.sql += `$${arg.index}${castSuffix}`;
     this.arguments.push(arg.key);

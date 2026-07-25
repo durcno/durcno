@@ -479,12 +479,13 @@ export function notIn<TCol extends AnyColumn>(
 /** @internal Union of table columns from all Filter conditions in the array. */
 type Filters = AnyFilter | Sql | null | undefined;
 
-type ExtractCols<T extends Filters> =
-  T extends Filter<any, any> ? T["$Columns"] : never;
+type ExtractCols<T extends Filters> = T extends AnyFilter
+  ? T["$Columns"]
+  : never;
 
 /** @internal `true` when at least one Filter condition in the array carries an Arg placeholder. */
 type HasArgOf<T extends Filters[]> = [
-  T[number] extends Filter<any, infer H> ? H : false,
+  T[number] extends Filter<infer _, infer H> ? H : false,
 ] extends [false]
   ? false
   : true;
