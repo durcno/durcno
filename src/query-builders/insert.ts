@@ -1,14 +1,131 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
-import { is } from "../entity";
-import type { AnyColumn, TableWithColumns } from "../table";
-import type { Key } from "../types";
+import { is, isCol } from "../entity";
+import type { FilterExpression } from "../filters/index";
+import {
+  type AnyColumn,
+  Table,
+  type TableAnyColumn,
+  type TableColumn,
+  type TableWithColumns,
+} from "../table";
+import type { Key, Valueof } from "../types";
 import type { ReturningColumns } from "../virtual-table";
 
 import { buildWithClause, resolveReturningColumns } from "./helpers";
 import { Arg } from "./pre";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
+
+/** Internal state for a DO NOTHING or DO UPDATE SET conflict clause. */
+type ConflictClause =
+  | { action: "nothing"; columns: AnyColumn[] }
+  | {
+      action: "update";
+      columns: AnyColumn[];
+      setValues: Record<string, unknown>;
+      where?: FilterExpression<any, any>;
+    };
+
+type ToExcludeColumn<T extends TableAnyColumn> =
+  T extends TableColumn<string, string, infer CName, infer Column>
+    ? TableColumn<"", "EXCLUDED", CName, Column>
+    : never;
+
+/** Builder returned by `InsertQuery#onConflict()`. */
+export class ConflictBuilder<
+  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean,
+  TReturning extends
+    | { [ColName in keyof TTableWC["_"]["columns"]]?: true }
+    | { [ColName in keyof TTableWC["_"]["columns"]]?: false }
+    | "*"
+    | undefined,
+  THasColumns extends boolean,
+> {
+  readonly #table: TTableWC;
+  readonly #factory: (
+    conflict: ConflictClause,
+  ) => InsertQuery<TTableWC, TPrepare, TReturning>;
+  readonly #columns: AnyColumn[];
+
+  constructor(
+    table: TTableWC,
+    factory: (
+      conflict: ConflictClause,
+    ) => InsertQuery<TTableWC, TPrepare, TReturning>,
+    columns: AnyColumn[],
+  ) {
+    this.#table = table;
+    this.#factory = factory;
+    this.#columns = columns;
+  }
+
+  /** Adds `ON CONFLICT DO NOTHING` clause. */
+  doNothing(): InsertQuery<TTableWC, TPrepare, TReturning> {
+    return this.#factory({ action: "nothing", columns: this.#columns });
+  }
+
+  /** Adds `ON CONFLICT DO UPDATE SET` clause. */
+  doUpdateSet<
+    TWhere extends
+      | FilterExpression<
+          | TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
+          | ToExcludeColumn<
+              TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
+            >,
+          TPrepare
+        >
+      | undefined = undefined,
+  >(
+    set: (ctx: {
+      excluded: {
+        [ColName in keyof TTableWC["_"]["columns"]]: ToExcludeColumn<
+          TTableWC["_"]["columns"][ColName]
+        >;
+      };
+    }) => {
+      [ColName in keyof TTableWC["_"]["columns"]]?:
+        | TTableWC["_"]["columns"][ColName]["ValTypeUpdate"]
+        | TTableWC["_"]["columns"][ColName]
+        | ToExcludeColumn<TTableWC["_"]["columns"][ColName]>;
+    },
+    where?: (ctx: {
+      excluded: {
+        [ColName in keyof TTableWC["_"]["columns"]]: ToExcludeColumn<
+          TTableWC["_"]["columns"][ColName]
+        >;
+      };
+    }) => TWhere,
+  ): THasColumns extends true
+    ? InsertQuery<TTableWC, TPrepare, TReturning>
+    : never {
+    const excluded = this.#buildExcludedTable();
+    const setValues = set({ excluded });
+    return this.#factory({
+      action: "update",
+      columns: this.#columns,
+      setValues: setValues as Record<string, unknown>,
+      where: where ? where({ excluded }) : undefined,
+    }) as THasColumns extends true
+      ? InsertQuery<TTableWC, TPrepare, TReturning>
+      : never;
+  }
+
+  /** Builds a `Table` instance for the PostgreSQL `EXCLUDED` pseudo-table. */
+  #buildExcludedTable() {
+    const clonedColumns: Record<string, AnyColumn> = {};
+    for (const [colName, col] of Object.entries(this.#table._.columns)) {
+      clonedColumns[colName] = col.clone();
+    }
+    const excludedTable = new Table("", "EXCLUDED", clonedColumns, {});
+    return excludedTable._.columns as unknown as {
+      [Col in keyof TTableWC["_"]["columns"]]: ToExcludeColumn<
+        TTableWC["_"]["columns"][Col]
+      >;
+    };
+  }
+}
 
 export class InsertBuilder<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
@@ -99,11 +216,12 @@ export class InsertQuery<
       : null,
 > extends QueryPromise<TReturn> {
   readonly #table: TTableWC;
-  readonly #$values: Record<string, unknown> | Record<string, unknown>[];
+  readonly #values: Record<string, unknown> | Record<string, unknown>[];
   readonly #$returning: TReturning;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
+  readonly #$conflict: ConflictClause | undefined;
 
   constructor(
     table: TTableWC,
@@ -112,14 +230,16 @@ export class InsertQuery<
     executor: QueryExecutor,
     prepare: TPrepare,
     ctes: readonly AnyCteWithColumns[] | null = null,
+    conflict?: ConflictClause,
   ) {
     super();
     this.#table = table;
-    this.#$values = values;
+    this.#values = values;
     this.#$returning = returnings;
     this.#executor = executor;
     this.#prepare = prepare;
     this.#$ctes = ctes;
+    this.#$conflict = conflict;
   }
 
   /** Return all columns using `RETURNING *`. */
@@ -139,12 +259,45 @@ export class InsertQuery<
   ) {
     return new InsertQuery(
       this.#table,
-      this.#$values,
+      this.#values,
       returnings as never,
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#$conflict,
     );
+  }
+
+  /** Begins an `ON CONFLICT` clause with no target columns. */
+  onConflict(): ConflictBuilder<TTableWC, TPrepare, TReturning, false>;
+  /** Begins an `ON CONFLICT` clause with target columns. */
+  onConflict(
+    ...columns: [
+      Valueof<TTableWC["_"]["columns"]>,
+      ...Valueof<TTableWC["_"]["columns"]>[],
+    ]
+  ): ConflictBuilder<TTableWC, TPrepare, TReturning, true>;
+  onConflict(
+    ...columns: Valueof<TTableWC["_"]["columns"]>[]
+  ): ConflictBuilder<TTableWC, TPrepare, TReturning, boolean> {
+    const table = this.#table;
+    // biome-ignore lint/suspicious/noExplicitAny: <>
+    const factory = (clause: ConflictClause): any =>
+      new InsertQuery(
+        table,
+        this.#values,
+        this.#$returning,
+        this.#executor,
+        this.#prepare,
+        this.#$ctes,
+        clause,
+      );
+    return new ConflictBuilder(table, factory, columns) as ConflictBuilder<
+      TTableWC,
+      TPrepare,
+      TReturning,
+      boolean
+    >;
   }
 
   toQuery(parentQuery?: AnyQuery): Query<TReturn> {
@@ -157,9 +310,9 @@ export class InsertQuery<
     }
     query.sql += "INSERT INTO ";
     query.sql += this.#table._.fullName;
-    const valuesArray = Array.isArray(this.#$values)
-      ? this.#$values
-      : [this.#$values];
+    const valuesArray = Array.isArray(this.#values)
+      ? this.#values
+      : [this.#values];
 
     const fields = Object.keys(this.#table._.columns);
     query.sql += " ( ";
@@ -196,6 +349,41 @@ export class InsertQuery<
         query.sql += ",\n";
       }
     });
+
+    if (this.#$conflict) {
+      const { action, columns } = this.#$conflict;
+
+      query.sql += " ON CONFLICT";
+
+      if (columns.length > 0) {
+        query.sql += " (";
+        query.sql += columns.map((col) => `"${col.nameSql}"`).join(", ");
+        query.sql += ")";
+      }
+
+      if (action === "nothing") {
+        query.sql += " DO NOTHING";
+      } else {
+        query.sql += " DO UPDATE SET ";
+        const setEntries = Object.entries(this.#$conflict.setValues);
+        setEntries.forEach(([fieldName, value], idx) => {
+          const col = this.#table._.columns[fieldName];
+          query.sql += `"${col.nameSql}" = `;
+          if (isCol(value)) {
+            value.toQuery(query);
+          } else {
+            query.sql += col.toSQL(value, { cast: true });
+          }
+          if (idx < setEntries.length - 1) {
+            query.sql += ", ";
+          }
+        });
+        if (this.#$conflict.where) {
+          query.sql += " WHERE ";
+          this.#$conflict.where.toQuery(query);
+        }
+      }
+    }
 
     if (this.#$returning === "*") {
       query.sql += " RETURNING *";

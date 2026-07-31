@@ -482,3 +482,52 @@ db.insert(NetworkDevices).values({
   // @ts-expect-error - number not assignable to string
   macAddress: 12345,
 });
+
+// ============================================================================
+// ON CONFLICT type tests
+// ============================================================================
+
+// Return type flows correctly through .returning()
+const _upsertResult = db
+  .insert(Users)
+  .values({
+    username: "alice",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .onConflict(Users.externalId)
+  .doUpdateSet(({ excluded }) => ({ username: excluded.username }))
+  .returning({ id: true, username: true });
+type UpsertResult = Awaited<typeof _upsertResult>;
+Expect<Equal<UpsertResult, { id: bigint; username: string }[]>>();
+
+// doNothing with returning: type still flows through
+const _doNothingWithReturning = db
+  .insert(Users)
+  .values({
+    username: "bob",
+    type: "admin",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .onConflict(Users.email)
+  .doNothing()
+  .returning({ id: true });
+type DoNothingWithReturning = Awaited<typeof _doNothingWithReturning>;
+Expect<Equal<DoNothingWithReturning, { id: bigint }[]>>();
+
+// ── Negative: doUpdateSet without target ────────────────────────────────────
+
+// doUpdateSet is typed as returning `never` when no target columns are given.
+// Calling it compiles, but the return type is `never` — unusable as a query.
+const _doUpdateSetNoTarget = db
+  .insert(Users)
+  .values({
+    username: "alice",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .onConflict()
+  .doUpdateSet(({ excluded }) => ({ username: excluded.username }));
+// The result is `never` — it cannot be awaited or chained usefully.
+type DoUpdateSetNoTarget = typeof _doUpdateSetNoTarget;
+Expect<Equal<DoUpdateSetNoTarget, never>>();

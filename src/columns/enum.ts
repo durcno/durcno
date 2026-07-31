@@ -44,6 +44,15 @@ export class EnumedColumn<
   fromDriverScalar(value: TValue | null): TValue | null {
     return value;
   }
+
+  /**
+   * Overrides the base `clone()` because `EnumedColumn` requires both the
+   * enum reference and the config to construct a valid instance.
+   * @internal
+   */
+  clone(): EnumedColumn<TValue, TConfig> {
+    return new EnumedColumn(this.#enum, this.config);
+  }
 }
 
 /** Creates an `enum` column bound to a user-defined PostgreSQL enum type. Maps to a union of string literals. */

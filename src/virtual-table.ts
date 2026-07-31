@@ -12,7 +12,6 @@ import {
   type TableColumn,
 } from "./table";
 import type { Key, Prettify, UnionToIntersection } from "./types";
-import { camelToSnake } from "./utils";
 
 export type SelectableSource = AnyColumn | AnySqlFn;
 
@@ -190,13 +189,7 @@ export class VirtualTable<
     columns: Record<string, SelectableSource>,
     query: AnySubquery,
   ) {
-    super(
-      "",
-      name,
-      createVirtualColumns(columns) as TColumns,
-      {},
-      { fullName: `"${camelToSnake(name)}"` },
-    );
+    super("", name, createVirtualColumns(columns) as TColumns, {});
     this.query = query;
   }
 }

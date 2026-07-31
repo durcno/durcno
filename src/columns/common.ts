@@ -792,6 +792,11 @@ export abstract class Column<
   opclass(opclass: string): IndexOn<this> {
     return new IndexOn(this as unknown as StdTableColumn<this>, opclass);
   }
+
+  /** @internal */
+  clone(): Column<TConfig, TColVal, TPgType> {
+    return new (this.constructor as new (config: TConfig) => this)(this.config);
+  }
 }
 
 export class IndexOn<TCol extends AnyColumn = AnyColumn> {

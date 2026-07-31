@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, database, defineConfig, eq } from "durcno";
+import { type $Client, database, defineConfig, eq, gt } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -394,6 +394,163 @@ describe("INSERT queries", () => {
           body: "Invalid reply",
         }),
       ).rejects.toThrow();
+    });
+  });
+
+  describe("ON CONFLICT", () => {
+    it("doNothing: should silently skip on unique violation", async () => {
+      const user = createTestUser({ username: "conflictuser" });
+      await db.insert(schema.Users).values(user);
+
+      // Second insert on same unique username — should not throw
+      await db
+        .insert(schema.Users)
+        .values({ ...user, type: "admin" })
+        .onConflict(schema.Users.username)
+        .doNothing();
+
+      const users = await db.from(schema.Users).select();
+      expect(users).toHaveLength(1);
+      expect(users[0].type).toBe("user"); // original row unchanged
+    });
+
+    it("doNothing: no target — silently skip on any conflict", async () => {
+      const user = createTestUser({ username: "noTargetConflict" });
+      await db.insert(schema.Users).values(user);
+
+      await db.insert(schema.Users).values(user).onConflict().doNothing();
+
+      const users = await db.from(schema.Users).select();
+      expect(users).toHaveLength(1);
+    });
+
+    it("doUpdateSet: should update column from EXCLUDED on conflict", async () => {
+      const user = createTestUser({ username: "upsertuser" });
+      await db.insert(schema.Users).values(user);
+
+      await db
+        .insert(schema.Users)
+        .values({ ...user, email: "newemail@example.com" })
+        .onConflict(schema.Users.username)
+        .doUpdateSet(({ excluded }) => ({
+          email: excluded.email,
+        }));
+
+      const users = await db.from(schema.Users).select();
+      expect(users).toHaveLength(1);
+      expect(users[0].email).toBe("newemail@example.com");
+    });
+
+    it("doUpdateSet: should keep existing column value (table ref in SET)", async () => {
+      const user = createTestUser({
+        username: "keepExisting",
+        email: "original@example.com",
+      });
+      await db.insert(schema.Users).values(user);
+
+      await db
+        .insert(schema.Users)
+        .values({ ...user, email: "ignored@example.com" })
+        .onConflict(schema.Users.username)
+        .doUpdateSet(() => ({
+          email: schema.Users.email, // keep the existing value
+        }));
+
+      const users = await db.from(schema.Users).select();
+      expect(users).toHaveLength(1);
+      expect(users[0].email).toBe("original@example.com");
+    });
+
+    it("doUpdateSet: should set a literal value on conflict", async () => {
+      const user = createTestUser({ username: "literalUpdate" });
+      await db.insert(schema.Users).values(user);
+
+      await db
+        .insert(schema.Users)
+        .values(user)
+        .onConflict(schema.Users.username)
+        .doUpdateSet(() => ({
+          score: 999,
+        }));
+
+      const users = await db.from(schema.Users).select();
+      expect(users).toHaveLength(1);
+      expect(users[0].score).toBe(999);
+    });
+
+    it("doUpdateSet: should chain with returning()", async () => {
+      const user = createTestUser({ username: "upsertReturn" });
+      await db.insert(schema.Users).values(user);
+
+      const result = await db
+        .insert(schema.Users)
+        .values({ ...user, email: "updated@example.com" })
+        .onConflict(schema.Users.username)
+        .doUpdateSet(({ excluded }) => ({
+          email: excluded.email,
+        }))
+        .returning({ id: true, username: true, email: true });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].username).toBe("upsertReturn");
+      expect(result[0].email).toBe("updated@example.com");
+    });
+
+    it("doNothing: should chain with returning() and return nothing on conflict", async () => {
+      const user = createTestUser({ username: "doNothingReturn" });
+      await db.insert(schema.Users).values(user);
+
+      const result = await db
+        .insert(schema.Users)
+        .values(user)
+        .onConflict(schema.Users.username)
+        .doNothing()
+        .returning({ id: true });
+
+      // PostgreSQL returns no rows when DO NOTHING fires
+      expect(result).toHaveLength(0);
+    });
+
+    it("doUpdateSet: should update when where condition matches", async () => {
+      const user = createTestUser({ username: "conditionalUpdate" });
+      await db.insert(schema.Users).values(user);
+
+      await db
+        .insert(schema.Users)
+        .values({ ...user, score: 100 }) // new score is greater
+        .onConflict(schema.Users.username)
+        .doUpdateSet(
+          ({ excluded }) => ({ score: excluded.score }),
+          ({ excluded }) => gt(excluded.score, schema.Users.score),
+        );
+
+      const users = await db
+        .from(schema.Users)
+        .select()
+        .where(eq(schema.Users.username, "conditionalUpdate"));
+      expect(users).toHaveLength(1);
+      expect(users[0].score).toBe(100);
+    });
+
+    it("doUpdateSet: should skip update when where condition does not match", async () => {
+      const user = createTestUser({ username: "conditionalSkip", score: 50 });
+      await db.insert(schema.Users).values(user);
+
+      await db
+        .insert(schema.Users)
+        .values({ ...user, score: 20 }) // new score is smaller
+        .onConflict(schema.Users.username)
+        .doUpdateSet(
+          ({ excluded }) => ({ score: excluded.score }),
+          ({ excluded }) => gt(excluded.score, schema.Users.score),
+        );
+
+      const users = await db
+        .from(schema.Users)
+        .select()
+        .where(eq(schema.Users.username, "conditionalSkip"));
+      expect(users).toHaveLength(1);
+      expect(users[0].score).toBe(50); // should not be updated to 20
     });
   });
 });
