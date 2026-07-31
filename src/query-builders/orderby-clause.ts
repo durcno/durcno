@@ -1,6 +1,6 @@
 import { isTCol } from "../entity";
 import type { AnyScalarSqlFn, SqlFn } from "../functions";
-import type { AnyTableWC, AnyTableWithColumns, TableAnyColumn } from "../table";
+import type { AnyTableWithColumns, TableAnyColumn } from "../table";
 import type { Valueof } from "../types";
 import type { Query, QueryContext } from "./query";
 

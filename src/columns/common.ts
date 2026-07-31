@@ -230,14 +230,15 @@ export abstract class Column<
 > {
   static readonly [entityType] = "Column";
   readonly config: TConfig;
+  // Phantom properties for type inference and compile-time checks
   readonly $!: {
-    /** Phantom discriminant id for this entity kind. */
+    /** Discriminant id for this entity kind. */
     kind: "column";
     /** The PostgreSQL type category for this column. */
     PgType: TPgType;
     /** The TypeScript type for this column's value. */
     TsType: TColVal;
-    /** Phantom schema and table references for this column. */
+    /** Schema and table references for this column. */
     schema: string | undefined;
     table: string | undefined;
     // biome-ignore lint/complexity/noBannedTypes: <>
@@ -267,7 +268,7 @@ export abstract class Column<
     ? never
     : this extends { isNotNull: true }
       ? this["ValType"] | undefined
-      : this["ValType"] | undefined | null;
+      : this["ValType"] | null | undefined;
   readonly ValTypeSelect!: this extends
     | {
         isGeneratedAlways: true;
@@ -281,14 +282,14 @@ export abstract class Column<
     | { isNotNull: true }
     ? this["ValType"]
     : this["ValType"] | null;
-  #default: this["ValType"] | Sql | undefined;
-  #insertFn: (() => this["ValType"]) | undefined;
-  #updateFn: (() => this["ValType"]) | undefined;
   readonly #primaryKey: boolean;
   readonly #unique: boolean;
   readonly #notNull: boolean;
   #generated: "ALWAYS" | "BY DEFAULT" | undefined;
   #generatedAs: string | Sql | StdSqlFn | undefined;
+  #default: this["ValType"] | Sql | undefined;
+  #insertFn: (() => this["ValType"]) | undefined;
+  #updateFn: (() => this["ValType"]) | undefined;
   #references:
     | { column: () => StdTableColumn; onDelete: OnDeleteAction }
     | undefined;

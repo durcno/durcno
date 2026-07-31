@@ -3,7 +3,7 @@ import { Column } from "./columns/common";
 import { isCol } from "./entity";
 import type { AnySqlFn } from "./functions";
 import type { AnyQuery } from "./query-builders/query";
-import type { QueryPromise } from "./query-builders/query-promise";
+import type { AnyQueryPromise } from "./query-builders/query-promise";
 import type { Sql } from "./sql";
 import {
   type AnyColumn,
@@ -15,7 +15,7 @@ import type { Key, Prettify, UnionToIntersection } from "./types";
 
 export type SelectableSource = AnyColumn | AnySqlFn;
 
-export type AnySubquery = QueryPromise<any> & {
+export type AnySubquery = AnyQueryPromise & {
   toQuery(parentQuery?: AnyQuery): AnyQuery;
   getResolvedColumns(): Record<string, SelectableSource>;
 };

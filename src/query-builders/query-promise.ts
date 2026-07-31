@@ -44,3 +44,5 @@ export abstract class QueryPromise<T> implements Promise<T> {
   abstract execute(): Promise<T>;
   abstract handleRows(rows: any[]): T;
 }
+
+export type AnyQueryPromise = QueryPromise<any>;
