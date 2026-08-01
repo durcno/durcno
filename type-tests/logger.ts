@@ -14,10 +14,19 @@ Expect<
   >
 >();
 
+// Positive: QueryLogger is a valid type with an error method
+type _LoggerHasError = QueryLogger["error"];
+Expect<
+  Equal<
+    _LoggerHasError,
+    (message: string, meta?: Record<string, unknown>) => void
+  >
+>();
+
 // Positive: ConnectorOptions accepts a logger property
 const _optionsWithLogger: ConnectorOptions = {
   dbCredentials: { url: "postgres://x" },
-  logger: { info: () => {} },
+  logger: { info: () => {}, error: () => {} },
 };
 void _optionsWithLogger;
 
@@ -34,6 +43,7 @@ void _logger;
 // Positive: Winston-style info call with metadata
 const _fakeLogger: QueryLogger = {
   info: (_msg: string, _meta?: Record<string, unknown>) => {},
+  error: (_msg: string, _meta?: Record<string, unknown>) => {},
 };
 _fakeLogger.info("Query", { sql: "SELECT 1", arguments: [] });
 _fakeLogger.info("Query", { sql: "SELECT 1", arguments: [], durationMs: 12.5 });
@@ -63,7 +73,7 @@ const _configWithLogger: Config = {
   schema: "db/schema.ts",
   connector: pg({
     dbCredentials: { url: "postgres://x" },
-    logger: { info: () => {} },
+    logger: { info: () => {}, error: () => {} },
   }),
 };
 void _configWithLogger;

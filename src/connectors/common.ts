@@ -205,15 +205,26 @@ abstract class $QueryExecutor {
    */
   async execQuery(q: Query<unknown>): Promise<unknown> {
     const start = performance.now();
-    const result = await this.query(q.sql, q.arguments);
-    if (this.logger) {
-      this.logger.info("Query", {
-        sql: q.sql,
-        arguments: q.arguments,
-        durationMs: performance.now() - start,
-      });
+    try {
+      const result = await this.query(q.sql, q.arguments);
+      if (this.logger) {
+        this.logger.info("Query executed", {
+          sql: q.sql,
+          arguments: q.arguments,
+          durationMs: performance.now() - start,
+        });
+      }
+      return result;
+    } catch (error) {
+      if (this.logger) {
+        this.logger.error("Query failed", {
+          sql: q.sql,
+          arguments: q.arguments,
+          durationMs: performance.now() - start,
+        });
+      }
+      throw error;
     }
-    return result;
   }
 }
 

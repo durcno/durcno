@@ -189,7 +189,7 @@ connector: pg({
 **Type:** `QueryLogger`  
 **Optional**
 
-A logger instance that receives every SQL query before it is sent to the database. Any object with a compatible `info()` method can be used. Durcno ships a pre-configured Winston logger via `durcno/logger`.
+A logger instance that receives query execution events for successful and failed queries. Successful queries call `info()`, while failed queries call `error()`. Any object with compatible `info()` and `error()` methods can be used. Durcno ships a pre-configured Winston logger via `durcno/logger`.
 
 Pass `logger` inside the connector options. See [Query Logger](./Advanced/logger) for full details and examples.
 

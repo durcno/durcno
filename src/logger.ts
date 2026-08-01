@@ -9,6 +9,7 @@ const { combine, label, timestamp, printf } = format;
  */
 export interface QueryLogger {
   info(message: string, meta?: Record<string, unknown>): void;
+  error(message: string, meta?: Record<string, unknown>): void;
 }
 
 /**

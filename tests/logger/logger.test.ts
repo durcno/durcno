@@ -41,15 +41,16 @@ class TestPool extends $Pool {
 
 describe("Logger", () => {
   describe("createQueryLogger", () => {
-    it("returns an object with an info method", () => {
+    it("returns an object with an info and error method", () => {
       const logger = createQueryLogger();
       expect(typeof logger.info).toBe("function");
+      expect(typeof logger.error).toBe("function");
     });
   });
 
   describe("$Client.execQuery with logger", () => {
     it("calls logger.info with structured query metadata", async () => {
-      const mockLogger: QueryLogger = { info: vi.fn() };
+      const mockLogger: QueryLogger = { info: vi.fn(), error: vi.fn() };
       const client = new TestClient();
       client.logger = mockLogger;
 
@@ -60,7 +61,7 @@ describe("Logger", () => {
 
       expect(mockLogger.info).toHaveBeenCalledOnce();
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Query",
+        "Query executed",
         expect.objectContaining({
           sql: "SELECT * FROM users WHERE id = $1",
           arguments: [42],
@@ -74,11 +75,31 @@ describe("Logger", () => {
 
       await expect(client.execQuery(q)).resolves.not.toThrow();
     });
+
+    it("logs query failure and rethrows", async () => {
+      const mockLogger: QueryLogger = { info: vi.fn(), error: vi.fn() };
+      const client = new TestClient();
+      client.logger = mockLogger;
+      
+      const testError = new Error("Connection lost");
+      client.query = vi.fn().mockRejectedValueOnce(testError);
+
+      const q = new Query("SELECT 1", (r) => r);
+      await expect(client.execQuery(q)).rejects.toThrow(testError);
+
+      expect(mockLogger.error).toHaveBeenCalledOnce();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "Query failed",
+        expect.objectContaining({
+          sql: "SELECT 1",
+        }),
+      );
+    });
   });
 
   describe("$Pool.execQuery with logger", () => {
     it("calls logger.info with structured query metadata", async () => {
-      const mockLogger: QueryLogger = { info: vi.fn() };
+      const mockLogger: QueryLogger = { info: vi.fn(), error: vi.fn() };
       const pool = new TestPool();
       pool.logger = mockLogger;
 
@@ -89,7 +110,7 @@ describe("Logger", () => {
 
       expect(mockLogger.info).toHaveBeenCalledOnce();
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Query",
+        "Query executed",
         expect.objectContaining({
           sql: 'INSERT INTO users ("name") VALUES ($1)',
           arguments: ["John"],
@@ -103,11 +124,31 @@ describe("Logger", () => {
 
       await expect(pool.execQuery(q)).resolves.not.toThrow();
     });
+
+    it("logs query failure and rethrows", async () => {
+      const mockLogger: QueryLogger = { info: vi.fn(), error: vi.fn() };
+      const pool = new TestPool();
+      pool.logger = mockLogger;
+      
+      const testError = new Error("DB Error");
+      pool.query = vi.fn().mockRejectedValueOnce(testError);
+
+      const q = new Query("SELECT 1", (r) => r);
+      await expect(pool.execQuery(q)).rejects.toThrow(testError);
+
+      expect(mockLogger.error).toHaveBeenCalledOnce();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "Query failed",
+        expect.objectContaining({
+          sql: "SELECT 1",
+        }),
+      );
+    });
   });
 
   describe("$Pool.execQuery logs multiple arguments correctly", () => {
     it("passes all arguments in the metadata", async () => {
-      const mockLogger: QueryLogger = { info: vi.fn() };
+      const mockLogger: QueryLogger = { info: vi.fn(), error: vi.fn() };
       const pool = new TestPool();
       pool.logger = mockLogger;
 
@@ -120,7 +161,7 @@ describe("Logger", () => {
       await pool.execQuery(q);
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Query",
+        "Query executed",
         expect.objectContaining({
           sql: "SELECT * FROM users WHERE id = $1 AND name = $2",
           arguments: [1, "Alice"],
@@ -131,7 +172,7 @@ describe("Logger", () => {
 
   describe("$Client.execQuery logs query with null arguments", () => {
     it("includes null in arguments array", async () => {
-      const mockLogger: QueryLogger = { info: vi.fn() };
+      const mockLogger: QueryLogger = { info: vi.fn(), error: vi.fn() };
       const client = new TestClient();
       client.logger = mockLogger;
 
@@ -141,7 +182,7 @@ describe("Logger", () => {
       await client.execQuery(q);
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Query",
+        "Query executed",
         expect.objectContaining({
           sql: "UPDATE users SET name = $1 WHERE id = $2",
           arguments: [null, 5],
