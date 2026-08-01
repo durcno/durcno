@@ -534,3 +534,187 @@ describe("SELECT with INNER JOIN", () => {
     });
   });
 });
+
+describe("SELECT with LEFT JOIN", () => {
+  let containerInfo: TestContainerInfo;
+  let container: Docker.Container;
+  let db: ReturnType<typeof database<typeof schema>>;
+  let client: $Client;
+  const migrationsDirName = generateMigrationsDirPath("left_joins");
+
+  beforeAll(async () => {
+    containerInfo = await startPostgresContainer({
+      image: "postgres:16-alpine",
+    });
+    container = containerInfo.container;
+
+    const configPath = path.resolve(__dirname, "durcno.config.ts");
+    const migrationsDir = path.resolve(__dirname, migrationsDirName);
+
+    if (fs.existsSync(migrationsDir)) {
+      fs.rmSync(migrationsDir, { recursive: true, force: true });
+    }
+
+    runDurcnoCli("generate", configPath, containerInfo, migrationsDirName);
+    runDurcnoCli("migrate", configPath, containerInfo, migrationsDirName);
+    db = database(
+      schema,
+      defineConfig({
+        schema: "./schema.ts",
+        connector: pg({
+          pool: { max: 1 },
+          dbCredentials: {
+            host: "localhost",
+            port: containerInfo.port,
+            user: "testuser",
+            password: "testpassword",
+            database: containerInfo.dbName,
+          },
+        }),
+      }),
+    );
+    client = db.$.config.connector.getClient();
+    await client.connect();
+  }, 120000);
+
+  beforeEach(async () => {
+    await truncateTables(client);
+  });
+
+  afterAll(async () => {
+    if (client) await client.close();
+    if (db) await db.close();
+    if (container) await stopPostgresContainer(container);
+  });
+
+  it("should select with left join and return null for unmatched rows", async () => {
+    // Insert two test users
+    const [user1] = await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "author_with_post" }))
+      .returning({ id: true });
+
+    await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "author_without_post" }))
+      .returning({ id: true });
+
+    // Insert test post for the first user only
+    await db
+      .insert(schema.Posts)
+      .values(createTestPost(user1.id, { title: "User 1 Post" }));
+
+    // Select with left join
+    const result = await db
+      .from(schema.Users)
+      .leftJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+      .select({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
+      })
+      .orderBy(asc(schema.Users.username));
+
+    expect(result).toHaveLength(2);
+    expect(result[0].username).toBe("author_with_post");
+    expect(result[0].postTitle).toBe("User 1 Post");
+    expect(result[1].username).toBe("author_without_post");
+    expect(result[1].postTitle).toBeNull();
+  });
+
+  it("should return null for all right side columns when selecting all", async () => {
+    await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "user_no_post" }))
+      .returning({ id: true });
+
+    const result = await db
+      .from(schema.Users)
+      .leftJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+      .select();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].username).toBe("user_no_post");
+    expect(result[0].title).toBeNull();
+    expect(result[0].content).toBeNull();
+    expect(result[0].userId).toBeNull();
+    expect(result[0].createdAt).toBeNull();
+  });
+
+  it("should handle left join with sql function correctly", async () => {
+    const { lower } = await import("durcno");
+    const [user1] = await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "AUTHOR_1" }))
+      .returning({ id: true });
+
+    await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "AUTHOR_2" }))
+      .returning({ id: true });
+
+    await db
+      .insert(schema.Posts)
+      .values(createTestPost(user1.id, { title: "MIXED Case Title" }));
+
+    const result = await db
+      .from(schema.Users)
+      .leftJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+      .select({
+        username: schema.Users.username,
+        lowerPostTitle: lower(schema.Posts.title),
+      })
+      .orderBy(asc(schema.Users.username));
+
+    expect(result).toHaveLength(2);
+    expect(result[0].username).toBe("AUTHOR_1");
+    expect(result[0].lowerPostTitle).toBe("mixed case title");
+
+    expect(result[1].username).toBe("AUTHOR_2");
+    expect(result[1].lowerPostTitle).toBeNull();
+  });
+
+  it("should handle mixed inner and left joins properly", async () => {
+    const [user1] = await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "u1" }))
+      .returning({ id: true });
+
+    const [post1] = await db
+      .insert(schema.Posts)
+      .values(createTestPost(user1.id, { title: "Post 1" }))
+      .returning({ id: true });
+
+    await db
+      .insert(schema.Posts)
+      .values(createTestPost(user1.id, { title: "Post 2" }))
+      .returning({ id: true });
+
+    // Only post1 gets a comment
+    await db
+      .insert(schema.Comments)
+      .values(
+        createTestComment(post1.id, user1.id, { body: "Comment on post 1" }),
+      );
+
+    const result = await db
+      .from(schema.Users)
+      .innerJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+      .leftJoin(schema.Comments, eq(schema.Comments.postId, schema.Posts.id))
+      .select({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
+        commentBody: schema.Comments.body,
+      })
+      .orderBy(asc(schema.Posts.title));
+
+    expect(result).toHaveLength(2);
+
+    // Post 1 has a comment
+    expect(result[0].postTitle).toBe("Post 1");
+    expect(result[0].commentBody).toBe("Comment on post 1");
+
+    // Post 2 does not have a comment, so commentBody should be null
+    expect(result[1].postTitle).toBe("Post 2");
+    expect(result[1].commentBody).toBeNull();
+  });
+});

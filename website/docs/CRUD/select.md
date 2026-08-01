@@ -13,6 +13,7 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 | Method                   | Description                            |
 | ------------------------ | -------------------------------------- |
 | `.innerJoin(table, on)`  | Add an inner join to the query         |
+| `.leftJoin(table, on)`   | Add a left join to the query           |
 | `.distinctOn(column)`    | Apply DISTINCT ON for a single column  |
 | `.distinctOn([...cols])` | Apply DISTINCT ON for multiple columns |
 | `.select()`              | Select all columns                     |
@@ -166,7 +167,7 @@ const page = await db.from(Users).select().limit(10n).offset(20n);
 
 ## Joining Tables
 
-Use `.innerJoin()` to join tables:
+Use joins to combine rows from related tables. See the dedicated [Joins](./joins.md) page for full examples of `.innerJoin()` and `.leftJoin()`.
 
 ```typescript
 import { eq } from "durcno";
@@ -181,24 +182,6 @@ const usersWithPosts = await db
     title: Posts.title,
   });
 // Type: { username: string; title: string | null }[]
-```
-
-### Multiple Joins
-
-Chain multiple `.innerJoin()` calls for complex queries:
-
-```typescript
-import { Users, Posts, Comments } from "./db/schema.ts";
-
-const data = await db
-  .from(Users)
-  .innerJoin(Posts, eq(Users.id, Posts.userId))
-  .innerJoin(Comments, eq(Posts.id, Comments.postId))
-  .select({
-    username: Users.username,
-    postTitle: Posts.title,
-    commentBody: Comments.body,
-  });
 ```
 
 ## Common Table Expressions (WITH)

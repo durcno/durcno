@@ -21,7 +21,7 @@ import type {
   UnionToIntersection,
   Valueof,
 } from "../types";
-import type { MergeJoinedColumns, SelectableSource } from "../virtual-table";
+import type { SelectableSource } from "../virtual-table";
 import {
   createGroupBySelectView,
   type GroupByAlias,
@@ -37,41 +37,98 @@ import { type AnyArg, Arg } from "./pre";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
-export class SelectBuilder<
+type MergeJoinedColumns<
+  TColumns extends Record<string, AnyColumn>,
+  TJoins,
+> = Prettify<
+  TColumns &
+    (TJoins extends readonly (infer TJoin)[]
+      ? UnionToIntersection<
+          TJoin extends {
+            table: {
+              _: {
+                columns: infer TJoinColumns extends Record<string, AnyColumn>;
+              };
+            };
+          }
+            ? TJoinColumns
+            : never
+        >
+      : Record<never, never>)
+>;
+
+type JoinSourceMeta<TCol> = TCol extends {
+  $: { schema: infer S; table: infer T };
+}
+  ? { schema: S; table: T }
+  : TCol extends { $Columns: { $: { schema: infer S; table: infer T } } }
+    ? { schema: S; table: T }
+    : never;
+
+type IsLeftJoin<TCol, TJoins> = TJoins extends readonly (infer TJoin)[]
+  ? [JoinSourceMeta<TCol>] extends [never]
+    ? false
+    : Extract<
+          TJoin,
+          {
+            type: "left";
+            table: {
+              _: {
+                schema: JoinSourceMeta<TCol>["schema"];
+                name: JoinSourceMeta<TCol>["table"];
+              };
+            };
+          }
+        > extends never
+      ? false
+      : true
+  : false;
+
+/** Shared shape for a single entry in the joins tuple. */
+type JoinEntry = {
+  type: "inner" | "left";
+  table: AnyTableWithColumns;
+  on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
+};
+
+type JoinsColumns<TJoins> = TJoins extends readonly (infer TJoin)[]
+  ? TJoin extends {
+      table: { _: { columns: infer C extends Record<string, AnyColumn> } };
+    }
+    ? Valueof<C>
+    : never
+  : never;
+
+type TableColumns<
   TTSchema extends string,
   TTName extends string,
   TTColumns extends Record<string, AnyColumn>,
+> = Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>;
+
+export class SelectBuilder<
+  TTSchema extends string,
+  TTName extends string,
+  TColumns extends Record<string, AnyColumn>,
   TPrepare extends boolean,
-  TInnerJoins extends
-    | null
-    | [
-        {
-          table: AnyTableWithColumns;
-          on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
-        },
-        ...{
-          table: AnyTableWithColumns;
-          on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
-        }[],
-      ],
+  TJoins extends null | [JoinEntry, ...JoinEntry[]],
 > {
-  readonly #table: TableWithColumns<TTSchema, TTName, TTColumns>;
+  readonly #table: TableWithColumns<TTSchema, TTName, TColumns>;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
-  readonly #$innerJoins: TInnerJoins;
+  readonly #$joins: TJoins;
   readonly #$distinctOn: StdTableColumn[] | undefined;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
 
   constructor(
-    table: TableWithColumns<TTSchema, TTName, TTColumns>,
-    innerJoins: TInnerJoins,
+    table: TableWithColumns<TTSchema, TTName, TColumns>,
+    joins: TJoins,
     distinctOn: StdTableColumn[] | undefined,
     executor: QueryExecutor,
     prepare: TPrepare,
     ctes: readonly AnyCteWithColumns[] | null = null,
   ) {
     this.#table = table;
-    this.#$innerJoins = innerJoins;
+    this.#$joins = joins;
     this.#$distinctOn = distinctOn;
     this.#executor = executor;
     this.#prepare = prepare;
@@ -81,48 +138,88 @@ export class SelectBuilder<
   innerJoin<
     TJoinTSchema extends string,
     TJoinTName extends string,
-    TJoinTColumns extends Record<string, AnyColumn>,
+    TJoinColumns extends Record<string, AnyColumn>,
     TOn extends FilterExpression<
-      | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-      | Valueof<
-          TableWithColumns<
-            TJoinTSchema,
-            TJoinTName,
-            TJoinTColumns
-          >["_"]["columns"]
-        >
-      | (TInnerJoins extends unknown[]
-          ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-          : never)
+      | TableColumns<TTSchema, TTName, TColumns>
+      | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+      | JoinsColumns<TJoins>
     >,
   >(
-    table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinTColumns>,
+    table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
     on: TOn,
   ): SelectBuilder<
     TTSchema,
     TTName,
-    TTColumns,
+    TColumns,
     TPrepare,
-    TInnerJoins extends unknown[]
+    TJoins extends unknown[]
       ? [
-          ...TInnerJoins,
+          ...TJoins,
           {
-            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinTColumns>;
+            type: "inner";
+            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>;
             on: StdCondition;
           },
         ]
       : [
           {
-            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinTColumns>;
+            type: "inner";
+            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>;
             on: StdCondition;
           },
         ]
   > {
     return new SelectBuilder(
       this.#table,
-      this.#$innerJoins
-        ? [...this.#$innerJoins, { table, on }]
-        : ([{ table, on }] as any),
+      this.#$joins
+        ? [...this.#$joins, { type: "inner" as const, table, on }]
+        : ([{ type: "inner" as const, table, on }] as any),
+      undefined,
+      this.#executor,
+      this.#prepare,
+      this.#$ctes,
+    );
+  }
+
+  leftJoin<
+    TJoinTSchema extends string,
+    TJoinTName extends string,
+    TJoinColumns extends Record<string, AnyColumn>,
+    TOn extends FilterExpression<
+      | TableColumns<TTSchema, TTName, TColumns>
+      | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+      | JoinsColumns<TJoins>
+    >,
+  >(
+    table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
+    on: TOn,
+  ): SelectBuilder<
+    TTSchema,
+    TTName,
+    TColumns,
+    TPrepare,
+    TJoins extends unknown[]
+      ? [
+          ...TJoins,
+          {
+            type: "left";
+            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>;
+            on: StdCondition;
+          },
+        ]
+      : [
+          {
+            type: "left";
+            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>;
+            on: StdCondition;
+          },
+        ]
+  > {
+    return new SelectBuilder(
+      this.#table,
+      this.#$joins
+        ? [...this.#$joins, { type: "left" as const, table, on }]
+        : ([{ type: "left" as const, table, on }] as any),
       undefined,
       this.#executor,
       this.#prepare,
@@ -132,18 +229,15 @@ export class SelectBuilder<
 
   distinctOn(
     columns: SelfOrArray<
-      | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-      | (TInnerJoins extends unknown[]
-          ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-          : never)
+      TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>
     >,
   ): Omit<
-    SelectBuilder<TTSchema, TTName, TTColumns, TPrepare, TInnerJoins>,
-    "distinctOn" | "innerJoin"
+    SelectBuilder<TTSchema, TTName, TColumns, TPrepare, TJoins>,
+    "distinctOn" | "innerJoin" | "leftJoin"
   > {
     return new SelectBuilder(
       this.#table,
-      this.#$innerJoins,
+      this.#$joins,
       (Array.isArray(columns) ? columns : [columns]) as StdTableColumn[],
       this.#executor,
       this.#prepare,
@@ -154,8 +248,8 @@ export class SelectBuilder<
   select(): SelectQuery<
     TTSchema,
     TTName,
-    TTColumns,
-    TInnerJoins,
+    TColumns,
+    TJoins,
     undefined,
     TPrepare,
     undefined,
@@ -164,30 +258,20 @@ export class SelectBuilder<
   select<
     TSelects extends Record<
       string,
-      | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-      | (TInnerJoins extends unknown[]
-          ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-          : never)
+      | TableColumns<TTSchema, TTName, TColumns>
+      | JoinsColumns<TJoins>
       | SqlFn<
-          Valueof<
-            TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
-          >,
+          TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
           TPrepare
         >
-      | (TInnerJoins extends unknown[]
-          ? SqlFn<
-              Valueof<TInnerJoins[number]["table"]["_"]["columns"]>,
-              TPrepare
-            >
-          : never)
     >,
   >(
     selects: TSelects,
   ): SelectQuery<
     TTSchema,
     TTName,
-    TTColumns,
-    TInnerJoins,
+    TColumns,
+    TJoins,
     TSelects,
     TPrepare,
     undefined,
@@ -197,30 +281,18 @@ export class SelectBuilder<
     TSelects extends
       | Record<
           string,
-          | Valueof<
-              TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
-            >
-          | (TInnerJoins extends unknown[]
-              ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-              : never)
+          | TableColumns<TTSchema, TTName, TColumns>
+          | JoinsColumns<TJoins>
           | SqlFn<
-              Valueof<
-                TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
-              >,
+              TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
               TPrepare
             >
-          | (TInnerJoins extends unknown[]
-              ? SqlFn<
-                  Valueof<TInnerJoins[number]["table"]["_"]["columns"]>,
-                  TPrepare
-                >
-              : never)
         >
       | undefined,
   >(selects?: TSelects) {
     return new SelectQuery(
       this.#table,
-      this.#$innerJoins,
+      this.#$joins,
       selects,
       this.#$distinctOn,
       undefined,
@@ -236,50 +308,52 @@ export class SelectBuilder<
   }
 }
 
+/** Makes all values of a select-inference record nullable. */
+type Nullable<T> = {
+  [K in keyof T]: T[K] | null;
+};
+
+/** Infers the select type for a single join entry, making columns nullable for left joins. */
+type InferJoinSelect<TJoin> = TJoin extends {
+  type: "left";
+  table: { $: { inferSelect: infer S } };
+}
+  ? Nullable<S>
+  : TJoin extends { table: { $: { inferSelect: infer S } } }
+    ? S
+    : Record<never, never>;
+
 export class SelectQuery<
   TTSchema extends string,
   TTName extends string,
-  TTColumns extends Record<string, AnyColumn>,
-  TInnerJoins extends
-    | null
-    | [
-        {
-          table: AnyTableWithColumns;
-          on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
-        },
-        ...{
-          table: AnyTableWithColumns;
-          on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
-        }[],
-      ],
+  TColumns extends Record<string, AnyColumn>,
+  TJoins extends null | [JoinEntry, ...JoinEntry[]],
   TSelects extends
     | Record<
         string,
-        | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-        | (TInnerJoins extends unknown[]
-            ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-            : never)
-        | SqlFn<any, boolean>
+        | TableColumns<TTSchema, TTName, TColumns>
+        | JoinsColumns<TJoins>
+        | SqlFn<
+            TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
+            TPrepare
+          >
       >
     | undefined,
   TPrepare extends boolean,
   TWhere extends
     | FilterExpression<
-        | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-        | (TInnerJoins extends unknown[]
-            ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-            : never),
+        TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
         TPrepare
       >
     | undefined,
   TOrderBy extends
     | OrderExpression<
-        TableWithColumns<TTSchema, TTName, TTColumns>,
+        TableWithColumns<TTSchema, TTName, TColumns>,
         TSelects,
         TPrepare
       >
     | OrderExpression<
-        TableWithColumns<TTSchema, TTName, TTColumns>,
+        TableWithColumns<TTSchema, TTName, TColumns>,
         TSelects,
         TPrepare
       >[]
@@ -287,35 +361,34 @@ export class SelectQuery<
   TGroupBy extends StdGroupByExpression[] | undefined = undefined,
   THaving extends
     | HavingExpression<
-        | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-        | (TInnerJoins extends unknown[]
-            ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-            : never),
+        TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
         TPrepare
       >
     | undefined = undefined,
   TReturn = (TSelects extends Record<string, unknown>
     ? {
         [TCol in keyof TSelects]: TSelects[TCol] extends TableAnyColumn
-          ? TSelects[TCol]["ValTypeSelect"]
+          ? IsLeftJoin<TSelects[TCol], TJoins> extends true
+            ? TSelects[TCol]["ValTypeSelect"] | null
+            : TSelects[TCol]["ValTypeSelect"]
           : TSelects[TCol] extends AnySqlFn
-            ? TSelects[TCol]["$"]["TsType"]
+            ? IsLeftJoin<TSelects[TCol], TJoins> extends true
+              ? TSelects[TCol]["$"]["TsType"] | null
+              : TSelects[TCol]["$"]["TsType"]
             : never;
       }
     : Prettify<
-        TableWithColumns<TTSchema, TTName, TTColumns>["$"]["inferSelect"] &
-          (TInnerJoins extends unknown[]
-            ? UnionToIntersection<
-                TInnerJoins[number]["table"]["$"]["inferSelect"]
-              >
+        TableWithColumns<TTSchema, TTName, TColumns>["$"]["inferSelect"] &
+          (TJoins extends unknown[]
+            ? UnionToIntersection<InferJoinSelect<TJoins[number]>>
             : Record<never, never>)
       >)[],
 > extends QueryPromise<TReturn> {
-  readonly #table: TableWithColumns<TTSchema, TTName, TTColumns>;
+  readonly #table: TableWithColumns<TTSchema, TTName, TColumns>;
   readonly #$select: TSelects;
   readonly #$distinctOn: StdTableColumn[] | undefined;
   readonly #$where: TWhere;
-  readonly #$innerJoins: TInnerJoins;
+  readonly #$joins: TJoins;
   readonly #$orderBy: TOrderBy;
   readonly #$groupBy: TGroupBy;
   readonly #$having: THaving;
@@ -326,8 +399,8 @@ export class SelectQuery<
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
 
   constructor(
-    table: TableWithColumns<TTSchema, TTName, TTColumns>,
-    innerJoins: TInnerJoins,
+    table: TableWithColumns<TTSchema, TTName, TColumns>,
+    joins: TJoins,
     select: TSelects,
     distinctOn: StdTableColumn[] | undefined,
     where: TWhere,
@@ -344,7 +417,7 @@ export class SelectQuery<
     this.#table = table;
     this.#$select = select;
     this.#$distinctOn = distinctOn;
-    this.#$innerJoins = innerJoins;
+    this.#$joins = joins;
     this.#$where = where;
     this.#$orderBy = orderBy;
     this.#$groupBy = groupBy;
@@ -359,19 +432,14 @@ export class SelectQuery<
   where<
     TWhere extends
       | FilterExpression<
-          | Valueof<
-              TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]
-            >
-          | (TInnerJoins extends unknown[]
-              ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-              : never),
+          TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
           TPrepare
         >
       | undefined,
   >(where: TWhere) {
     return new SelectQuery(
       this.#table,
-      this.#$innerJoins,
+      this.#$joins,
       this.#$select,
       this.#$distinctOn,
       where,
@@ -390,36 +458,28 @@ export class SelectQuery<
     TOrderBys extends
       | (
           | OrderExpression<
-              TableWithColumns<TTSchema, TTName, TTColumns>,
+              TableWithColumns<TTSchema, TTName, TColumns>,
               TSelects,
               TPrepare
             >
-          | (TInnerJoins extends unknown[]
-              ? OrderExpression<
-                  TInnerJoins[number]["table"],
-                  TSelects,
-                  TPrepare
-                >
+          | (TJoins extends unknown[]
+              ? OrderExpression<TJoins[number]["table"], TSelects, TPrepare>
               : never)
         )
       | (
           | OrderExpression<
-              TableWithColumns<TTSchema, TTName, TTColumns>,
+              TableWithColumns<TTSchema, TTName, TColumns>,
               TSelects,
               TPrepare
             >
-          | (TInnerJoins extends unknown[]
-              ? OrderExpression<
-                  TInnerJoins[number]["table"],
-                  TSelects,
-                  TPrepare
-                >
+          | (TJoins extends unknown[]
+              ? OrderExpression<TJoins[number]["table"], TSelects, TPrepare>
               : never)
         )[],
   >(orderBy: TOrderBys) {
     return new SelectQuery(
       this.#table,
-      this.#$innerJoins,
+      this.#$joins,
       this.#$select,
       this.#$distinctOn,
       this.#$where,
@@ -437,27 +497,22 @@ export class SelectQuery<
   /**
    * Adds an explicit GROUP BY clause. Overrides auto GROUP BY detection when set.
    *
-   * **Direct form** — a single column/expression or array:
    * ```ts
    * db.from(Users).select({ type: Users.type, total: count('*') }).groupBy(Users.type)
-   * ```
-   *
-   * **Callback form** — references named select-map aliases (requires `.select({...})`):
-   * ```ts
    * db.from(Users).select({ lname: lower(Users.username) }).groupBy(({ lname }) => [lname])
    * ```
    */
   groupBy<
     TItems extends
       | GroupByExpression<
-          TableWithColumns<TTSchema, TTName, TTColumns>,
+          TableWithColumns<TTSchema, TTName, TColumns>,
           TPrepare,
           TSelects extends Record<string, SelectableSource>
             ? TSelects
             : undefined
         >
       | GroupByExpression<
-          TableWithColumns<TTSchema, TTName, TTColumns>,
+          TableWithColumns<TTSchema, TTName, TColumns>,
           TPrepare,
           TSelects extends Record<string, SelectableSource>
             ? TSelects
@@ -469,7 +524,7 @@ export class SelectQuery<
       ? (
           selects: GroupBySelectView<TSelects>,
         ) => GroupByExpression<
-          TableWithColumns<TTSchema, TTName, TTColumns>,
+          TableWithColumns<TTSchema, TTName, TColumns>,
           TPrepare,
           TSelects
         >[]
@@ -495,7 +550,7 @@ export class SelectQuery<
           : [groupByOrCallback];
     return new SelectQuery(
       this.#table,
-      this.#$innerJoins,
+      this.#$joins,
       this.#$select,
       this.#$distinctOn,
       this.#$where,
@@ -512,9 +567,8 @@ export class SelectQuery<
 
   /**
    * Adds a HAVING clause to filter grouped results.
-   * Supports aggregate-to-literal and aggregate-to-aggregate comparisons.
    *
-   * ```ts
+   * ```typescript
    * db.from(Users).select({ type: Users.type, total: count('*') })
    *   .groupBy(Users.type)
    *   .having(gte(count('*'), 2))
@@ -522,16 +576,13 @@ export class SelectQuery<
    */
   having<
     TH extends HavingExpression<
-      | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-      | (TInnerJoins extends unknown[]
-          ? Valueof<TInnerJoins[number]["table"]["_"]["columns"]>
-          : never),
+      TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
       TPrepare
     >,
   >(having: TH): Omit<this, "having"> {
     return new SelectQuery(
       this.#table,
-      this.#$innerJoins,
+      this.#$joins,
       this.#$select,
       this.#$distinctOn,
       this.#$where,
@@ -553,7 +604,7 @@ export class SelectQuery<
   ) {
     return new SelectQuery(
       this.#table,
-      this.#$innerJoins,
+      this.#$joins,
       this.#$select,
       this.#$distinctOn,
       this.#$where,
@@ -575,7 +626,7 @@ export class SelectQuery<
   ) {
     return new SelectQuery(
       this.#table,
-      this.#$innerJoins,
+      this.#$joins,
       this.#$select,
       this.#$distinctOn,
       this.#$where,
@@ -621,9 +672,9 @@ export class SelectQuery<
     }
     query.sql += " FROM ";
     query.sql += this.#table._.fullName;
-    this.#$innerJoins?.forEach((innerJoin) => {
-      const join = innerJoin;
-      query.sql += ` INNER JOIN ${join.table._.fullName} ON `;
+    this.#$joins?.forEach((join) => {
+      const keyword = join.type === "left" ? "LEFT" : "INNER";
+      query.sql += ` ${keyword} JOIN ${join.table._.fullName} ON `;
       join.on.toQuery(query);
     });
     if (this.#$where) {
@@ -710,29 +761,27 @@ export class SelectQuery<
 
   /**
    * Returns the resolved output columns of this query.
-   * When an explicit `.select()` was provided the select-map entries are returned;
-   * otherwise the table's own columns are merged with any joined table columns.
    */
   getResolvedColumns(): Prettify<
     TSelects extends Record<string, SelectableSource>
       ? TSelects
-      : MergeJoinedColumns<TTColumns, TInnerJoins>
+      : MergeJoinedColumns<TColumns, TJoins>
   > {
     if (this.#$select) {
       return { ...this.#$select } as Prettify<
         TSelects extends Record<string, SelectableSource>
           ? TSelects
-          : MergeJoinedColumns<TTColumns, TInnerJoins>
+          : MergeJoinedColumns<TColumns, TJoins>
       >;
     }
     const cols: Record<string, SelectableSource> = { ...this.#table._.columns };
-    this.#$innerJoins?.forEach((j) => {
+    this.#$joins?.forEach((j) => {
       Object.assign(cols, j.table._.columns);
     });
     return cols as Prettify<
       TSelects extends Record<string, SelectableSource>
         ? TSelects
-        : MergeJoinedColumns<TTColumns, TInnerJoins>
+        : MergeJoinedColumns<TColumns, TJoins>
     >;
   }
 
@@ -756,8 +805,8 @@ export class SelectQuery<
         for (const [key, value] of Object.entries(row)) {
           let column = this.#table._.columnsBySql[key];
           if (column === undefined) {
-            this.#$innerJoins?.forEach((innerJoin) => {
-              const joinCol = innerJoin.table._.columnsBySql[key];
+            this.#$joins?.forEach((join) => {
+              const joinCol = join.table._.columnsBySql[key];
               if (joinCol !== undefined) {
                 column = joinCol;
               }

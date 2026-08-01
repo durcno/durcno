@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "durcno";
+import { asc, desc, eq, lower } from "durcno";
 import {
   Articles,
   Categories,
@@ -455,3 +455,189 @@ db.from(Users)
   .select()
   // @ts-expect-error - orderBy array with column from unjoined table
   .orderBy([asc(Users.username), desc(Categories.name)]);
+
+// ============================================================================
+// POSITIVE TYPE TESTS - Single Left Join
+// ============================================================================
+
+// Type test: left join with explicit select — columns from left-joined table stay as-is
+// because explicit select resolves via ValTypeSelect, not inferSelect
+const leftJoinExplicitQuery = db
+  .from(Users)
+  .leftJoin(Posts, eq(Users.id, Posts.userId))
+  .select({
+    username: Users.username,
+    postTitle: Posts.title,
+  });
+
+type LeftJoinExplicit = Awaited<typeof leftJoinExplicitQuery>;
+Expect<
+  Equal<
+    LeftJoinExplicit,
+    {
+      username: string;
+      postTitle: string | null;
+    }[]
+  >
+>();
+
+// Type test: left join with select all — left-joined columns become nullable
+const leftJoinSelectAllQuery = db
+  .from(Users)
+  .leftJoin(Posts, eq(Users.id, Posts.userId))
+  .select();
+
+type LeftJoinSelectAll = Awaited<typeof leftJoinSelectAllQuery>;
+Expect<
+  Equal<
+    LeftJoinSelectAll,
+    {
+      id: bigint;
+      username: string;
+      email: string | null;
+      type: "admin" | "user";
+      createdAt: Date;
+      externalId: string;
+      trackingId: string | null;
+      // Left-joined Post columns — all nullable
+      userId: bigint | null;
+      title: string | null;
+      content: string | null;
+      tags: string[] | null;
+      metrics: { views: number; likes: number } | null;
+    }[]
+  >
+>();
+
+// Type test: left join with where clause on left-joined table
+const leftJoinWithWhereQuery = db
+  .from(Users)
+  .leftJoin(Posts, eq(Users.id, Posts.userId))
+  .select({
+    username: Users.username,
+    postTitle: Posts.title,
+  })
+  .where(eq(Posts.title, "hello"));
+
+type LeftJoinWithWhere = Awaited<typeof leftJoinWithWhereQuery>;
+Expect<
+  Equal<LeftJoinWithWhere, { username: string; postTitle: string | null }[]>
+>();
+
+// Type test: left join with orderBy on both tables
+const leftJoinOrderByQuery = db
+  .from(Users)
+  .leftJoin(Posts, eq(Users.id, Posts.userId))
+  .select({
+    username: Users.username,
+    postTitle: Posts.title,
+  })
+  .orderBy([asc(Users.username), desc(Posts.createdAt)]);
+
+type LeftJoinOrderBy = Awaited<typeof leftJoinOrderByQuery>;
+Expect<
+  Equal<LeftJoinOrderBy, { username: string; postTitle: string | null }[]>
+>();
+
+// ============================================================================
+// POSITIVE TYPE TESTS - Mixed Inner + Left Join
+// ============================================================================
+
+// Type test: inner join then left join — inner columns not nullable, left columns nullable
+const mixedJoinQuery = db
+  .from(Users)
+  .innerJoin(Posts, eq(Users.id, Posts.userId))
+  .leftJoin(Comments, eq(Posts.id, Comments.postId))
+  .select();
+
+type MixedJoin = Awaited<typeof mixedJoinQuery>;
+Expect<
+  Equal<
+    MixedJoin,
+    {
+      // Users — base table, not nullable
+      id: bigint;
+      username: string;
+      email: string | null;
+      type: "admin" | "user";
+      createdAt: Date;
+      externalId: string;
+      trackingId: string | null;
+      // Posts — inner join, not nullable
+      userId: bigint;
+      title: string | null;
+      content: string | null;
+      tags: string[] | null;
+      metrics: { views: number; likes: number } | null;
+      // Comments — left join, all nullable
+      postId: bigint | null;
+      body: string | null;
+    }[]
+  >
+>();
+
+// Type test: left join then inner join — left columns nullable, inner not
+const leftThenInnerQuery = db
+  .from(Users)
+  .leftJoin(UserProfiles, eq(Users.id, UserProfiles.userId))
+  .innerJoin(Posts, eq(Users.id, Posts.userId))
+  .select({
+    username: Users.username,
+    bio: UserProfiles.bio,
+    postTitle: Posts.title,
+  });
+
+type LeftThenInner = Awaited<typeof leftThenInnerQuery>;
+Expect<
+  Equal<
+    LeftThenInner,
+    {
+      username: string;
+      bio: string | null;
+      postTitle: string | null;
+    }[]
+  >
+>();
+
+// Type test: left join with SqlFn (e.g., lower, concat)
+const leftJoinSqlFnQuery = db
+  .from(Users)
+  .leftJoin(Posts, eq(Users.id, Posts.userId))
+  .select({
+    username: Users.username,
+    lowerPostTitle: lower(Posts.title),
+  });
+type LeftJoinSqlFn = Awaited<typeof leftJoinSqlFnQuery>;
+Expect<
+  Equal<
+    LeftJoinSqlFn,
+    {
+      username: string;
+      lowerPostTitle: string | null;
+    }[]
+  >
+>();
+
+// ============================================================================
+// NEGATIVE TYPE TESTS - Left Join
+// ============================================================================
+
+db.from(Users)
+  .leftJoin(Posts, eq(Users.id, Posts.userId))
+  // @ts-expect-error - Using column from unjoined table
+  .select({ commentBody: Comments.body });
+
+// @ts-expect-error - Joining with completely unrelated tables in condition
+db.from(Users).leftJoin(Posts, eq(Categories.id, Comments.postId)).select();
+
+db.from(Users)
+  .leftJoin(Posts, eq(Users.id, Posts.userId))
+  .select()
+  // @ts-expect-error - Wrong type in where clause after left join
+  .where(eq(Users.id, "not_a_number"));
+
+db.from(Users)
+  .leftJoin(Posts, eq(Users.id, Posts.userId))
+  .select()
+  // @ts-expect-error - orderBy column from unjoined table after left join
+  .orderBy(asc(Comments.createdAt));

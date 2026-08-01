@@ -11,7 +11,7 @@ import {
   type TableAnyColumn,
   type TableColumn,
 } from "./table";
-import type { Key, Prettify, UnionToIntersection } from "./types";
+import type { Key } from "./types";
 
 export type SelectableSource = AnyColumn | AnySqlFn;
 
@@ -55,26 +55,6 @@ type MapSourcesToColumns<
         >
       : never;
 };
-
-export type MergeJoinedColumns<
-  TColumns extends Record<string, AnyColumn>,
-  TInnerJoins,
-> = Prettify<
-  TColumns &
-    (TInnerJoins extends readonly (infer TJoin)[]
-      ? UnionToIntersection<
-          TJoin extends {
-            table: {
-              _: {
-                columns: infer TJoinColumns extends Record<string, AnyColumn>;
-              };
-            };
-          }
-            ? TJoinColumns
-            : never
-        >
-      : Record<never, never>)
->;
 
 export type ReturningColumns<
   TColumns extends Record<string, AnyColumn>,
