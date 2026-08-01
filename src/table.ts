@@ -184,12 +184,6 @@ export type StdTableWithColumns = TableWithColumns<
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnyTableWithColumns = TableWithColumns<any, any, any>;
 
-export type AnyTableWC = TableWithColumns<
-  string,
-  string,
-  Record<any, AnyColumn>
->;
-
 export type TableWCorNever<T> =
   T extends TableWithColumns<infer TTSchema, infer TTName, infer TColumns>
     ? TColumns extends Record<string, AnyColumn>
@@ -388,12 +382,8 @@ export type StdRelations = Relations<
   >
 >;
 
-export type AnyRelations = Relations<
-  any,
-  any,
-  Record<any, any>,
-  Record<any, any>
->;
+// biome-ignore lint/suspicious/noExplicitAny: <>
+export type AnyRelations = Relations<any, any, any, any>;
 
 export function relations<
   TTSchema extends string,

@@ -630,12 +630,12 @@ function convert(
     const value = object[key];
     const column = table._.columnsBySql[key];
     if (column) {
-      object[column.name] = column.fromDriver(value as never);
+      object[column.name] = column.fromDriver(value);
       if (column.name !== key) delete object[key];
     } else {
       const relations = allRelations[table._.fullName];
       if (relations) {
-        const relation = relations.map[snakeToCamel(key) as any];
+        const relation = relations.map[snakeToCamel(key)];
         if (relation) {
           if (relation.t === "Many") {
             for (const row in object[key]) {

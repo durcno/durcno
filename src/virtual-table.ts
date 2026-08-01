@@ -13,11 +13,11 @@ import {
 } from "./table";
 import type { Key } from "./types";
 
-export type SelectableSource = AnyColumn | AnySqlFn;
+export type AnySelectableSource = AnyColumn | AnySqlFn;
 
 export type AnySubquery = AnyQueryPromise & {
   toQuery(parentQuery?: AnyQuery): AnyQuery;
-  getResolvedColumns(): Record<string, SelectableSource>;
+  getResolvedColumns(): Record<string, AnySelectableSource>;
 };
 
 type VirtualizedColumn<
@@ -35,12 +35,12 @@ type VirtualizedSqlFn<
   "",
   TVirtualName,
   TKey,
-  VirtualColumn<Column<{}, TTsType, TPgType>>
+  VirtualColumn<Column<Record<never, never>, TTsType, TPgType>>
 >;
 
 type MapSourcesToColumns<
   TVirtualName extends string,
-  TSources extends Record<string, SelectableSource>,
+  TSources extends Record<string, AnySelectableSource>,
 > = {
   [K in keyof TSources]: TSources[K] extends TableAnyColumn<infer TCol>
     ? VirtualizedColumn<TVirtualName, K extends Key ? K : never, TCol>
@@ -83,7 +83,10 @@ export type InferQueryColumns<
   TVirtualName extends string,
   TQuery,
 > = TQuery extends {
-  getResolvedColumns(): infer TColumns extends Record<string, SelectableSource>;
+  getResolvedColumns(): infer TColumns extends Record<
+    string,
+    AnySelectableSource
+  >;
 }
   ? MapSourcesToColumns<TVirtualName, TColumns>
   : never;
@@ -93,9 +96,9 @@ class VirtualColumn<TColumn extends AnyColumn> extends Column<
   TColumn["$"]["TsType"],
   TColumn["$"]["PgType"]
 > {
-  readonly #source: SelectableSource;
+  readonly #source: AnySelectableSource;
 
-  constructor(source: SelectableSource) {
+  constructor(source: AnySelectableSource) {
     super((isCol(source) ? source.config : {}) as TColumn["config"]);
     this.#source = source;
   }
@@ -146,7 +149,7 @@ class VirtualColumn<TColumn extends AnyColumn> extends Column<
 }
 
 function createVirtualColumns(
-  sources: Record<string, SelectableSource>,
+  sources: Record<string, AnySelectableSource>,
 ): Record<string, AnyColumn> {
   return Object.fromEntries(
     Object.entries(sources).map(([name, source]) => [
@@ -166,7 +169,7 @@ export class VirtualTable<
 
   constructor(
     name: TName,
-    columns: Record<string, SelectableSource>,
+    columns: Record<string, AnySelectableSource>,
     query: AnySubquery,
   ) {
     super("", name, createVirtualColumns(columns) as TColumns, {});

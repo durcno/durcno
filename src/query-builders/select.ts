@@ -21,8 +21,9 @@ import type {
   UnionToIntersection,
   Valueof,
 } from "../types";
-import type { SelectableSource } from "../virtual-table";
+import type { AnySelectableSource } from "../virtual-table";
 import {
+  type AnyGroupByExpression,
   createGroupBySelectView,
   type GroupByAlias,
   type GroupByExpression,
@@ -249,9 +250,9 @@ export class SelectBuilder<
     TTSchema,
     TTName,
     TColumns,
+    TPrepare,
     TJoins,
     undefined,
-    TPrepare,
     undefined,
     undefined
   >;
@@ -271,9 +272,9 @@ export class SelectBuilder<
     TTSchema,
     TTName,
     TColumns,
+    TPrepare,
     TJoins,
     TSelects,
-    TPrepare,
     undefined,
     undefined
   >;
@@ -327,6 +328,7 @@ export class SelectQuery<
   TTSchema extends string,
   TTName extends string,
   TColumns extends Record<string, AnyColumn>,
+  TPrepare extends boolean,
   TJoins extends null | [JoinEntry, ...JoinEntry[]],
   TSelects extends
     | Record<
@@ -339,7 +341,6 @@ export class SelectQuery<
           >
       >
     | undefined,
-  TPrepare extends boolean,
   TWhere extends
     | FilterExpression<
         TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
@@ -358,7 +359,9 @@ export class SelectQuery<
         TPrepare
       >[]
     | undefined,
-  TGroupBy extends StdGroupByExpression[] | undefined = undefined,
+  TGroupBy extends
+    | [AnyGroupByExpression, ...AnyGroupByExpression[]]
+    | undefined = undefined,
   THaving extends
     | HavingExpression<
         TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
@@ -507,20 +510,20 @@ export class SelectQuery<
       | GroupByExpression<
           TableWithColumns<TTSchema, TTName, TColumns>,
           TPrepare,
-          TSelects extends Record<string, SelectableSource>
+          TSelects extends Record<string, AnySelectableSource>
             ? TSelects
             : undefined
         >
       | GroupByExpression<
           TableWithColumns<TTSchema, TTName, TColumns>,
           TPrepare,
-          TSelects extends Record<string, SelectableSource>
+          TSelects extends Record<string, AnySelectableSource>
             ? TSelects
             : undefined
         >[],
   >(groupBy: TItems): Omit<this, "groupBy">;
   groupBy(
-    callback: TSelects extends Record<string, SelectableSource>
+    callback: TSelects extends Record<string, AnySelectableSource>
       ? (
           selects: GroupBySelectView<TSelects>,
         ) => GroupByExpression<
@@ -542,7 +545,7 @@ export class SelectQuery<
       typeof groupByOrCallback === "function"
         ? groupByOrCallback(
             createGroupBySelectView(
-              this.#$select as Record<string, SelectableSource>,
+              this.#$select as Record<string, AnySelectableSource>,
             ),
           )
         : Array.isArray(groupByOrCallback)
@@ -555,7 +558,7 @@ export class SelectQuery<
       this.#$distinctOn,
       this.#$where,
       this.#$orderBy,
-      items as StdGroupByExpression[],
+      items as [StdGroupByExpression, ...StdGroupByExpression[]],
       this.#$having,
       this.#$limit,
       this.#$offset,
@@ -691,7 +694,7 @@ export class SelectQuery<
         } else if (isScalarSqlFn(expr)) {
           expr.toQuery(query); // → floor(...)
         } else {
-          query.sql += (expr as StdTableColumn).fullName; // → "schema"."table"."col"
+          query.sql += expr.fullName; // → "table"."col"
         }
         if (i < this.#$groupBy.length - 1) query.sql += ", ";
       }
@@ -707,11 +710,9 @@ export class SelectQuery<
           query.sql += " GROUP BY ";
           for (let i = 0; i < nonAggEntries.length; i++) {
             const [, colOrFn] = nonAggEntries[i];
-            if (colOrFn instanceof SqlFn) {
-              colOrFn.toQuery(query);
-            } else {
-              query.sql += (colOrFn as StdTableColumn).fullName;
-            }
+            (colOrFn as { toQuery: (q: Query<unknown>) => void }).toQuery(
+              query,
+            );
             if (i < nonAggEntries.length - 1) query.sql += ", ";
           }
         }
@@ -763,23 +764,25 @@ export class SelectQuery<
    * Returns the resolved output columns of this query.
    */
   getResolvedColumns(): Prettify<
-    TSelects extends Record<string, SelectableSource>
+    TSelects extends Record<string, AnySelectableSource>
       ? TSelects
       : MergeJoinedColumns<TColumns, TJoins>
   > {
     if (this.#$select) {
       return { ...this.#$select } as Prettify<
-        TSelects extends Record<string, SelectableSource>
+        TSelects extends Record<string, AnySelectableSource>
           ? TSelects
           : MergeJoinedColumns<TColumns, TJoins>
       >;
     }
-    const cols: Record<string, SelectableSource> = { ...this.#table._.columns };
+    const cols: Record<string, AnySelectableSource> = {
+      ...this.#table._.columns,
+    };
     this.#$joins?.forEach((j) => {
       Object.assign(cols, j.table._.columns);
     });
     return cols as Prettify<
-      TSelects extends Record<string, SelectableSource>
+      TSelects extends Record<string, AnySelectableSource>
         ? TSelects
         : MergeJoinedColumns<TColumns, TJoins>
     >;
