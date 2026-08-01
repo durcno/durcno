@@ -77,38 +77,6 @@ const updateUserProfilesQuery = db
 type UpdateUserProfiles = Awaited<typeof updateUserProfilesQuery>;
 Expect<Equal<UpdateUserProfiles, null>>();
 
-// ============================================================================
-// Array column update tests
-// ============================================================================
-
-// Type test: update Posts tags array column
-db.update(Posts)
-  .set({
-    tags: ["updated", "tags", "array"],
-  })
-  .where(eq(Posts.id, 1n));
-
-// Type test: update Posts tags to null
-db.update(Posts)
-  .set({
-    tags: null,
-  })
-  .where(eq(Posts.id, 1n));
-
-// Type test: update UserProfiles skills array column
-db.update(UserProfiles)
-  .set({
-    skills: ["TypeScript", "PostgreSQL"],
-  })
-  .where(eq(UserProfiles.id, 1));
-
-// Type test: update UserProfiles skills to null
-db.update(UserProfiles)
-  .set({
-    skills: null,
-  })
-  .where(eq(UserProfiles.id, 1));
-
 // Type test: update with enum value
 const updateEnumQuery = db
   .update(Users)

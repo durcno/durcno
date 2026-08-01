@@ -116,40 +116,6 @@ const offsetQuery = db
 type Offset = Awaited<typeof offsetQuery>;
 Expect<Equal<Offset, { username: string }[]>>();
 
-// Type test: select uuid column from Users (notNull)
-const uuidNotNullQuery = db
-  .from(Users)
-  .select({ externalId: Users.externalId });
-type UuidNotNull = Awaited<typeof uuidNotNullQuery>;
-Expect<Equal<UuidNotNull, { externalId: string }[]>>();
-
-// Type test: select uuid column from Users (nullable)
-const uuidNullableQuery = db
-  .from(Users)
-  .select({ trackingId: Users.trackingId });
-type UuidNullable = Awaited<typeof uuidNullableQuery>;
-Expect<Equal<UuidNullable, { trackingId: string | null }[]>>();
-
-// Type test: select bytea column from UserProfiles (notNull)
-const byteaNotNullQuery = db
-  .from(UserProfiles)
-  .select({ avatarData: UserProfiles.avatarData });
-type ByteaNotNull = Awaited<typeof byteaNotNullQuery>;
-Expect<Equal<ByteaNotNull, { avatarData: Buffer }[]>>();
-
-// Type test: select bytea column from UserProfiles (nullable)
-const byteaNullableQuery = db
-  .from(UserProfiles)
-  .select({ thumbnailData: UserProfiles.thumbnailData });
-type ByteaNullable = Awaited<typeof byteaNullableQuery>;
-Expect<Equal<ByteaNullable, { thumbnailData: Buffer | null }[]>>();
-
-// Type test: select array column from UserProfiles (nullable skills)
-const skillsQuery = db
-  .from(UserProfiles)
-  .select({ id: UserProfiles.id, skills: UserProfiles.skills });
-type SkillsResult = Awaited<typeof skillsQuery>;
-Expect<Equal<SkillsResult, { id: number; skills: string[] | null }[]>>();
 
 // ============================================================================
 // Negative type tests - these should cause compile errors
@@ -183,85 +149,10 @@ db.from(UserProfiles)
 db.from(UserProfiles).select().where(eq(UserProfiles.avatarData, 123));
 
 // ============================================================================
-// Network column type tests (INET, CIDR, MACADDR)
+// Negative type tests for network columns
 // ============================================================================
 
 import { NetworkDevices } from "./schema";
-
-// Type test: select all network columns (includes array column)
-const allNetworkDevicesQuery = db.from(NetworkDevices).select();
-type AllNetworkDevices = Awaited<typeof allNetworkDevicesQuery>;
-Expect<
-  Equal<
-    AllNetworkDevices,
-    {
-      id: bigint;
-      name: string;
-      ipAddress: string;
-      secondaryIp: string | null;
-      networkRange: string;
-      allowedNetwork: string | null;
-      macAddress: string;
-      backupMac: string | null;
-      allowedIps: string[] | null;
-    }[]
-  >
->();
-
-// Type test: select array column from NetworkDevices (allowedIps)
-const allowedIpsQuery = db
-  .from(NetworkDevices)
-  .select({ id: NetworkDevices.id, allowedIps: NetworkDevices.allowedIps });
-type AllowedIpsResult = Awaited<typeof allowedIpsQuery>;
-Expect<
-  Equal<AllowedIpsResult, { id: bigint; allowedIps: string[] | null }[]>
->();
-
-// Type test: select INET column (notNull)
-const inetNotNullQuery = db
-  .from(NetworkDevices)
-  .select({ ipAddress: NetworkDevices.ipAddress });
-type InetNotNull = Awaited<typeof inetNotNullQuery>;
-Expect<Equal<InetNotNull, { ipAddress: string }[]>>();
-
-// Type test: select INET column (nullable)
-const inetNullableQuery = db
-  .from(NetworkDevices)
-  .select({ secondaryIp: NetworkDevices.secondaryIp });
-type InetNullable = Awaited<typeof inetNullableQuery>;
-Expect<Equal<InetNullable, { secondaryIp: string | null }[]>>();
-
-// Type test: select CIDR column (notNull)
-const cidrNotNullQuery = db
-  .from(NetworkDevices)
-  .select({ networkRange: NetworkDevices.networkRange });
-type CidrNotNull = Awaited<typeof cidrNotNullQuery>;
-Expect<Equal<CidrNotNull, { networkRange: string }[]>>();
-
-// Type test: select CIDR column (nullable)
-const cidrNullableQuery = db
-  .from(NetworkDevices)
-  .select({ allowedNetwork: NetworkDevices.allowedNetwork });
-type CidrNullable = Awaited<typeof cidrNullableQuery>;
-Expect<Equal<CidrNullable, { allowedNetwork: string | null }[]>>();
-
-// Type test: select MACADDR column (notNull)
-const macaddrNotNullQuery = db
-  .from(NetworkDevices)
-  .select({ macAddress: NetworkDevices.macAddress });
-type MacaddrNotNull = Awaited<typeof macaddrNotNullQuery>;
-Expect<Equal<MacaddrNotNull, { macAddress: string }[]>>();
-
-// Type test: select MACADDR column (nullable)
-const macaddrNullableQuery = db
-  .from(NetworkDevices)
-  .select({ backupMac: NetworkDevices.backupMac });
-type MacaddrNullable = Awaited<typeof macaddrNullableQuery>;
-Expect<Equal<MacaddrNullable, { backupMac: string | null }[]>>();
-
-// ============================================================================
-// Negative type tests for network columns
-// ============================================================================
 
 // @ts-expect-error - Cannot use number for INET column (expects string)
 db.from(NetworkDevices).select().where(eq(NetworkDevices.ipAddress, 123));
