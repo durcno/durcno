@@ -4,7 +4,7 @@ sidebar_position: 0
 
 # Query Logger
 
-Durcno supports query logging through a configurable `logger` option. When set, after every SQL query is executed the logger's `info()` method is called with the SQL string, bound arguments, and the query duration in milliseconds.
+Durcno supports query logging through a configurable `logger` option. When set, successful queries call the logger's `info()` method, while failed queries call `error()` with the SQL string, bound arguments, and the query duration in milliseconds.
 
 ## Interface
 
@@ -13,6 +13,7 @@ Any object implementing the `QueryLogger` interface can be used:
 ```typescript
 interface QueryLogger {
   info(message: string, meta?: Record<string, unknown>): void;
+  error(message: string, meta?: Record<string, unknown>): void;
 }
 ```
 
@@ -55,11 +56,11 @@ export default defineConfig({
 Each logged query is printed in a box-drawing style:
 
 ```
-2026-04-23T10:00:00.000Z [durcno] INFO: Query
+2026-04-23T10:00:00.000Z [durcno] INFO: Query executed
   ┌ SQL
   │ SELECT "id", "name", "email"
   │ FROM "public"."users"
-  │ WHERE "id" = $1
+  │ WHERE "id" = $1;
   ├ Arguments
   │ $1 = 42
   ├ Duration
@@ -71,7 +72,7 @@ If a query has no bound arguments the `Arguments` section is omitted. The `Durat
 
 ## Custom Logger
 
-Pass any object with a compatible `info()` method. The metadata object will always contain:
+Pass any object with compatible `info()` and `error()` methods. The metadata object will always contain:
 
 | Key          | Type                                        | Description                          |
 | ------------ | ------------------------------------------- | ------------------------------------ |
@@ -94,6 +95,9 @@ export default defineConfig({
       info(message, meta) {
         console.log(`[db] ${message}`, meta);
       },
+      error(message, meta) {
+        console.error(`[db] ${message}`, meta);
+      },
     },
   }),
 });
@@ -101,7 +105,7 @@ export default defineConfig({
 
 ### Using Pino
 
-```typescript
+```javascript
 import pino from "pino";
 
 const log = pino();
@@ -112,6 +116,7 @@ export default defineConfig({
     dbCredentials: { url: process.env.DATABASE_URL! },
     logger: {
       info: (message, meta) => log.info(meta ?? {}, message),
+      error: (message, meta) => log.error(meta ?? {}, message),
     },
   }),
 });

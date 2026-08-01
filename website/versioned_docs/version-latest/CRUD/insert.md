@@ -16,9 +16,10 @@ Use `db.insert()` to insert rows into a table. Durcno provides full type safety,
 
 ### Query methods (InsertQuery)
 
-| Method         | Description                            |
-| -------------- | -------------------------------------- |
-| `.returning()` | Specify columns to return after insert |
+| Method          | Description                                             |
+| --------------- | ------------------------------------------------------- |
+| `.onConflict()` | Start an `ON CONFLICT` clause for upsert-style handling |
+| `.returning()`  | Specify columns to return after insert                  |
 
 ## Basic Usage
 
@@ -44,6 +45,60 @@ await db.insert(Users).values([
   { username: "john_doe", email: "john@example.com", type: "user" },
   { username: "jane_doe", email: "jane@example.com", type: "admin" },
 ]);
+```
+
+## Upserts with `ON CONFLICT`
+
+Use `.onConflict()` to build PostgreSQL `ON CONFLICT` clauses for insert operations. You can target one or more columns, or omit the arguments to apply the clause to any conflict.
+
+### Skip conflicting inserts with `.doNothing()`
+
+```typescript
+await db
+  .insert(Users)
+  .values({
+    username: "john_doe",
+    email: "john@example.com",
+    type: "user",
+  })
+  .onConflict(Users.username)
+  .doNothing();
+```
+
+### Update conflicting rows with `.doUpdateSet()`
+
+Use `.doUpdateSet()` to update existing rows when a conflict occurs. The callback receives an `excluded` object that references the values from the incoming insert row.
+
+```javascript
+await db
+  .insert(Users)
+  .values({
+    username: "john_doe",
+    email: "updated@example.com",
+    type: "user",
+  })
+  .onConflict(Users.username)
+  .doUpdateSet(({ excluded }) => ({
+    email: excluded.email,
+  }));
+```
+
+You can also provide an optional predicate to make the update conditional:
+
+```javascript
+import { gt } from "durcno";
+
+await db
+  .insert(Users)
+  .values({
+    username: "john_doe",
+    score: 100,
+  })
+  .onConflict(Users.username)
+  .doUpdateSet(
+    ({ excluded }) => ({ score: excluded.score }),
+    ({ excluded }) => gt(excluded.score, Users.score),
+  );
 ```
 
 ## Required vs Optional Columns
