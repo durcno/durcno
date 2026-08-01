@@ -44,8 +44,8 @@ Prepared queries does not provide runtime validation of argument type. Make sure
 
 ## How It Works
 
-1. **Define arguments**: Create argument placeholders using `Column.arg()` method
-2. **Build the query**: Use `db.prepare().from(Table)` to build the query structure
+1. **Define arguments**: Create argument placeholders using `Column.arg()` or `Arg.number()` / `Arg.bigint()`
+2. **Build the query**: Use `db.prepare()` with the appropriate builder (`from()`, `insert()`, `update()`, `delete()`, or `query()`)
 3. **Wrap with prequery**: Pass arguments and query builder to `prequery()`
 4. **Execute**: Call `.run(db, values)` to execute with specific values
 
@@ -86,6 +86,28 @@ const result = await findUser.run(db, {
   type: "admin",
 });
 ```
+
+## Using Arguments in INSERT Values
+
+Prepared arguments can also be used inside `insert().values(...)` when you want to bind runtime values for a new row:
+
+```typescript
+const createUser = prequery({ username: Users.username.arg() }, (args) => {
+  return db
+    .prepare()
+    .insert(Users)
+    .values({
+      username: args.username,
+      email: "prequery@example.com",
+      type: "user",
+    })
+    .returning("*");
+});
+
+const [user] = await createUser.run(db, { username: "new_user" });
+```
+
+The same pattern also applies to `update().set(...)`, `delete().where(...)`, and relational queries created with `query().findMany({...})`.
 
 ## Selective Column Selection
 
@@ -287,7 +309,7 @@ const page = await paginatedUsers.run(db, { lim: 10n, off: 20n });
 
 1. **Performance**: SQL is parsed and planned once, then reused
 2. **Type Safety**: Full TypeScript inference for parameters and results
-3. **Reusability**: Define once, execute many times with different values
+3. **Reusability**: Define once, execute many times with different values across `SELECT`, `INSERT`, `UPDATE`, `DELETE`, and relational queries
 
 ## API Reference
 

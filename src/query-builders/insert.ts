@@ -152,16 +152,21 @@ export class InsertBuilder<
         ? never
         : undefined extends TTableWC["_"]["columns"][colName]["ValTypeInsert"]
           ? never
-          : colName]: TTableWC["_"]["columns"][colName]["ValTypeInsert"];
+          : colName]:
+        | Exclude<TTableWC["_"]["columns"][colName]["ValTypeInsert"], undefined>
+        | (TPrepare extends true
+            ? Arg<TTableWC["_"]["columns"][colName]["ValType"]>
+            : never);
     } & {
       [colName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][colName]["ValTypeInsert"] extends never
         ? never
         : undefined extends TTableWC["_"]["columns"][colName]["ValTypeInsert"]
           ? colName
-          : never]?: Exclude<
-        TTableWC["_"]["columns"][colName]["ValTypeInsert"],
-        undefined
-      >;
+          : never]?:
+        | Exclude<TTableWC["_"]["columns"][colName]["ValTypeInsert"], undefined>
+        | (TPrepare extends true
+            ? Arg<TTableWC["_"]["columns"][colName]["ValType"]>
+            : never);
     } extends infer TValues
       ?
           | {

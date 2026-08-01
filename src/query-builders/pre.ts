@@ -1,7 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyDBorTX } from "../db";
 import { entityType } from "../symbols";
-import type { Query } from "./query";
+import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class Arg<TType> {
@@ -40,19 +40,23 @@ export type AnyArg = Arg<any>;
 export type IsArg<T> = T extends Arg<any> ? true : false;
 
 export class PreparedStatement<TArgs extends Record<string, AnyArg>, TReturn> {
-  readonly #query: Query;
+  readonly #query: Query<TReturn>;
   readonly #args: TArgs;
-  constructor(query: Query, args: TArgs) {
+  constructor(query: Query<TReturn>, args: TArgs) {
     this.#query = query;
     this.#args = args;
   }
-  run(db: AnyDBorTX, values: { [K in keyof TArgs]: TArgs[K]["$"]["TsType"] }) {
+  run(
+    db: AnyDBorTX,
+    values: { [K in keyof TArgs]: TArgs[K]["$"]["TsType"] },
+  ): PreparedQuery<TReturn> {
     const args = [];
     for (const k of this.#query.arguments) {
       args.push(this.#args[k as keyof TArgs].handler(values[k as keyof TArgs]));
     }
-    this.#query.arguments = args;
-    return new PreparedQuery<TReturn>(this.#query, db._.getExecutor());
+    const q = new Query<TReturn>(this.#query.sql, this.#query.rowsHandler);
+    q.arguments = args;
+    return new PreparedQuery(q, db._.getExecutor());
   }
 }
 
@@ -92,6 +96,6 @@ export function prequery<TArgs extends Record<string, AnyArg>, TReturn>(
     args[key].index = i + 1;
     args[key].key = key;
   }
-  const query = statement(args).toQuery();
+  const query = statement(args).toQuery() as Query<TReturn>;
   return new PreparedStatement<TArgs, TReturn>(query, args);
 }

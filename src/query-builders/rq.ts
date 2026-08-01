@@ -68,7 +68,8 @@ type Options<
     | Partial<Record<keyof TTColumns, false>>;
   where?: TOpts["where"] extends true
     ? FilterExpression<
-        Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
+        Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>,
+        TPrepare
       >
     : never;
   orderBy?: TOpts["orderBy"] extends true
