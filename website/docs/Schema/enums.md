@@ -178,7 +178,15 @@ export const Users = table("public", "users", {
 ### User Management System
 
 ```typescript
-import { table, pk, varchar, enumtype, timestamp, notNull, now } from "durcno";
+import {
+  table,
+  pk,
+  varchar,
+  enumtype,
+  timestamptz,
+  notNull,
+  now,
+} from "durcno";
 
 export const UserRole = enumtype("public", "userRole", [
   "admin",
@@ -197,7 +205,7 @@ export const Users = table("public", "users", {
   email: varchar({ length: 255, notNull }),
   role: UserRole.enumed({ notNull }).default("user"),
   status: AccountStatus.enumed({ notNull }).default("active"),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 ```
 
@@ -231,7 +239,7 @@ export const Tasks = table("public", "tasks", {
 ### Order Processing
 
 ```typescript
-import { table, pk, bigint, enumtype, timestamp, notNull, now } from "durcno";
+import { table, pk, bigint, enumtype, timestamptz, notNull, now } from "durcno";
 
 export const OrderStatus = enumtype("public", "orderStatus", [
   "pending",
@@ -254,7 +262,7 @@ export const Orders = table("public", "orders", {
   customerId: bigint({ notNull }),
   status: OrderStatus.enumed({ notNull }).default("pending"),
   paymentStatus: PaymentStatus.enumed({ notNull }).default("pending"),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 ```
 

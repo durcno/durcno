@@ -29,7 +29,9 @@ import {
   smallserial,
   table,
   time,
+  timetz,
   timestamp,
+  timestamptz,
   tuple,
   unique,
   uuid,
@@ -44,7 +46,7 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, unique, notNull }),
   email: varchar({ length: 100 }),
   type: UserTypeEnum.enumed({ notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
   // uuid column: external identifier for API exposure
   externalId: uuid({ notNull, unique }),
   // Optional uuid for tracking purposes
@@ -147,25 +149,27 @@ export const Logs = table("public", "logs", {
   id: bigserial({ primaryKey }),
   message: varchar({ length: 500, notNull }),
   // insertFn: auto-generate createdAt on insert
-  createdAt: timestamp({ notNull }).$insertFn(() => new Date()),
+  createdAt: timestamptz({ notNull }).$insertFn(() => new Date()),
   // updateFn: auto-generate updatedAt on every update
-  updatedAt: timestamp({ notNull }).$updateFn(() => new Date()),
+  updatedAt: timestamptz({ notNull }).$updateFn(() => new Date()),
 });
 
 // Table for testing timestamp and time column options
 export const Events = table("public", "events", {
   id: pk(),
   name: varchar({ length: 200, notNull }),
-  // Default timestamp with timezone (timestamptz)
-  scheduledAt: timestamp({ notNull }),
-  // Timestamp without timezone
-  localTime: timestamp({ withTimezone: false }),
+  // timestamptz: timezone-aware timestamp
+  scheduledAt: timestamptz({ notNull }),
+  // Timestamp without timezone (default)
+  localTime: timestamp({}),
   // Timestamp with precision
   preciseTime: timestamp({ precision: 3 }),
+  // Timestamp with timezone via withTimezone option
+  preciseTimeTz: timestamp({ precision: 3, withTimezone: true }),
   // Time column with precision
   startTime: time({ precision: 2 }),
-  // Time column with timezone
-  startTimeWithTz: time({ withTimezone: true }),
+  // Timetz column: time with timezone
+  startTimeWithTz: timetz({}),
   // Time column without precision
   endTime: time({}),
   // Numeric column with $type override
@@ -251,7 +255,7 @@ export const UserRoles = table(
       notNull,
     }).references(() => Users.id),
     roleId: bigint({ notNull }),
-    assignedAt: timestamp({ notNull }).default(now()),
+    assignedAt: timestamptz({ notNull }).default(now()),
   },
   {
     uniqueConstraints: (t, unique) => [

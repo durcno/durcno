@@ -116,7 +116,6 @@ const offsetQuery = db
 type Offset = Awaited<typeof offsetQuery>;
 Expect<Equal<Offset, { username: string }[]>>();
 
-
 // ============================================================================
 // Negative type tests - these should cause compile errors
 // ============================================================================

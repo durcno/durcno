@@ -227,22 +227,54 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; -- for uuid_generate_v4()
 
 ### Date & Time Columns
 
+#### `timestamptz`
+
+- SQL type: `timestamp with time zone` (PostgreSQL's `timestamptz`)
+- JS type: `Date`
+- Column-specific options: precision (0–6)
+- Notes: Recommended for correct UTC handling. Always stores and retrieves dates respecting timezones.
+
+```typescript
+import { table, timestamptz, notNull, now } from "durcno";
+
+export const Posts = table("public", "posts", {
+  createdAt: timestamptz({ notNull }).default(now()),
+  updatedAt: timestamptz({ notNull })
+    .default(now())
+    .$updateFn(() => new Date()),
+  publishedAt: timestamptz({}),
+});
+```
+
 #### `timestamp`
 
 - SQL type: `timestamp [with time zone]` / `timestamp [without time zone]`
 - JS type: `Date`
-- Column-specific options: withTimezone (default true), precision (0–6)
-- Notes: withTimezone=true is recommended for correct UTC handling. Use server-side DEFAULT clauses in migrations when you want database-generated timestamps.
+- Column-specific options: withTimezone (default false), precision (0–6)
+- Notes: `withTimezone: false` by default, meaning it uses `timestamp without time zone`. Set `withTimezone: true` if you want the legacy behavior, but preferring `timestamptz` is recommended. Use server-side DEFAULT clauses in migrations when you want database-generated timestamps.
 
 ```typescript
 import { table, timestamp, notNull } from "durcno";
 
-export const Posts = table("public", "posts", {
-  createdAt: timestamp({ notNull }).default(now()),
-  updatedAt: timestamp({ notNull })
-    .default(now())
-    .$updateFn(() => new Date()),
-  publishedAt: timestamp({}),
+export const PostsLocal = table("public", "postsLocal", {
+  localCreatedAt: timestamp({ notNull }),
+  localPublishedAt: timestamp({}),
+});
+```
+
+#### `timetz`
+
+- SQL type: `time with time zone` (PostgreSQL's `timetz`)
+- JS type: `string`
+- Column-specific options: precision (0–6)
+- Notes: Stores time-of-day with timezone offset (e.g., `12:30:45+02:00`).
+
+```typescript
+import { table, timetz, notNull } from "durcno";
+
+export const SchedulesTz = table("public", "schedulesTz", {
+  startsAt: timetz({ notNull }),
+  endsAt: timetz({ precision: 3 }),
 });
 ```
 
@@ -251,7 +283,7 @@ export const Posts = table("public", "posts", {
 - SQL type: `time [with time zone]` / `time [without time zone]`
 - JS type: `string`
 - Column-specific options: withTimezone (default false), precision (0–6)
-- Notes: stores time-of-day without date. Use `withTimezone: true` when you need offsets (e.g., `12:30:45+02:00`).
+- Notes: Stores time-of-day without date. `withTimezone: false` by default. Using `timetz` is recommended if you need timezone offsets.
 
 ```typescript
 import { table, time, notNull } from "durcno";
@@ -259,7 +291,6 @@ import { table, time, notNull } from "durcno";
 export const Schedules = table("public", "schedules", {
   startsAt: time({ notNull }),
   endsAt: time({ precision: 3 }),
-  startsAtWithTz: time({ withTimezone: true }),
 });
 ```
 

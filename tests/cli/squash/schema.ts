@@ -7,7 +7,7 @@ import {
   pk,
   table,
   text,
-  timestamp,
+  timestamptz,
   unique,
   varchar,
 } from "durcno";
@@ -27,7 +27,7 @@ export const Users = table("public", "users", {
   id: pk(),
   username: varchar({ length: 50, unique, notNull }),
   email: varchar({ length: 100, notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
   ...(migrationVersion >= 2 && {
     bio: text({}),
     age: integer({}),
@@ -43,8 +43,8 @@ export const Posts =
         authorId: bigint({
           notNull,
         }).references({ column: () => Users.id, onDelete: "CASCADE" }),
-        publishedAt: timestamp({}),
-        createdAt: timestamp({ notNull }).default(now()),
+        publishedAt: timestamptz({}),
+        createdAt: timestamptz({ notNull }).default(now()),
         ...(migrationVersion >= 5 && {
           views: integer({}),
         }),
@@ -63,6 +63,6 @@ export const Comments =
           onDelete: "CASCADE",
         }),
         body: text({ notNull }),
-        createdAt: timestamp({ notNull }).default(now()),
+        createdAt: timestamptz({ notNull }).default(now()),
       })
     : undefined;

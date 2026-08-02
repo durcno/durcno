@@ -6,7 +6,7 @@ import {
   primaryKey,
   type Sql,
   table,
-  timestamp,
+  timestamptz,
   varchar,
 } from "durcno";
 import { type Equal, Expect, testSetup } from "./utils";
@@ -37,7 +37,7 @@ const TestTable = table("public", "testTable", {
   nullable: varchar({ length: 50 }),
 
   // Timestamp with now() default and notNull - should be optional
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 
 const db = database({ TestTable }, testSetup);

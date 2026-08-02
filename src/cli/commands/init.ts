@@ -110,7 +110,7 @@ export default defineConfig({
 }
 
 function generateSchemaFile(): string {
-  return `import { notNull, now, pk, table, timestamp, unique, varchar } from "durcno";
+  return `import { notNull, now, pk, table, timestamptz, unique, varchar } from "durcno";
 
 export { Migrations } from "durcno";
 
@@ -119,7 +119,7 @@ export const Users = table("public", "users", {
   name: varchar({ length: 255, notNull }),
   email: varchar({ length: 255, notNull, unique }),
   password: varchar({ length: 255, notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 `;
 }

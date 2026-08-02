@@ -13,7 +13,7 @@ import {
   relations,
   table,
   text,
-  timestamp,
+  timestamptz,
   unique,
   varchar,
 } from "durcno";
@@ -54,9 +54,9 @@ export const Users = table("public", "users", {
 
   // Date/Time types
   birthDate: date({}),
-  createdAt: timestamp({ notNull }).default(now()),
-  updatedAt: timestamp({}),
-  lastLogin: timestamp({}),
+  createdAt: timestamptz({ notNull }).default(now()),
+  updatedAt: timestamptz({}),
+  lastLogin: timestamptz({}),
 
   // Enum types
   status: StatusEnum.enumed({ notNull }),
@@ -80,7 +80,7 @@ export const UserProfiles = table("public", "userProfiles", {
   bio: varchar({ length: 500 }),
   avatarUrl: varchar({ length: 200 }),
   website: varchar({ length: 200 }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 
 export const UserProfilesRelations = relations(UserProfiles, () => ({
@@ -95,8 +95,8 @@ export const Posts = table("public", "posts", {
   content: varchar({ length: 1000 }),
   slug: varchar({ length: 250, unique }),
   isPublished: boolean({ notNull }).default(false),
-  publishedAt: timestamp({}),
-  createdAt: timestamp({ notNull }).default(now()),
+  publishedAt: timestamptz({}),
+  createdAt: timestamptz({ notNull }).default(now()),
   viewCount: integer({ notNull }).default(0),
   likeCount: bigint({ notNull }).default(0n),
 });
@@ -123,8 +123,8 @@ export const Comments = table(
     parentId: bigint({}), // Self-reference for nested comments
     body: varchar({ length: 500 }),
     isEdited: boolean({ notNull }).default(false),
-    createdAt: timestamp({ notNull }).default(now()),
-    editedAt: timestamp({}),
+    createdAt: timestamptz({ notNull }).default(now()),
+    editedAt: timestamptz({}),
   },
   {
     foreignKeys: (t, fk) => [
@@ -148,7 +148,7 @@ export const Products = table("public", "products", {
   inStock: boolean({ notNull }).default(true),
   categoryId: integer({}),
   createdDate: date({ notNull }),
-  lastUpdated: timestamp({ notNull }).default(now()),
+  lastUpdated: timestamptz({ notNull }).default(now()),
 });
 
 // Categories table for testing fk relations
@@ -167,7 +167,7 @@ export const Articles = table("public", "articles", {
   // Nullable FK - category is optional
   categoryId: bigint({}).references(() => Categories.id),
   content: text({}),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 
 export const ArticlesRelations = relations(Articles, () => ({
@@ -183,7 +183,7 @@ export const AuditLogs = table("public", "auditLogs", {
   action: varchar({ length: 100, notNull }),
   message: text({}),
   // insertFn: auto-generate createdAt on insert
-  createdAt: timestamp({ notNull }).$insertFn(() => new Date()),
+  createdAt: timestamptz({ notNull }).$insertFn(() => new Date()),
   // updateFn: auto-generate modifiedAt on every update
-  modifiedAt: timestamp({ notNull }).$updateFn(() => new Date()),
+  modifiedAt: timestamptz({ notNull }).$updateFn(() => new Date()),
 });

@@ -103,7 +103,6 @@ Expect<
   >
 >();
 
-
 // ============================================================================
 // returning("*") type tests
 // ============================================================================
@@ -227,7 +226,6 @@ db.insert(UserProfiles).values({ userId: 1, avatarData: 123 });
 
 // @ts-expect-error - Missing required bytea field should not compile
 db.insert(UserProfiles).values({ userId: 1 });
-
 
 // ============================================================================
 // Negative type tests for network column inserts

@@ -23,7 +23,9 @@ import {
   table,
   text,
   time,
+  timetz,
   timestamp,
+  timestamptz,
   tuple,
   uuid,
   varchar,
@@ -175,7 +177,7 @@ export const BooleanTests = table("public", "booleanTests", {
 // ============================================================================
 
 /**
- * Test table for timestamp column type
+ * Test table for timestamp column type (without timezone)
  */
 export const TimestampTests = table("public", "timestampTests", {
   id: pk(),
@@ -183,6 +185,17 @@ export const TimestampTests = table("public", "timestampTests", {
   at: timestamp({}),
   // Nullable timestamp with default (epoch)
   atWithDefault: timestamp({}).default(new Date(0)),
+});
+
+/**
+ * Test table for timestamptz column type (with timezone)
+ */
+export const TimestamptzTests = table("public", "timestamptzTests", {
+  id: pk(),
+  // Nullable timestamptz
+  at: timestamptz({}),
+  // Nullable timestamptz with default (epoch)
+  atWithDefault: timestamptz({}).default(new Date(0)),
 });
 
 /**
@@ -205,6 +218,17 @@ export const TimeTests = table("public", "timeTests", {
   time: time({}),
   // Nullable time with default
   timeWithDefault: time({}).default("00:00:00"),
+});
+
+/**
+ * Test table for timetz column type
+ */
+export const TimetzTests = table("public", "timetzTests", {
+  id: pk(),
+  // Nullable timetz
+  time: timetz({}),
+  // Nullable timetz with default
+  timeWithDefault: timetz({}).default("00:00:00+00"),
 });
 
 // ============================================================================

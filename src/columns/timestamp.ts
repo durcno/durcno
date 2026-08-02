@@ -12,9 +12,9 @@ type TimestampConfig = ColumnConfig & {
   precision?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   /**
    * Include timezone information in the timestamp.
-   * When true, uses `timestamp with time zone` (recommended for UTC round-trips).
-   * When false, uses `timestamp` (recommended for local round-trips).
-   * @default true
+   * When true, uses `timestamp with time zone`.
+   * When false, uses `timestamp`.
+   * @default false
    */
   withTimezone?: boolean;
 };
@@ -30,7 +30,7 @@ export class TimestampColumn<TConfig extends TimestampConfig> extends Column<
 
   constructor(config: TConfig) {
     super(config);
-    this.#withTimezone = config.withTimezone ?? true;
+    this.#withTimezone = config.withTimezone ?? false;
     this.#precision = config.precision;
   }
 
@@ -46,9 +46,7 @@ export class TimestampColumn<TConfig extends TimestampConfig> extends Column<
   }
 
   get zodTypeScaler() {
-    return z.iso.datetime({
-      precision: this.#precision,
-    });
+    return z.date();
   }
 
   toDriverScalar(value: TimestampValType | Sql | null) {
@@ -71,10 +69,11 @@ export class TimestampColumn<TConfig extends TimestampConfig> extends Column<
  *
  * @example
  * ```ts
- * timestamp({ withTimezone: true, precision: 3, notNull }) // timestamp(3) with time zone NOT NULL
+ * timestamp({ precision: 3, notNull }) // timestamp(3) NOT NULL
+ * timestamp({ withTimezone: true, notNull }) // timestamp with time zone NOT NULL
  * ```
  *
- * @param config.withTimezone - Include timezone info (default: `true`)
+ * @param config.withTimezone - Include timezone info (default: `false`)
  * @param config.precision - Fractional seconds precision (0–6)
  */
 export function timestamp<TConfig extends TimestampConfig>(

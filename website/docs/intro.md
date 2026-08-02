@@ -24,7 +24,7 @@ import {
   table,
   pk,
   varchar,
-  timestamp,
+  timestamptz,
   enumtype,
   notNull,
   unique,
@@ -44,7 +44,7 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, notNull, unique }),
   email: varchar({ length: 255, notNull, unique }),
   role: UserRole.enumed({ notNull }).default("user"),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 ```
 

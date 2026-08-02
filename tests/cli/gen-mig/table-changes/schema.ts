@@ -7,7 +7,7 @@ import {
   pk,
   table,
   text,
-  timestamp,
+  timestamptz,
   unique,
   varchar,
 } from "durcno";
@@ -27,7 +27,7 @@ export const Users = table("public", "users", {
   id: pk(),
   username: varchar({ length: 50, unique, notNull }),
   email: varchar({ length: 100, notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
   // Stage 2: bio and age added; Stage 3+: only age remains
   ...(stage >= 2 && stage <= 2 && { bio: text({}) }),
   ...(stage >= 2 && { age: integer({}) }),
@@ -41,7 +41,7 @@ export const Posts =
         title: varchar({ length: 500, notNull }),
         content: text({ notNull }),
         userId: bigint({ notNull }),
-        publishedAt: timestamp({}),
-        createdAt: timestamp({ notNull }).default(now()),
+        publishedAt: timestamptz({}),
+        createdAt: timestamptz({ notNull }).default(now()),
       })
     : undefined;

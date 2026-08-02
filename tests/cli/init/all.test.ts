@@ -57,7 +57,7 @@ describe("durcno init", () => {
     expect(schemaContent).toContain('"users"');
     expect(schemaContent).toContain("pk()");
     expect(schemaContent).toContain("varchar(");
-    expect(schemaContent).toContain("timestamp(");
+    expect(schemaContent).toContain("timestamptz(");
   });
 
   it("should generate index file exporting db instance", () => {

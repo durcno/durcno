@@ -80,7 +80,7 @@ describe("Logger", () => {
       const mockLogger: QueryLogger = { info: vi.fn(), error: vi.fn() };
       const client = new TestClient();
       client.logger = mockLogger;
-      
+
       const testError = new Error("Connection lost");
       client.query = vi.fn().mockRejectedValueOnce(testError);
 
@@ -129,7 +129,7 @@ describe("Logger", () => {
       const mockLogger: QueryLogger = { info: vi.fn(), error: vi.fn() };
       const pool = new TestPool();
       pool.logger = mockLogger;
-      
+
       const testError = new Error("DB Error");
       pool.query = vi.fn().mockRejectedValueOnce(testError);
 

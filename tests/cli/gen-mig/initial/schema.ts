@@ -11,6 +11,7 @@ import {
   table,
   text,
   timestamp,
+  timestamptz,
   unique,
   varchar,
 } from "durcno";
@@ -50,9 +51,9 @@ export const users = table("public", "users", {
 
   // Date/Time types
   birthDate: date({}),
-  createdAt: timestamp({ notNull }).default(now()),
-  updatedAt: timestamp({}),
-  lastLogin: timestamp({}),
+  createdAt: timestamptz({ notNull }).default(now()),
+  updatedAt: timestamptz({}),
+  lastLogin: timestamptz({}),
 
   // Enum types
   status: StatusEnum.enumed({ notNull }),
@@ -69,8 +70,8 @@ export const posts = table("public", "posts", {
   content: text({ notNull }),
   slug: varchar({ length: 250, unique, notNull }),
   isPublished: boolean({ notNull }).default(false),
-  publishedAt: timestamp({}),
-  createdAt: timestamp({ notNull }).default(now()),
+  publishedAt: timestamptz({}),
+  createdAt: timestamptz({ notNull }).default(now()),
   viewCount: integer({ notNull }).default(0),
   likeCount: bigint({ notNull }).default(0n),
 });
@@ -88,8 +89,8 @@ export const comments = table("public", "comments", {
   parentId: bigint({}), // Will be updated to self-reference after table creation
   body: text({ notNull }),
   isEdited: boolean({ notNull }).default(false),
-  createdAt: timestamp({ notNull }).default(now()),
-  editedAt: timestamp({}),
+  createdAt: timestamptz({ notNull }).default(now()),
+  editedAt: timestamptz({}),
 });
 
 // Test table with all constraint types
@@ -102,5 +103,5 @@ export const products = table("public", "products", {
   inStock: boolean({ notNull }).default(true),
   categoryId: integer({}),
   createdDate: date({ notNull }),
-  lastUpdated: timestamp({ notNull }).default(now()),
+  lastUpdated: timestamptz({ notNull }).default(now()),
 });

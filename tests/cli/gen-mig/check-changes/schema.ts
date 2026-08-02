@@ -13,7 +13,7 @@ import {
   now,
   pk,
   table,
-  timestamp,
+  timestamptz,
   varchar,
 } from "durcno";
 
@@ -35,7 +35,7 @@ export const CheckTest = table(
     quantity: integer({ notNull }),
     email: varchar({ length: 255 }),
     name: varchar({ length: 100, notNull }),
-    createdAt: timestamp({ notNull }).default(now()),
+    createdAt: timestamptz({ notNull }).default(now()),
   },
   {
     checkConstraints: (t, check) => {
