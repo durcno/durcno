@@ -221,7 +221,7 @@ dist/                     # Production compiled output
 
 Durcno uses two clearly separated test suites — **Type tests** and **Integration tests** — with distinct scope and rules.
 
-- **Type tests (`type-tests/`)** — compile-time checks for TypeScript inference (use `Expect`,`Equal` / `@ts-expect-error`). Required for any change that affects exported types or API shapes.
+- **Type tests (`type-tests/`)** — compile-time checks for TypeScript inference (use `Expect`,`Equal` / `@ts-expect-error`). Things that not practical for Integration tests. Required for any change that affects exported types or API shapes.
 - **Integration tests (`tests/`)** — runtime tests (Vitest) validating columns, query builders, migrations, and CLI behavior. Keep them deterministic, and fast.
 
 Quick rules:
@@ -244,15 +244,13 @@ Commands:
 
 ### Type tests (type-tests/)
 
-Purpose: Assert TypeScript behavior and inference (return types, input types, overloads).
+Purpose: Assert TypeScript behavior, constrains, and inference (return types, input types, overloads).
 
 When: Add/Update/Remove for any changes that alters types or public api in `src/`, excluding `src/cli`.
 
 How:
 
-- Keep tests minimal, assert exact shapes rather than runtime behavior.
-- Each test file must include both positive and negative type tests.
-- **Comprehensive negative tests are essential** — ensure invalid usages are properly rejected by the type system.
+- Keep tests minimal, assert exact shapes/constrains rather than runtime behavior.
 - Place `// @ts-expect-error` **directly above the line that causes the error**, not above the entire statement.
 - Use \_ prefix for unused variables in type tests.
 
@@ -352,7 +350,6 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 - Export all new public APIs from `src/index.ts`
 - Maintain backward compatibility in public APIs
 - Create/Update comprehensive type tests in `type-tests/`
-- Ensure both positive and negative type tests
 - Run type tests (`pnpm run test-types`) - MUST PASS
 - Create/Update necessary integration tests in `tests/`
 - Run integration tests (`pnpm test`) - MUST PASS
