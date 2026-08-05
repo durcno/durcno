@@ -10,7 +10,6 @@ import {
   pk,
   table,
   text,
-  timestamp,
   timestamptz,
   unique,
   varchar,

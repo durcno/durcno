@@ -1,17 +1,17 @@
 import type { GeoJSON } from "geojson";
+import type { BinaryReader } from "./binaryreader";
+import { BinaryWriter } from "./binarywriter";
 import {
-  Geometry,
   type GeoJSONOptions,
+  Geometry,
+  type TwkbOptions,
   TwkbPrecision,
   type WkbOptions,
-  type TwkbOptions,
 } from "./geometry";
-import { Types } from "./types";
 import { Point } from "./point";
 import { Polygon } from "./polygon";
-import { BinaryWriter } from "./binarywriter";
-import type { BinaryReader } from "./binaryreader";
-import type { WktParser, WktParseOptions } from "./wktparser";
+import { Types } from "./types";
+import type { WktParseOptions, WktParser } from "./wktparser";
 
 export class MultiPolygon extends Geometry {
   polygons: Polygon[];

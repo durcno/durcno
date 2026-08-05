@@ -1,4 +1,4 @@
-import { ArrayTest, Events, Posts } from "./schema";
+import type { ArrayTest, Events, Posts } from "./schema";
 import { type Equal, Expect } from "./utils";
 
 // Type test: Numeric column with $type override (Events.capacity)
