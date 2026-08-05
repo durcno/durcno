@@ -441,26 +441,6 @@ describe("INSERT queries", () => {
       expect(users[0].email).toBe("newemail@example.com");
     });
 
-    it("doUpdateSet: should keep existing column value (table ref in SET)", async () => {
-      const user = createTestUser({
-        username: "keepExisting",
-        email: "original@example.com",
-      });
-      await db.insert(schema.Users).values(user);
-
-      await db
-        .insert(schema.Users)
-        .values({ ...user, email: "ignored@example.com" })
-        .onConflict(schema.Users.username)
-        .doUpdateSet(() => ({
-          email: schema.Users.email, // keep the existing value
-        }));
-
-      const users = await db.from(schema.Users).select();
-      expect(users).toHaveLength(1);
-      expect(users[0].email).toBe("original@example.com");
-    });
-
     it("doUpdateSet: should set a literal value on conflict", async () => {
       const user = createTestUser({ username: "literalUpdate" });
       await db.insert(schema.Users).values(user);

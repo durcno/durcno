@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, database, defineConfig, eq } from "durcno";
+import { type $Client, database, defineConfig, eq, sql } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -361,5 +361,24 @@ describe("UPDATE queries", () => {
     expect(result[0]).toHaveProperty("isVerified");
     expect(result[0]).toHaveProperty("status");
     expect(result[0].username).toBe("returnstarchanged");
+  });
+
+  it("should update column with Sql value", async () => {
+    const [user] = await db
+      .insert(schema.Users)
+      .values(createTestUser({ username: "mixedCASE" }))
+      .returning({ id: true });
+
+    await db
+      .update(schema.Users)
+      .set({ username: sql`LOWER('MIXEDCASE')` })
+      .where(eq(schema.Users.id, user.id));
+
+    const updated = await db
+      .from(schema.Users)
+      .select()
+      .where(eq(schema.Users.id, user.id));
+
+    expect(updated[0].username).toBe("mixedcase");
   });
 });

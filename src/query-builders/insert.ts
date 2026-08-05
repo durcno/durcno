@@ -2,6 +2,7 @@ import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
 import type { FilterExpression } from "../filters/index";
+import { Sql } from "../sql";
 import {
   type AnyColumn,
   Table,
@@ -67,17 +68,7 @@ export class ConflictBuilder<
   }
 
   /** Adds `ON CONFLICT DO UPDATE SET` clause. */
-  doUpdateSet<
-    TWhere extends
-      | FilterExpression<
-          | TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
-          | ToExcludeColumn<
-              TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
-            >,
-          TPrepare
-        >
-      | undefined = undefined,
-  >(
+  doUpdateSet(
     set: (ctx: {
       excluded: {
         [ColName in keyof TTableWC["_"]["columns"]]: ToExcludeColumn<
@@ -85,10 +76,12 @@ export class ConflictBuilder<
         >;
       };
     }) => {
-      [ColName in keyof TTableWC["_"]["columns"]]?:
-        | TTableWC["_"]["columns"][ColName]["ValTypeUpdate"]
-        | TTableWC["_"]["columns"][ColName]
-        | ToExcludeColumn<TTableWC["_"]["columns"][ColName]>;
+      [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
+        ? never
+        : ColName]?:
+        | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+        | Valueof<Omit<TTableWC["_"]["columns"], ColName>>
+        | ToExcludeColumn<Valueof<TTableWC["_"]["columns"]>>;
     },
     where?: (ctx: {
       excluded: {
@@ -96,7 +89,13 @@ export class ConflictBuilder<
           TTableWC["_"]["columns"][ColName]
         >;
       };
-    }) => TWhere,
+    }) => FilterExpression<
+      | TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
+      | ToExcludeColumn<
+          TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
+        >,
+      TPrepare
+    >,
   ): THasColumns extends true
     ? InsertQuery<TTableWC, TPrepare, TReturning>
     : never {
@@ -153,7 +152,8 @@ export class InsertBuilder<
         : undefined extends TTableWC["_"]["columns"][colName]["ValTypeInsert"]
           ? never
           : colName]:
-        | Exclude<TTableWC["_"]["columns"][colName]["ValTypeInsert"], undefined>
+        | TTableWC["_"]["columns"][colName]["ValTypeInsert"]
+        | Sql
         | (TPrepare extends true
             ? Arg<TTableWC["_"]["columns"][colName]["ValType"]>
             : never);
@@ -164,6 +164,7 @@ export class InsertBuilder<
           ? colName
           : never]?:
         | Exclude<TTableWC["_"]["columns"][colName]["ValTypeInsert"], undefined>
+        | Sql
         | (TPrepare extends true
             ? Arg<TTableWC["_"]["columns"][colName]["ValType"]>
             : never);
@@ -337,6 +338,8 @@ export class InsertQuery<
           } else {
             query.sql += "DEFAULT";
           }
+        } else if (value instanceof Sql) {
+          query.sql += value.string;
         } else if (is(value, Arg)) {
           const cast = value.cast ?? column.sqlCast ?? null;
           const castSuffix = cast ? `::${cast}` : "";

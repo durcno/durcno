@@ -1,10 +1,13 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
+import { is } from "../entity";
 import type { FilterExpression } from "../filters/index";
+import { Sql } from "../sql";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key } from "../types";
 import type { ReturningColumns } from "../virtual-table";
 import { buildWithClause, resolveReturningColumns } from "./helpers";
+import { Arg } from "./pre";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -30,10 +33,14 @@ export class UpdateBuilder<
 
   set<
     TValues extends {
-      [colName in keyof TTableWC["_"]["columns"]]?: Exclude<
-        TTableWC["_"]["columns"][colName]["ValTypeUpdate"],
-        undefined
-      >;
+      [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
+        ? never
+        : ColName]?:
+        | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+        | Sql
+        | (TPrepare extends true
+            ? Arg<TTableWC["_"]["columns"][ColName]["ValType"]>
+            : never);
     },
   >(values: TValues) {
     return new UpdateQuery(
@@ -50,10 +57,17 @@ export class UpdateBuilder<
 
 export class UpdateQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
-  TValues extends {
-    [colName in keyof TTableWC["_"]["columns"]]?: TTableWC["_"]["columns"][colName]["ValTypeUpdate"];
-  },
   TPrepare extends boolean,
+  TValues extends {
+    [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
+      ? never
+      : ColName]?:
+      | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+      | Sql
+      | (TPrepare extends true
+          ? Arg<TTableWC["_"]["columns"][ColName]["ValType"]>
+          : never);
+  },
   TWhere extends
     | FilterExpression<
         TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
@@ -134,7 +148,7 @@ export class UpdateQuery<
   }
 
   /** Return all columns using `RETURNING *`. */
-  returning(all: "*"): UpdateQuery<TTableWC, TValues, TPrepare, TWhere, "*">;
+  returning(all: "*"): UpdateQuery<TTableWC, TPrepare, TValues, TWhere, "*">;
   /** Return a subset of columns. */
   returning<
     TReturnings extends
@@ -146,7 +160,7 @@ export class UpdateQuery<
         },
   >(
     returnings: TReturnings,
-  ): UpdateQuery<TTableWC, TValues, TPrepare, TWhere, TReturnings>;
+  ): UpdateQuery<TTableWC, TPrepare, TValues, TWhere, TReturnings>;
   returning(
     returnings: "*" | { [ColName in keyof TTableWC["_"]["columns"]]?: boolean },
   ) {
@@ -174,8 +188,8 @@ export class UpdateQuery<
 
     query.sql += " SET ";
 
-    // Collect fields from explicit values
-    const explicitFields = new Set(Object.keys(this.#values));
+    // Collect fields from set values
+    const explicitFields = new Set<string>(Object.keys(this.#values));
 
     // Build the combined values map with updateFn values
     const allFields: string[] = [];
@@ -184,7 +198,7 @@ export class UpdateQuery<
     // First, add explicit values
     for (const field of explicitFields) {
       allFields.push(field);
-      allValues.push(this.#values[field]);
+      allValues.push((this.#values as Record<string, unknown>)[field]);
     }
 
     // Then, add updateFn values for columns not explicitly provided
@@ -196,12 +210,26 @@ export class UpdateQuery<
       }
     }
 
-    query.sql += allFields
-      .map(
-        (field, index) =>
-          `"${this.#table._.columns[field].nameSql}" = ${this.#table._.columns[field].toSQL(allValues[index], { cast: true })}`,
-      )
-      .join(", ");
+    allFields.forEach((field, index) => {
+      const column = this.#table._.columns[field];
+      const value = allValues[index];
+
+      query.sql += `"${column.nameSql}" = `;
+      if (value instanceof Sql) {
+        query.sql += value.string;
+      } else if (is(value, Arg)) {
+        const cast = value.cast ?? column.sqlCast ?? null;
+        const castSuffix = cast ? `::${cast}` : "";
+        query.sql += `$${value.index}${castSuffix}`;
+        query.arguments.push(value.key);
+      } else {
+        query.sql += column.toSQL(value, { cast: true });
+      }
+
+      if (index !== allFields.length - 1) {
+        query.sql += ", ";
+      }
+    });
 
     if (this.#$where) {
       query.sql += ` WHERE `;

@@ -259,9 +259,9 @@ export abstract class Column<
             isNotNull: true;
           }
         ? this extends { hasInsertFn: true } | { hasDefault: true }
-          ? this["ValType"] | Sql | undefined
-          : this["ValType"] | Sql
-        : this["ValType"] | Sql | null | undefined;
+          ? this["ValType"] | undefined
+          : this["ValType"]
+        : this["ValType"] | null | undefined;
   readonly ValTypeUpdate!: this extends {
     isPrimaryKey: true;
   }
