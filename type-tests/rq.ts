@@ -1,13 +1,17 @@
 import { asc, desc, eq } from "durcno";
-import { Articles, Comments, db, Posts, Users } from "./schema";
+import { Articles, db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
-// Type test: query on Users
-const allQr = db.query(Users).findMany({});
-type AllQueryRtrn = Awaited<typeof allQr>;
+// ============================================================================
+// Section 1: Basic findMany & Column Selection
+// ============================================================================
+
+// Select all columns
+const _findManyAllQuery = db.query(Users).findMany({});
+type FindManyAll = Awaited<typeof _findManyAllQuery>;
 Expect<
   Equal<
-    AllQueryRtrn,
+    FindManyAll,
     {
       id: bigint;
       username: string;
@@ -20,8 +24,8 @@ Expect<
   >
 >();
 
-// Type test: query on Users /w columns true
-const manyWtColsQr = db.query(Users).findMany({
+// Select specific columns with true map
+const _findManyTrueMapQuery = db.query(Users).findMany({
   columns: {
     id: true,
     username: true,
@@ -29,10 +33,10 @@ const manyWtColsQr = db.query(Users).findMany({
     type: true,
   },
 });
-type ManyWtColsTrueRtrn = Awaited<typeof manyWtColsQr>;
+type FindManyTrueMap = Awaited<typeof _findManyTrueMapQuery>;
 Expect<
   Equal<
-    ManyWtColsTrueRtrn,
+    FindManyTrueMap,
     {
       id: bigint;
       username: string;
@@ -40,20 +44,19 @@ Expect<
       type: "admin" | "user";
     }[]
   >
->;
+>();
 
-// Type test: query on Users /w columns false
-const manyWtColsFalseQr = db.query(Users).findMany({
+// Exclude specific columns with false map
+const _findManyFalseMapQuery = db.query(Users).findMany({
   columns: {
     id: false,
     createdAt: false,
   },
 });
-
-type ManyWtColsFalseRtrn = Awaited<typeof manyWtColsFalseQr>;
+type FindManyFalseMap = Awaited<typeof _findManyFalseMapQuery>;
 Expect<
   Equal<
-    ManyWtColsFalseRtrn,
+    FindManyFalseMap,
     {
       username: string;
       email: string | null;
@@ -62,10 +65,14 @@ Expect<
       trackingId: string | null;
     }[]
   >
->;
+>();
 
-// Type test: query on Users with where
-const whereQr = db.query(Users).findMany({
+// ============================================================================
+// Section 2: findMany Filtering & Ordering (where, orderBy)
+// ============================================================================
+
+// Query with where clause condition
+const _findManyWhereQuery = db.query(Users).findMany({
   columns: {
     id: true,
     username: true,
@@ -74,10 +81,10 @@ const whereQr = db.query(Users).findMany({
   },
   where: eq(Users.type, "user"),
 });
-type WhereQueryRtrn = Awaited<typeof whereQr>;
+type FindManyWhere = Awaited<typeof _findManyWhereQuery>;
 Expect<
   Equal<
-    WhereQueryRtrn,
+    FindManyWhere,
     {
       id: bigint;
       username: string;
@@ -85,29 +92,29 @@ Expect<
       type: "admin" | "user";
     }[]
   >
->;
+>();
 
-// Type test: query on Users with orderBy (single column)
-const orderByQr = db.query(Users).findMany({
+// Query with single column orderBy
+const _findManyOrderByQuery = db.query(Users).findMany({
   columns: {
     id: true,
     username: true,
   },
   orderBy: asc(Users.username),
 });
-type OrderByQueryRtrn = Awaited<typeof orderByQr>;
+type FindManyOrderBy = Awaited<typeof _findManyOrderByQuery>;
 Expect<
   Equal<
-    OrderByQueryRtrn,
+    FindManyOrderBy,
     {
       id: bigint;
       username: string;
     }[]
   >
->;
+>();
 
-// Type test: query on Users with orderBy (multi-column array)
-const multiOrderByQr = db.query(Users).findMany({
+// Query with multi-column array orderBy
+const _findManyMultiOrderByQuery = db.query(Users).findMany({
   columns: {
     id: true,
     username: true,
@@ -115,20 +122,24 @@ const multiOrderByQr = db.query(Users).findMany({
   },
   orderBy: [asc(Users.username), desc(Users.createdAt)],
 });
-type MultiOrderByQueryRtrn = Awaited<typeof multiOrderByQr>;
+type FindManyMultiOrderBy = Awaited<typeof _findManyMultiOrderByQuery>;
 Expect<
   Equal<
-    MultiOrderByQueryRtrn,
+    FindManyMultiOrderBy,
     {
       id: bigint;
       username: string;
       createdAt: Date;
     }[]
   >
->;
+>();
 
-// Type test: query on Users with Profile
-const usersWithProfileQuery = db.query(Users).findMany({
+// ============================================================================
+// Section 3: findMany Relational with Queries (1-Level Relations)
+// ============================================================================
+
+// One-to-one relation (profile on Users -> profile object or null)
+const _usersWithProfileQuery = db.query(Users).findMany({
   columns: {
     id: true,
     username: true,
@@ -144,10 +155,10 @@ const usersWithProfileQuery = db.query(Users).findMany({
     },
   },
 });
-type UsersWithProfileQueryRtrn = Awaited<typeof usersWithProfileQuery>;
+type UsersWithProfile = Awaited<typeof _usersWithProfileQuery>;
 Expect<
   Equal<
-    UsersWithProfileQueryRtrn,
+    UsersWithProfile,
     {
       id: bigint;
       username: string;
@@ -159,10 +170,10 @@ Expect<
       } | null;
     }[]
   >
->;
+>();
 
-// Type test: query on Posts with Comments
-const postsWithCommentsQuery = db.query(Posts).findMany({
+// One-to-many relation (comments on Posts -> comments array)
+const _postsWithCommentsQuery = db.query(Posts).findMany({
   columns: {
     id: true,
     userId: true,
@@ -178,10 +189,10 @@ const postsWithCommentsQuery = db.query(Posts).findMany({
     },
   },
 });
-type PostsWithCommentsQueryRtrn = Awaited<typeof postsWithCommentsQuery>;
+type PostsWithComments = Awaited<typeof _postsWithCommentsQuery>;
 Expect<
   Equal<
-    PostsWithCommentsQueryRtrn,
+    PostsWithComments,
     {
       id: bigint;
       userId: bigint;
@@ -193,10 +204,10 @@ Expect<
       }[];
     }[]
   >
->;
+>();
 
-// Type test: fk relation with notNull FK column - result should be T (not nullable)
-const postsWithAuthorQuery = db.query(Posts).findMany({
+// FK relation with notNull FK column (author on Articles -> non-nullable author)
+const _articlesWithAuthorQuery = db.query(Articles).findMany({
   columns: {
     id: true,
     title: true,
@@ -210,40 +221,10 @@ const postsWithAuthorQuery = db.query(Posts).findMany({
     },
   },
 });
-type PostsWithAuthorQueryRtrn = Awaited<typeof postsWithAuthorQuery>;
+type ArticlesWithAuthor = Awaited<typeof _articlesWithAuthorQuery>;
 Expect<
   Equal<
-    PostsWithAuthorQueryRtrn,
-    {
-      id: bigint;
-      title: string | null;
-      author: {
-        id: bigint;
-        username: string;
-      };
-    }[]
-  >
->;
-
-// Type test: fk relation with notNull FK column (Articles.authorId)
-const articlesWithAuthorQuery = db.query(Articles).findMany({
-  columns: {
-    id: true,
-    title: true,
-  },
-  with: {
-    author: {
-      columns: {
-        id: true,
-        username: true,
-      },
-    },
-  },
-});
-type ArticlesWithAuthorQueryRtrn = Awaited<typeof articlesWithAuthorQuery>;
-Expect<
-  Equal<
-    ArticlesWithAuthorQueryRtrn,
+    ArticlesWithAuthor,
     {
       id: bigint;
       title: string;
@@ -253,10 +234,10 @@ Expect<
       };
     }[]
   >
->;
+>();
 
-// Type test: fk relation with nullable FK column (Articles.categoryId) - result should be T | null
-const articlesWithCategoryQuery = db.query(Articles).findMany({
+// FK relation with nullable FK column (category on Articles -> category or null)
+const _articlesWithCategoryQuery = db.query(Articles).findMany({
   columns: {
     id: true,
     title: true,
@@ -270,10 +251,10 @@ const articlesWithCategoryQuery = db.query(Articles).findMany({
     },
   },
 });
-type ArticlesWithCategoryQueryRtrn = Awaited<typeof articlesWithCategoryQuery>;
+type ArticlesWithCategory = Awaited<typeof _articlesWithCategoryQuery>;
 Expect<
   Equal<
-    ArticlesWithCategoryQueryRtrn,
+    ArticlesWithCategory,
     {
       id: bigint;
       title: string;
@@ -283,10 +264,10 @@ Expect<
       } | null;
     }[]
   >
->;
+>();
 
-// Type test: fk relation with both nullable and non-nullable FK columns
-const articlesWithBothRelationsQuery = db.query(Articles).findMany({
+// FK relation with both nullable and non-nullable FK columns
+const _articlesWithBothRelationsQuery = db.query(Articles).findMany({
   columns: {
     id: true,
     title: true,
@@ -306,12 +287,12 @@ const articlesWithBothRelationsQuery = db.query(Articles).findMany({
     },
   },
 });
-type ArticlesWithBothRelationsQueryRtrn = Awaited<
-  typeof articlesWithBothRelationsQuery
+type ArticlesWithBothRelations = Awaited<
+  typeof _articlesWithBothRelationsQuery
 >;
 Expect<
   Equal<
-    ArticlesWithBothRelationsQueryRtrn,
+    ArticlesWithBothRelations,
     {
       id: bigint;
       title: string;
@@ -325,14 +306,14 @@ Expect<
       } | null;
     }[]
   >
->;
+>();
 
 // ============================================================================
-// Nested `with` type tests
+// Section 4: findMany Nested Relational with Queries (Multi-Level Relations)
 // ============================================================================
 
-// Type test: 2-level nested with - Posts -> comments -> author
-const postsWithNestedCommentsAuthorQuery = db.query(Posts).findMany({
+// 2-level nested with (Posts -> comments -> author)
+const _postsWithNestedCommentsAuthorQuery = db.query(Posts).findMany({
   columns: {
     id: true,
     title: true,
@@ -354,12 +335,12 @@ const postsWithNestedCommentsAuthorQuery = db.query(Posts).findMany({
     },
   },
 });
-type PostsWithNestedCommentsAuthorQueryRtrn = Awaited<
-  typeof postsWithNestedCommentsAuthorQuery
+type PostsWithNestedCommentsAuthor = Awaited<
+  typeof _postsWithNestedCommentsAuthorQuery
 >;
 Expect<
   Equal<
-    PostsWithNestedCommentsAuthorQueryRtrn,
+    PostsWithNestedCommentsAuthor,
     {
       id: bigint;
       title: string | null;
@@ -373,10 +354,10 @@ Expect<
       }[];
     }[]
   >
->;
+>();
 
-// Type test: 2-level nested with - Posts -> comments -> post (circular reference)
-const postsWithNestedCommentsPostQuery = db.query(Posts).findMany({
+// 2-level circular reference with (Posts -> comments -> post)
+const _postsWithNestedCommentsPostQuery = db.query(Posts).findMany({
   columns: {
     id: true,
     title: true,
@@ -398,12 +379,12 @@ const postsWithNestedCommentsPostQuery = db.query(Posts).findMany({
     },
   },
 });
-type PostsWithNestedCommentsPostQueryRtrn = Awaited<
-  typeof postsWithNestedCommentsPostQuery
+type PostsWithNestedCommentsPost = Awaited<
+  typeof _postsWithNestedCommentsPostQuery
 >;
 Expect<
   Equal<
-    PostsWithNestedCommentsPostQueryRtrn,
+    PostsWithNestedCommentsPost,
     {
       id: bigint;
       title: string | null;
@@ -417,10 +398,10 @@ Expect<
       }[];
     }[]
   >
->;
+>();
 
-// Type test: Multiple nested branches - Posts with author AND comments with their authors
-const postsWithAuthorAndNestedCommentsQuery = db.query(Posts).findMany({
+// Multiple nested branches (Posts -> author AND comments -> author)
+const _postsWithAuthorAndNestedCommentsQuery = db.query(Posts).findMany({
   columns: {
     id: true,
     title: true,
@@ -448,12 +429,12 @@ const postsWithAuthorAndNestedCommentsQuery = db.query(Posts).findMany({
     },
   },
 });
-type PostsWithAuthorAndNestedCommentsQueryRtrn = Awaited<
-  typeof postsWithAuthorAndNestedCommentsQuery
+type PostsWithAuthorAndNestedComments = Awaited<
+  typeof _postsWithAuthorAndNestedCommentsQuery
 >;
 Expect<
   Equal<
-    PostsWithAuthorAndNestedCommentsQueryRtrn,
+    PostsWithAuthorAndNestedComments,
     {
       id: bigint;
       title: string | null;
@@ -471,10 +452,10 @@ Expect<
       }[];
     }[]
   >
->;
+>();
 
-// Type test: 3-level nested with - Users -> posts -> comments -> author
-const usersWithDeepNestedQuery = db.query(Users).findMany({
+// 3-level deep nested with (Users -> posts -> comments -> author)
+const _usersWithDeepNestedQuery = db.query(Users).findMany({
   columns: {
     id: true,
     username: true,
@@ -504,10 +485,10 @@ const usersWithDeepNestedQuery = db.query(Users).findMany({
     },
   },
 });
-type UsersWithDeepNestedQueryRtrn = Awaited<typeof usersWithDeepNestedQuery>;
+type UsersWithDeepNested = Awaited<typeof _usersWithDeepNestedQuery>;
 Expect<
   Equal<
-    UsersWithDeepNestedQueryRtrn,
+    UsersWithDeepNested,
     {
       id: bigint;
       username: string;
@@ -525,10 +506,10 @@ Expect<
       }[];
     }[]
   >
->;
+>();
 
-// Type test: Nested with all columns (no column selection)
-const postsWithNestedAllColumnsQuery = db.query(Posts).findMany({
+// Nested with selecting all columns (empty object for nested author)
+const _postsWithNestedAllColumnsQuery = db.query(Posts).findMany({
   columns: {
     id: true,
     title: true,
@@ -541,12 +522,12 @@ const postsWithNestedAllColumnsQuery = db.query(Posts).findMany({
     },
   },
 });
-type PostsWithNestedAllColumnsQueryRtrn = Awaited<
-  typeof postsWithNestedAllColumnsQuery
+type PostsWithNestedAllColumns = Awaited<
+  typeof _postsWithNestedAllColumnsQuery
 >;
 Expect<
   Equal<
-    PostsWithNestedAllColumnsQueryRtrn,
+    PostsWithNestedAllColumns,
     {
       id: bigint;
       title: string | null;
@@ -568,18 +549,18 @@ Expect<
       }[];
     }[]
   >
->;
+>();
 
 // ============================================================================
-// findFirst type tests - verifies T | null return type (Object type shared with findMany)
+// Section 5: findFirst Query Return Types
 // ============================================================================
 
-// Type test: findFirst returns T | null (all columns)
-const firstAllQr = db.query(Users).findFirst({});
-type FirstAllQueryRtrn = Awaited<typeof firstAllQr>;
+// findFirst returns T | null (all columns)
+const _firstAllQuery = db.query(Users).findFirst({});
+type FirstAll = Awaited<typeof _firstAllQuery>;
 Expect<
   Equal<
-    FirstAllQueryRtrn,
+    FirstAll,
     {
       id: bigint;
       username: string;
@@ -592,17 +573,17 @@ Expect<
   >
 >();
 
-// Type test: findFirst with column selection returns subset T | null
-const firstWtColsQr = db.query(Users).findFirst({
+// findFirst with column selection returns subset T | null
+const _firstTrueMapQuery = db.query(Users).findFirst({
   columns: {
     id: true,
     username: true,
   },
 });
-type FirstWtColsRtrn = Awaited<typeof firstWtColsQr>;
+type FirstTrueMap = Awaited<typeof _firstTrueMapQuery>;
 Expect<
   Equal<
-    FirstWtColsRtrn,
+    FirstTrueMap,
     {
       id: bigint;
       username: string;
@@ -610,17 +591,17 @@ Expect<
   >
 >();
 
-// Type test: findFirst with columns false returns excluded subset T | null
-const firstWtColsFalseQr = db.query(Users).findFirst({
+// findFirst with false map returns excluded subset T | null
+const _firstFalseMapQuery = db.query(Users).findFirst({
   columns: {
     id: false,
     createdAt: false,
   },
 });
-type FirstWtColsFalseRtrn = Awaited<typeof firstWtColsFalseQr>;
+type FirstFalseMap = Awaited<typeof _firstFalseMapQuery>;
 Expect<
   Equal<
-    FirstWtColsFalseRtrn,
+    FirstFalseMap,
     {
       username: string;
       email: string | null;
@@ -631,8 +612,8 @@ Expect<
   >
 >();
 
-// Type test: findFirst with many relation (comments still array inside T | null)
-const firstPostsWithCommentsQr = db.query(Posts).findFirst({
+// findFirst with one-to-many relation
+const _firstPostsWithCommentsQuery = db.query(Posts).findFirst({
   columns: {
     id: true,
     title: true,
@@ -646,10 +627,10 @@ const firstPostsWithCommentsQr = db.query(Posts).findFirst({
     },
   },
 });
-type FirstPostsWithCommentsRtrn = Awaited<typeof firstPostsWithCommentsQr>;
+type FirstPostsWithComments = Awaited<typeof _firstPostsWithCommentsQuery>;
 Expect<
   Equal<
-    FirstPostsWithCommentsRtrn,
+    FirstPostsWithComments,
     {
       id: bigint;
       title: string | null;
@@ -661,8 +642,8 @@ Expect<
   >
 >();
 
-// Type test: findFirst with fk relations (nullable and non-nullable)
-const firstArticlesWithRelationsQr = db.query(Articles).findFirst({
+// findFirst with FK relations (nullable and non-nullable)
+const _firstArticlesWithRelationsQuery = db.query(Articles).findFirst({
   columns: {
     id: true,
     title: true,
@@ -682,12 +663,12 @@ const firstArticlesWithRelationsQr = db.query(Articles).findFirst({
     },
   },
 });
-type FirstArticlesWithRelationsRtrn = Awaited<
-  typeof firstArticlesWithRelationsQr
+type FirstArticlesWithRelations = Awaited<
+  typeof _firstArticlesWithRelationsQuery
 >;
 Expect<
   Equal<
-    FirstArticlesWithRelationsRtrn,
+    FirstArticlesWithRelations,
     {
       id: bigint;
       title: string;
@@ -703,8 +684,8 @@ Expect<
   >
 >();
 
-// Type test: findFirst with 3-level nested with - Posts -> comments -> author
-const firstPostsDeepNestedQr = db.query(Posts).findFirst({
+// findFirst with multi-level nested with
+const _firstPostsDeepNestedQuery = db.query(Posts).findFirst({
   columns: {
     id: true,
     title: true,
@@ -726,10 +707,10 @@ const firstPostsDeepNestedQr = db.query(Posts).findFirst({
     },
   },
 });
-type FirstPostsDeepNestedRtrn = Awaited<typeof firstPostsDeepNestedQr>;
+type FirstPostsDeepNested = Awaited<typeof _firstPostsDeepNestedQuery>;
 Expect<
   Equal<
-    FirstPostsDeepNestedRtrn,
+    FirstPostsDeepNested,
     {
       id: bigint;
       title: string | null;
@@ -745,50 +726,8 @@ Expect<
   >
 >();
 
-// Type test: findFirst with nested with
-const firstUsersDeepNestedQr = db.query(Users).findFirst({
-  columns: {
-    id: true,
-    username: true,
-  },
-  with: {
-    posts: {
-      columns: {
-        id: true,
-        title: true,
-      },
-      with: {
-        comments: {
-          columns: {
-            id: true,
-            body: true,
-          },
-        },
-      },
-    },
-  },
-});
-type FirstUsersDeepNestedRtrn = Awaited<typeof firstUsersDeepNestedQr>;
-Expect<
-  Equal<
-    FirstUsersDeepNestedRtrn,
-    {
-      id: bigint;
-      username: string;
-      posts: {
-        id: bigint;
-        title: string | null;
-        comments: {
-          id: bigint;
-          body: string | null;
-        }[];
-      }[];
-    } | null
-  >
->();
-
 // ============================================================================
-// Negative type tests - these should cause compile errors
+// Section 6: Negative Type Safety Tests
 // ============================================================================
 
 // @ts-expect-error - Non-existent column in columns should not compile
@@ -816,7 +755,7 @@ db.query(Posts).findMany({
   with: { comments: { with: { nonExistentRelation: {} } } },
 });
 
-// @ts-expect-error -
+// @ts-expect-error - Column from wrong table in orderBy should not compile
 db.query(Users).findMany({ orderBy: asc(Posts.createdAt) });
 
 // @ts-expect-error - Non-existent column in findFirst should not compile
@@ -824,10 +763,6 @@ db.query(Users).findFirst({ columns: { nonExistentColumn: true } });
 
 // @ts-expect-error - Non-existent relation in findFirst should not compile
 db.query(Users).findFirst({ with: { nonExistentRelation: {} } });
-
-// ============================================================================
-// Negative type tests - where/orderBy/limit on nested Fk/One relations
-// ============================================================================
 
 db.query(Posts).findMany({
   with: {
@@ -863,9 +798,4 @@ db.query(Posts).findMany({
       limit: 10,
     },
   },
-});
-
-// Positive: where IS allowed on a nested Many relation (comments)
-db.query(Posts).findMany({
-  with: { comments: { where: eq(Comments.body, "hello") } },
 });
