@@ -305,6 +305,28 @@ const paginatedUsers = prepare(
 const page = await paginatedUsers.run(db, { lim: 10n, off: 20n });
 ```
 
+## Prepared Arguments in `sql` Tagged Templates
+
+You can interpolate prepared arguments (`Arg`) directly into `sql` tagged template expressions when defining a prepared query builder statement:
+
+```typescript
+import { prepare, Arg, sql } from "durcno";
+
+const findUsersByAge = prepare({ age: Arg.number() }, (args) => {
+  return db
+    .prepare()
+    .from(Users)
+    .select()
+    .where(sql`age = ${args.age}`);
+});
+
+const users = await findUsersByAge.run(db, { age: 30 });
+```
+
+:::caution
+Evaluating `.toSQL()` directly on a `Sql` object containing an `Arg` parameter outside of a query context will throw an error (`Cannot evaluate Sql containing prepared argument (Arg) without a query context`). Prepared arguments are bound dynamically when the query is constructed by `db.prepare()`.
+:::
+
 ## Benefits of Prepared Queries
 
 1. **Performance**: SQL is parsed and planned once, then reused
