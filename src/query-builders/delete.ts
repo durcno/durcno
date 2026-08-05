@@ -16,13 +16,9 @@ export class DeleteQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
   TPrepare extends boolean,
   TReturning extends
-    | {
-        [ColName in keyof TTableWC["_"]["columns"]]?: true;
-      }
-    | {
-        [ColName in keyof TTableWC["_"]["columns"]]?: false;
-      }
     | "*"
+    | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+    | Partial<Record<keyof TTableWC["_"]["columns"], false>>
     | undefined,
   TReturn = TReturning extends "*"
     ? {
@@ -93,22 +89,14 @@ export class DeleteQuery<
   /** Return a subset of columns. */
   returning<
     TReturnings extends
-      | {
-          [ColName in keyof TTableWC["_"]["columns"]]?: true;
-        }
-      | {
-          [ColName in keyof TTableWC["_"]["columns"]]?: false;
-        },
+      | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+      | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
   >(returnings: TReturnings): DeleteQuery<TTableWC, TPrepare, TReturnings>;
   returning<
     TReturnings extends
       | "*"
-      | {
-          [ColName in keyof TTableWC["_"]["columns"]]?: true;
-        }
-      | {
-          [ColName in keyof TTableWC["_"]["columns"]]?: false;
-        },
+      | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+      | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
   >(returnings: TReturnings): DeleteQuery<TTableWC, TPrepare, TReturnings> {
     return new DeleteQuery(
       this.#$table,

@@ -79,13 +79,9 @@ export class UpdateQuery<
       >
     | undefined,
   TReturning extends
-    | {
-        [ColName in keyof TTableWC["_"]["columns"]]?: true;
-      }
-    | {
-        [ColName in keyof TTableWC["_"]["columns"]]?: false;
-      }
     | "*"
+    | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+    | Partial<Record<keyof TTableWC["_"]["columns"], false>>
     | undefined,
   TReturn = TReturning extends "*"
     ? {
@@ -156,23 +152,22 @@ export class UpdateQuery<
   /** Return a subset of columns. */
   returning<
     TReturnings extends
-      | {
-          [ColName in keyof TTableWC["_"]["columns"]]?: true;
-        }
-      | {
-          [ColName in keyof TTableWC["_"]["columns"]]?: false;
-        },
+      | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+      | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
   >(
     returnings: TReturnings,
   ): UpdateQuery<TTableWC, TPrepare, TValues, TWhere, TReturnings>;
-  returning(
-    returnings: "*" | { [ColName in keyof TTableWC["_"]["columns"]]?: boolean },
-  ) {
+  returning<
+    TReturnings extends
+      | "*"
+      | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+      | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
+  >(returnings: TReturnings) {
     return new UpdateQuery(
       this.#table,
       this.#values,
       this.#$where,
-      returnings as never,
+      returnings,
       this.#executor,
       this.#prepare,
       this.#$ctes,

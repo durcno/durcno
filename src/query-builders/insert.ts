@@ -197,13 +197,9 @@ export class InsertQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
   TPrepare extends boolean,
   TReturning extends
-    | {
-        [ColName in keyof TTableWC["_"]["columns"]]?: true;
-      }
-    | {
-        [ColName in keyof TTableWC["_"]["columns"]]?: false;
-      }
     | "*"
+    | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+    | Partial<Record<keyof TTableWC["_"]["columns"], false>>
     | undefined,
   TReturn = TReturning extends "*"
     ? {
@@ -257,20 +253,19 @@ export class InsertQuery<
   /** Return a subset of columns. */
   returning<
     TReturnings extends
-      | {
-          [ColName in keyof TTableWC["_"]["columns"]]?: true;
-        }
-      | {
-          [ColName in keyof TTableWC["_"]["columns"]]?: false;
-        },
+      | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+      | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
   >(returnings: TReturnings): InsertQuery<TTableWC, TPrepare, TReturnings>;
-  returning(
-    returnings: "*" | { [ColName in keyof TTableWC["_"]["columns"]]?: boolean },
-  ) {
+  returning<
+    TReturnings extends
+      | "*"
+      | Partial<Record<keyof TTableWC["_"]["columns"], true>>
+      | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
+  >(returnings: TReturnings) {
     return new InsertQuery(
       this.#table,
       this.#values,
-      returnings as never,
+      returnings,
       this.#executor,
       this.#prepare,
       this.#$ctes,
