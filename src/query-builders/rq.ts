@@ -18,7 +18,7 @@ import type {
   StdOrder,
   StdOrderSqlFn,
 } from "./orderby-clause";
-import { Arg } from "./pre";
+import { Arg } from "./prepare";
 import { Query, type QueryContext } from "./query";
 import { QueryPromise } from "./query-promise";
 

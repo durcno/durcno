@@ -1,5 +1,4 @@
 import postgresLib, { type ReservedSql } from "postgres";
-
 import {
   $Client,
   $Pool,
@@ -19,10 +18,6 @@ import {
  * @see https://www.npmjs.com/package/postgres
  */
 export class PostgresConnector extends Connector {
-  constructor(options: ConnectorOptions) {
-    super(options);
-  }
-
   getClient() {
     return new PostgresClient(this.options);
   }
@@ -51,9 +46,14 @@ class PostgresClient extends $Client {
     this.#sql = postgresLib(getUrlFromDbCredentials(options.dbCredentials), {
       max: 1,
     });
-    this.query = this.#sql.unsafe.bind(this.#sql);
   }
 
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#sql.unsafe(query, args);
+  }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
     return response;
@@ -78,7 +78,13 @@ class PostgresPool extends $Pool {
     this.#sql = postgresLib(getUrlFromDbCredentials(options.dbCredentials), {
       max: options.pool?.max ?? DEFAULT_POOL_MAX,
     });
-    this.query = this.#sql.unsafe.bind(this.#sql);
+  }
+
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#sql.unsafe(query, args);
   }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
@@ -105,9 +111,14 @@ class PostgresPoolClient extends $Client {
   constructor(sql: ReservedSql, options: ConnectorOptions) {
     super(options);
     this.#sql = sql;
-    this.query = this.#sql.unsafe.bind(this.#sql);
   }
 
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#sql.unsafe(query, args);
+  }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
     return response;

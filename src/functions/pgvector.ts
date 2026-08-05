@@ -1,5 +1,5 @@
 import { is } from "../entity";
-import { Arg, type IsArg } from "../query-builders/pre";
+import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { AnyColumn } from "../table";
 import { SqlFn } from "./index";

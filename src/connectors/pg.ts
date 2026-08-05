@@ -1,5 +1,4 @@
 import { Client, Pool, type PoolClient } from "pg";
-
 import {
   $Client,
   $Pool,
@@ -19,10 +18,6 @@ import {
  * @see https://www.npmjs.com/package/pg
  */
 export class PgConnector extends Connector {
-  constructor(options: ConnectorOptions) {
-    super(options);
-  }
-
   getClient() {
     return new PgClient(this.options);
   }
@@ -30,12 +25,10 @@ export class PgConnector extends Connector {
     return new PgPool(this.options);
   }
 }
-
 /** Creates a pg (node-postgres) connector instance. */
 export function pg(options: ConnectorOptions): PgConnector {
   return new PgConnector(options);
 }
-
 /**
  * Single-connection client wrapper for the `pg` library.
  *
@@ -52,9 +45,13 @@ class PgClient extends $Client {
     this.#client = new Client({
       connectionString: getUrlFromDbCredentials(options.dbCredentials),
     });
-    this.query = this.#client.query.bind(this.#client);
   }
-
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#client.query(query, args);
+  }
   async connect(): Promise<void> {
     await this.#client.connect();
   }
@@ -65,7 +62,6 @@ class PgClient extends $Client {
     await this.#client.end();
   }
 }
-
 /**
  * Connection pool wrapper for the `pg` library.
  *
@@ -83,7 +79,13 @@ class PgPool extends $Pool {
       connectionString: getUrlFromDbCredentials(options.dbCredentials),
       max: options.pool?.max ?? DEFAULT_POOL_MAX,
     });
-    this.query = this.#pool.query.bind(this.#pool);
+  }
+
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#pool.query(query, args);
   }
   async connect(): Promise<void> {
     await this.#pool.connect();
@@ -99,7 +101,6 @@ class PgPool extends $Pool {
     return new PgPoolClient(client, this.options);
   }
 }
-
 /**
  * Client wrapper for a connection acquired from a pg Pool.
  *
@@ -113,9 +114,14 @@ class PgPoolClient extends $Client {
   constructor(client: PoolClient, options: ConnectorOptions) {
     super(options);
     this.#client = client;
-    this.query = this.#client.query.bind(this.#client);
   }
 
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#client.query(query, args);
+  }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
     return response.rows;

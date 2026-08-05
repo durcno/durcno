@@ -5,7 +5,7 @@ import {
   type AnySqlFn,
   SqlFn,
 } from "../functions";
-import { Arg, type IsArg } from "../query-builders/pre";
+import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { SelectQuery } from "../query-builders/select";
 import { type Sql, toSqlValue } from "../sql";

@@ -1,14 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import {
-  type $Client,
-  Arg,
-  database,
-  defineConfig,
-  eq,
-  prequery,
-} from "durcno";
+import { type $Client, Arg, database, defineConfig, eq, prepare } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -22,12 +15,12 @@ import {
   truncateTables,
 } from "./setup";
 
-describe("prequery", () => {
+describe("prepare", () => {
   let containerInfo: TestContainerInfo;
   let container: Docker.Container;
   let db: ReturnType<typeof database<typeof schema>>;
   let client: $Client;
-  const migrationsDirName = generateMigrationsDirPath("prequery");
+  const migrationsDirName = generateMigrationsDirPath("prepare");
 
   beforeAll(async () => {
     containerInfo = await startPostgresContainer({
@@ -87,7 +80,7 @@ describe("prequery", () => {
       ])
       .returning("*");
 
-    const selectPre = prequery(
+    const selectPre = prepare(
       { userId: schema.Users.id.arg(), lim: Arg.number() },
       (args) =>
         db
@@ -108,7 +101,7 @@ describe("prequery", () => {
   // ── INSERT ────────────────────────────────────────────────────────────
   // Arg in: values (username column)
   it("should insert with Arg in values", async () => {
-    const insertPre = prequery(
+    const insertPre = prepare(
       { username: schema.Users.username.arg() },
       (args) =>
         db
@@ -116,7 +109,7 @@ describe("prequery", () => {
           .insert(schema.Users)
           .values({
             username: args.username,
-            email: "prequery@test.com",
+            email: "prepare@test.com",
             type: "user",
             status: "active",
             role: "user",
@@ -128,7 +121,7 @@ describe("prequery", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].username).toBe("prepared_user");
-    expect(rows[0].email).toBe("prequery@test.com");
+    expect(rows[0].email).toBe("prepare@test.com");
   });
 
   // ── UPDATE ────────────────────────────────────────────────────────────
@@ -139,7 +132,7 @@ describe("prequery", () => {
       .values(createTestUser({ username: "to_update", email: "old@test.com" }))
       .returning("*");
 
-    const updatePre = prequery({ userId: schema.Users.id.arg() }, (args) =>
+    const updatePre = prepare({ userId: schema.Users.id.arg() }, (args) =>
       db
         .prepare()
         .update(schema.Users)
@@ -163,7 +156,7 @@ describe("prequery", () => {
       .values(createTestUser({ username: "to_delete" }))
       .returning("*");
 
-    const deletePre = prequery({ userId: schema.Users.id.arg() }, (args) =>
+    const deletePre = prepare({ userId: schema.Users.id.arg() }, (args) =>
       db
         .prepare()
         .delete(schema.Users)
@@ -195,7 +188,7 @@ describe("prequery", () => {
       ])
       .returning("*");
 
-    const queryPre = prequery({ userId: schema.Users.id.arg() }, (args) =>
+    const queryPre = prepare({ userId: schema.Users.id.arg() }, (args) =>
       db
         .prepare()
         .query(schema.Users)

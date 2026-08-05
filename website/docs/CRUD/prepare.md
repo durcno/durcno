@@ -4,19 +4,19 @@ sidebar_position: 8.5
 
 # Prepared Query
 
-Use `prequery()` to create reusable, type-safe prepared statements that can be executed multiple times with different parameter values. Prepared queries compile the SQL once and reuse the compiled query for better performance.
+Use `prepare()` to create reusable, type-safe prepared statements that can be executed multiple times with different parameter values. Prepared queries compile the SQL once and reuse the compiled query for better performance.
 
 ## Basic Usage
 
 ### Creating a Prepared Query
 
 ```typescript
-import { prequery, eq } from "durcno";
+import { prepare, eq } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
 // Create a prepared query with a username parameter
-const findUserByUsername = prequery(
+const findUserByUsername = prepare(
   { username: Users.username.arg() },
   (args) => {
     return db
@@ -46,7 +46,7 @@ Prepared queries does not provide runtime validation of argument type. Make sure
 
 1. **Define arguments**: Create argument placeholders using `Column.arg()` or `Arg.number()` / `Arg.bigint()`
 2. **Build the query**: Use `db.prepare()` with the appropriate builder (`from()`, `insert()`, `update()`, `delete()`, or `query()`)
-3. **Wrap with prequery**: Pass arguments and query builder to `prequery()`
+3. **Wrap with prepare**: Pass arguments and query builder to `prepare()`
 4. **Execute**: Call `.run(db, values)` to execute with specific values
 
 ## Multiple Arguments
@@ -54,11 +54,11 @@ Prepared queries does not provide runtime validation of argument type. Make sure
 You can define multiple arguments in a single prepared query:
 
 ```typescript
-import { prequery, and, eq } from "durcno";
+import { prepare, and, eq } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
-const findUser = prequery(
+const findUser = prepare(
   {
     username: Users.username.arg(),
     email: Users.email.arg(),
@@ -92,13 +92,13 @@ const result = await findUser.run(db, {
 Prepared arguments can also be used inside `insert().values(...)` when you want to bind runtime values for a new row:
 
 ```typescript
-const createUser = prequery({ username: Users.username.arg() }, (args) => {
+const createUser = prepare({ username: Users.username.arg() }, (args) => {
   return db
     .prepare()
     .insert(Users)
     .values({
       username: args.username,
-      email: "prequery@example.com",
+      email: "prepare@example.com",
       type: "user",
     })
     .returning("*");
@@ -114,7 +114,7 @@ The same pattern also applies to `update().set(...)`, `delete().where(...)`, and
 You can select specific columns in your prepared query:
 
 ```typescript
-const findUserInfo = prequery({ id: Users.id.arg() }, (args) => {
+const findUserInfo = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
@@ -131,9 +131,9 @@ const result = await findUserInfo.run(db, { id: 1n });
 ### OR Conditions
 
 ```typescript
-import { prequery, or, eq } from "durcno";
+import { prepare, or, eq } from "durcno";
 
-const findByEitherUsername = prequery(
+const findByEitherUsername = prepare(
   {
     username1: Users.username.arg(),
     username2: Users.username.arg(),
@@ -162,9 +162,9 @@ const result = await findByEitherUsername.run(db, {
 ### Combined AND/OR Conditions
 
 ```typescript
-import { prequery, and, or, eq } from "durcno";
+import { prepare, and, or, eq } from "durcno";
 
-const complexQuery = prequery(
+const complexQuery = prepare(
   {
     username: Users.username.arg(),
     type1: Users.type.arg(),
@@ -197,10 +197,10 @@ const result = await complexQuery.run(db, {
 ### Numeric Arguments
 
 ```typescript
-import { prequery, eq } from "durcno";
+import { prepare, eq } from "durcno";
 import { Posts } from "./db/schema.ts";
 
-const findPostsByUser = prequery({ userId: Posts.userId.arg() }, (args) => {
+const findPostsByUser = prepare({ userId: Posts.userId.arg() }, (args) => {
   return db.prepare().from(Posts).select().where(eq(Posts.userId, args.userId));
 });
 
@@ -210,7 +210,7 @@ const posts = await findPostsByUser.run(db, { userId: 1n });
 ### Enum Arguments
 
 ```typescript
-const findByUserType = prequery({ userType: Users.type.arg() }, (args) => {
+const findByUserType = prepare({ userType: Users.type.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
@@ -226,7 +226,7 @@ const admins = await findByUserType.run(db, { userType: "admin" });
 ### Date/Timestamp Arguments
 
 ```typescript
-const findUsersByDate = prequery(
+const findUsersByDate = prepare(
   { createdAt: Users.createdAt.arg() },
   (args) => {
     return db
@@ -250,7 +250,7 @@ Prepared queries provide full type safety:
 - **Enum validation**: Only valid enum values can be passed as arguments
 
 ```typescript
-const findUser = prequery({ id: Users.id.arg() }, (args) => {
+const findUser = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
@@ -270,11 +270,11 @@ await findUser.run(db, { id: "1" });
 You can parameterize `limit` and `offset` values using `Arg.number()` and `Arg.bigint()`. This is useful when building paginated prepared queries where the page size or offset varies at runtime.
 
 ```typescript
-import { prequery, Arg } from "durcno";
+import { prepare, Arg } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
-const paginatedUsers = prequery(
+const paginatedUsers = prepare(
   {
     lim: Arg.number(),
     off: Arg.number(),
@@ -292,7 +292,7 @@ const page2 = await paginatedUsers.run(db, { lim: 10, off: 10 });
 Use `Arg.bigint()` when your limit or offset values may exceed the safe integer range:
 
 ```typescript
-const paginatedUsers = prequery(
+const paginatedUsers = prepare(
   {
     lim: Arg.bigint(),
     off: Arg.bigint(),
@@ -313,7 +313,7 @@ const page = await paginatedUsers.run(db, { lim: 10n, off: 20n });
 
 ## API Reference
 
-### `prequery(args, statement)`
+### `prepare(args, statement)`
 
 Creates a prepared statement.
 
@@ -346,7 +346,7 @@ Creates an argument placeholder that accepts a JS `bigint`. Use with `.limit()` 
 const arg = Arg.bigint();
 ```
 
-### `PreparedStatement.run(db, values)`
+### `PrepareStatement.run(db, values)`
 
 Executes the prepared statement with the provided values.
 

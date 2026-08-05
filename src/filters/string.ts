@@ -1,6 +1,6 @@
 import type { Column } from "../columns/common";
 import { is } from "../entity";
-import { Arg, type IsArg } from "../query-builders/pre";
+import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import { Filter } from "./index";
 

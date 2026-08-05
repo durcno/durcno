@@ -10,9 +10,12 @@ const minimalOptions = { dbCredentials: { url: "postgres://localhost/test" } };
 class TestClient extends $Client {
   constructor() {
     super(minimalOptions);
-    this.query = async (_sql: string, _args?: (string | number | null)[]) => ({
-      rows: [],
-    });
+  }
+  async query(
+    _sql: string,
+    _args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return { rows: [] };
   }
   async connect() {}
   getRows(response: any): any[] {
@@ -20,14 +23,16 @@ class TestClient extends $Client {
   }
   async close() {}
 }
-
 /** Minimal concrete $Pool for testing. */
 class TestPool extends $Pool {
   constructor() {
     super(minimalOptions);
-    this.query = async (_sql: string, _args?: (string | number | null)[]) => ({
-      rows: [],
-    });
+  }
+  async query(
+    _sql: string,
+    _args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return { rows: [] };
   }
   async connect() {}
   getRows(response: any): any[] {

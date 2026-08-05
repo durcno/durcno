@@ -2,7 +2,7 @@ import * as z from "zod";
 import type { CheckExpression } from "../constraints/check";
 import type { AnyFilter } from "../filters/index";
 import { SqlFn, type StdSqlFn } from "../functions";
-import { Arg } from "../query-builders/pre";
+import { Arg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import { Sql } from "../sql";
 import { entityType } from "../symbols";

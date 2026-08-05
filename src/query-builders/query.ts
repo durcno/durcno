@@ -1,4 +1,4 @@
-import type { AnyArg } from "./pre";
+import type { AnyArg } from "./prepare";
 
 export type SqlArgType = string | number | null;
 

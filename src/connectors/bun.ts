@@ -1,5 +1,4 @@
 import Bun from "bun";
-
 import {
   $Client,
   $Pool,
@@ -47,9 +46,14 @@ class BunClient extends $Client {
     this.#client = new Bun.SQL(getUrlFromDbCredentials(options.dbCredentials), {
       max: 1,
     });
-    this.query = this.#client.unsafe.bind(this.#client);
   }
 
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#client.unsafe(query, args);
+  }
   async connect(): Promise<void> {
     await this.#client.connect();
   }
@@ -76,7 +80,13 @@ class BunPool extends $Pool {
     this.#pool = new Bun.SQL(getUrlFromDbCredentials(options.dbCredentials), {
       max: options.pool?.max ?? DEFAULT_POOL_MAX,
     });
-    this.query = this.#pool.unsafe.bind(this.#pool);
+  }
+
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#pool.unsafe(query, args);
   }
   async connect(): Promise<void> {
     await this.#pool.connect();
@@ -105,9 +115,14 @@ class BunPoolClient extends $Client {
   constructor(sql: Bun.ReservedSQL, options: ConnectorOptions) {
     super(options);
     this.#sql = sql;
-    this.query = this.#sql.unsafe.bind(this.#sql);
   }
 
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#sql.unsafe(query, args);
+  }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
     return response;

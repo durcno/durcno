@@ -34,7 +34,7 @@ import {
 } from "./groupby-clause";
 import { buildWithClause } from "./helpers";
 import type { OrderExpression } from "./orderby-clause";
-import { type AnyArg, Arg } from "./pre";
+import { type AnyArg, Arg } from "./prepare";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 

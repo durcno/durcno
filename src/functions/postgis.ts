@@ -1,6 +1,6 @@
 import type { GeographyPointCol } from "../filters/postgis";
 import { pointToQuery } from "../filters/postgis";
-import type { Arg, IsArg } from "../query-builders/pre";
+import type { Arg, IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { Or } from "../types";
 import { SqlFn } from ".";

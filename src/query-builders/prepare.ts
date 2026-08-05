@@ -39,7 +39,7 @@ export type AnyArg = Arg<any>;
 
 export type IsArg<T> = T extends Arg<any> ? true : false;
 
-export class PreparedStatement<TArgs extends Record<string, AnyArg>, TReturn> {
+export class PrepareStatement<TArgs extends Record<string, AnyArg>, TReturn> {
   readonly #query: Query<TReturn>;
   readonly #args: TArgs;
   constructor(query: Query<TReturn>, args: TArgs) {
@@ -49,18 +49,18 @@ export class PreparedStatement<TArgs extends Record<string, AnyArg>, TReturn> {
   run(
     db: AnyDBorTX,
     values: { [K in keyof TArgs]: TArgs[K]["$"]["TsType"] },
-  ): PreparedQuery<TReturn> {
+  ): PrepareQuery<TReturn> {
     const args = [];
     for (const k of this.#query.arguments) {
       args.push(this.#args[k as keyof TArgs].handler(values[k as keyof TArgs]));
     }
     const q = new Query<TReturn>(this.#query.sql, this.#query.rowsHandler);
     q.arguments = args;
-    return new PreparedQuery(q, db._.getExecutor());
+    return new PrepareQuery(q, db._.getExecutor());
   }
 }
 
-export class PreparedQuery<TReturn> extends QueryPromise<TReturn> {
+export class PrepareQuery<TReturn> extends QueryPromise<TReturn> {
   readonly query: Query;
   readonly executor: QueryExecutor;
   constructor(query: Query, executor: QueryExecutor) {
@@ -84,7 +84,7 @@ export class PreparedQuery<TReturn> extends QueryPromise<TReturn> {
   }
 }
 
-export function prequery<TArgs extends Record<string, AnyArg>, TReturn>(
+export function prepare<TArgs extends Record<string, AnyArg>, TReturn>(
   args: TArgs,
   statement: (
     ...args: [{ [K in keyof TArgs]: TArgs[K] }]
@@ -97,5 +97,5 @@ export function prequery<TArgs extends Record<string, AnyArg>, TReturn>(
     args[key].key = key;
   }
   const query = statement(args).toQuery() as Query<TReturn>;
-  return new PreparedStatement<TArgs, TReturn>(query, args);
+  return new PrepareStatement<TArgs, TReturn>(query, args);
 }

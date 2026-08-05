@@ -11,7 +11,7 @@ import {
   buildWithClause,
   resolveReturningColumns,
 } from "./helpers";
-import { Arg } from "./pre";
+import { Arg } from "./prepare";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 

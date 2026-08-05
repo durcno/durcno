@@ -13,7 +13,7 @@
  */
 import type { PointColumn } from "../columns/postgis/geography/point";
 import { is } from "../entity";
-import { Arg, type IsArg } from "../query-builders/pre";
+import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { Or } from "../types";
 import { Filter } from ".";

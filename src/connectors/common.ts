@@ -191,10 +191,10 @@ abstract class $QueryExecutor {
    * @param args - Optional array of parameter values for parameterized queries.
    * @returns A promise that resolves with the query result.
    */
-  query!: (
+  abstract query(
     query: string,
     args?: (string | number | null)[],
-  ) => Promise<unknown>;
+  ): Promise<unknown>;
 
   /**
    * Executes a {@link Query} object by forwarding its sql and arguments to {@link query}.

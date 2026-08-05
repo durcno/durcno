@@ -112,6 +112,6 @@ See [Raw SQL](./raw-sql) for comprehensive documentation on raw queries.
 - [Filters](../Expressions/filters.md) - Learn about WHERE conditions and operators
 - [Relational Queries](./relational-query) - Learn about the Relational Query Builder
 - [Query Shortcuts](./query-shortcuts) - Learn about `$`-prefixed utility functions
-- [Prepared Query](./prequery) - Learn about reusable prepared statements
+- [Prepared Query](./prepare) - Learn about reusable prepared statements
 - [Transactions](./transaction) - Learn about database transactions
 - [Raw SQL](./raw-sql) - Learn about executing raw SQL queries

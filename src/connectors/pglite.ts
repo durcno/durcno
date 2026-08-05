@@ -1,5 +1,4 @@
 import { PGlite, type PGliteOptions } from "@electric-sql/pglite";
-
 import {
   $Client,
   $Pool,
@@ -27,9 +26,7 @@ export class PgLiteConnector extends Connector {
     transaction: false,
     execution: "sequential" as const,
   };
-
   #driverOptions?: PGliteOptions;
-
   constructor(options: ConnectorOptions, driverOptions?: PGliteOptions) {
     super(options);
     this.#driverOptions = driverOptions;
@@ -42,7 +39,6 @@ export class PgLiteConnector extends Connector {
     return new PgLitePool(this.options, this.#driverOptions);
   }
 }
-
 /** Creates a PgLite connector instance, accepting connection options and optionally PGlite driver options (e.g., extensions). */
 export function pglite(
   options: ConnectorOptions,
@@ -50,7 +46,6 @@ export function pglite(
 ): PgLiteConnector {
   return new PgLiteConnector(options, driverOptions);
 }
-
 /**
  * Single-instance client wrapper for PGlite.
  *
@@ -67,9 +62,14 @@ class PgLiteClient extends $Client {
       getUrlFromDbCredentials(options.dbCredentials),
       driverOptions,
     );
-    this.query = this.#client.query.bind(this.#client);
   }
 
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#client.query(query, args);
+  }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
     return response.rows;
@@ -78,7 +78,6 @@ class PgLiteClient extends $Client {
     await this.#client.close();
   }
 }
-
 /**
  * Pool-like wrapper for PGlite.
  *
@@ -96,7 +95,13 @@ class PgLitePool extends $Pool {
       getUrlFromDbCredentials(options.dbCredentials),
       driverOptions,
     );
-    this.query = this.#pool.query.bind(this.#pool);
+  }
+
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#pool.query(query, args);
   }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
@@ -109,7 +114,6 @@ class PgLitePool extends $Pool {
     return Promise.resolve(new PgLitePoolClient(this.#pool, this.options));
   }
 }
-
 /**
  * Client wrapper for a connection acquired from a PGlite Pool.
  *
@@ -123,9 +127,14 @@ class PgLitePoolClient extends $Client {
   constructor(client: PGlite, options: ConnectorOptions) {
     super(options);
     this.#client = client;
-    this.query = this.#client.query.bind(this.#client);
   }
 
+  async query(
+    query: string,
+    args?: (string | number | null)[],
+  ): Promise<unknown> {
+    return this.#client.query(query, args);
+  }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
     return response.rows;
