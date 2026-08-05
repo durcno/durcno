@@ -46,3 +46,29 @@ export function resolveReturningColumns<
     ),
   ) as ReturningColumns<TColumns, TReturning>;
 }
+
+/**
+ * Appends the `RETURNING ...` SQL clause to `query.sql`.
+ * Handles `"*"`, inclusion (`{col: true}`), and exclusion (`{col: false}`)
+ * patterns, consistent with `resolveReturningColumns`.
+ */
+export function buildReturningClause(
+  columns: Record<string, AnyColumn>,
+  returning: "*" | Record<string, boolean> | undefined,
+  query: AnyQuery,
+): void {
+  if (!returning) return;
+  if (returning === "*") {
+    query.sql += " RETURNING *";
+    return;
+  }
+  const hasTrue = Object.values(returning).some((v) => v === true);
+  const returningFields = Object.keys(columns).filter((key) =>
+    hasTrue ? returning[key] === true : returning[key] !== false,
+  );
+  if (returningFields.length === 0) return;
+  query.sql += " RETURNING ";
+  query.sql += returningFields
+    .map((field) => `"${columns[field].nameSql}"`)
+    .join(", ");
+}

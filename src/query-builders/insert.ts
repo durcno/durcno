@@ -13,7 +13,11 @@ import {
 import type { Key, Valueof } from "../types";
 import type { ReturningColumns } from "../virtual-table";
 
-import { buildWithClause, resolveReturningColumns } from "./helpers";
+import {
+  buildReturningClause,
+  buildWithClause,
+  resolveReturningColumns,
+} from "./helpers";
 import { Arg } from "./pre";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -393,17 +397,11 @@ export class InsertQuery<
       }
     }
 
-    if (this.#$returning === "*") {
-      query.sql += " RETURNING *";
-    } else if (this.#$returning) {
-      query.sql += " RETURNING ";
-      const returningFields = Object.keys(this.#$returning).filter(
-        (k) => (this.#$returning as Record<string, boolean>)?.[k] === true,
-      );
-      query.sql += returningFields
-        .map((field) => `"${this.#table._.columns[field].nameSql}"`)
-        .join(", ");
-    }
+    buildReturningClause(
+      this.#table._.columns,
+      this.#$returning as "*" | Record<string, boolean> | undefined,
+      query,
+    );
 
     return query;
   }

@@ -6,7 +6,11 @@ import { Sql } from "../sql";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key } from "../types";
 import type { ReturningColumns } from "../virtual-table";
-import { buildWithClause, resolveReturningColumns } from "./helpers";
+import {
+  buildReturningClause,
+  buildWithClause,
+  resolveReturningColumns,
+} from "./helpers";
 import { Arg } from "./pre";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -235,19 +239,11 @@ export class UpdateQuery<
       query.sql += ` WHERE `;
       this.#$where.toQuery(query);
     }
-    if (this.#$returning === "*") {
-      query.sql += " RETURNING *";
-    } else if (this.#$returning) {
-      query.sql += " RETURNING ";
-      const returningFields = Object.keys(
-        this.#$returning as Record<string, boolean>,
-      ).filter(
-        (k) => (this.#$returning as Record<string, boolean>)?.[k] === true,
-      );
-      query.sql += returningFields
-        .map((field) => `"${this.#table._.columns[field].nameSql}"`)
-        .join(", ");
-    }
+    buildReturningClause(
+      this.#table._.columns,
+      this.#$returning as "*" | Record<string, boolean> | undefined,
+      query,
+    );
     return query;
   }
 
