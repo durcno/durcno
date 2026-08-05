@@ -1,6 +1,6 @@
 ---
 name: durcno
-description: "Durcno usage guide. Use when: defining schemas, writing queries, running migrations, or configuring the database connection."
+description: "Durcno usage guide. Use when: defining schemas, writing queries, validating data, and managing migrations."
 ---
 
 # Durcno
@@ -89,6 +89,30 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
 await db.delete(Users).where(eq(Users.id, 1));
 ```
 
+## Validation
+
+Generate Zod schemas from table definitions for runtime data validation:
+
+```typescript
+import { createInsertSchema } from "durcno/validators/zod";
+import { Users } from "./schema.ts";
+
+const insertUserSchema = createInsertSchema(Users, {
+  email: (f) => f.email(),
+});
+
+// Validate input before database operations
+const result = insertUserSchema.safeParse({
+  name: "Jane",
+  email: "jane@example.com",
+  type: "user",
+});
+
+if (result.success) {
+  await db.insert(Users).values(result.data);
+}
+```
+
 ## Migrations
 
 After every schema change, run generate then migrate in order:
@@ -98,5 +122,5 @@ durcno generate              # Generate migration from schema changes
 durcno migrate               # Apply pending migrations
 durcno down <migration>      # Rollback a specific migration
 durcno squash <start> <end>  # Squash a range of migrations into one
-durcno status                # Show pending/applied migration status
+durcno status                # Show all migrations status
 ```
