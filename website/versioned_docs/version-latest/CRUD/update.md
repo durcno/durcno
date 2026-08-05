@@ -173,13 +173,13 @@ await db
 
 ## Primary Key Restriction
 
-Primary key columns cannot be updated:
+Primary key columns cannot be updated and are strictly excluded from the set object type in TypeScript:
 
 ```typescript
-// ❌ TypeScript Error - cannot update primary key
+// ❌ TypeScript Error - primary key property 'id' is excluded from set()
 await db
   .update(Users)
-  .set({ id: 999 }) // Error!
+  .set({ id: 999 }) // Property 'id' does not exist in type ...
   .where(eq(Users.id, 1n));
 ```
 

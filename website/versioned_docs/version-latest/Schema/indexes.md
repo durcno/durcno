@@ -69,7 +69,7 @@ export const Posts = table(
     id: pk(),
     userId: bigint({ notNull }),
     categoryId: bigint({ notNull }),
-    createdAt: timestamp({ notNull }),
+    createdAt: timestamptz({ notNull }),
   },
   {
     indexes: (t) => [
@@ -97,7 +97,7 @@ export const Users = table(
   "users",
   {
     id: pk(),
-    createdAt: timestamp({ notNull }),
+    createdAt: timestamptz({ notNull }),
   },
   {
     indexes: (t) => [
@@ -233,7 +233,7 @@ export const Logs = table(
   "logs",
   {
     id: pk(),
-    timestamp: timestamp({ notNull }),
+    timestamp: timestamptz({ notNull }),
     message: text({ notNull }),
   },
   {
@@ -489,7 +489,7 @@ export const Posts = table(
     id: pk(),
     userId: bigint({ notNull }),
     status: varchar({ length: 20, notNull }),
-    createdAt: timestamp({ notNull }),
+    createdAt: timestamptz({ notNull }),
   },
   {
     indexes: (t) => [
@@ -513,7 +513,7 @@ export const Orders = table(
     id: pk(),
     userId: bigint({ notNull }),
     status: varchar({ length: 20, notNull }),
-    createdAt: timestamp({ notNull }),
+    createdAt: timestamptz({ notNull }),
   },
   {
     indexes: (t) => [
@@ -601,7 +601,7 @@ export const Articles = table(
     title: varchar({ length: 255, notNull }),
     content: text({ notNull }),
     tags: text({ notNull }), // Array
-    publishedAt: timestamp({}),
+    publishedAt: timestamptz({}),
     views: integer().default(0),
   },
   {
@@ -685,7 +685,7 @@ export const Events = table(
     id: pk(),
     userId: bigint({ notNull }),
     eventType: varchar({ length: 50, notNull }),
-    timestamp: timestamp({ notNull }),
+    timestamp: timestamptz({ notNull }),
   },
   {
     indexes: (t) => [

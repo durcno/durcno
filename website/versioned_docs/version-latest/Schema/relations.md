@@ -209,7 +209,7 @@ import {
   bigint,
   varchar,
   text,
-  timestamp,
+  timestamptz,
   relations,
   many,
   one,
@@ -224,7 +224,7 @@ export const Users = table("public", "users", {
   id: pk(),
   username: varchar({ length: 50, unique, notNull }),
   email: varchar({ length: 255, unique, notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 
 // User profiles (one-to-one with users)
@@ -242,7 +242,7 @@ export const Posts = table("public", "posts", {
   userId: bigint({ notNull }).references(() => Users.id),
   title: varchar({ length: 255, notNull }),
   content: text({ notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 
 // Comments (many-to-one with users and posts)
@@ -251,7 +251,7 @@ export const Comments = table("public", "comments", {
   postId: bigint({ notNull }).references(() => Posts.id),
   userId: bigint({ notNull }).references(() => Users.id),
   body: text({ notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 
 // Define all relations
@@ -375,7 +375,7 @@ export const Orders = table("public", "orders", {
   id: pk(),
   customerId: bigint({ notNull }).references(() => Customers.id),
   totalAmount: integer({ notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 
 export const OrderItems = table("public", "orderItems", {
@@ -423,7 +423,7 @@ export const Follows = table("public", "follows", {
   id: pk(),
   followerId: bigint({ notNull }).references(() => Users.id),
   followingId: bigint({ notNull }).references(() => Users.id),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 
 export const UsersRelations = relations(Users, () => ({

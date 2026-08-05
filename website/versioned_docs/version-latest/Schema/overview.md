@@ -25,7 +25,7 @@ import {
   pk,
   varchar,
   bigint,
-  timestamp,
+  timestamptz,
   enumtype,
   relations,
   many,
@@ -49,7 +49,7 @@ export const Users = table(
     username: varchar({ length: 50, unique, notNull }),
     email: varchar({ length: 255, unique, notNull }),
     role: UserRole.enumed({ notNull }),
-    createdAt: timestamp({ notNull }).default(now()),
+    createdAt: timestamptz({ notNull }).default(now()),
   },
   {
     // Define indexes
@@ -64,7 +64,7 @@ export const Posts = table(
     id: pk(),
     userId: bigint({ notNull }).references(() => Users.id),
     title: varchar({ length: 255, notNull }),
-    createdAt: timestamp({ notNull }).default(now()),
+    createdAt: timestamptz({ notNull }).default(now()),
   },
   {
     indexes: (t) => [index([t.userId]), index([t.userId, table.createdAt])],
@@ -161,7 +161,7 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, notNull }),
   age: integer({}),
   isActive: boolean().default(true),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 ```
 
@@ -384,7 +384,7 @@ export const Posts = table(
     id: pk(),
     userId: bigint({ notNull }),
     status: varchar({ length: 20, notNull }),
-    createdAt: timestamp({ notNull }),
+    createdAt: timestamptz({ notNull }),
   },
   {
     indexes: (t) => [
@@ -409,7 +409,7 @@ export const Users = table("public", "users", {
   email: varchar({ length: 255, unique, notNull }),
   passwordHash: varchar({ length: 255, notNull }),
   role: UserRole.enumed({ notNull }).default("user"),
-  createdAt: timestamp({ notNull }).default(now()),
+  createdAt: timestamptz({ notNull }).default(now()),
 });
 ```
 
@@ -419,7 +419,7 @@ export const Users = table("public", "users", {
 export const Posts = table("public", "posts", {
   id: pk(),
   title: varchar({ length: 255, notNull }),
-  deletedAt: timestamp({}),
+  deletedAt: timestamptz({}),
 });
 ```
 
@@ -429,8 +429,8 @@ export const Posts = table("public", "posts", {
 export const Posts = table("public", "posts", {
   id: pk(),
   title: varchar({ length: 255, notNull }),
-  createdAt: timestamp({ notNull }).default(now()),
-  updatedAt: timestamp({ notNull })
+  createdAt: timestamptz({ notNull }).default(now()),
+  updatedAt: timestamptz({ notNull })
     .default(now())
     .$updateFn(() => new Date()),
 });
