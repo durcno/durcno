@@ -48,7 +48,11 @@ export type GroupByExpression<
   TSelects extends Record<string, AnySelectableSource> | undefined = undefined,
 > =
   | Valueof<TTableWC["_"]["columns"]>
-  | SqlFn<Valueof<TTableWC["_"]["columns"]>, TPrepare, "scalar">
+  | SqlFn<
+      Valueof<TTableWC["_"]["columns"]>,
+      TPrepare extends true ? boolean : false,
+      "scalar"
+    >
   | (TSelects extends Record<string, AnySelectableSource>
       ? GroupByAlias<Extract<keyof TSelects, string>>
       : never);

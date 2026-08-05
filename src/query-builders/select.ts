@@ -263,7 +263,7 @@ export class SelectBuilder<
       | JoinsColumns<TJoins>
       | SqlFn<
           TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
-          TPrepare
+          TPrepare extends true ? boolean : false
         >
     >,
   >(
@@ -286,7 +286,7 @@ export class SelectBuilder<
           | JoinsColumns<TJoins>
           | SqlFn<
               TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
-              TPrepare
+              TPrepare extends true ? boolean : false
             >
         >
       | undefined,
@@ -337,7 +337,7 @@ export class SelectQuery<
         | JoinsColumns<TJoins>
         | SqlFn<
             TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
-            TPrepare
+            TPrepare extends true ? boolean : false
           >
       >
     | undefined,

@@ -71,7 +71,13 @@ export type OrderExpression<
 > =
   | Order<Valueof<TTableWC["_"]["columns"]>, "ASC" | "DESC">
   | Order<Extract<keyof TSelects, string>, "ASC" | "DESC">
-  | OrderSqlFn<SqlFn<Valueof<TTableWC["_"]["columns"]>, TPrepare, "scalar">>;
+  | OrderSqlFn<
+      SqlFn<
+        Valueof<TTableWC["_"]["columns"]>,
+        TPrepare extends true ? boolean : false,
+        "scalar"
+      >
+    >;
 
 /**
  * Creates an ascending order clause for a column or a `SqlFn` expression.
