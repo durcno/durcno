@@ -338,7 +338,7 @@ export class InsertQuery<
             query.sql += "DEFAULT";
           }
         } else if (value instanceof Sql) {
-          query.sql += value.string;
+          value.toQuery(query);
         } else if (is(value, Arg)) {
           const cast = value.cast ?? column.sqlCast ?? null;
           const castSuffix = cast ? `::${cast}` : "";
@@ -377,6 +377,8 @@ export class InsertQuery<
           const col = this.#table._.columns[fieldName];
           query.sql += `"${col.nameSql}" = `;
           if (isCol(value)) {
+            value.toQuery(query);
+          } else if (value instanceof Sql) {
             value.toQuery(query);
           } else {
             query.sql += col.toSQL(value, { cast: true });

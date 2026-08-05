@@ -1,6 +1,6 @@
 import type { AnyFilter, Filter } from "../filters/index";
 import { Query, type QueryContext } from "../query-builders/query";
-import { Sql } from "../sql";
+import type { Sql } from "../sql";
 import type { AnyColumn, TableAnyColumn } from "../table";
 
 /**
@@ -36,9 +36,6 @@ export class Check {
    * on specific tables (used by the snapshot builder for CHECK constraint SQL).
    */
   toSQL(ctx?: QueryContext): string {
-    if (this.#expr instanceof Sql) {
-      return this.#expr.string;
-    }
     const query = new Query("", () => []);
     this.#expr.toQuery(query, ctx);
     return query.sql;

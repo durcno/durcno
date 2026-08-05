@@ -215,7 +215,7 @@ export class UpdateQuery<
 
       query.sql += `"${column.nameSql}" = `;
       if (value instanceof Sql) {
-        query.sql += value.string;
+        value.toQuery(query);
       } else if (is(value, Arg)) {
         const cast = value.cast ?? column.sqlCast ?? null;
         const castSuffix = cast ? `::${cast}` : "";

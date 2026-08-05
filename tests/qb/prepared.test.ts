@@ -1,7 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, Arg, database, defineConfig, eq, prepare } from "durcno";
+import {
+  type $Client,
+  Arg,
+  database,
+  defineConfig,
+  eq,
+  prepare,
+  sql,
+} from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -202,5 +210,36 @@ describe("prepare", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].id).toBe(user1.id);
     expect(rows[0].username).toBe("query_user_1");
+  });
+
+  describe("Sql template literal with Arg", () => {
+    it("should throw on toSQL() if Sql contains an Arg parameter", () => {
+      const arg = Arg.number();
+      const s = sql`SELECT ${arg}`;
+      expect(() => s.toSQL()).toThrow(
+        "Cannot evaluate Sql containing prepared argument (Arg) without a query context",
+      );
+    });
+
+    it("should handle Arg in raw sql WHERE expression", async () => {
+      const [user] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "raw_arg_user", age: 30 }))
+        .returning("*");
+
+      const selectPre = prepare({ ageArg: Arg.number() }, (args) =>
+        db
+          .prepare()
+          .from(schema.Users)
+          .select()
+          .where(sql`age = ${args.ageArg}`),
+      );
+
+      const rows = await selectPre.run(db, { ageArg: 30 });
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0].id).toBe(user.id);
+      expect(rows[0].age).toBe(30);
+    });
   });
 });

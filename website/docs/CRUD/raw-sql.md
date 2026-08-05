@@ -4,9 +4,48 @@ sidebar_position: 8.7
 
 # Raw SQL
 
-While Durcno's query builder handles most use cases, sometimes you need to execute raw SQL queries directly. The `db.raw()` method provides a way to run arbitrary SQL with parameterized queries and custom result handlers.
+While Durcno's query builder handles most use cases, sometimes you need to execute raw SQL queries or SQL fragments directly. You can execute raw SQL queries via `db.raw()` or construct reusable, parameter-interpolating SQL expressions using the `sql` tagged template literal.
 
-## Basic Usage
+## `sql` Tagged Template
+
+The `sql` tagged template helper (`import { sql } from "durcno"`) returns a `Sql` instance that represents a raw SQL fragment. It evaluates parameters lazily and safely handles primitive values, column references, and prepared query arguments (`Arg`).
+
+### Interpolation & Lazy Evaluation
+
+Expressions inside `sql` tagged templates are evaluated lazily when `.toSQL()`, `.string`, or `.toQuery()` is invoked.
+
+```typescript
+import { sql, db } from "durcno";
+import { Users } from "./db/schema.ts";
+
+// Primitive values and column references inside template strings:
+const queryFragment = sql`SELECT ${Users.username} FROM ${Users} WHERE ${Users.age} >= ${30}`;
+
+// Lazy evaluation via .toSQL() or .string:
+console.log(queryFragment.toSQL());
+// Output: SELECT "users"."username" FROM "users" WHERE "users"."age" >= 30
+
+// Embed inside query builder clauses:
+const users = await db
+  .from(Users)
+  .select()
+  .where(sql`LOWER(${Users.username}) = ${"admin"}`);
+```
+
+### Static `Sql.raw()`
+
+If you already have a plain SQL string that does not require template string interpolation, use `Sql.raw(string)`:
+
+```typescript
+import { Sql } from "durcno";
+
+const rawVal = Sql.raw("nextval('my_sequence')");
+console.log(rawVal.toSQL()); // Output: nextval('my_sequence')
+```
+
+---
+
+## `db.raw()`
 
 ```typescript
 import { db } from "./db/index.ts";

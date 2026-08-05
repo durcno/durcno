@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, database, defineConfig } from "durcno";
+import { type $Client, database, defineConfig, sql } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -296,5 +296,18 @@ describe("Raw SQL queries", () => {
     );
 
     expect(result).toEqual(["USER1", "USER2"]);
+  });
+
+  describe("Sql template evaluation", () => {
+    it("should lazily evaluate primitive values on toSQL()", () => {
+      const s = sql`SELECT ${"hello'world"}, ${42}, ${true}, ${null}`;
+      expect(s.toSQL()).toBe("SELECT 'hello''world', 42, 't', NULL");
+      expect(s.string).toBe("SELECT 'hello''world', 42, 't', NULL");
+    });
+
+    it("should evaluate column references in toSQL()", () => {
+      const s = sql`SELECT ${schema.Users.username} FROM users`;
+      expect(s.toSQL()).toBe('SELECT "users"."username" FROM users');
+    });
   });
 });

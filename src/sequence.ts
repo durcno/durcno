@@ -45,7 +45,7 @@ export class Sequence<TConfig extends SequenceOptions = SequenceOptions> {
     const fullName = this.schemaSql
       ? `"${this.schemaSql}"."${this.nameSql}"`
       : `"${this.nameSql}"`;
-    return new Sql(`nextval('${fullName}')`);
+    return Sql.raw(`nextval('${fullName}')`);
   }
 
   /** Returns SQL: currval('schema.sequence_name') */
@@ -53,7 +53,7 @@ export class Sequence<TConfig extends SequenceOptions = SequenceOptions> {
     const fullName = this.schemaSql
       ? `"${this.schemaSql}"."${this.nameSql}"`
       : `"${this.nameSql}"`;
-    return new Sql(`currval('${fullName}')`);
+    return Sql.raw(`currval('${fullName}')`);
   }
 
   /** Returns SQL: setval('schema.sequence_name', value) */
@@ -61,7 +61,7 @@ export class Sequence<TConfig extends SequenceOptions = SequenceOptions> {
     const fullName = this.schemaSql
       ? `"${this.schemaSql}"."${this.nameSql}"`
       : `"${this.nameSql}"`;
-    return new Sql(`setval('${fullName}', ${value})`);
+    return Sql.raw(`setval('${fullName}', ${value})`);
   }
 }
 

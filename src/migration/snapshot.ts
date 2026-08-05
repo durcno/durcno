@@ -304,14 +304,9 @@ export function snapshot(entities: unknown[]): Snapshot {
         if (!col.getCheckFn) continue;
         const constraintName = `${table._.nameSql}_${col.nameSql}_check`;
         const expr = col.getCheckFn(table._.columns[colName]);
-        let sql: string;
-        if (expr instanceof Sql) {
-          sql = expr.string;
-        } else {
-          const q = new Query("", () => []);
-          expr.toQuery(q, checkCtx);
-          sql = q.sql;
-        }
+        const q = new Query("", () => []);
+        expr.toQuery(q, checkCtx);
+        const sql = q.sql;
         ss.tables[`${table._.schemaSql}.${table._.nameSql}`].checkConstraints[
           constraintName
         ] = { name: constraintName, sql };
