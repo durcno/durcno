@@ -3,6 +3,7 @@ import path from "node:path";
 import type Docker from "dockerode";
 import {
   type $Client,
+  abs,
   asc,
   avg,
   count,
@@ -11,15 +12,18 @@ import {
   defineConfig,
   desc,
   eq,
+  length,
   lower,
   max,
   min,
+  mul,
   sum,
 } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
+  createTestPost,
   createTestUser,
   generateMigrationsDirPath,
   runDurcnoCli,
@@ -589,6 +593,108 @@ describe("SELECT aggregate functions", () => {
       expect(results.length).toBeGreaterThanOrEqual(2);
       const adamGroup = results.find((r) => r.lowerName === "adam");
       expect(adamGroup?.total).toBe(1);
+    });
+  });
+
+  // =========================================================================
+  // scalar functions inside aggregate functions
+  // =========================================================================
+
+  describe("scalar functions inside aggregate functions", () => {
+    it("should compute min and max of a scalar function (e.g. min(lower(col)), max(lower(col)))", async () => {
+      await db
+        .insert(schema.Users)
+        .values([
+          createTestUser({ username: "Alice" }),
+          createTestUser({ username: "BOB" }),
+          createTestUser({ username: "charlie" }),
+        ]);
+
+      const [result] = await db.from(schema.Users).select({
+        minLower: min(lower(schema.Users.username)),
+        maxLower: max(lower(schema.Users.username)),
+      });
+
+      expect(result.minLower).toBe("alice");
+      expect(result.maxLower).toBe("charlie");
+    });
+
+    it("should compute sum and avg of a scalar numeric function (e.g. sum(abs(col)))", async () => {
+      await db
+        .insert(schema.Users)
+        .values([
+          createTestUser({ username: "alice", score: -10 }),
+          createTestUser({ username: "bob", score: 20 }),
+          createTestUser({ username: "charlie", score: -30 }),
+        ]);
+
+      const [result] = await db.from(schema.Users).select({
+        totalAbs: sum(abs(schema.Users.score)),
+        avgAbs: avg(abs(schema.Users.score)),
+      });
+
+      expect(result.totalAbs).toBe(60);
+      expect(Number(result.avgAbs)).toBe(20);
+    });
+
+    it("should compute sum of scalar string function (e.g. sum(length(col)))", async () => {
+      await db
+        .insert(schema.Users)
+        .values([
+          createTestUser({ username: "a" }),
+          createTestUser({ username: "bb" }),
+          createTestUser({ username: "ccc" }),
+        ]);
+
+      const [result] = await db.from(schema.Users).select({
+        totalLength: sum(length(schema.Users.username)),
+      });
+
+      expect(result.totalLength).toBe(6);
+    });
+
+    it("should compute scalar inside aggregate with leftJoin multiplying two joined columns (e.g. sum(mul(Posts.viewCount, Posts.likeCount)))", async () => {
+      const [user1] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "alice" }))
+        .returning({ id: true });
+
+      const [user2] = await db
+        .insert(schema.Users)
+        .values(createTestUser({ username: "bob" }))
+        .returning({ id: true });
+
+      await db
+        .insert(schema.Posts)
+        .values([
+          createTestPost(user1.id, { title: "Post 1", viewCount: 10, likeCount: 2n }),
+          createTestPost(user1.id, { title: "Post 2", viewCount: 20, likeCount: 5n }),
+          createTestPost(user2.id, { title: "Post 3", viewCount: 5, likeCount: 4n }),
+        ]);
+
+      const results = await db
+        .from(schema.Users)
+        .leftJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
+        .select({
+          username: schema.Users.username,
+          postCount: count(schema.Posts.id),
+          viewCountSum: sum(schema.Posts.viewCount),
+          totalEngagement: sum(
+            mul(schema.Posts.viewCount, schema.Posts.likeCount),
+          ),
+        })
+        .orderBy(asc(schema.Users.username));
+
+      expect(results).toHaveLength(2);
+      expect(results[0].username).toBe("alice");
+      expect(results[0].postCount).toBe(2);
+      expect(results[0].viewCountSum).toBe(30);
+      expect(results[0].totalEngagement).toBe(120);
+
+      expect(results[1].username).toBe("bob");
+      expect(results[1].postCount).toBe(1);
+      expect(results[1].viewCountSum).toBe(5);
+      expect(results[1].totalEngagement).toBe(20);
     });
   });
 });

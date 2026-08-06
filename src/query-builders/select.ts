@@ -13,6 +13,7 @@ import type {
   AnyTableWithColumns,
   StdTableColumn,
   TableAnyColumn,
+  TableColumn,
   TableWithColumns,
 } from "../table";
 import type {
@@ -92,19 +93,27 @@ type JoinEntry = {
   on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
 };
 
-type JoinsColumns<TJoins> = TJoins extends readonly (infer TJoin)[]
-  ? TJoin extends {
-      table: { _: { columns: infer C extends Record<string, AnyColumn> } };
-    }
-    ? Valueof<C>
-    : never
-  : never;
-
 type TableColumns<
   TTSchema extends string,
   TTName extends string,
   TTColumns extends Record<string, AnyColumn>,
-> = Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>;
+> = {
+  [K in keyof TTColumns]: TableColumn<TTSchema, TTName, K, TTColumns[K]>;
+}[keyof TTColumns];
+
+type JoinsColumns<TJoins> = TJoins extends readonly (infer TJoin)[]
+  ? TJoin extends {
+      table: {
+        _: {
+          schema: infer S extends string;
+          name: infer N extends string;
+          columns: infer C extends Record<string, AnyColumn>;
+        };
+      };
+    }
+    ? TableColumns<S, N, C>
+    : never
+  : never;
 
 export class SelectBuilder<
   TTSchema extends string,

@@ -120,7 +120,7 @@ export type AnyAggregateSqlFn = SqlFn<any, any, "aggregate", any, any>;
  */
 export type ExprColumns<TExpr> = TExpr extends {
   $: { kind: "sqlFn" };
-  $Columns: infer TCol extends AnyColumn;
+  $Columns: infer TCol;
 }
   ? TCol
   : TExpr extends { $: { kind: "column" } }
