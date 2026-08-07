@@ -1,4 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
+import { fk } from "../constraints/foreign-key";
 import { is } from "../entity";
 import type { FilterExpression } from "../filters/index";
 import type {
@@ -554,7 +555,21 @@ function buildRelationSubquery(
   // For Many/One: relation.col is the FK column on the related table, references points to parent
   // For Fk: relation.col is the FK column on the parent table, table is the referenced table
   if (relation.t === "Many" || relation.t === "One") {
-    const referencedCol = relation.col.getReferencesCol;
+    let referencedCol = relation.col.getReferencesCol;
+    if (!referencedCol) {
+      const tableExtraFks =
+        relation.col.table?._.extra.foreignKeys?.(
+          relation.col.table as StdTableWithColumns,
+          fk,
+        ) ?? [];
+      const foundFk = tableExtraFks.find(
+        (f) => f._.getColumn().name === relation.col.name,
+      );
+      if (foundFk) {
+        referencedCol = foundFk._.getReference();
+      }
+    }
+
     if (!referencedCol) {
       throw new Error(
         `Relation column "${relation.col.name}"/${relation.col.nameSql} has no .references() definition. ` +
@@ -578,7 +593,21 @@ function buildRelationSubquery(
   } else if (relation.t === "Fk") {
     // For Fk: relation.col is the FK column on the parent, relation.table is the referenced table
     // We need to find the primary key of the referenced table (relation.table)
-    const referencedCol = relation.col.getReferencesCol;
+    let referencedCol = relation.col.getReferencesCol;
+    if (!referencedCol) {
+      const tableExtraFks =
+        relation.col.table?._.extra.foreignKeys?.(
+          relation.col.table as StdTableWithColumns,
+          fk,
+        ) ?? [];
+      const foundFk = tableExtraFks.find(
+        (f) => f._.getColumn().name === relation.col.name,
+      );
+      if (foundFk) {
+        referencedCol = foundFk._.getReference();
+      }
+    }
+
     if (!referencedCol) {
       throw new Error(
         `Relation column "${relation.col.name}"/${relation.col.nameSql} has no .references() definition. ` +
