@@ -228,9 +228,9 @@ await db
 
 ---
 
-## Numeric Functions
+## Mathematical Functions
 
-Numeric functions accept any numeric column (`integer`, `bigint`, `numeric`, `smallint`, etc.) or the result of another numeric-producing function.
+Mathematical functions accept any numeric column (`integer`, `bigint`, `numeric`, `smallint`, etc.) or the result of another numeric-producing function.
 
 | Function         | SQL              | Returns  | Description                               |
 | ---------------- | ---------------- | -------- | ----------------------------------------- |
@@ -240,6 +240,9 @@ Numeric functions accept any numeric column (`integer`, `bigint`, `numeric`, `sm
 | `round(expr, n)` | `round(expr, n)` | `number` | Rounds to `n` decimal places              |
 | `ceil(expr)`     | `ceil(expr)`     | `number` | Smallest integer ≥ expression (round up)  |
 | `floor(expr)`    | `floor(expr)`    | `number` | Largest integer ≤ expression (round down) |
+| `trunc(expr)`    | `trunc(expr)`    | `number` | Truncates to nearest integer              |
+| `trunc(expr, n)` | `trunc(expr, n)` | `number` | Truncates to `n` decimal places           |
+| `power(expr, n)` | `power(expr, n)` | `number` | Raises `expr` to the power of `n`         |
 
 ### `abs`
 
@@ -290,6 +293,31 @@ import { ceil, floor } from "durcno";
 const result = await db.from(Products).select({
   ceiling: ceil(Products.price),
   floored: floor(Products.price),
+});
+```
+
+### `trunc`
+
+Truncates a numeric expression towards zero. Omit `decimals` to truncate to the nearest integer, or pass a value to truncate to that many decimal places.
+
+```typescript
+import { trunc } from "durcno";
+
+const result = await db.from(Products).select({
+  truncatedPrice: trunc(Products.price),
+  twoDecimals: trunc(Products.price, 2),
+});
+```
+
+### `power`
+
+Returns a numeric expression raised to the power of `exponent`.
+
+```typescript
+import { power } from "durcno";
+
+const result = await db.from(Products).select({
+  squared: power(Products.price, 2),
 });
 ```
 
