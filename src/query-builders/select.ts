@@ -799,22 +799,27 @@ export class SelectQuery<
 
   handleRows(rows: Record<string, unknown>[]) {
     if (this.#$select !== undefined) {
+      if (rows.length === 0) return [] as TReturn;
+      const keys = Object.keys(rows[0]);
       rows.forEach((row) => {
-        for (const [key, value] of Object.entries(row)) {
+        keys.forEach((key) => {
+          const value = row[key];
           const colOrFn = (
             this.#$select as Record<string, StdTableColumn | StdSqlFn>
           )[key];
           row[key] = isCol(colOrFn)
             ? colOrFn.fromDriver(value)
             : colOrFn.fromDriverValue(value);
-        }
+        });
       });
       return rows as TReturn;
     } else {
+      if (rows.length === 0) return [] as TReturn;
       const newRows: Record<string, unknown>[] = [];
+      const keys = Object.keys(rows[0]);
       rows.forEach((row) => {
         const newRow: Record<string, unknown> = {};
-        for (const [key, value] of Object.entries(row)) {
+        keys.forEach((key) => {
           let column = this.#table._.columnsBySql[key];
           if (column === undefined) {
             this.#$joins?.forEach((join) => {
@@ -826,8 +831,8 @@ export class SelectQuery<
           }
           if (column === undefined)
             throw new Error(`Column ${key} not found in any table`);
-          newRow[column.name] = column.fromDriver(value);
-        }
+          newRow[column.name] = column.fromDriver(row[key]);
+        });
         newRows.push(newRow);
       });
       return newRows as TReturn;

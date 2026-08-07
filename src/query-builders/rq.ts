@@ -13,7 +13,6 @@ import type {
   TableWithColumns,
 } from "../table";
 import type { SelfOrArray, Valueof } from "../types";
-import { snakeToCamel } from "../utils";
 import type {
   OrderExpression,
   StdOrder,
@@ -328,11 +327,11 @@ class RelationQuery<
     const query = new Query("SELECT ", this.handleRows.bind(this));
 
     const selects: string[] = [];
-    for (const [, column] of getSelectedColumns(
+    for (const [colName, column] of getSelectedColumns(
       options.columns,
       this.#table._.columns,
     )) {
-      selects.push(column.fullName);
+      selects.push(`${column.fullName} AS "${colName}"`);
     }
     const relations = this.#allRelations[this.#table._.fullName];
     if (relations) {
@@ -658,18 +657,17 @@ function convert(
 ) {
   for (const key of Object.keys(object)) {
     const value = object[key];
-    const column = table._.columnsBySql[key];
+    const column = table._.columns[key];
     if (column) {
-      object[column.name] = column.fromDriver(value);
-      if (column.name !== key) delete object[key];
+      object[key] = column.fromDriver(value);
     } else {
       const relations = allRelations[table._.fullName];
       if (relations) {
-        const relation = relations.map[snakeToCamel(key)];
+        const relation = relations.map[key];
         if (relation) {
           if (relation.t === "Many") {
-            for (const row in object[key]) {
-              convert(object[key][row], relation.table, allRelations);
+            for (let i = 0; i < object[key].length; i++) {
+              convert(object[key][i], relation.table, allRelations);
             }
           } else if (relation.t === "One" || relation.t === "Fk") {
             if (object[key] !== null) {
