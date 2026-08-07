@@ -1,4 +1,5 @@
 export type BasicTypes = string | number | bigint | boolean | null;
+export type SqlArgType = string | number | bigint | boolean | null;
 
 declare const camelCaseBrand: unique symbol;
 declare const snakeCaseBrand: unique symbol;

@@ -63,16 +63,16 @@ const result = await db.raw<{ id: bigint; username: string }[]>(
 ```typescript
 db.raw<TReturn>(
   query: string,
-  args?: (string | number | null)[],
+  args?: (string | number | bigint | boolean | null)[],
   rowsHandler?: (rows: any[]) => TReturn
 ): Promise<TReturn>
 ```
 
-| Parameter     | Type                           | Description                                                                |
-| ------------- | ------------------------------ | -------------------------------------------------------------------------- |
-| `query`       | `string`                       | The raw SQL query string with `$1`, `$2`, etc. placeholders for parameters |
-| `args`        | `(string \| number \| null)[]` | Array of parameter values to bind to query placeholders                    |
-| `rowsHandler` | `(rows: any[]) => TReturn`     | Optional function to transform the result rows                             |
+| Parameter     | Type                                                | Description                                                                |
+| ------------- | --------------------------------------------------- | -------------------------------------------------------------------------- |
+| `query`       | `string`                                            | The raw SQL query string with `$1`, `$2`, etc. placeholders for parameters |
+| `args`        | `(string \| number \| bigint \| boolean \| null)[]` | Array of parameter values to bind to query placeholders                    |
+| `rowsHandler` | `(rows: any[]) => TReturn`                          | Optional function to transform the result rows                             |
 
 ## Parameterized Queries
 

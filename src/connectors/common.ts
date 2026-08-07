@@ -2,13 +2,9 @@ import type { ConnectionOptions } from "node:tls";
 import type { QueryLogger } from "../logger";
 import type { MigrationOptions } from "../migration/index";
 import type { Query } from "../query-builders/query";
+import type { SqlArgType } from "../types";
 
-/**
- * Default maximum number of connections in the pool.
- *
- * This value is used when no explicit pool size is specified in the
- * connector configuration.
- */
+/** Default maximum number of connections in the pool. */
 export const DEFAULT_POOL_MAX = 5;
 
 /**
@@ -52,12 +48,7 @@ export type ConnectorOptions = {
      */
     max?: number;
   };
-  /**
-   * Optional logger instance for query logging.
-   * Pass a Winston logger or any object with a compatible `info()` method.
-   * When set, all executed queries will be logged at the `info` level with
-   * structured `{ sql, arguments }` metadata.
-   */
+  /** Optional logger instance for query logging. */
   logger?: QueryLogger;
 };
 
@@ -191,26 +182,24 @@ abstract class $QueryExecutor {
    * @param args - Optional array of parameter values for parameterized queries.
    * @returns A promise that resolves with the query result.
    */
-  abstract query(
-    query: string,
-    args?: (string | number | null)[],
-  ): Promise<unknown>;
+  abstract query(query: string, args?: SqlArgType[]): Promise<unknown>;
 
   /**
-   * Executes a {@link Query} object by forwarding its sql and arguments to {@link query}.
+   * Executes a SQL query string and arguments by forwarding to {@link query}.
    * When a logger is configured, logs the SQL, arguments, and query duration after execution.
    *
-   * @param q - The {@link Query} object to execute.
+   * @param str - The SQL query string to execute.
+   * @param args - Optional array of parameter values for parameterized queries.
    * @returns A promise that resolves with the raw query result.
    */
-  async execQuery(q: Query<unknown>): Promise<unknown> {
-    const start = performance.now();
+  async execStrArgs(str: string, args?: SqlArgType[]): Promise<unknown> {
+    const start = this.logger ? performance.now() : 0;
     try {
-      const result = await this.query(q.sql, q.arguments);
+      const result = await this.query(str, args);
       if (this.logger) {
         this.logger.info("Query executed", {
-          sql: q.sql,
-          arguments: q.arguments,
+          sql: str,
+          arguments: args,
           durationMs: performance.now() - start,
         });
       }
@@ -218,13 +207,23 @@ abstract class $QueryExecutor {
     } catch (error) {
       if (this.logger) {
         this.logger.error("Query failed", {
-          sql: q.sql,
-          arguments: q.arguments,
+          sql: str,
+          arguments: args,
           durationMs: performance.now() - start,
         });
       }
       throw error;
     }
+  }
+
+  /**
+   * Executes a {@link Query} object by forwarding its sql and arguments to {@link execStrArgs}.
+   *
+   * @param q - The {@link Query} object to execute.
+   * @returns A promise that resolves with the raw query result.
+   */
+  async execQuery(q: Query<unknown>): Promise<unknown> {
+    return this.execStrArgs(q.sql, q.arguments);
   }
 }
 

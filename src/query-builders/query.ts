@@ -1,6 +1,5 @@
+import type { SqlArgType } from "../types";
 import type { AnyArg } from "./prepare";
-
-export type SqlArgType = string | number | null;
 
 /**
  * Rendering context passed to `toQuery` for alias overrides.

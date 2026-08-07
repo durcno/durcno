@@ -1,6 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyDBorTX } from "../db";
 import { entityType } from "../symbols";
+import type { BasicTypes } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -50,31 +51,37 @@ export class PrepareStatement<TArgs extends Record<string, AnyArg>, TReturn> {
     db: AnyDBorTX,
     values: { [K in keyof TArgs]: TArgs[K]["$"]["TsType"] },
   ): PrepareQuery<TReturn> {
-    const args = [];
+    const args = [] as BasicTypes[];
     for (const k of this.#query.arguments) {
       args.push(this.#args[k as keyof TArgs].handler(values[k as keyof TArgs]));
     }
-    const q = new Query<TReturn>(this.#query.sql, this.#query.rowsHandler);
-    q.arguments = args;
-    return new PrepareQuery(q, db._.getExecutor());
+    return new PrepareQuery(this.#query, args, db._.getExecutor());
   }
 }
 
 export class PrepareQuery<TReturn> extends QueryPromise<TReturn> {
-  readonly query: Query;
+  readonly query: Query<TReturn>;
+  readonly arguments: BasicTypes[];
   readonly executor: QueryExecutor;
-  constructor(query: Query, executor: QueryExecutor) {
+  constructor(
+    query: Query<TReturn>,
+    args: BasicTypes[],
+    executor: QueryExecutor,
+  ) {
     super();
     this.query = query;
+    this.arguments = args;
     this.executor = executor;
   }
 
   toQuery() {
-    return this.query as Query<TReturn>;
+    const query = new Query<TReturn>(this.query.sql, this.query.rowsHandler);
+    query.arguments = this.arguments;
+    return query;
   }
 
   async execute(): Promise<TReturn> {
-    const res = await this.executor.execQuery(this.query);
+    const res = await this.executor.execStrArgs(this.query.sql, this.arguments);
     const rows = this.executor.getRows(res);
     return this.handleRows(rows);
   }

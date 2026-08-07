@@ -10,7 +10,6 @@ import { DistinctQuery } from "./query-builders/distinct";
 import { ExistsQuery } from "./query-builders/exists";
 import { FirstQuery } from "./query-builders/first";
 import { InsertBuilder } from "./query-builders/insert";
-import { Query } from "./query-builders/query";
 import { RawQuery } from "./query-builders/raw";
 import { RelationQueryBuilder } from "./query-builders/rq";
 import { SelectBuilder } from "./query-builders/select";
@@ -27,7 +26,7 @@ import {
   type TableWCorNever,
   type TableWithColumns,
 } from "./table";
-import type { Valueof } from "./types";
+import type { SqlArgType, Valueof } from "./types";
 import {
   type AnySubquery,
   bindVirtualTableColumns,
@@ -445,7 +444,7 @@ class Base<
    */
   raw<TReturn = unknown>(
     query: string,
-    args: (string | number | null)[] = [],
+    args: SqlArgType[] = [],
     rowsHandler: ((rows: any[]) => TReturn) | undefined,
   ) {
     return new RawQuery(query, args, rowsHandler, this.#getExecutor());
@@ -538,7 +537,7 @@ class DB<
     const client = await this.#pool.acquireClient();
 
     try {
-      await client.execQuery(new Query("BEGIN;", () => null));
+      await client.execStrArgs("BEGIN;");
       const tx = new Transaction(
         this.$.tables,
         this.$.allRelations,
@@ -547,12 +546,12 @@ class DB<
         false,
       );
       const result = await callback(tx);
-      await client.execQuery(new Query("COMMIT;", () => null));
+      await client.execStrArgs("COMMIT;");
       await client.close();
 
       return result;
     } catch (error) {
-      await client.execQuery(new Query("ROLLBACK;", () => null));
+      await client.execStrArgs("ROLLBACK;");
       await client.close();
       throw error;
     }
