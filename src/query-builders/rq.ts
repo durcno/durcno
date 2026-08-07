@@ -656,10 +656,9 @@ function convert(
   allRelations: Record<string, StdRelations>,
 ) {
   for (const key of Object.keys(object)) {
-    const value = object[key];
     const column = table._.columns[key];
     if (column) {
-      object[key] = column.fromDriver(value);
+      object[key] = column.fromDriver(object[key]);
     } else {
       const relations = allRelations[table._.fullName];
       if (relations) {

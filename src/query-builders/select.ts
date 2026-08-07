@@ -803,13 +803,12 @@ export class SelectQuery<
       const keys = Object.keys(rows[0]);
       rows.forEach((row) => {
         keys.forEach((key) => {
-          const value = row[key];
           const colOrFn = (
             this.#$select as Record<string, StdTableColumn | StdSqlFn>
           )[key];
           row[key] = isCol(colOrFn)
-            ? colOrFn.fromDriver(value)
-            : colOrFn.fromDriverValue(value);
+            ? colOrFn.fromDriver(row[key])
+            : colOrFn.fromDriverValue(row[key]);
         });
       });
       return rows as TReturn;
