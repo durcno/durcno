@@ -17,10 +17,12 @@ import {
   mod,
   mul,
   position,
+  power,
   right,
   round,
   sub,
   trim,
+  trunc,
   upper,
 } from "durcno";
 import { pg } from "durcno/connectors/pg";
@@ -144,6 +146,8 @@ describe("String and Numeric Functions", () => {
         r: round(schema.Users.age),
         c: ceil(schema.Users.age),
         f: floor(schema.Users.age),
+        t: trunc(schema.Users.age),
+        p: power(schema.Users.age, 2),
       })
       .where(eq(schema.Users.id, user.id));
 
@@ -152,6 +156,8 @@ describe("String and Numeric Functions", () => {
     expect(Number(result[0].r)).toBe(age);
     expect(Number(result[0].c)).toBe(age);
     expect(Number(result[0].f)).toBe(age);
+    expect(Number(result[0].t)).toBe(age);
+    expect(Number(result[0].p)).toBe(Math.pow(age, 2));
   });
 
   it("Arithmetic functions (add, sub, mul, div) evaluate correctly", async () => {

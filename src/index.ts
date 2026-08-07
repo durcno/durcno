@@ -88,8 +88,10 @@ export {
   ceil,
   floor,
   mod,
+  power,
   round,
-} from "./functions/numeric";
+  trunc,
+} from "./functions/mathematical";
 export {
   cosineDistance,
   hammingDistance,

@@ -253,3 +253,117 @@ export function floor<
 >(expr: TExpr): FloorFn<TExpr> {
   return new FloorFn(expr);
 }
+
+// ============================================================================
+// trunc
+// ============================================================================
+
+export class TruncFn<
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
+    $: { PgType: "numeric" };
+  },
+  TDecimals extends number | Arg<number> | undefined = undefined,
+> extends SqlFn<
+  ExprColumns<TExpr>,
+  Or<HasArg<TExpr>, IsArg<TDecimals>>,
+  "scalar",
+  "numeric",
+  number
+> {
+  constructor(
+    private readonly expr: TExpr,
+    private readonly decimals?: TDecimals,
+  ) {
+    super();
+  }
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "trunc(";
+    this.expr.toQuery(query, ctx);
+    if (this.decimals !== undefined) {
+      query.sql += ", ";
+      if (is(this.decimals, Arg<number>)) {
+        query.addArg(this.decimals);
+      } else {
+        query.sql += this.decimals.toString();
+      }
+    }
+    query.sql += ")";
+  }
+}
+
+/** Truncates a numeric expression to the nearest integer, or to `decimals` decimal places. */
+export function trunc<
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
+    $: { PgType: "numeric" };
+  },
+  TDecimals extends number | Arg<number> | undefined = undefined,
+>(expr: TExpr, decimals?: TDecimals): TruncFn<TExpr, TDecimals> {
+  return new TruncFn(expr, decimals);
+}
+
+// ============================================================================
+// power
+// ============================================================================
+
+export class PowerFn<
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
+    $: { PgType: "numeric" };
+  },
+  TN extends number | Arg<number>,
+> extends SqlFn<
+  ExprColumns<TExpr>,
+  Or<HasArg<TExpr>, IsArg<TN>>,
+  "scalar",
+  "numeric",
+  number
+> {
+  constructor(
+    private readonly expr: TExpr,
+    private readonly exponent: TN,
+  ) {
+    super();
+  }
+
+  toDriverValue(value: number | null): unknown {
+    return value;
+  }
+  toSQLValue(value: number | null): string {
+    return SqlFn._numericToSQL(value);
+  }
+  fromDriverValue(value: unknown): number | null {
+    return SqlFn._numericFromDriver(value);
+  }
+
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "power(";
+    this.expr.toQuery(query, ctx);
+    query.sql += ", ";
+    if (is(this.exponent, Arg<number>)) {
+      query.addArg(this.exponent);
+    } else {
+      query.sql += this.exponent.toString();
+    }
+    query.sql += ")";
+  }
+}
+
+/** Returns the numeric expression raised to the power of `exponent`. */
+export function power<
+  TExpr extends (AnyScalarColumn | AnySqlFn) & {
+    $: { PgType: "numeric" };
+  },
+  TN extends number | Arg<number>,
+>(expr: TExpr, exponent: TN): PowerFn<TExpr, TN> {
+  return new PowerFn(expr, exponent);
+}

@@ -11,10 +11,12 @@ import {
   min,
   mod,
   position,
+  power,
   right,
   round,
   sum,
   trim,
+  trunc,
   upper,
 } from "durcno";
 import type { MaxFn, MinFn, SumFn } from "../src/functions/aggregate";
@@ -23,8 +25,10 @@ import type {
   CeilFn,
   FloorFn,
   ModFn,
+  PowerFn,
   RoundFn,
-} from "../src/functions/numeric";
+  TruncFn,
+} from "../src/functions/mathematical";
 import type {
   LeftFn,
   LengthFn,
@@ -74,17 +78,27 @@ const mFn = mod(Users.id, 2);
 const rndFn = round(Users.id);
 const cFn = ceil(Users.id);
 const fFn = floor(Users.id);
+const tFn = trunc(Users.id);
+const tFn2 = trunc(Users.id, 2);
+const pFn = power(Users.id, 2);
 
 Expect<Equal<typeof absFn, AbsFn<typeof Users.id>>>();
 Expect<Equal<typeof mFn, ModFn<typeof Users.id, 2>>>();
 Expect<Equal<typeof rndFn, RoundFn<typeof Users.id, undefined>>>();
 Expect<Equal<typeof cFn, CeilFn<typeof Users.id>>>();
 Expect<Equal<typeof fFn, FloorFn<typeof Users.id>>>();
+Expect<Equal<typeof tFn, TruncFn<typeof Users.id, undefined>>>();
+Expect<Equal<typeof tFn2, TruncFn<typeof Users.id, 2>>>();
+Expect<Equal<typeof pFn, PowerFn<typeof Users.id, 2>>>();
 
 // @ts-expect-error: abs expects a numeric column
 abs(Users.username);
 // @ts-expect-error: round expects a numeric column
 round(Users.username);
+// @ts-expect-error: trunc expects a numeric column
+trunc(Users.username);
+// @ts-expect-error: power expects a numeric column
+power(Users.username, 2);
 
 // --- Nested String Functions ---
 
