@@ -3,6 +3,7 @@ import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
+import { Check, Copy, Map as MapIcon, Repeat, ShieldCheck } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import ShikiCodeBlock from "../components/ShikiCodeBlock";
 import styles from "./index.module.css";
@@ -138,40 +139,12 @@ function AgenticSupport() {
                 title="Copy command"
               >
                 {copied ? (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                  <Check
                     className={styles.agenticCopyIcon}
                     style={{ color: "#27c93f" }}
-                  >
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
+                  />
                 ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={styles.agenticCopyIcon}
-                  >
-                    <rect
-                      x="9"
-                      y="9"
-                      width="13"
-                      height="13"
-                      rx="2"
-                      ry="2"
-                    ></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
+                  <Copy className={styles.agenticCopyIcon} />
                 )}
               </button>
             </div>
@@ -180,18 +153,14 @@ function AgenticSupport() {
             <div className={styles.agenticVisualGlow} />
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
               fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              viewBox="0 0 24 24"
               className={styles.agenticVisualIcon}
             >
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-              <line x1="12" y1="22.08" x2="12" y2="12" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" />
+              <path
+                fill="currentColor"
+                d="M2 10h1v7H2v-1H1v-5h1zm17-3h-1V6h-5V3h-2v3H6v1H5v1H4v10h1v1h1v1h12v-1h1v-1h1V8h-1zm-2 6h-3v-3h3zm-4 4h-2v-1h2zm-6-1h3v1H7zm0-6h3v3H7zm7 7v-1h3v1zm9-6v5h-1v1h-1v-7h1v1z"
+              />
             </svg>
           </div>
         </div>
@@ -371,22 +340,10 @@ function FeatureHighlights() {
               className={styles.featureIconWrapper}
               style={{ background: "rgba(255, 165, 0, 0.1)" }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <Repeat
                 className={styles.featureIcon}
                 style={{ color: "orange" }}
-              >
-                <polyline points="17 1 21 5 17 9"></polyline>
-                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                <polyline points="7 23 3 19 7 15"></polyline>
-                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-              </svg>
+              />
             </div>
             <h3>Smart Migrations</h3>
             <p>
@@ -401,23 +358,10 @@ function FeatureHighlights() {
               className={styles.featureIconWrapper}
               style={{ background: "rgba(65, 105, 225, 0.1)" }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 401 401"
-                fill="none"
+              <ShieldCheck
                 className={styles.featureIcon}
                 style={{ color: "royalblue" }}
-              >
-                <path
-                  opacity="0.5"
-                  d="M129.587 348.601L393.367 155.669L249.776 56.4025L0 248.835L129.587 348.601Z"
-                  fill="currentColor"
-                />
-                <path
-                  d="M400.999 155.669L262.155 352.029L129.586 348.601L194.887 259.076L259.699 261.218L339.565 146.666L262.637 84.7323L175.761 213.626L98.5303 154.673L211.536 0.17981L400.999 155.669Z"
-                  fill="currentColor"
-                />
-              </svg>
+              />
             </div>
             <h3>Zod Validation</h3>
             <p>
@@ -431,21 +375,10 @@ function FeatureHighlights() {
               className={styles.featureIconWrapper}
               style={{ background: "rgba(40, 180, 100, 0.1)" }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <MapIcon
                 className={styles.featureIcon}
                 style={{ color: "rgb(40, 180, 100)" }}
-              >
-                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
-                <line x1="8" y1="2" x2="8" y2="18"></line>
-                <line x1="16" y1="6" x2="16" y2="22"></line>
-              </svg>
+              />
             </div>
             <h3>PostGIS Built-in</h3>
             <p>
