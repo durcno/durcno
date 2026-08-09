@@ -6,6 +6,10 @@
   <img src="https://img.shields.io/badge/vitest--green?logo=vitest" alt="License" />
 </p>
 
+<p align="center">
+  <a href="https://discord.gg/JuVrdjeNeQ">Discord</a>  |  <a href="https://twitter.com/durcno">X</a>
+</p>
+
 <h1 align="center">Durcno</h1>
 
 <p align="center">
@@ -28,7 +32,7 @@
 - **🌍 PostGIS Support** — First-class geographic column types for spatial queries.
 - **🔍 pgvector Support** — Vector similarity search with type-safe distance functions and indexes.
 
-## Agentic DX
+## SKILL
 
 Durcno ships with an official **Agent Skill**.
 
@@ -36,7 +40,7 @@ Durcno ships with an official **Agent Skill**.
 npx skills add https://github.com/durcno/durcno --skill durcno
 ```
 
-## Setup
+## Installation
 
 ```bash
 npm add durcno@alpha
@@ -51,10 +55,6 @@ npm exec durcno init
 Get started with Durcno by following our comprehensive documentation.
 
 **[Getting Started | Durcno](https://durcno.dev/docs/latest/getting-started)**
-
-> [!NOTE]
-> Durcno is currently in the alpha stage.
-> Avoid using it in any critical or large project until it reaches beta. Expect edge cases and breaking changes. However, your feedback is invaluable to help us shape the future of Durcno!
 
 ## Contributing
 
