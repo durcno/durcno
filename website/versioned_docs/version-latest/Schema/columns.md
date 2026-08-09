@@ -112,6 +112,18 @@ db.insert(Products).values({
 Use `numeric` when you need exact decimal precision, such as for monetary values or scientific calculations. The string representation ensures no precision is lost due to JavaScript's floating-point limitations.
 :::
 
+#### `real`
+
+- SQL type: `real` (single precision floating-point)
+- JS type: `number`
+- Notes: 4-byte variable-precision floating-point number. Range: 1E-37 to 1E+37 with a precision of at least 6 decimal digits. Inexact type, meaning some values cannot be converted exactly to the internal format and are stored as approximations.
+
+#### `double precision`
+
+- SQL type: `double precision`
+- JS type: `number`
+- Notes: 8-byte variable-precision floating-point number. Range: 1E-307 to 1E+308 with a precision of at least 15 decimal digits. Inexact type like `real`, but with higher precision.
+
 ### Serial Columns (Auto-increment)
 
 Serial columns are PostgreSQL's legacy auto-incrementing integer types.
