@@ -1,0 +1,28 @@
+.shikiContainer {
+  margin: 0;
+  width: 100%;
+}
+
+.shikiContainer :global(pre.shiki) {
+  margin: 0;
+  padding: var(--ifm-pre-padding);
+  border-radius: var(--ifm-pre-border-radius);
+  overflow: auto;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: var(--ifm-code-font-size);
+  background-color: var(--shiki-light-bg) !important;
+  color: var(--shiki-light) !important;
+}
+
+.shikiContainer :global(pre.shiki span) {
+  color: var(--shiki-light) !important;
+}
+
+:global([data-theme="dark"]) .shikiContainer :global(pre.shiki) {
+  background-color: var(--shiki-dark-bg) !important;
+  color: var(--shiki-dark) !important;
+}
+
+:global([data-theme="dark"]) .shikiContainer :global(pre.shiki span) {
+  color: var(--shiki-dark) !important;
+}

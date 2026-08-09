@@ -27,7 +27,8 @@
     "prism-react-renderer": "^2.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-qr-code": "^2.0.18"
+    "react-qr-code": "^2.0.18",
+    "shiki": "^4.4.2"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.2",

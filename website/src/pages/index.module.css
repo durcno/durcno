@@ -97,6 +97,33 @@
   font-size: 0.9rem;
   background: #1e1e1e;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.blurOverlay {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(30, 30, 30, 0.2);
+  z-index: 10;
+  animation: fadeOutBlur 1s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fadeOutBlur {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    visibility: hidden;
+  }
 }
 
 .codeBlockContainer :global(pre) {
@@ -109,7 +136,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  background: #2d2d2d;
+  background: #2f3138;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 

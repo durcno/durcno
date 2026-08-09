@@ -1,10 +1,10 @@
 /** biome-ignore-all lint/a11y/noSvgWithoutTitle: <> */
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
-import CodeBlock from "@theme/CodeBlock";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
 import { type ReactNode, useState } from "react";
+import ShikiCodeBlock from "../components/ShikiCodeBlock";
 import styles from "./index.module.css";
 
 export default function Home(): ReactNode {
@@ -78,6 +78,7 @@ function HomepageHeader() {
         </div>
         <div className={styles.heroCode}>
           <div className={styles.codeBlockContainer}>
+            <div className={styles.blurOverlay} />
             <div className={styles.codeHeader}>
               <div className={styles.windowControls}>
                 <span
@@ -94,7 +95,7 @@ function HomepageHeader() {
                 />
               </div>
             </div>
-            <CodeBlock language="typescript">{codeExample}</CodeBlock>
+            <ShikiCodeBlock language="typescript" code={codeExample} />
           </div>
         </div>
       </div>
