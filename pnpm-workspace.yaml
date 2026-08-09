@@ -12,3 +12,4 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - cngpac
+  - lucide-react@1.31.0
