@@ -79,13 +79,29 @@ export function sql(strings: TemplateStringsArray, ...params: SqlParam[]) {
   return new Sql(strings, params);
 }
 
+/**
+ * Escapes a string for use as a double-quoted PostgreSQL identifier.
+ * Doubles any embedded `"` characters: `foo"bar` -> `foo""bar`.
+ */
+export function escIdentifier(value: string): string {
+  return value.replace(/"/g, '""');
+}
+
+/**
+ * Escapes a string for use inside a single-quoted PostgreSQL literal.
+ * Doubles any embedded `'` characters: `it's` -> `it''s`.
+ */
+export function escLiteral(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
 export function toSqlValue(
   value: string | number | bigint | boolean | null | undefined | TableAnyColumn,
 ): string {
   if (value === null || value === undefined) {
     return "NULL";
   } else if (typeof value === "string") {
-    return `'${value.replace(/'/g, "''")}'`;
+    return `'${escLiteral(value)}'`;
   } else if (typeof value === "number" || typeof value === "bigint") {
     return value.toString();
   } else if (typeof value === "boolean") {

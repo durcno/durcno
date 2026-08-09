@@ -1,5 +1,6 @@
 import { isTCol } from "../entity";
 import type { AnyScalarSqlFn, SqlFn } from "../functions";
+import { escIdentifier } from "../sql";
 import type { AnyTableWithColumns, TableAnyColumn } from "../table";
 import type { Valueof } from "../types";
 import type { Query, QueryContext } from "./query";
@@ -20,7 +21,7 @@ class Order<
   /** Appends the order fragment to the query SQL. */
   toQuery(query: Query, ctx?: QueryContext) {
     if (typeof this.field === "string") {
-      query.sql += `"${this.field}" ${this.dir}`;
+      query.sql += `"${escIdentifier(this.field)}" ${this.dir}`;
     } else {
       this.field.toQuery(query, ctx);
       query.sql += ` ${this.dir}`;

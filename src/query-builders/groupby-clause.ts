@@ -1,5 +1,6 @@
 import type { AnyScalarSqlFn } from "../functions";
 import { SqlFn } from "../functions";
+import { escIdentifier } from "../sql";
 import type {
   AnyColumn,
   AnyTableWithColumns,
@@ -19,7 +20,7 @@ export class GroupByAlias<TKey extends string> {
 
   /** Appends `"key"` (quoted alias) to the query SQL. */
   toQuery(query: Query): void {
-    query.sql += `"${this.key}"`;
+    query.sql += `"${escIdentifier(this.key)}"`;
   }
 }
 

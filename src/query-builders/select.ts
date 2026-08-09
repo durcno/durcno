@@ -8,6 +8,7 @@ import type {
 } from "../filters/index";
 import type { AnySqlFn, StdSqlFn } from "../functions/index";
 import { SqlFn } from "../functions/index";
+import { escIdentifier } from "../sql";
 import type {
   AnyColumn,
   AnyTableWithColumns,
@@ -673,9 +674,9 @@ export class SelectQuery<
         const [key, colOrFn] = entries[i];
         if (colOrFn instanceof SqlFn) {
           colOrFn.toQuery(query);
-          query.sql += ` AS "${key}"`;
+          query.sql += ` AS "${escIdentifier(key)}"`;
         } else {
-          query.sql += `${(colOrFn as StdTableColumn).fullName} AS "${key}"`;
+          query.sql += `${(colOrFn as StdTableColumn).fullName} AS "${escIdentifier(key)}"`;
         }
         if (i < entries.length - 1) query.sql += ", ";
       }

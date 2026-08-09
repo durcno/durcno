@@ -2,6 +2,7 @@ import type { QueryExecutor } from "../connectors/common";
 import { fk } from "../constraints/foreign-key";
 import { is } from "../entity";
 import type { FilterExpression } from "../filters/index";
+import { escIdentifier, escLiteral } from "../sql";
 import type {
   AnyColumn,
   AnyRelation,
@@ -331,7 +332,7 @@ class RelationQuery<
       options.columns,
       this.#table._.columns,
     )) {
-      selects.push(`${column.fullName} AS "${colName}"`);
+      selects.push(`${column.fullName} AS "${escIdentifier(colName)}"`);
     }
     const relations = this.#allRelations[this.#table._.fullName];
     if (relations) {
@@ -340,7 +341,9 @@ class RelationQuery<
           const relation = relations.map[key];
           if (relation) {
             // Use relation key as alias for top-level relations
-            selects.push(`"${key}"."data" AS "${key}"`);
+            selects.push(
+              `"${escIdentifier(key)}"."data" AS "${escIdentifier(key)}"`,
+            );
           }
         }
       }
@@ -348,7 +351,7 @@ class RelationQuery<
     query.sql += selects.join(", ");
 
     query.sql += " FROM";
-    query.sql += ` ${this.#table._.fullName} "${this.#table._.nameSql}"`;
+    query.sql += ` ${this.#table._.fullName} "${escIdentifier(this.#table._.nameSql)}"`;
     if (options.with) {
       for (const key in options.with) {
         const otps = options.with[key];
@@ -456,7 +459,9 @@ function getJsonBuildObjectSelects(
     options.columns,
     table._.columns,
   )) {
-    selects.push(`'${colName}', "${alias}"."${column.nameSql}"`);
+    selects.push(
+      `'${escLiteral(colName)}', "${escIdentifier(alias)}"."${escIdentifier(column.nameSql ?? "")}"`,
+    );
   }
 
   // Add nested relation selects
@@ -469,7 +474,9 @@ function getJsonBuildObjectSelects(
           // The inner subquery aliases nested data as "${nestedKey}_data",
           // and the inner subquery itself is aliased as "${alias}",
           // so we reference "${alias}"."${nestedKey}_data"
-          selects.push(`'${nestedKey}', "${alias}"."${nestedKey}_data"`);
+          selects.push(
+            `'${escLiteral(nestedKey)}', "${escIdentifier(alias)}"."${escIdentifier(nestedKey)}_data"`,
+          );
         }
       }
     }
@@ -518,19 +525,19 @@ function buildRelationSubquery(
     ? allRelations[relation.table._.fullName]
     : undefined;
 
-  query.sql += ` FROM (SELECT "${aliasPath}".*`;
+  query.sql += ` FROM (SELECT "${escIdentifier(aliasPath)}".*`;
 
   if (nestedTableRelations) {
     for (const nestedKey in options.with) {
       const nestedRelation = nestedTableRelations.map[nestedKey];
       if (nestedRelation) {
         const nestedAliasPath = `${aliasPath}__${nestedKey}`;
-        query.sql += `, "${nestedAliasPath}"."data" AS "${nestedKey}_data"`;
+        query.sql += `, "${escIdentifier(nestedAliasPath)}"."data" AS "${escIdentifier(nestedKey)}_data"`;
       }
     }
   }
 
-  query.sql += ` FROM ${relation.table._.fullName} "${aliasPath}"`;
+  query.sql += ` FROM ${relation.table._.fullName} "${escIdentifier(aliasPath)}"`;
 
   if (nestedTableRelations) {
     for (const nestedKey in options.with) {
@@ -575,7 +582,7 @@ function buildRelationSubquery(
           `Columns used in 'many' or 'one' relations must call .references() to define the join target.`,
       );
     }
-    query.sql += ` WHERE "${aliasPath}"."${relation.col.nameSql}" = "${parentTableAlias}"."${referencedCol.nameSql}"`;
+    query.sql += ` WHERE "${escIdentifier(aliasPath)}"."${escIdentifier(relation.col.nameSql)}" = "${escIdentifier(parentTableAlias)}"."${escIdentifier(referencedCol.nameSql)}"`;
     // Apply user-supplied where filter on top of the join condition (Many only)
     if (relation.t === "Many" && options.where) {
       const ctx: QueryContext = {
@@ -613,7 +620,7 @@ function buildRelationSubquery(
           `Columns used in 'fk' relations must call .references() to define the join target.`,
       );
     }
-    query.sql += ` WHERE "${aliasPath}"."${referencedCol.nameSql}" = "${parentTableAlias}"."${relation.col.nameSql}"`;
+    query.sql += ` WHERE "${escIdentifier(aliasPath)}"."${escIdentifier(referencedCol.nameSql)}" = "${escIdentifier(parentTableAlias)}"."${escIdentifier(relation.col.nameSql)}"`;
     query.sql += ` LIMIT 1`;
   }
 
@@ -633,8 +640,8 @@ function buildRelationSubquery(
     if (options.limit) query.sql += ` LIMIT ${options.limit}`;
   }
 
-  query.sql += `) "${aliasPath}"`;
-  query.sql += `) "${aliasPath}" ON true`;
+  query.sql += `) "${escIdentifier(aliasPath)}"`;
+  query.sql += `) "${escIdentifier(aliasPath)}" ON true`;
 }
 
 /** Appends an ORDER BY clause for `orders` to `query.sql`. */
