@@ -28,6 +28,14 @@
 - **🌍 PostGIS Support** — First-class geographic column types for spatial queries.
 - **🔍 pgvector Support** — Vector similarity search with type-safe distance functions and indexes.
 
+## Agentic DX
+
+Durcno ships with an official **Agent Skill**.
+
+```bash
+npx skills add https://github.com/durcno/durcno --skill durcno
+```
+
 ## Setup
 
 ```bash

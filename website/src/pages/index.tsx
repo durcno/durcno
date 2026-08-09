@@ -4,7 +4,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import CodeBlock from "@theme/CodeBlock";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import styles from "./index.module.css";
 
 export default function Home(): ReactNode {
@@ -16,6 +16,7 @@ export default function Home(): ReactNode {
     >
       <HomepageHeader />
       <main>
+        <AgenticSupport />
         <SupportedRuntimes />
         <SupportedDatabases />
         <FeatureHighlights />
@@ -98,6 +99,103 @@ function HomepageHeader() {
         </div>
       </div>
     </header>
+  );
+}
+
+function AgenticSupport() {
+  const [copied, setCopied] = useState(false);
+  const command =
+    "npx skills add https://github.com/durcno/durcno --skill durcno";
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(command).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <section className={styles.agenticSection}>
+      <div className="container">
+        <div className={styles.agenticContainer}>
+          <div className={styles.agenticContent}>
+            <div className={styles.agenticBadge}>Agentic DX</div>
+            <h2 className={styles.agenticTitle}>Built for AI Agents</h2>
+            <p className={styles.agenticSubtitle}>
+              Durcno ships with an official <strong>Agent Skill</strong>.
+              Empower your AI agents with deep knowledge of Durcno and its
+              robust type-safety.
+            </p>
+            <div className={styles.agenticCommandContainer}>
+              <span className={styles.agenticCommandPrompt}>$</span>
+              <code className={styles.agenticCommand}>{command}</code>
+              <button
+                type="button"
+                className={styles.agenticCopyButton}
+                onClick={handleCopy}
+                aria-label="Copy command"
+                title="Copy command"
+              >
+                {copied ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={styles.agenticCopyIcon}
+                    style={{ color: "#27c93f" }}
+                  >
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={styles.agenticCopyIcon}
+                  >
+                    <rect
+                      x="9"
+                      y="9"
+                      width="13"
+                      height="13"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+          <div className={styles.agenticVisual}>
+            <div className={styles.agenticVisualGlow} />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={styles.agenticVisualIcon}
+            >
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+              <line x1="12" y1="22.08" x2="12" y2="12" />
+              <circle cx="12" cy="12" r="3" fill="currentColor" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

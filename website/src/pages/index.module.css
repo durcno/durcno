@@ -170,7 +170,195 @@
 }
 
 /* ===========================
-   2. Supported Runtimes
+   2. Agentic Support
+   =========================== */
+
+.agenticSection {
+  padding: 6rem 0 2rem;
+  background: var(--ifm-background-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.agenticContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  background:
+    radial-gradient(
+      circle at 100% 100%,
+      rgba(97, 218, 251, 0.05) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 0% 0%,
+      rgba(var(--ifm-color-primary-rgb), 0.05) 0%,
+      transparent 50%
+    );
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 24px;
+  padding: 4rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.agenticContent {
+  flex: 1;
+  z-index: 1;
+}
+
+.agenticBadge {
+  display: inline-block;
+  padding: 0.4rem 1rem;
+  border-radius: 50px;
+  background: rgba(97, 218, 251, 0.1);
+  border: 2px solid var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.agenticTitle {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.agenticSubtitle {
+  font-size: 1.2rem;
+  opacity: 0.8;
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+  max-width: 600px;
+}
+
+.agenticCommandContainer {
+  display: inline-flex;
+  align-items: center;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  gap: 1rem;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.agenticCommandPrompt {
+  color: #27c93f;
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: bold;
+}
+
+.agenticCommand {
+  color: #e6e6e6;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.95rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.agenticVisual {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.agenticVisualGlow {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background: var(--ifm-color-primary);
+  filter: blur(100px);
+  opacity: 0.2;
+  border-radius: 50%;
+  animation: pulse 4s ease-in-out infinite;
+}
+
+.agenticVisualIcon {
+  width: 150px;
+  height: 150px;
+  color: var(--ifm-color-primary);
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 20px rgba(97, 218, 251, 0.4));
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.15;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.25;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.15;
+  }
+}
+
+@media (min-width: 997px) {
+  .agenticContainer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .agenticContainer {
+    padding: 2rem;
+  }
+
+  .agenticTitle {
+    font-size: 2rem;
+  }
+
+  .agenticCommandContainer {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.agenticCopyButton {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 0.4rem;
+  color: #e6e6e6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.agenticCopyButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.agenticCopyIcon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===========================
+   3. Supported Runtimes
    =========================== */
 
 .supportedRuntimesSection {
@@ -188,7 +376,7 @@
 }
 
 /* ===========================
-   3. Supported Databases
+   4. Supported Databases
    =========================== */
 
 .supportedDbSection {
@@ -238,7 +426,7 @@
 }
 
 /* ===========================
-   4. Feature Highlights
+   5. Feature Highlights
    =========================== */
 
 .featuresSection {
@@ -299,7 +487,7 @@
 }
 
 /* ===========================
-   5. Reviews
+   6. Reviews
    =========================== */
 
 .reviewsSection {
@@ -380,7 +568,7 @@
 }
 
 /* ===========================
-   6. Sponsors
+   7. Sponsors
    =========================== */
 
 .sponsorsSection {
