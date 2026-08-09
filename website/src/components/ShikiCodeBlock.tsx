@@ -31,6 +31,7 @@ export default function ShikiCodeBlock({
           light: "github-light",
           dark: "github-dark",
         },
+        defaultColor: false,
       });
       setHtml(out);
     });

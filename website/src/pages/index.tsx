@@ -140,8 +140,10 @@ function AgenticSupport() {
               >
                 {copied ? (
                   <Check
-                    className={styles.agenticCopyIcon}
-                    style={{ color: "#27c93f" }}
+                    className={clsx(
+                      styles.agenticCopyIcon,
+                      styles.agenticCopySuccessIcon,
+                    )}
                   />
                 ) : (
                   <Copy className={styles.agenticCopyIcon} />

@@ -95,8 +95,7 @@
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   border-radius: 12px;
   font-size: 0.9rem;
-  background: #1e1e1e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--ifm-color-space);
   overflow: hidden;
   position: relative;
 }
@@ -136,8 +135,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  background: #2f3138;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--ifm-color-space);
 }
 
 .windowControls {
@@ -266,24 +264,34 @@
 .agenticCommandContainer {
   display: inline-flex;
   align-items: center;
-  background: #1e1e1e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ifm-color-emphasis-100);
+  border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: 8px;
   padding: 1rem 1.5rem;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
   gap: 1rem;
   max-width: 100%;
   overflow-x: auto;
 }
 
+:global([data-theme="dark"]) .agenticCommandContainer {
+  background: #1e1e1e;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
 .agenticCommandPrompt {
-  color: #27c93f;
+  color: #20a133;
   font-family: var(--ifm-font-family-monospace);
   font-weight: bold;
 }
 
+:global([data-theme="dark"]) .agenticCommandPrompt {
+  color: #27c93f;
+}
+
 .agenticCommand {
-  color: #e6e6e6;
+  color: var(--ifm-font-color-base);
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.95rem;
   background: transparent;
@@ -291,6 +299,10 @@
   padding: 0;
   margin: 0;
   white-space: nowrap;
+}
+
+:global([data-theme="dark"]) .agenticCommand {
+  color: #e6e6e6;
 }
 
 .agenticVisual {
@@ -361,11 +373,11 @@
 }
 
 .agenticCopyButton {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--ifm-color-emphasis-200);
+  border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 4px;
   padding: 0.4rem;
-  color: #e6e6e6;
+  color: var(--ifm-font-color-base);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -374,7 +386,18 @@
   margin-left: auto;
 }
 
+:global([data-theme="dark"]) .agenticCopyButton {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e6e6e6;
+}
+
 .agenticCopyButton:hover {
+  background: var(--ifm-color-emphasis-300);
+  border-color: var(--ifm-color-emphasis-400);
+}
+
+:global([data-theme="dark"]) .agenticCopyButton:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
 }
@@ -382,6 +405,14 @@
 .agenticCopyIcon {
   width: 16px;
   height: 16px;
+}
+
+.agenticCopySuccessIcon {
+  color: #20a133;
+}
+
+:global([data-theme="dark"]) .agenticCopySuccessIcon {
+  color: #27c93f;
 }
 
 /* ===========================

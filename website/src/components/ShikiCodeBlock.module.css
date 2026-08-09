@@ -6,7 +6,6 @@
 .shikiContainer :global(pre.shiki) {
   margin: 0;
   padding: var(--ifm-pre-padding);
-  border-radius: var(--ifm-pre-border-radius);
   overflow: auto;
   font-family: var(--ifm-font-family-monospace);
   font-size: var(--ifm-code-font-size);
