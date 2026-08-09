@@ -157,7 +157,7 @@ describe("String and Numeric Functions", () => {
     expect(Number(result[0].c)).toBe(age);
     expect(Number(result[0].f)).toBe(age);
     expect(Number(result[0].t)).toBe(age);
-    expect(Number(result[0].p)).toBe(Math.pow(age, 2));
+    expect(Number(result[0].p)).toBe(age ** 2);
   });
 
   it("Arithmetic functions (add, sub, mul, div) evaluate correctly", async () => {

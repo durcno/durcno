@@ -6,7 +6,7 @@ import { SqlFn } from "./index";
 
 export type VectorCol = AnyColumn & {
   ValType: number[];
-  $?: { PgType: "numeric" };
+  $?: { PgType: "numeric" | "float" };
 };
 
 export type BitCol = AnyColumn & {

@@ -14,10 +14,10 @@ type AggregateInput = AnyColumn | AnyScalarSqlFn;
 // Columns must be scalar (non-array): ValType is narrowed to exclude array types.
 type NumericAggregateInput =
   | (AnyColumn & {
-      $: { PgType: "numeric" };
+      $: { PgType: "numeric" | "float" };
       config: { dimension?: undefined };
     })
-  | (AnyScalarSqlFn & { $: { PgType: "numeric" } });
+  | (AnyScalarSqlFn & { $: { PgType: "numeric" | "float" } });
 
 // ============================================================================
 // count

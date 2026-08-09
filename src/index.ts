@@ -17,6 +17,7 @@ export {
   unique,
 } from "./columns/common";
 export { date } from "./columns/date";
+export { doublePrecision } from "./columns/double-precision";
 export { enumed } from "./columns/enum";
 export { inet } from "./columns/inet";
 export { integer } from "./columns/integer";
@@ -26,6 +27,7 @@ export { macaddr } from "./columns/macaddr";
 export { numeric } from "./columns/numeric";
 export { pgvector } from "./columns/pgvector/index";
 export { geography } from "./columns/postgis/geography/index";
+export { real } from "./columns/real";
 export { serial } from "./columns/serial";
 export { smallint } from "./columns/smallint";
 export { smallserial } from "./columns/smallserial";

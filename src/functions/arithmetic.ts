@@ -10,7 +10,7 @@ import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
  * a numeric column or SqlFn, a plain number literal, or an `Arg<number>`.
  */
 export type NumericOperand =
-  | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "numeric" } })
+  | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "numeric" | "float" } })
   | number
   | Arg<number>;
 

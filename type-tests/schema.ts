@@ -6,6 +6,7 @@ import {
   bytea,
   cidr,
   database,
+  doublePrecision,
   enumtype,
   fk,
   gt,
@@ -24,6 +25,7 @@ import {
   one,
   pk,
   primaryKey,
+  real,
   relations,
   serial,
   smallserial,
@@ -178,6 +180,10 @@ export const Events = table("public", "events", {
   description: varchar({ length: 500 }).default("defaultValue"),
   // Numeric column with $type override
   capacity: numeric({}).$type<{ seats: number }>(),
+  // Real column
+  rating: real({}),
+  // Double precision column
+  exactScore: doublePrecision({}),
   // JSON column with $type override
   eventMetadata: json({}).$type<{ tags: string[] }>(),
 });

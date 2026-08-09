@@ -7,6 +7,7 @@ import {
   char,
   cidr,
   date,
+  doublePrecision,
   enumtype,
   geography,
   inet,
@@ -17,6 +18,7 @@ import {
   notNull,
   numeric,
   pk,
+  real,
   serial,
   smallint,
   smallserial,
@@ -155,6 +157,28 @@ export const NumericTests = table("public", "numericTests", {
   value: numeric({}),
   // Nullable numeric with default
   valueWithDefault: numeric({}).default("0"),
+});
+
+/**
+ * Test table for real column type (single precision floating point)
+ */
+export const RealTests = table("public", "realTests", {
+  id: pk(),
+  // Nullable real
+  value: real({}),
+  // Nullable real with default
+  valueWithDefault: real({}).default(0),
+});
+
+/**
+ * Test table for double precision column type (double precision floating point)
+ */
+export const DoublePrecisionTests = table("public", "doublePrecisionTests", {
+  id: pk(),
+  // Nullable double precision
+  value: doublePrecision({}),
+  // Nullable double precision with default
+  valueWithDefault: doublePrecision({}).default(0),
 });
 
 // ============================================================================

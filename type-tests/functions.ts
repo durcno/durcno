@@ -38,7 +38,7 @@ import type {
   TrimFn,
   UpperFn,
 } from "../src/functions/string";
-import { Users } from "./schema";
+import { Events, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
 // --- SQL Utility Functions ---
@@ -90,6 +90,20 @@ Expect<Equal<typeof fFn, FloorFn<typeof Users.id>>>();
 Expect<Equal<typeof tFn, TruncFn<typeof Users.id, undefined>>>();
 Expect<Equal<typeof tFn2, TruncFn<typeof Users.id, 2>>>();
 Expect<Equal<typeof pFn, PowerFn<typeof Users.id, 2>>>();
+
+// Check PgType for real and doublePrecision columns ("float")
+Expect<Equal<(typeof Events.rating)["$"]["PgType"], "float">>();
+Expect<Equal<(typeof Events.exactScore)["$"]["PgType"], "float">>();
+
+// Numeric/math/aggregate functions support float columns
+const absFloat = abs(Events.rating);
+const roundFloat = round(Events.exactScore);
+const sumFloat = sum(Events.rating);
+Expect<Equal<typeof absFloat, AbsFn<typeof Events.rating>>>();
+Expect<
+  Equal<typeof roundFloat, RoundFn<typeof Events.exactScore, undefined>>
+>();
+Expect<Equal<typeof sumFloat, SumFn<typeof Events.rating>>>();
 
 // @ts-expect-error: abs expects a numeric column
 abs(Users.username);

@@ -11,7 +11,7 @@ import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
 
 export class AbsFn<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
 > extends SqlFn<
   ExprColumns<TExpr>,
@@ -44,7 +44,7 @@ export class AbsFn<
 /** Returns the absolute value of a numeric expression. */
 export function abs<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
 >(expr: TExpr): AbsFn<TExpr> {
   return new AbsFn(expr);
@@ -56,7 +56,7 @@ export function abs<
 
 export class ModFn<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
   TN extends number | Arg<number>,
 > extends SqlFn<
@@ -99,7 +99,7 @@ export class ModFn<
 /** Returns the remainder of `expr` divided by `n`. */
 export function mod<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
   TN extends number | Arg<number>,
 >(expr: TExpr, n: TN): ModFn<TExpr, TN> {
@@ -112,7 +112,7 @@ export function mod<
 
 export class RoundFn<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
   TDecimals extends number | Arg<number> | undefined = undefined,
 > extends SqlFn<
@@ -157,7 +157,7 @@ export class RoundFn<
 /** Rounds a numeric expression to the nearest integer, or to `decimals` decimal places. */
 export function round<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
   TDecimals extends number | Arg<number> | undefined = undefined,
 >(expr: TExpr, decimals?: TDecimals): RoundFn<TExpr, TDecimals> {
@@ -170,7 +170,7 @@ export function round<
 
 export class CeilFn<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
 > extends SqlFn<
   ExprColumns<TExpr>,
@@ -203,7 +203,7 @@ export class CeilFn<
 /** Returns the smallest integer greater than or equal to the numeric expression. */
 export function ceil<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
 >(expr: TExpr): CeilFn<TExpr> {
   return new CeilFn(expr);
@@ -215,7 +215,7 @@ export function ceil<
 
 export class FloorFn<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
 > extends SqlFn<
   ExprColumns<TExpr>,
@@ -248,7 +248,7 @@ export class FloorFn<
 /** Returns the largest integer less than or equal to the numeric expression. */
 export function floor<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
 >(expr: TExpr): FloorFn<TExpr> {
   return new FloorFn(expr);
@@ -260,7 +260,7 @@ export function floor<
 
 export class TruncFn<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
   TDecimals extends number | Arg<number> | undefined = undefined,
 > extends SqlFn<
@@ -305,7 +305,7 @@ export class TruncFn<
 /** Truncates a numeric expression to the nearest integer, or to `decimals` decimal places. */
 export function trunc<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
   TDecimals extends number | Arg<number> | undefined = undefined,
 >(expr: TExpr, decimals?: TDecimals): TruncFn<TExpr, TDecimals> {
@@ -318,7 +318,7 @@ export function trunc<
 
 export class PowerFn<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
   TN extends number | Arg<number>,
 > extends SqlFn<
@@ -361,7 +361,7 @@ export class PowerFn<
 /** Returns the numeric expression raised to the power of `exponent`. */
 export function power<
   TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" };
+    $: { PgType: "numeric" | "float" };
   },
   TN extends number | Arg<number>,
 >(expr: TExpr, exponent: TN): PowerFn<TExpr, TN> {

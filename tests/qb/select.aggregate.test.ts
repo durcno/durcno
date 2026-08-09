@@ -664,13 +664,23 @@ describe("SELECT aggregate functions", () => {
         .values(createTestUser({ username: "bob" }))
         .returning({ id: true });
 
-      await db
-        .insert(schema.Posts)
-        .values([
-          createTestPost(user1.id, { title: "Post 1", viewCount: 10, likeCount: 2n }),
-          createTestPost(user1.id, { title: "Post 2", viewCount: 20, likeCount: 5n }),
-          createTestPost(user2.id, { title: "Post 3", viewCount: 5, likeCount: 4n }),
-        ]);
+      await db.insert(schema.Posts).values([
+        createTestPost(user1.id, {
+          title: "Post 1",
+          viewCount: 10,
+          likeCount: 2n,
+        }),
+        createTestPost(user1.id, {
+          title: "Post 2",
+          viewCount: 20,
+          likeCount: 5n,
+        }),
+        createTestPost(user2.id, {
+          title: "Post 3",
+          viewCount: 5,
+          likeCount: 4n,
+        }),
+      ]);
 
       const results = await db
         .from(schema.Users)

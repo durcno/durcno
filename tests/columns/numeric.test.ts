@@ -335,4 +335,103 @@ describe("Numeric Column Types", () => {
       expect(row.value).toBe("999.99");
     });
   });
+  // ==========================================================================
+  // REAL
+  // ==========================================================================
+
+  describe("real", () => {
+    let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.RealTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ value: "abc" })).toThrow();
+      expect(zodSchema.parse({ value: "3.14" })).toMatchObject({ value: 3.14 });
+      expect(zodSchema.parse({ value: 3.14 })).toMatchObject({ value: 3.14 });
+    });
+
+    it("insert", async () => {
+      const db = getDb();
+      const [row] = await db
+        .insert(schema.RealTests)
+        .values(zodSchema.parse({ value: 3.14 }))
+        .returning({ id: true });
+      insertedId = row.id;
+      expect(insertedId).toBeDefined();
+    });
+
+    it("select", async () => {
+      const db = getDb();
+      const [row] = await db
+        .from(schema.RealTests)
+        .select()
+        .where(eq(schema.RealTests.id, insertedId));
+      expect(row.value).toBeCloseTo(3.14, 2);
+      expect(row.valueWithDefault).toBe(0);
+    });
+
+    it("update", async () => {
+      const db = getDb();
+      await db
+        .update(schema.RealTests)
+        .set({ value: 9.99 })
+        .where(eq(schema.RealTests.id, insertedId));
+      const [row] = await db
+        .from(schema.RealTests)
+        .select()
+        .where(eq(schema.RealTests.id, insertedId));
+      expect(row.value).toBeCloseTo(9.99, 2);
+    });
+  });
+
+  // ==========================================================================
+  // DOUBLE PRECISION
+  // ==========================================================================
+
+  describe("double precision", () => {
+    let insertedId: bigint;
+    const zodSchema = createInsertSchema(schema.DoublePrecisionTests);
+
+    it("zod insert schema", () => {
+      expect(() => zodSchema.parse({ value: "abc" })).toThrow();
+      expect(zodSchema.parse({ value: "3.141592653589793" })).toMatchObject({
+        value: Math.PI,
+      });
+      expect(zodSchema.parse({ value: Math.PI })).toMatchObject({
+        value: Math.PI,
+      });
+    });
+
+    it("insert", async () => {
+      const db = getDb();
+      const [row] = await db
+        .insert(schema.DoublePrecisionTests)
+        .values(zodSchema.parse({ value: Math.PI }))
+        .returning({ id: true });
+      insertedId = row.id;
+      expect(insertedId).toBeDefined();
+    });
+
+    it("select", async () => {
+      const db = getDb();
+      const [row] = await db
+        .from(schema.DoublePrecisionTests)
+        .select()
+        .where(eq(schema.DoublePrecisionTests.id, insertedId));
+      expect(row.value).toBeCloseTo(Math.PI, 10);
+      expect(row.valueWithDefault).toBe(0);
+    });
+
+    it("update", async () => {
+      const db = getDb();
+      await db
+        .update(schema.DoublePrecisionTests)
+        .set({ value: 9.9999999999 })
+        .where(eq(schema.DoublePrecisionTests.id, insertedId));
+      const [row] = await db
+        .from(schema.DoublePrecisionTests)
+        .select()
+        .where(eq(schema.DoublePrecisionTests.id, insertedId));
+      expect(row.value).toBeCloseTo(9.9999999999, 10);
+    });
+  });
 });
