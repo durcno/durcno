@@ -7,14 +7,26 @@ export {
 
 import { custom } from "./statement";
 
+export * from "./extension";
 export * from "./indexes";
 export * from "./schema";
 export * from "./sequence";
 export * from "./table";
 export * from "./types";
 
+import {
+  createExtension,
+  createExtensionIfNotExists,
+  dropExtension,
+  dropExtensionIfExists,
+} from "./extension";
 import { createIndex, dropIndex } from "./indexes";
-import { createSchema, dropSchema } from "./schema";
+import {
+  createSchema,
+  createSchemaIfNotExists,
+  dropSchema,
+  dropSchemaIfExists,
+} from "./schema";
 import { createSequence, dropSequence } from "./sequence";
 import { alterTable, createTable, dropTable, renameTable } from "./table";
 import { alterType, createType, dropType } from "./types";
@@ -39,7 +51,9 @@ import { alterType, createType, dropType } from "./types";
  */
 export const ddl = {
   createSchema,
+  createSchemaIfNotExists,
   dropSchema,
+  dropSchemaIfExists,
   createType,
   dropType,
   alterType,
@@ -51,5 +65,9 @@ export const ddl = {
   alterTable,
   createIndex,
   dropIndex,
+  createExtension,
+  createExtensionIfNotExists,
+  dropExtension,
+  dropExtensionIfExists,
   custom,
 };

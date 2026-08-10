@@ -19,6 +19,8 @@ export type DDLStatementType =
   | "dropSequence"
   | "createIndex"
   | "dropIndex"
+  | "createExtension"
+  | "dropExtension"
   | "custom";
 
 /**
