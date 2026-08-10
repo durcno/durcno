@@ -16,7 +16,7 @@ import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { Or } from "../types";
-import { Filter } from ".";
+import { Filter } from "./index";
 
 /** Constrains `TCol` to geography point columns only. */
 export type GeographyPointCol = PointColumn<any>;

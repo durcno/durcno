@@ -1,7 +1,12 @@
 import { isCol } from "../entity";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { AnyColumn } from "../table";
-import { type AnyScalarSqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
+import {
+  type AnyScalarSqlFn,
+  type ExprColumns,
+  type HasArg,
+  SqlFn,
+} from "./index";
 
 /**
  * Any expression that can be passed to an aggregate function.

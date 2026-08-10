@@ -3,7 +3,7 @@ import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { AnyScalarColumn } from "../table";
 import type { Or } from "../types";
-import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from ".";
+import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from "./index";
 
 // ============================================================================
 // abs

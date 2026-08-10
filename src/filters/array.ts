@@ -12,7 +12,7 @@ import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { AnyColumn } from "../table";
-import { Filter } from ".";
+import { Filter } from "./index";
 
 /**
  * Helper type to extract the element type from an array type.
