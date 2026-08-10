@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { MIGRATION_NAME_REGEX } from "durcno/migration";
@@ -9,7 +8,7 @@ import {
   stopPostgresContainer,
   type TestContainerInfo,
 } from "../../../docker-utils";
-import { rmSync } from "../../../helpers";
+import { rmSync, runDurcno } from "../../../helpers";
 
 describe("durcno generate - table changes", () => {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
@@ -28,39 +27,36 @@ describe("durcno generate - table changes", () => {
       DATABASE_PORT: String(containerInfo.port),
     };
 
-    const genResult = spawnSync(
-      "durcno",
-      ["generate", "--config", configPath],
-      {
-        encoding: "utf8",
-        cwd: process.cwd(),
+    let genOutput = "";
+    try {
+      genOutput = runDurcno(
+        ["generate", "--config", configPath],
         env,
-      },
-    );
-    if (genResult.status !== 0) {
+        process.cwd(),
+      );
+    } catch (e: unknown) {
       return {
         success: false,
-        output: genResult.stdout + genResult.stderr,
+        output: e instanceof Error ? e.message : String(e),
       };
     }
 
-    const migrateResult = spawnSync(
-      "durcno",
-      ["migrate", "--config", configPath],
-      {
-        encoding: "utf8",
-        cwd: __dirname,
+    try {
+      const migrateOutput = runDurcno(
+        ["migrate", "--config", configPath],
         env,
-      },
-    );
-    return {
-      success: migrateResult.status === 0,
-      output:
-        genResult.stdout +
-        genResult.stderr +
-        migrateResult.stdout +
-        migrateResult.stderr,
-    };
+        __dirname,
+      );
+      return {
+        success: true,
+        output: genOutput + migrateOutput,
+      };
+    } catch (e: unknown) {
+      return {
+        success: false,
+        output: genOutput + (e instanceof Error ? e.message : String(e)),
+      };
+    }
   }
 
   function getMigrationFolders(): string[] {
@@ -257,16 +253,15 @@ describe("durcno generate - table changes", () => {
   });
 
   it("[stage 4] should detect no changes when schema is unchanged", () => {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: process.cwd(),
-      env: {
+    const output = runDurcno(
+      ["generate", "--config", configPath],
+      {
         ...process.env,
         STAGE: "4",
         DATABASE_PORT: String(containerInfo.port),
       },
-    });
-    const output = result.stdout + result.stderr;
+      process.cwd(),
+    );
     expect(output).toContain("No changes detected");
 
     // Should not create a new migration folder

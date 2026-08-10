@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { MIGRATION_NAME_REGEX } from "durcno/migration";
@@ -9,7 +8,7 @@ import {
   stopPostgresContainer,
   type TestContainerInfo,
 } from "../../../docker-utils";
-import { rmSync } from "../../../helpers";
+import { rmSync, runDurcno } from "../../../helpers";
 
 describe("durcno generate - enum changes", () => {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
@@ -28,39 +27,36 @@ describe("durcno generate - enum changes", () => {
       DATABASE_PORT: String(containerInfo.port),
     };
 
-    const genResult = spawnSync(
-      "durcno",
-      ["generate", "--config", configPath],
-      {
-        encoding: "utf8",
-        cwd: process.cwd(),
+    let genOutput = "";
+    try {
+      genOutput = runDurcno(
+        ["generate", "--config", configPath],
         env,
-      },
-    );
-    if (genResult.status !== 0) {
+        process.cwd(),
+      );
+    } catch (e: unknown) {
       return {
         success: false,
-        output: genResult.stdout + genResult.stderr,
+        output: e instanceof Error ? e.message : String(e),
       };
     }
 
-    const migrateResult = spawnSync(
-      "durcno",
-      ["migrate", "--config", configPath],
-      {
-        encoding: "utf8",
-        cwd: __dirname,
+    try {
+      const migrateOutput = runDurcno(
+        ["migrate", "--config", configPath],
         env,
-      },
-    );
-    return {
-      success: migrateResult.status === 0,
-      output:
-        genResult.stdout +
-        genResult.stderr +
-        migrateResult.stdout +
-        migrateResult.stderr,
-    };
+        __dirname,
+      );
+      return {
+        success: true,
+        output: genOutput + migrateOutput,
+      };
+    } catch (e: unknown) {
+      return {
+        success: false,
+        output: genOutput + (e instanceof Error ? e.message : String(e)),
+      };
+    }
   }
 
   function getMigrationFolders(): string[] {
@@ -164,16 +160,15 @@ describe("durcno generate - enum changes", () => {
   });
 
   it("[stage 4] should detect no changes when schema is unchanged", () => {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: process.cwd(),
-      env: {
+    const output = runDurcno(
+      ["generate", "--config", configPath],
+      {
         ...process.env,
         STAGE: "4",
         DATABASE_PORT: String(containerInfo.port),
       },
-    });
-    const output = result.stdout + result.stderr;
+      process.cwd(),
+    );
     expect(output).toContain("No changes detected");
 
     const folders = getMigrationFolders();
@@ -181,17 +176,20 @@ describe("durcno generate - enum changes", () => {
   });
 
   it("should fail when enum values are removed", () => {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        STAGE: "5",
-        DATABASE_PORT: String(containerInfo.port),
-      },
-    });
-    const output = result.stdout + result.stderr;
-    expect(result.status).not.toBe(0);
+    let output = "";
+    try {
+      output = runDurcno(
+        ["generate", "--config", configPath],
+        {
+          ...process.env,
+          STAGE: "5",
+          DATABASE_PORT: String(containerInfo.port),
+        },
+        process.cwd(),
+      );
+    } catch (e: unknown) {
+      output = e instanceof Error ? e.message : String(e);
+    }
     expect(output).toContain("removed values");
     expect(output).toContain("user");
 
@@ -199,17 +197,20 @@ describe("durcno generate - enum changes", () => {
   });
 
   it("should fail when enum values are reordered", () => {
-    const result = spawnSync("durcno", ["generate", "--config", configPath], {
-      encoding: "utf8",
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        STAGE: "6",
-        DATABASE_PORT: String(containerInfo.port),
-      },
-    });
-    const output = result.stdout + result.stderr;
-    expect(result.status).not.toBe(0);
+    let output = "";
+    try {
+      output = runDurcno(
+        ["generate", "--config", configPath],
+        {
+          ...process.env,
+          STAGE: "6",
+          DATABASE_PORT: String(containerInfo.port),
+        },
+        process.cwd(),
+      );
+    } catch (e: unknown) {
+      output = e instanceof Error ? e.message : String(e);
+    }
     expect(output).toContain("reordered values");
 
     expect(getMigrationFolders()).toHaveLength(4);

@@ -189,7 +189,7 @@ describe("durcno squash command", () => {
     // 6 folders on disk; only m1–m3 applied in DB
     expect(folders).toHaveLength(6);
     expect(await getAppliedNames()).toEqual([m1, m2, m3]);
-  });
+  }, 30000);
 
   // ── PHASE 2: Squash validation errors ──────────────────────────────────────
   // Pure validation: none of these tests modify the filesystem or DB.

@@ -1,5 +1,4 @@
 /** biome-ignore-all lint/suspicious/noUselessEscapeInString: <> */
-import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import pg from "pg";
@@ -9,6 +8,7 @@ import {
   stopPostgresContainer,
   type TestContainerInfo,
 } from "../../../docker-utils";
+import { runDurcno } from "../../../helpers";
 
 describe("durcno generate - initial migration", () => {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
@@ -20,9 +20,11 @@ describe("durcno generate - initial migration", () => {
       fs.rmSync(migrationsDir, { recursive: true, force: true });
     }
     // Run generate command
-    execSync(`durcno generate --config ${configPath}`, {
-      stdio: ["ignore", "ignore", "pipe"],
-    });
+    runDurcno(
+      ["generate", "--config", configPath],
+      process.env as Record<string, string>,
+      __dirname,
+    );
   }, 120000);
 
   afterAll(async () => {});
@@ -41,14 +43,14 @@ describe("durcno generate - initial migration", () => {
       await client.connect();
 
       // Run migrate command with DATABASE_PORT environment variable
-      execSync(`durcno migrate --config ${configPath}`, {
-        stdio: ["ignore", "ignore", "pipe"],
-        cwd: __dirname,
-        env: {
+      runDurcno(
+        ["migrate", "--config", configPath],
+        {
           ...process.env,
           DATABASE_PORT: String(containerInfo.port),
         },
-      });
+        __dirname,
+      );
     }, 120000);
 
     afterAll(async () => {

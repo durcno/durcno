@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
@@ -10,6 +9,7 @@ import {
   stopPostgresContainer,
   type TestContainerInfo,
 } from "../../docker-utils";
+import { runDurcno } from "../../helpers";
 
 describe("durcno down command", () => {
   const configPath = path.resolve(__dirname, "durcno.config.ts");
@@ -53,16 +53,16 @@ describe("durcno down command", () => {
     await client.connect();
 
     // Generate first migration (Users table only)
-    execSync(`durcno generate --config ${configPath}`, {
-      stdio: ["ignore", "ignore", "pipe"],
-      cwd: __dirname,
-      env: {
+    runDurcno(
+      ["generate", "--config", configPath],
+      {
         ...process.env,
         MIGRATION_VERSION: "1",
         DATABASE_PORT: databasePort,
         DB_NAME: databaseName,
       },
-    });
+      __dirname,
+    );
 
     // Get first migration folder name
     let folders = fs
@@ -72,16 +72,16 @@ describe("durcno down command", () => {
     firstMigrationName = folders[0];
 
     // Generate second migration (add Posts table and columns to Users)
-    execSync(`durcno generate --config ${configPath}`, {
-      stdio: ["ignore", "ignore", "pipe"],
-      cwd: __dirname,
-      env: {
+    runDurcno(
+      ["generate", "--config", configPath],
+      {
         ...process.env,
         MIGRATION_VERSION: "2",
         DATABASE_PORT: databasePort,
         DB_NAME: databaseName,
       },
-    });
+      __dirname,
+    );
 
     // Get second migration folder name
     folders = fs
@@ -91,15 +91,15 @@ describe("durcno down command", () => {
     secondMigrationName = folders[1];
 
     // Apply all migrations
-    execSync(`durcno migrate --config ${configPath}`, {
-      stdio: ["ignore", "ignore", "pipe"],
-      cwd: __dirname,
-      env: {
+    runDurcno(
+      ["migrate", "--config", configPath],
+      {
         ...process.env,
         DATABASE_PORT: databasePort,
         DB_NAME: databaseName,
       },
-    });
+      __dirname,
+    );
   }, 120000);
 
   afterAll(async () => {
@@ -148,15 +148,15 @@ describe("durcno down command", () => {
 
   it("should rollback second migration and remove Posts table", async () => {
     // Run down command to rollback to second migration (inclusive)
-    execSync(`durcno down ${secondMigrationName} --config ${configPath}`, {
-      stdio: ["ignore", "ignore", "pipe"],
-      cwd: __dirname,
-      env: {
+    runDurcno(
+      ["down", secondMigrationName, "--config", configPath],
+      {
         ...process.env,
         DATABASE_PORT: databasePort,
         DB_NAME: databaseName,
       },
-    });
+      __dirname,
+    );
 
     // Verify Posts table is dropped
     const tablesResult = await client.query(`
@@ -194,15 +194,15 @@ describe("durcno down command", () => {
 
   it("should rollback first migration and drop entire schema", async () => {
     // Run down command to rollback first migration (drops everything)
-    execSync(`durcno down ${firstMigrationName} --config ${configPath}`, {
-      stdio: ["ignore", "ignore", "pipe"],
-      cwd: __dirname,
-      env: {
+    runDurcno(
+      ["down", firstMigrationName, "--config", configPath],
+      {
         ...process.env,
         DATABASE_PORT: databasePort,
         DB_NAME: databaseName,
       },
-    });
+      __dirname,
+    );
 
     // Verify all tables are dropped (including users)
     const tablesResult = await client.query(`

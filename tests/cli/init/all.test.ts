@@ -1,7 +1,7 @@
-import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runDurcno } from "../../helpers";
 
 describe("durcno init", () => {
   const testDir = path.resolve(__dirname, "test-project");
@@ -17,13 +17,7 @@ describe("durcno init", () => {
     fs.mkdirSync(testDir, { recursive: true });
 
     // Run init command with CI mode (prompts will use defaults)
-    // We inject defaults via stdin with newlines to accept all prompts
-    execSync("durcno init", {
-      cwd: testDir,
-      stdio: ["pipe", "pipe", "pipe"],
-      input: "\n\n\n\n\n\n\n\n", // Accept all defaults (Enter key presses)
-      env: { ...process.env, CI: "true" },
-    });
+    runDurcno(["init"], { ...process.env, CI: "true" }, testDir);
   });
 
   afterAll(() => {
@@ -89,12 +83,7 @@ describe("durcno init --force", () => {
     fs.writeFileSync(configPath, "// existing config");
 
     // Run init with --force to overwrite
-    execSync("durcno init --force", {
-      cwd: testDir,
-      stdio: ["pipe", "pipe", "pipe"],
-      input: "\n\n\n\n\n\n\n\n",
-      env: { ...process.env, CI: "true" },
-    });
+    runDurcno(["init", "--force"], { ...process.env, CI: "true" }, testDir);
   });
 
   afterAll(() => {
