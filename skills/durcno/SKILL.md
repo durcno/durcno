@@ -9,7 +9,7 @@ A PostgreSQL query builder and migration manager for TypeScript.
 
 ## Documentation
 
-Full reference documentation is located in the `docs/` directory alongside this skill file (symlinked from `website/docs/`). Read the relevant doc files **before** writing or reviewing any Durcno code.
+Full reference documentation is symlinked in the `docs/` directory alongside this skill file. Read the relevant doc files **before** writing or reviewing any Durcno code. The `package.json` file is also symlinked alongside, so that the package metadata is available for inspection.
 
 | Path                      | Contents                                 |
 | ------------------------- | ---------------------------------------- |
