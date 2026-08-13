@@ -1,5 +1,6 @@
 import type { now, Sql, uuidv4, uuidv7 } from "durcno";
 import {
+  Arg,
   abs,
   ceil,
   count,
@@ -66,6 +67,20 @@ Expect<Equal<typeof lFn, LeftFn<typeof Users.username, false>>>();
 Expect<Equal<typeof rFn, RightFn<typeof Users.username, false>>>();
 Expect<Equal<typeof posFn, PositionFn<typeof Users.username, "@">>>();
 
+// Literal Strings
+const lenLitFn = length("HELLO");
+const lowLitFn = lower("HELLO");
+const posLitFn = position("HELLO", "E");
+
+Expect<Equal<typeof lenLitFn, LengthFn<"HELLO">>>();
+Expect<Equal<typeof lowLitFn, LowerFn<"HELLO">>>();
+Expect<Equal<typeof posLitFn, PositionFn<"HELLO", "E">>>();
+
+const strArg = new Arg<string>((val) => val);
+const lowArgFn = lower(strArg);
+
+Expect<Equal<typeof lowArgFn, LowerFn<Arg<string>>>>();
+
 // @ts-expect-error: length expects a string column
 length(Users.id);
 // @ts-expect-error: lower expects a string column
@@ -90,6 +105,19 @@ Expect<Equal<typeof fFn, FloorFn<typeof Users.id>>>();
 Expect<Equal<typeof tFn, TruncFn<typeof Users.id, undefined>>>();
 Expect<Equal<typeof tFn2, TruncFn<typeof Users.id, 2>>>();
 Expect<Equal<typeof pFn, PowerFn<typeof Users.id, 2>>>();
+
+// Literal Numbers
+const absLitFn = abs(-42);
+const rndLitFn = round(42.5);
+
+Expect<Equal<typeof absLitFn, AbsFn<-42>>>();
+Expect<Equal<typeof rndLitFn, RoundFn<42.5, undefined>>>();
+
+// Arg Numbers
+const numArg = Arg.number();
+const absArgFn = abs(numArg);
+
+Expect<Equal<typeof absArgFn, AbsFn<Arg<number>>>>();
 
 // Check PgType for real and doublePrecision columns ("float")
 Expect<Equal<(typeof Events.rating)["$"]["PgType"], "float">>();

@@ -5,17 +5,28 @@ import type { AnyScalarColumn } from "../table";
 import type { Or } from "../types";
 import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from "./index";
 
+export type TextExpr =
+  | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "text" } })
+  | string
+  | Arg<string>;
+
+function appendTextExpr(query: Query, expr: TextExpr, ctx?: QueryContext) {
+  if (typeof expr === "string") {
+    query.sql += `'${expr.replace(/'/g, "''")}'`;
+  } else if (is(expr, Arg<string>)) {
+    query.addArg(expr);
+  } else {
+    expr.toQuery(query, ctx);
+  }
+}
+
 // ============================================================================
 // length
 // ============================================================================
 
-export class LengthFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
-> extends SqlFn<
+export class LengthFn<TExpr extends TextExpr> extends SqlFn<
   ExprColumns<TExpr>,
-  HasArg<TExpr>,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
   number
@@ -36,17 +47,13 @@ export class LengthFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "length(";
-    this.expr.toQuery(query, ctx);
+    appendTextExpr(query, this.expr, ctx);
     query.sql += ")";
   }
 }
 
 /** Returns the number of characters in a string expression. */
-export function length<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr): LengthFn<TExpr> {
+export function length<TExpr extends TextExpr>(expr: TExpr): LengthFn<TExpr> {
   return new LengthFn(expr);
 }
 
@@ -54,11 +61,13 @@ export function length<
 // lower
 // ============================================================================
 
-export class LowerFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
-> extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
+export class LowerFn<TExpr extends TextExpr> extends SqlFn<
+  ExprColumns<TExpr>,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  "scalar",
+  "text",
+  string
+> {
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -75,17 +84,13 @@ export class LowerFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "lower(";
-    this.expr.toQuery(query, ctx);
+    appendTextExpr(query, this.expr, ctx);
     query.sql += ")";
   }
 }
 
 /** Converts a string expression to lower case. */
-export function lower<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr): LowerFn<TExpr> {
+export function lower<TExpr extends TextExpr>(expr: TExpr): LowerFn<TExpr> {
   return new LowerFn(expr);
 }
 
@@ -93,11 +98,13 @@ export function lower<
 // upper
 // ============================================================================
 
-export class UpperFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
-> extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
+export class UpperFn<TExpr extends TextExpr> extends SqlFn<
+  ExprColumns<TExpr>,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  "scalar",
+  "text",
+  string
+> {
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -114,17 +121,13 @@ export class UpperFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "upper(";
-    this.expr.toQuery(query, ctx);
+    appendTextExpr(query, this.expr, ctx);
     query.sql += ")";
   }
 }
 
 /** Converts a string expression to upper case. */
-export function upper<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr): UpperFn<TExpr> {
+export function upper<TExpr extends TextExpr>(expr: TExpr): UpperFn<TExpr> {
   return new UpperFn(expr);
 }
 
@@ -132,11 +135,13 @@ export function upper<
 // trim
 // ============================================================================
 
-export class TrimFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
-> extends SqlFn<ExprColumns<TExpr>, HasArg<TExpr>, "scalar", "text", string> {
+export class TrimFn<TExpr extends TextExpr> extends SqlFn<
+  ExprColumns<TExpr>,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  "scalar",
+  "text",
+  string
+> {
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -153,17 +158,13 @@ export class TrimFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "trim(";
-    this.expr.toQuery(query, ctx);
+    appendTextExpr(query, this.expr, ctx);
     query.sql += ")";
   }
 }
 
 /** Removes leading and trailing whitespace from a string expression. */
-export function trim<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr): TrimFn<TExpr> {
+export function trim<TExpr extends TextExpr>(expr: TExpr): TrimFn<TExpr> {
   return new TrimFn(expr);
 }
 
@@ -172,13 +173,14 @@ export function trim<
 // ============================================================================
 
 export class LeftFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
+  TExpr extends TextExpr,
   THasArg extends boolean = false,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<HasArg<TExpr>, THasArg>,
+  Or<
+    TExpr extends string | Arg<string> ? IsArg<TExpr> : HasArg<TExpr>,
+    THasArg
+  >,
   "scalar",
   "text",
   string
@@ -202,7 +204,7 @@ export class LeftFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "left(";
-    this.expr.toQuery(query, ctx);
+    appendTextExpr(query, this.expr, ctx);
     query.sql += ", ";
     if (is(this.n, Arg)) {
       query.addArg(this.n);
@@ -214,21 +216,18 @@ export class LeftFn<
 }
 
 /** Returns the first `n` characters of a string expression. */
-export function left<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr, n: number): LeftFn<TExpr, false>;
-export function left<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr, n: Arg<number>): LeftFn<TExpr, true>;
-export function left<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr, n: number | Arg<number>): LeftFn<TExpr, boolean> {
+export function left<TExpr extends TextExpr>(
+  expr: TExpr,
+  n: number,
+): LeftFn<TExpr, false>;
+export function left<TExpr extends TextExpr>(
+  expr: TExpr,
+  n: Arg<number>,
+): LeftFn<TExpr, true>;
+export function left<TExpr extends TextExpr>(
+  expr: TExpr,
+  n: number | Arg<number>,
+): LeftFn<TExpr, boolean> {
   return new LeftFn(expr, n);
 }
 
@@ -237,13 +236,14 @@ export function left<
 // ============================================================================
 
 export class RightFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
+  TExpr extends TextExpr,
   THasArg extends boolean = false,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<HasArg<TExpr>, THasArg>,
+  Or<
+    TExpr extends string | Arg<string> ? IsArg<TExpr> : HasArg<TExpr>,
+    THasArg
+  >,
   "scalar",
   "text",
   string
@@ -267,7 +267,7 @@ export class RightFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "right(";
-    this.expr.toQuery(query, ctx);
+    appendTextExpr(query, this.expr, ctx);
     query.sql += ", ";
     if (is(this.n, Arg)) {
       query.addArg(this.n);
@@ -279,21 +279,18 @@ export class RightFn<
 }
 
 /** Returns the last `n` characters of a string expression. */
-export function right<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr, n: number): RightFn<TExpr, false>;
-export function right<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr, n: Arg<number>): RightFn<TExpr, true>;
-export function right<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
->(expr: TExpr, n: number | Arg<number>): RightFn<TExpr, boolean> {
+export function right<TExpr extends TextExpr>(
+  expr: TExpr,
+  n: number,
+): RightFn<TExpr, false>;
+export function right<TExpr extends TextExpr>(
+  expr: TExpr,
+  n: Arg<number>,
+): RightFn<TExpr, true>;
+export function right<TExpr extends TextExpr>(
+  expr: TExpr,
+  n: number | Arg<number>,
+): RightFn<TExpr, boolean> {
   return new RightFn(expr, n);
 }
 
@@ -302,13 +299,14 @@ export function right<
 // ============================================================================
 
 export class PositionFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
+  TExpr extends TextExpr,
   TSearch extends string | Arg<string>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<HasArg<TExpr>, IsArg<TSearch>>,
+  Or<
+    TExpr extends string | Arg<string> ? IsArg<TExpr> : HasArg<TExpr>,
+    IsArg<TSearch>
+  >,
   "scalar",
   "numeric",
   number
@@ -332,7 +330,7 @@ export class PositionFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "strpos(";
-    this.expr.toQuery(query, ctx);
+    appendTextExpr(query, this.expr, ctx);
     query.sql += ", ";
     if (is(this.search, Arg<string>)) {
       query.addArg(this.search);
@@ -345,9 +343,7 @@ export class PositionFn<
 
 /** Returns the 1-based position of `search` within a string expression, or 0 if not found. */
 export function position<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "text" };
-  },
+  TExpr extends TextExpr,
   TSearch extends string | Arg<string>,
 >(expr: TExpr, search: TSearch): PositionFn<TExpr, TSearch> {
   return new PositionFn(expr, search);

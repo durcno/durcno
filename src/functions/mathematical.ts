@@ -5,17 +5,32 @@ import type { AnyScalarColumn } from "../table";
 import type { Or } from "../types";
 import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from "./index";
 
+export type NumericExpr =
+  | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "numeric" | "float" } })
+  | number
+  | Arg<number>;
+
+function appendNumericExpr(
+  query: Query,
+  expr: NumericExpr,
+  ctx?: QueryContext,
+) {
+  if (typeof expr === "number") {
+    query.sql += expr.toString();
+  } else if (is(expr, Arg<number>)) {
+    query.addArg(expr);
+  } else {
+    expr.toQuery(query, ctx);
+  }
+}
+
 // ============================================================================
 // abs
 // ============================================================================
 
-export class AbsFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
-> extends SqlFn<
+export class AbsFn<TExpr extends NumericExpr> extends SqlFn<
   ExprColumns<TExpr>,
-  HasArg<TExpr>,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
   number
@@ -36,17 +51,13 @@ export class AbsFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "abs(";
-    this.expr.toQuery(query, ctx);
+    appendNumericExpr(query, this.expr, ctx);
     query.sql += ")";
   }
 }
 
 /** Returns the absolute value of a numeric expression. */
-export function abs<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
->(expr: TExpr): AbsFn<TExpr> {
+export function abs<TExpr extends NumericExpr>(expr: TExpr): AbsFn<TExpr> {
   return new AbsFn(expr);
 }
 
@@ -55,13 +66,11 @@ export function abs<
 // ============================================================================
 
 export class ModFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
+  TExpr extends NumericExpr,
   TN extends number | Arg<number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<HasArg<TExpr>, IsArg<TN>>,
+  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TN>>,
   "scalar",
   "numeric",
   number
@@ -85,7 +94,7 @@ export class ModFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "mod(";
-    this.expr.toQuery(query, ctx);
+    appendNumericExpr(query, this.expr, ctx);
     query.sql += ", ";
     if (is(this.n, Arg<number>)) {
       query.addArg(this.n);
@@ -97,12 +106,10 @@ export class ModFn<
 }
 
 /** Returns the remainder of `expr` divided by `n`. */
-export function mod<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
-  TN extends number | Arg<number>,
->(expr: TExpr, n: TN): ModFn<TExpr, TN> {
+export function mod<TExpr extends NumericExpr, TN extends number | Arg<number>>(
+  expr: TExpr,
+  n: TN,
+): ModFn<TExpr, TN> {
   return new ModFn(expr, n);
 }
 
@@ -111,13 +118,11 @@ export function mod<
 // ============================================================================
 
 export class RoundFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
+  TExpr extends NumericExpr,
   TDecimals extends number | Arg<number> | undefined = undefined,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<HasArg<TExpr>, IsArg<TDecimals>>,
+  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TDecimals>>,
   "scalar",
   "numeric",
   number
@@ -141,7 +146,7 @@ export class RoundFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "round(";
-    this.expr.toQuery(query, ctx);
+    appendNumericExpr(query, this.expr, ctx);
     if (this.decimals !== undefined) {
       query.sql += ", ";
       if (is(this.decimals, Arg<number>)) {
@@ -156,9 +161,7 @@ export class RoundFn<
 
 /** Rounds a numeric expression to the nearest integer, or to `decimals` decimal places. */
 export function round<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
+  TExpr extends NumericExpr,
   TDecimals extends number | Arg<number> | undefined = undefined,
 >(expr: TExpr, decimals?: TDecimals): RoundFn<TExpr, TDecimals> {
   return new RoundFn(expr, decimals);
@@ -168,13 +171,9 @@ export function round<
 // ceil
 // ============================================================================
 
-export class CeilFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
-> extends SqlFn<
+export class CeilFn<TExpr extends NumericExpr> extends SqlFn<
   ExprColumns<TExpr>,
-  HasArg<TExpr>,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
   number
@@ -195,17 +194,13 @@ export class CeilFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "ceil(";
-    this.expr.toQuery(query, ctx);
+    appendNumericExpr(query, this.expr, ctx);
     query.sql += ")";
   }
 }
 
 /** Returns the smallest integer greater than or equal to the numeric expression. */
-export function ceil<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
->(expr: TExpr): CeilFn<TExpr> {
+export function ceil<TExpr extends NumericExpr>(expr: TExpr): CeilFn<TExpr> {
   return new CeilFn(expr);
 }
 
@@ -213,13 +208,9 @@ export function ceil<
 // floor
 // ============================================================================
 
-export class FloorFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
-> extends SqlFn<
+export class FloorFn<TExpr extends NumericExpr> extends SqlFn<
   ExprColumns<TExpr>,
-  HasArg<TExpr>,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
   number
@@ -240,17 +231,13 @@ export class FloorFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "floor(";
-    this.expr.toQuery(query, ctx);
+    appendNumericExpr(query, this.expr, ctx);
     query.sql += ")";
   }
 }
 
 /** Returns the largest integer less than or equal to the numeric expression. */
-export function floor<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
->(expr: TExpr): FloorFn<TExpr> {
+export function floor<TExpr extends NumericExpr>(expr: TExpr): FloorFn<TExpr> {
   return new FloorFn(expr);
 }
 
@@ -259,13 +246,11 @@ export function floor<
 // ============================================================================
 
 export class TruncFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
+  TExpr extends NumericExpr,
   TDecimals extends number | Arg<number> | undefined = undefined,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<HasArg<TExpr>, IsArg<TDecimals>>,
+  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TDecimals>>,
   "scalar",
   "numeric",
   number
@@ -289,7 +274,7 @@ export class TruncFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "trunc(";
-    this.expr.toQuery(query, ctx);
+    appendNumericExpr(query, this.expr, ctx);
     if (this.decimals !== undefined) {
       query.sql += ", ";
       if (is(this.decimals, Arg<number>)) {
@@ -304,9 +289,7 @@ export class TruncFn<
 
 /** Truncates a numeric expression to the nearest integer, or to `decimals` decimal places. */
 export function trunc<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
+  TExpr extends NumericExpr,
   TDecimals extends number | Arg<number> | undefined = undefined,
 >(expr: TExpr, decimals?: TDecimals): TruncFn<TExpr, TDecimals> {
   return new TruncFn(expr, decimals);
@@ -317,13 +300,11 @@ export function trunc<
 // ============================================================================
 
 export class PowerFn<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
+  TExpr extends NumericExpr,
   TN extends number | Arg<number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<HasArg<TExpr>, IsArg<TN>>,
+  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TN>>,
   "scalar",
   "numeric",
   number
@@ -347,7 +328,7 @@ export class PowerFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "power(";
-    this.expr.toQuery(query, ctx);
+    appendNumericExpr(query, this.expr, ctx);
     query.sql += ", ";
     if (is(this.exponent, Arg<number>)) {
       query.addArg(this.exponent);
@@ -360,9 +341,7 @@ export class PowerFn<
 
 /** Returns the numeric expression raised to the power of `exponent`. */
 export function power<
-  TExpr extends (AnyScalarColumn | AnySqlFn) & {
-    $: { PgType: "numeric" | "float" };
-  },
+  TExpr extends NumericExpr,
   TN extends number | Arg<number>,
 >(expr: TExpr, exponent: TN): PowerFn<TExpr, TN> {
   return new PowerFn(expr, exponent);
