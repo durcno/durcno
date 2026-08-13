@@ -135,6 +135,7 @@ export {
   many,
   one,
   relations,
+  type StdTableColumn,
   type Table,
   type TableColumn,
   type TableWithColumns,
