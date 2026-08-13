@@ -11,10 +11,12 @@ import {
   eq,
   gt,
   gte,
+  ilike,
   isIn,
   isNotNull,
   isNull,
   length,
+  like,
   lower,
   lt,
   lte,
@@ -668,12 +670,12 @@ describe("Filters", () => {
     });
   });
 
-  describe("startsWith / endsWith / contains", () => {
+  describe("like / ilike / startsWith / endsWith / contains", () => {
     it("should filter rows with string pattern filters", async () => {
       const uniqueVal = Date.now().toString();
       await db.insert(schema.Users).values(
         createTestUser({
-          username: `prefix_${uniqueVal}_suffix`,
+          username: `Prefix_${uniqueVal}_Suffix`,
           email: `filter${uniqueVal}@example.com`,
         }),
       );
@@ -681,13 +683,13 @@ describe("Filters", () => {
       const byStarts = await db
         .from(schema.Users)
         .select({ id: schema.Users.id })
-        .where(startsWith(schema.Users.username, `prefix_${uniqueVal}`));
+        .where(startsWith(schema.Users.username, `Prefix_${uniqueVal}`));
       expect(byStarts.length).toBe(1);
 
       const byEnds = await db
         .from(schema.Users)
         .select({ id: schema.Users.id })
-        .where(endsWith(schema.Users.username, `${uniqueVal}_suffix`));
+        .where(endsWith(schema.Users.username, `${uniqueVal}_Suffix`));
       expect(byEnds.length).toBe(1);
 
       const byContains = await db
@@ -695,6 +697,24 @@ describe("Filters", () => {
         .select({ id: schema.Users.id })
         .where(contains(schema.Users.username, uniqueVal));
       expect(byContains.length).toBe(1);
+
+      const byLike = await db
+        .from(schema.Users)
+        .select({ id: schema.Users.id })
+        .where(like(schema.Users.username, `Prefix_${uniqueVal}%`));
+      expect(byLike.length).toBe(1);
+
+      const byILike = await db
+        .from(schema.Users)
+        .select({ id: schema.Users.id })
+        .where(ilike(schema.Users.username, `prefix_${uniqueVal}%`));
+      expect(byILike.length).toBe(1);
+
+      const byLikeCaseMismatch = await db
+        .from(schema.Users)
+        .select({ id: schema.Users.id })
+        .where(like(schema.Users.username, `prefix_${uniqueVal}%`));
+      expect(byLikeCaseMismatch.length).toBe(0);
     });
   });
 

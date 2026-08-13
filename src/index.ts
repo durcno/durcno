@@ -74,7 +74,7 @@ export {
   stIntersects,
   stWithin,
 } from "./filters/postgis";
-export { contains, endsWith, like, startsWith } from "./filters/string";
+export { contains, endsWith, ilike, like, startsWith } from "./filters/string";
 export { now, SqlFn, uuidv4, uuidv7 } from "./functions";
 export {
   avg,

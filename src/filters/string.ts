@@ -143,3 +143,36 @@ export function like<
 >(col: TCol, pattern: TPattern): LikeCondition<TCol, TPattern> {
   return new LikeCondition(col, pattern);
 }
+
+// ============================================================================
+// ilike
+// ============================================================================
+
+export class ILikeCondition<
+  TCol extends TextScalarTableColumn,
+  TPattern extends string | Arg<string>,
+> extends Filter<TCol, IsArg<TPattern>> {
+  constructor(
+    private readonly col: TCol,
+    private readonly pattern: TPattern,
+  ) {
+    super();
+  }
+
+  toQuery(query: Query, ctx?: QueryContext): void {
+    this.col.toQuery(query, ctx);
+    query.sql += " ILIKE ";
+    if (is(this.pattern, Arg<string>)) {
+      query.addArg(this.pattern);
+    } else {
+      query.sql += `'${this.pattern.replace(/'/g, "''")}'`;
+    }
+  }
+}
+
+export function ilike<
+  TCol extends TextScalarTableColumn,
+  TPattern extends string | Arg<string>,
+>(col: TCol, pattern: TPattern): ILikeCondition<TCol, TPattern> {
+  return new ILikeCondition(col, pattern);
+}

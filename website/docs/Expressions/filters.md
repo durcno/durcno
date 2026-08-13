@@ -24,6 +24,7 @@ Durcno provides a set of type-safe filter operators for building WHERE and CHECK
 | `endsWith(col, val)`          | Ends with (case-sensitive)                     | `endsWith(Users.email, "@test.com")`         |
 | `contains(col, val)`          | Contains (case-sensitive)                      | `contains(Users.bio, "typescript")`          |
 | `like(col, pattern)`          | Case-sensitive LIKE pattern                    | `like(Users.code, "US%")`                    |
+| `ilike(col, pattern)`         | Case-insensitive ILIKE pattern                 | `ilike(Users.code, "us%")`                   |
 | `and(...conditions)`          | AND logic; ignores `null`, `undefined` entries | `and(eq(...), gte(...))`                     |
 | `or(...conditions)`           | OR logic; ignores `null`, `undefined` entries  | `or(eq(...), eq(...))`                       |
 | `arrayContains(col, values)`  | Array contains all values (`@>`)               | `arrayContains(Posts.tags, ["ts", "pg"])`    |
@@ -215,8 +216,19 @@ await db.from(Countries).select().where(like(Countries.code, "US%"));
 await db.from(Products).select().where(like(Products.sku, "_____"));
 ```
 
+### ILIKE (`ilike`)
+
+Case-insensitive pattern matching using PostgreSQL's `ILIKE` operator:
+
+```typescript
+import { ilike } from "durcno";
+
+// Match email pattern case-insensitively
+await db.from(Users).select().where(ilike(Users.email, "%@EXAMPLE.COM"));
+```
+
 :::tip Case sensitivity
-All string filter functions — `like`, `startsWith`, `endsWith`, and `contains` — are case-sensitive. For case-insensitive matching, use the `ILIKE` operator via a raw `sql` template: `.where(sql`${Users.email} ILIKE ${'%@example.com'}`)`.
+`like`, `startsWith`, `endsWith`, and `contains` are case-sensitive matching functions. For case-insensitive pattern matching, use `ilike`.
 :::
 
 ## Logical Operators

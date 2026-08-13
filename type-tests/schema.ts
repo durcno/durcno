@@ -11,6 +11,7 @@ import {
   fk,
   gt,
   gte,
+  ilike,
   inet,
   integer,
   json,
@@ -209,6 +210,9 @@ export const CheckTest = table(
 
       // Email format with like()
       check("valid_email", like(t.email, "%@%.%")),
+
+      // Email format with ilike()
+      check("valid_email_ci", ilike(t.email, "%@%.%")),
 
       // Length constraints using functions
       check(
