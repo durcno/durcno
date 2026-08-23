@@ -640,13 +640,13 @@ function generateAlterTableStmts(
     if (!prevCol && !renamedToCols.has(colName)) {
       // Truly new column
       alterStatements.push(
-        `.addColumn("${colName}", "${currCol.type}", ${genDdlColumnOptions(currCol)})`,
+        `.addColumn("${colName}", \`${currCol.type}\`, ${genDdlColumnOptions(currCol)})`,
       );
     } else if (prevCol) {
       // Existing or renamed column: check for type/constraint changes
       if (currCol.type !== prevCol.type) {
         alterStatements.push(
-          `.alterColumnType("${colName}", "${currCol.type}")`,
+          `.alterColumnType("${colName}", \`${currCol.type}\`)`,
         );
       }
       if (currCol.unique !== prevCol.unique) {
