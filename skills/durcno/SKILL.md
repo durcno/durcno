@@ -20,13 +20,13 @@ Full reference documentation is symlinked in the `docs/` directory alongside thi
 | `docs/cli.md`             | CLI commands reference                   |
 | `docs/Schema/`            | Table, column, enum, index definitions   |
 | `docs/CRUD/`              | Select, insert, update, delete queries   |
-| `docs/Expressions/`       | Filters, operators, and expressions      |
+| `docs/Expressions/`       | Functions and filters                    |
 | `docs/Migrations/`        | Migration generation, applying, rollback |
 | `docs/Validation/`        | Runtime validators                       |
 | `docs/Guides/`            | How-to guides and recipes                |
-| `docs/Advanced/`          | Advanced patterns and internals          |
-| `docs/Conventions/`       | Naming and structural conventions        |
-| `docs/Extensions/`        | PostGIS and other extensions             |
+| `docs/Advanced/`          | Query logging, etc                       |
+| `docs/Conventions/`       | Naming and casing conventions            |
+| `docs/Extensions/`        | PostGIS and pgvector extensions          |
 
 ## Configuration
 
@@ -94,12 +94,13 @@ await db.delete(Users).where(eq(Users.id, 1));
 Generate Zod schemas from table definitions for runtime data validation:
 
 ```typescript
-import { createInsertSchema } from "durcno/validators/zod";
+import { createInsertSchema, createUpdateSchema } from "durcno/validators/zod";
 import { Users } from "./schema.ts";
 
 const insertUserSchema = createInsertSchema(Users, {
   email: (f) => f.email(),
 });
+const updateUserSchema = createUpdateSchema(Users);
 
 // Validate input before database operations
 const result = insertUserSchema.safeParse({
