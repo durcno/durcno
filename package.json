@@ -50,7 +50,8 @@
   },
   "scripts": {
     "format": "biome format --write && oxfmt '**/*.{md,yml,yaml,css}'",
-    "format:check": "biome format && oxfmt '**/*.{md,yml,yaml,css}' --check",
+    "format-dry": "biome format && oxfmt '**/*.{md,yml,yaml,css}' --check",
+    "check": "biome check --write",
     "lint": "biome lint",
     "tsclint": "tsc --noEmit",
     "tsclint-cli": "tsc --noEmit -p src/cli",
