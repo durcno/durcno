@@ -693,21 +693,6 @@ function generateAlterTableStmts(
     }
   }
 
-  // New indexes
-  for (const idxName in currTable.indexes) {
-    if (!prevTable.indexes[idxName]) {
-      const idx = currTable.indexes[idxName];
-      const cols = idx.columns
-        .map((c) =>
-          c.opclass ? `["${c.name}", "${c.opclass}"]` : `"${c.name}"`,
-        )
-        .join(", ");
-      let indexStmt = `ddl.createIndex("${idx.name}").on("${currTable.schema}", "${currTable.name}", [${cols}]).using("${idx.type}")`;
-      if (idx.unique) indexStmt += ".unique()";
-      statements.push(indexStmt);
-    }
-  }
-
   // Drop removed/changed check constraints
   for (const chkName in prevTable.checkConstraints) {
     const prevChk = prevTable.checkConstraints[chkName];
@@ -788,10 +773,32 @@ function generateAlterTableStmts(
     }
   }
 
+  // Drop removed indexes (must happen before columns are dropped)
+  for (const idxName in prevTable.indexes) {
+    if (!currTable.indexes[idxName]) {
+      statements.push(`ddl.dropIndex("${idxName}")`);
+    }
+  }
+
   if (alterStatements.length > 0) {
     statements.push(
       `ddl.alterTable("${currTable.schema}", "${currTable.name}")\n${alterStatements.join("\n")}`,
     );
+  }
+
+  // Create new indexes (must happen after columns are added)
+  for (const idxName in currTable.indexes) {
+    if (!prevTable.indexes[idxName]) {
+      const idx = currTable.indexes[idxName];
+      const cols = idx.columns
+        .map((c) =>
+          c.opclass ? `["${c.name}", "${c.opclass}"]` : `"${c.name}"`,
+        )
+        .join(", ");
+      let indexStmt = `ddl.createIndex("${idx.name}").on("${currTable.schema}", "${currTable.name}", [${cols}]).using("${idx.type}")`;
+      if (idx.unique) indexStmt += ".unique()";
+      statements.push(indexStmt);
+    }
   }
 }
 
