@@ -30,8 +30,18 @@ export default defineConfig({
       const src = join(configDir, "website/docs");
       const dest = join(configDir, "website/versioned_docs/version-latest");
 
+      const filesBefore = await glob("**/*", {
+        cwd: dest,
+        nodir: true,
+        absolute: true,
+      });
       await rm(dest, { recursive: true, force: true });
       await cp(src, dest, { recursive: true, force: true });
+      const filesAfter = await glob("**/*", {
+        cwd: dest,
+        nodir: true,
+        absolute: true,
+      });
 
       const versionsInfoPath = join(configDir, "website/versionsInfo.json");
       const versionsInfo = JSON.parse(
@@ -40,12 +50,14 @@ export default defineConfig({
       versionsInfo.latest.label = `Latest - ${versionBump.newVersion}`;
       await writeFile(versionsInfoPath, JSON.stringify(versionsInfo, null, 2));
 
-      const files = await glob("**/*", {
-        cwd: dest,
-        nodir: true,
-        absolute: true,
+      const files = new Set([versionsInfoPath]);
+      filesBefore.forEach((file) => {
+        files.add(file);
       });
-      return [...files, versionsInfoPath] as unknown as DirtyFileAbsPath[];
+      filesAfter.forEach((file) => {
+        files.add(file);
+      });
+      return files.values() as unknown as DirtyFileAbsPath[];
     },
   ],
   formatters: [
