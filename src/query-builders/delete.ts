@@ -3,10 +3,10 @@ import type { AnyCteWithColumns } from "../cte";
 import type { FilterExpression } from "../filters/index";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key, Valueof } from "../types";
-import type { ReturningColumns } from "../virtual-table";
 import {
   buildReturningClause,
   buildWithClause,
+  type ReturningColumns,
   resolveReturningColumns,
 } from "./helpers";
 import { type AnyQuery, Query } from "./query";

@@ -11,11 +11,10 @@ import {
   type TableWithColumns,
 } from "../table";
 import type { Key, Valueof } from "../types";
-import type { ReturningColumns } from "../virtual-table";
-
 import {
   buildReturningClause,
   buildWithClause,
+  type ReturningColumns,
   resolveReturningColumns,
 } from "./helpers";
 import { Arg } from "./prepare";

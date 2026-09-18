@@ -56,29 +56,6 @@ type MapSourcesToColumns<
       : never;
 };
 
-export type ReturningColumns<
-  TColumns extends Record<string, AnyColumn>,
-  TReturning,
-> = TReturning extends "*"
-  ? TColumns
-  : TReturning extends Record<Key, boolean>
-    ? true extends TReturning[keyof TReturning]
-      ? {
-          [K in keyof TColumns as K extends keyof TReturning
-            ? TReturning[K] extends true
-              ? K
-              : never
-            : never]: TColumns[K];
-        }
-      : {
-          [K in keyof TColumns as K extends keyof TReturning
-            ? TReturning[K] extends false
-              ? never
-              : K
-            : K]: TColumns[K];
-        }
-    : Record<never, never>;
-
 export type InferQueryColumns<
   TVirtualName extends string,
   TQuery,

@@ -5,10 +5,10 @@ import type { FilterExpression } from "../filters/index";
 import { Sql } from "../sql";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key } from "../types";
-import type { ReturningColumns } from "../virtual-table";
 import {
   buildReturningClause,
   buildWithClause,
+  type ReturningColumns,
   resolveReturningColumns,
 } from "./helpers";
 import { Arg } from "./prepare";

@@ -1,6 +1,6 @@
 import type { AnyCteWithColumns } from "../cte";
 import type { AnyColumn } from "../table";
-import type { ReturningColumns } from "../virtual-table";
+import type { Key } from "../types";
 import type { AnyQuery } from "./query";
 
 /**
@@ -18,6 +18,32 @@ export function buildWithClause(
     query.sql += i < ctes.length - 1 ? "), " : ") ";
   });
 }
+
+/**
+ * Resolves the resulting column map type for a `RETURNING` clause.
+ */
+export type ReturningColumns<
+  TColumns extends Record<string, AnyColumn>,
+  TReturning,
+> = TReturning extends "*"
+  ? TColumns
+  : TReturning extends Record<Key, boolean>
+    ? true extends TReturning[keyof TReturning]
+      ? {
+          [K in keyof TColumns as K extends keyof TReturning
+            ? TReturning[K] extends true
+              ? K
+              : never
+            : never]: TColumns[K];
+        }
+      : {
+          [K in keyof TColumns as K extends keyof TReturning
+            ? TReturning[K] extends false
+              ? never
+              : K
+            : K]: TColumns[K];
+        }
+    : Record<never, never>;
 
 /**
  * Resolves the output columns for a RETURNING clause.
