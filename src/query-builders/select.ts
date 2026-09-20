@@ -1,3 +1,4 @@
+import type { Column, SetValueType } from "../columns/common";
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
@@ -13,9 +14,11 @@ import type {
   AnyColumn,
   AnyTableWithColumns,
   StdTableColumn,
+  StdTableWithColumns,
   TableAnyColumn,
   TableColumn,
   TableWithColumns,
+  UnwrapTableColumn,
 } from "../table";
 import type {
   Prettify,
@@ -26,19 +29,151 @@ import type {
 import type { AnySelectableSource } from "../virtual-table";
 import {
   type AnyGroupByExpression,
-  createGroupBySelectView,
-  type GroupByAlias,
   type GroupByExpression,
-  type GroupBySelectView,
-  isGroupByAlias,
   isScalarSqlFn,
   type StdGroupByExpression,
 } from "./groupby-clause";
-import { buildWithClause } from "./helpers";
+import { buildWithClause, type SelectAliasesView } from "./helpers";
 import type { OrderExpression } from "./orderby-clause";
 import { type AnyArg, Arg } from "./prepare";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
+
+// ============================================================================
+// View types — shared by all callback-based chain methods
+// ============================================================================
+
+/** Maps a table's columns to `TableColumn` with schema/table metadata. */
+type ViewColumns<
+  TSchema extends string,
+  TName extends string,
+  TColumns extends Record<string, AnyColumn>,
+> = {
+  [K in keyof TColumns]: TableColumn<TSchema, TName, K, TColumns[K]>;
+};
+
+type NullableColumnConfig<TConfig> = {
+  [C in keyof TConfig as C extends "notNull" | "primaryKey"
+    ? never
+    : C]: TConfig[C];
+};
+
+type NullableColumn<TCol extends AnyColumn> =
+  UnwrapTableColumn<TCol> extends infer UCol extends AnyColumn
+    ? UCol extends {
+        $: {
+          HasValTypeOverridde: true;
+          ValTypeOverride: infer TOverride;
+        };
+      }
+      ? SetValueType<
+          Column<
+            NullableColumnConfig<UCol["config"]>,
+            UCol["$"]["TsType"],
+            UCol["$"]["PgType"]
+          >,
+          TOverride
+        >
+      : Column<
+          NullableColumnConfig<UCol["config"]>,
+          UCol["$"]["TsType"],
+          UCol["$"]["PgType"]
+        >
+    : never;
+
+/** Same as `ViewColumns` but every column is nullable (notNull/primaryKey stripped). */
+type NullableViewColumns<
+  TSchema extends string,
+  TName extends string,
+  TColumns extends Record<string, AnyColumn>,
+> = {
+  [K in keyof TColumns]: TableColumn<
+    TSchema,
+    TName,
+    K,
+    NullableColumn<TColumns[K]>
+  >;
+};
+
+/** Maps a single join entry to `{ tableName: columns }`. Left joins get nullable columns. */
+type JoinView<TJoin> = TJoin extends {
+  type: "left";
+  table: {
+    _: {
+      schema: infer S extends string;
+      name: infer N extends string;
+    };
+    $: {
+      columns: infer C extends Record<string, AnyColumn>;
+    };
+  };
+}
+  ? Record<N, NullableViewColumns<S, N, C>>
+  : TJoin extends {
+        table: {
+          _: {
+            schema: infer S extends string;
+            name: infer N extends string;
+          };
+          $: {
+            columns: infer C extends Record<string, AnyColumn>;
+          };
+        };
+      }
+    ? Record<N, ViewColumns<S, N, C>>
+    : never;
+
+/** Full per-table view: base table + all joins, keyed by table name. */
+type ColumnsView<
+  TTSchema extends string,
+  TTName extends string,
+  TColumns extends Record<string, AnyColumn>,
+  TJoins,
+> = Record<TTName, ViewColumns<TTSchema, TTName, TColumns>> &
+  (TJoins extends readonly (infer TJoin)[]
+    ? UnionToIntersection<JoinView<TJoin>>
+    : Record<never, never>);
+
+/** Union of all `TableColumn` values across the view (for type constraints). */
+type AllViewColumns<
+  TTSchema extends string,
+  TTName extends string,
+  TColumns extends Record<string, AnyColumn>,
+  TJoins,
+> = Valueof<ViewColumns<TTSchema, TTName, TColumns>> | JoinsViewColumns<TJoins>;
+
+type JoinsViewColumns<TJoins> = TJoins extends readonly (infer TJoin)[]
+  ? TJoin extends {
+      type: "left";
+      table: {
+        _: {
+          schema: infer S extends string;
+          name: infer N extends string;
+        };
+        $: {
+          columns: infer C extends Record<string, AnyColumn>;
+        };
+      };
+    }
+    ? Valueof<NullableViewColumns<S, N, C>>
+    : TJoin extends {
+          table: {
+            _: {
+              schema: infer S extends string;
+              name: infer N extends string;
+            };
+            $: {
+              columns: infer C extends Record<string, AnyColumn>;
+            };
+          };
+        }
+      ? Valueof<ViewColumns<S, N, C>>
+      : never
+  : never;
+
+// ============================================================================
+// Type helpers (used in select-all / TReturn)
+// ============================================================================
 
 type MergeJoinedColumns<
   TColumns extends Record<string, AnyColumn>,
@@ -49,7 +184,7 @@ type MergeJoinedColumns<
       ? UnionToIntersection<
           TJoin extends {
             table: {
-              _: {
+              $: {
                 columns: infer TJoinColumns extends Record<string, AnyColumn>;
               };
             };
@@ -60,38 +195,11 @@ type MergeJoinedColumns<
       : Record<never, never>)
 >;
 
-type JoinSourceMeta<TCol> = TCol extends {
-  $: { schema: infer S; table: infer T };
-}
-  ? { schema: S; table: T }
-  : TCol extends { $Columns: { $: { schema: infer S; table: infer T } } }
-    ? { schema: S; table: T }
-    : never;
-
-type IsLeftJoin<TCol, TJoins> = TJoins extends readonly (infer TJoin)[]
-  ? [JoinSourceMeta<TCol>] extends [never]
-    ? false
-    : Extract<
-          TJoin,
-          {
-            type: "left";
-            table: {
-              _: {
-                schema: JoinSourceMeta<TCol>["schema"];
-                name: JoinSourceMeta<TCol>["table"];
-              };
-            };
-          }
-        > extends never
-      ? false
-      : true
-  : false;
-
 /** Shared shape for a single entry in the joins tuple. */
 type JoinEntry = {
   type: "inner" | "left";
   table: AnyTableWithColumns;
-  on: FilterExpression<Valueof<AnyTableWithColumns["_"]["columns"]>>;
+  on: StdCondition;
 };
 
 type TableColumns<
@@ -102,19 +210,46 @@ type TableColumns<
   [K in keyof TTColumns]: TableColumn<TTSchema, TTName, K, TTColumns[K]>;
 }[keyof TTColumns];
 
-type JoinsColumns<TJoins> = TJoins extends readonly (infer TJoin)[]
-  ? TJoin extends {
-      table: {
-        _: {
-          schema: infer S extends string;
-          name: infer N extends string;
-          columns: infer C extends Record<string, AnyColumn>;
-        };
-      };
+// ============================================================================
+// Runtime helper — builds the namespaced view object
+// ============================================================================
+
+/** Builds the per-table columns view at runtime. Left join columns are cloned nullable. */
+function buildColumnsView(
+  table: StdTableWithColumns,
+  joins: JoinEntry[] | null,
+): Record<string, Record<string, StdTableColumn>> {
+  const view: Record<string, Record<string, StdTableColumn>> = {};
+  view[table._.name] = table._.columns;
+  joins?.forEach((j) => {
+    if (j.type === "left") {
+      const cols: Record<string, StdTableColumn> = {};
+      for (const key in j.table._.columns) {
+        cols[key] = j.table._.columns[key].cloneAsNullable() as StdTableColumn;
+      }
+      view[j.table._.name] = cols;
+    } else {
+      view[j.table._.name] = j.table._.columns;
     }
-    ? TableColumns<S, N, C>
-    : never
-  : never;
+  });
+  return view;
+}
+
+// ============================================================================
+// SelectBuilder
+// ============================================================================
+
+/** Partial view available during join — base table + already-joined tables. */
+type JoinOnView<
+  TTSchema extends string,
+  TTName extends string,
+  TColumns extends Record<string, AnyColumn>,
+  TJoins,
+  TJoinSchema extends string,
+  TJoinName extends string,
+  TJoinColumns extends Record<string, AnyColumn>,
+> = ColumnsView<TTSchema, TTName, TColumns, TJoins> &
+  Record<TJoinName, ViewColumns<TJoinSchema, TJoinName, TJoinColumns>>;
 
 export class SelectBuilder<
   TTSchema extends string,
@@ -129,6 +264,7 @@ export class SelectBuilder<
   readonly #$joins: TJoins;
   readonly #$distinctOn: StdTableColumn[] | undefined;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
+  #cachedView: Record<string, Record<string, StdTableColumn>> | null = null;
 
   constructor(
     table: TableWithColumns<TTSchema, TTName, TColumns>,
@@ -146,18 +282,37 @@ export class SelectBuilder<
     this.#$ctes = ctes;
   }
 
+  /** Returns the memoized columns view for this builder instance. */
+  #getView(): Record<string, Record<string, StdTableColumn>> {
+    if (!this.#cachedView) {
+      this.#cachedView = buildColumnsView(
+        this.#table as unknown as StdTableWithColumns,
+        this.#$joins,
+      );
+    }
+    return this.#cachedView;
+  }
+
   innerJoin<
     TJoinTSchema extends string,
     TJoinTName extends string,
     TJoinColumns extends Record<string, AnyColumn>,
-    TOn extends FilterExpression<
-      | TableColumns<TTSchema, TTName, TColumns>
-      | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>
-      | JoinsColumns<TJoins>
-    >,
   >(
     table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
-    on: TOn,
+    on: (
+      view: JoinOnView<
+        TTSchema,
+        TTName,
+        TColumns,
+        TJoins,
+        TJoinTSchema,
+        TJoinTName,
+        TJoinColumns
+      >,
+    ) => FilterExpression<
+      | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
+      | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+    >,
   ): SelectBuilder<
     TTSchema,
     TTName,
@@ -180,11 +335,18 @@ export class SelectBuilder<
           },
         ]
   > {
+    const view = { ...this.#getView() };
+    // Add the joining table to the view
+    view[table._.name] = table._.columns as never;
+    const onResult = on(view as never);
     return new SelectBuilder(
       this.#table,
       this.#$joins
-        ? [...this.#$joins, { type: "inner" as const, table, on }]
-        : ([{ type: "inner" as const, table, on }] as any),
+        ? ([
+            ...this.#$joins,
+            { type: "inner" as const, table, on: onResult },
+          ] as never)
+        : ([{ type: "inner" as const, table, on: onResult }] as never),
       undefined,
       this.#executor,
       this.#prepare,
@@ -196,14 +358,22 @@ export class SelectBuilder<
     TJoinTSchema extends string,
     TJoinTName extends string,
     TJoinColumns extends Record<string, AnyColumn>,
-    TOn extends FilterExpression<
-      | TableColumns<TTSchema, TTName, TColumns>
-      | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>
-      | JoinsColumns<TJoins>
-    >,
   >(
     table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
-    on: TOn,
+    on: (
+      view: JoinOnView<
+        TTSchema,
+        TTName,
+        TColumns,
+        TJoins,
+        TJoinTSchema,
+        TJoinTName,
+        TJoinColumns
+      >,
+    ) => FilterExpression<
+      | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
+      | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+    >,
   ): SelectBuilder<
     TTSchema,
     TTName,
@@ -226,11 +396,18 @@ export class SelectBuilder<
           },
         ]
   > {
+    const view = { ...this.#getView() };
+    // Add the joining table to the view (not nullable for `on` — using original columns)
+    view[table._.name] = table._.columns as never;
+    const onResult = on(view as never);
     return new SelectBuilder(
       this.#table,
       this.#$joins
-        ? [...this.#$joins, { type: "left" as const, table, on }]
-        : ([{ type: "left" as const, table, on }] as any),
+        ? ([
+            ...this.#$joins,
+            { type: "left" as const, table, on: onResult },
+          ] as never)
+        : ([{ type: "left" as const, table, on: onResult }] as never),
       undefined,
       this.#executor,
       this.#prepare,
@@ -239,13 +416,14 @@ export class SelectBuilder<
   }
 
   distinctOn(
-    columns: SelfOrArray<
-      TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>
-    >,
+    callback: (
+      view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
+    ) => SelfOrArray<AllViewColumns<TTSchema, TTName, TColumns, TJoins>>,
   ): Omit<
     SelectBuilder<TTSchema, TTName, TColumns, TPrepare, TJoins>,
     "distinctOn" | "innerJoin" | "leftJoin"
   > {
+    const columns = callback(this.#getView() as never);
     return new SelectBuilder(
       this.#table,
       this.#$joins,
@@ -269,15 +447,16 @@ export class SelectBuilder<
   select<
     TSelects extends Record<
       string,
-      | TableColumns<TTSchema, TTName, TColumns>
-      | JoinsColumns<TJoins>
+      | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
       | SqlFn<
-          TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
+          AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
           TPrepare extends true ? boolean : false
         >
     >,
   >(
-    selects: TSelects,
+    callback: (
+      view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
+    ) => TSelects,
   ): SelectQuery<
     TTSchema,
     TTName,
@@ -292,19 +471,23 @@ export class SelectBuilder<
     TSelects extends
       | Record<
           string,
-          | TableColumns<TTSchema, TTName, TColumns>
-          | JoinsColumns<TJoins>
+          | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
           | SqlFn<
-              TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
+              AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
               TPrepare extends true ? boolean : false
             >
         >
       | undefined,
-  >(selects?: TSelects) {
+  >(
+    callback?: (
+      view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
+    ) => TSelects,
+  ) {
+    const selects = callback ? callback(this.#getView() as never) : undefined;
     return new SelectQuery(
       this.#table,
       this.#$joins,
-      selects,
+      selects as never,
       this.#$distinctOn,
       undefined,
       undefined,
@@ -319,9 +502,13 @@ export class SelectBuilder<
   }
 }
 
+// ============================================================================
+// SelectQuery
+// ============================================================================
+
 /** Makes all values of a select-inference record nullable. */
-type Nullable<T> = {
-  [K in keyof T]: T[K] | null;
+type Nullable<S> = {
+  [K in keyof S]: S[K] | null;
 };
 
 /** Infers the select type for a single join entry, making columns nullable for left joins. */
@@ -343,30 +530,29 @@ export class SelectQuery<
   TSelects extends
     | Record<
         string,
-        | TableColumns<TTSchema, TTName, TColumns>
-        | JoinsColumns<TJoins>
+        | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
         | SqlFn<
-            TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
+            AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
             TPrepare extends true ? boolean : false
           >
       >
     | undefined,
   TWhere extends
     | FilterExpression<
-        TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
+        AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
         TPrepare
       >
     | undefined,
   TOrderBy extends
     | OrderExpression<
-        TableWithColumns<TTSchema, TTName, TColumns>,
-        TSelects,
-        TPrepare
+        AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
+        TPrepare,
+        TSelects
       >
     | OrderExpression<
-        TableWithColumns<TTSchema, TTName, TColumns>,
-        TSelects,
-        TPrepare
+        AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
+        TPrepare,
+        TSelects
       >[]
     | undefined,
   TGroupBy extends
@@ -374,20 +560,16 @@ export class SelectQuery<
     | undefined = undefined,
   THaving extends
     | HavingExpression<
-        TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
+        AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
         TPrepare
       >
     | undefined = undefined,
   TReturn = (TSelects extends Record<string, unknown>
     ? {
         [TCol in keyof TSelects]: TSelects[TCol] extends TableAnyColumn
-          ? IsLeftJoin<TSelects[TCol], TJoins> extends true
-            ? TSelects[TCol]["ValTypeSelect"] | null
-            : TSelects[TCol]["ValTypeSelect"]
+          ? TSelects[TCol]["ValTypeSelect"]
           : TSelects[TCol] extends AnySqlFn
-            ? IsLeftJoin<TSelects[TCol], TJoins> extends true
-              ? TSelects[TCol]["$"]["TsType"] | null
-              : TSelects[TCol]["$"]["TsType"]
+            ? TSelects[TCol]["$"]["TsType"]
             : never;
       }
     : Prettify<
@@ -410,6 +592,8 @@ export class SelectQuery<
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
+  #cachedView: Record<string, Record<string, StdTableColumn>> | null = null;
+  #cachedSelectAliases: Record<string, string> | null = null;
 
   constructor(
     table: TableWithColumns<TTSchema, TTName, TColumns>,
@@ -442,20 +626,42 @@ export class SelectQuery<
     this.#$ctes = ctes;
   }
 
-  where<
-    TWhere extends
-      | FilterExpression<
-          TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
-          TPrepare
-        >
-      | undefined,
-  >(where: TWhere) {
+  /** Returns the memoized columns view for this query instance. */
+  #getView(): Record<string, Record<string, StdTableColumn>> {
+    if (!this.#cachedView) {
+      this.#cachedView = buildColumnsView(
+        this.#table as unknown as StdTableWithColumns,
+        this.#$joins,
+      );
+    }
+    return this.#cachedView;
+  }
+
+  /** Returns the memoized select aliases view for this query instance. */
+  #getSelectAliases(): Record<string, string> {
+    if (!this.#cachedSelectAliases) {
+      this.#cachedSelectAliases = this.#$select
+        ? Object.fromEntries(Object.keys(this.#$select).map((k) => [k, k]))
+        : {};
+    }
+    return this.#cachedSelectAliases;
+  }
+
+  where(
+    callback: (
+      view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
+    ) => FilterExpression<
+      AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
+      TPrepare
+    >,
+  ) {
+    const filter = callback(this.#getView() as never);
     return new SelectQuery(
       this.#table,
       this.#$joins,
       this.#$select,
       this.#$distinctOn,
-      where,
+      filter,
       this.#$orderBy,
       this.#$groupBy,
       this.#$having,
@@ -468,28 +674,23 @@ export class SelectQuery<
   }
 
   orderBy<
-    TOrderBys extends
-      | (
-          | OrderExpression<
-              TableWithColumns<TTSchema, TTName, TColumns>,
-              TSelects,
-              TPrepare
-            >
-          | (TJoins extends unknown[]
-              ? OrderExpression<TJoins[number]["table"], TSelects, TPrepare>
-              : never)
-        )
-      | (
-          | OrderExpression<
-              TableWithColumns<TTSchema, TTName, TColumns>,
-              TSelects,
-              TPrepare
-            >
-          | (TJoins extends unknown[]
-              ? OrderExpression<TJoins[number]["table"], TSelects, TPrepare>
-              : never)
-        )[],
-  >(orderBy: TOrderBys) {
+    TOrderBys extends SelfOrArray<
+      OrderExpression<
+        AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
+        TPrepare,
+        TSelects
+      >
+    >,
+  >(
+    callback: (
+      view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
+      selects: SelectAliasesView<TSelects>,
+    ) => TOrderBys,
+  ) {
+    const orderBy = callback(
+      this.#getView() as never,
+      this.#getSelectAliases() as never,
+    );
     return new SelectQuery(
       this.#table,
       this.#$joins,
@@ -511,56 +712,29 @@ export class SelectQuery<
    * Adds an explicit GROUP BY clause. Overrides auto GROUP BY detection when set.
    *
    * ```ts
-   * db.from(Users).select({ type: Users.type, total: count('*') }).groupBy(Users.type)
-   * db.from(Users).select({ lname: lower(Users.username) }).groupBy(({ lname }) => [lname])
+   * db.from(Users).select(({ users }) => ({ type: users.type, total: count('*') }))
+   *   .groupBy(({ users }, { type }) => [type])
    * ```
    */
   groupBy<
-    TItems extends
-      | GroupByExpression<
-          TableWithColumns<TTSchema, TTName, TColumns>,
-          TPrepare,
-          TSelects extends Record<string, AnySelectableSource>
-            ? TSelects
-            : undefined
-        >
-      | GroupByExpression<
-          TableWithColumns<TTSchema, TTName, TColumns>,
-          TPrepare,
-          TSelects extends Record<string, AnySelectableSource>
-            ? TSelects
-            : undefined
-        >[],
-  >(groupBy: TItems): Omit<this, "groupBy">;
-  groupBy(
-    callback: TSelects extends Record<string, AnySelectableSource>
-      ? (
-          selects: GroupBySelectView<TSelects>,
-        ) => GroupByExpression<
-          TableWithColumns<TTSchema, TTName, TColumns>,
-          TPrepare,
-          TSelects
-        >[]
-      : never,
-  ): Omit<this, "groupBy">;
-  groupBy(
-    groupByOrCallback:
-      | StdGroupByExpression
-      | StdGroupByExpression[]
-      | ((
-          selects: Record<string, GroupByAlias<string>>,
-        ) => StdGroupByExpression[]),
+    TItems extends SelfOrArray<
+      GroupByExpression<
+        AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
+        TPrepare,
+        TSelects
+      >
+    >,
+  >(
+    callback: (
+      view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
+      selects: SelectAliasesView<TSelects>,
+    ) => TItems,
   ): Omit<this, "groupBy"> {
-    const items =
-      typeof groupByOrCallback === "function"
-        ? groupByOrCallback(
-            createGroupBySelectView(
-              this.#$select as Record<string, AnySelectableSource>,
-            ),
-          )
-        : Array.isArray(groupByOrCallback)
-          ? groupByOrCallback
-          : [groupByOrCallback];
+    const result = callback(
+      this.#getView() as never,
+      this.#getSelectAliases() as never,
+    );
+    const items = Array.isArray(result) ? result : [result];
     return new SelectQuery(
       this.#table,
       this.#$joins,
@@ -568,7 +742,7 @@ export class SelectQuery<
       this.#$distinctOn,
       this.#$where,
       this.#$orderBy,
-      items as [StdGroupByExpression, ...StdGroupByExpression[]],
+      items as unknown as [StdGroupByExpression, ...StdGroupByExpression[]],
       this.#$having,
       this.#$limit,
       this.#$offset,
@@ -582,17 +756,20 @@ export class SelectQuery<
    * Adds a HAVING clause to filter grouped results.
    *
    * ```typescript
-   * db.from(Users).select({ type: Users.type, total: count('*') })
-   *   .groupBy(Users.type)
-   *   .having(gte(count('*'), 2))
+   * db.from(Users).select(({ users }) => ({ type: users.type, total: count('*') }))
+   *   .groupBy(({ users }) => [users.type])
+   *   .having(() => gte(count('*'), 2))
    * ```
    */
   having<
     TH extends HavingExpression<
-      TableColumns<TTSchema, TTName, TColumns> | JoinsColumns<TJoins>,
+      AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
       TPrepare
     >,
-  >(having: TH): Omit<this, "having"> {
+  >(
+    callback: (view: ColumnsView<TTSchema, TTName, TColumns, TJoins>) => TH,
+  ): Omit<this, "having"> {
+    const having = callback(this.#getView() as never);
     return new SelectQuery(
       this.#table,
       this.#$joins,
@@ -699,8 +876,8 @@ export class SelectQuery<
       query.sql += " GROUP BY ";
       for (let i = 0; i < this.#$groupBy.length; i++) {
         const expr = this.#$groupBy[i];
-        if (isGroupByAlias(expr)) {
-          expr.toQuery(query); // → "alias"
+        if (typeof expr === "string") {
+          query.sql += `"${escIdentifier(expr)}"`;
         } else if (isScalarSqlFn(expr)) {
           expr.toQuery(query); // → floor(...)
         } else {

@@ -141,7 +141,7 @@ describe("INSERT queries", () => {
     const users = await db
       .from(schema.Users)
       .select()
-      .where(eq(schema.Users.username, "nulluser"));
+      .where(({ users }) => eq(users.username, "nulluser"));
 
     expect(users[0].email).toBeNull();
     expect(users[0].bio).toBeNull();
@@ -187,7 +187,7 @@ describe("INSERT queries", () => {
     const users = await db
       .from(schema.Users)
       .select()
-      .where(eq(schema.Users.username, "fulluser"));
+      .where(({ users }) => eq(users.username, "fulluser"));
 
     expect(users[0]).toMatchObject({
       username: "fulluser",
@@ -338,7 +338,7 @@ describe("INSERT queries", () => {
       const posts = await db
         .from(schema.Posts)
         .select()
-        .where(eq(schema.Posts.userId, user.id));
+        .where(({ posts }) => eq(posts.userId, user.id));
 
       expect(posts).toHaveLength(1);
       expect(posts[0].userId).toEqual(user.id);
@@ -507,7 +507,7 @@ describe("INSERT queries", () => {
       const users = await db
         .from(schema.Users)
         .select()
-        .where(eq(schema.Users.username, "conditionalUpdate"));
+        .where(({ users }) => eq(users.username, "conditionalUpdate"));
       expect(users).toHaveLength(1);
       expect(users[0].score).toBe(100);
     });
@@ -528,7 +528,7 @@ describe("INSERT queries", () => {
       const users = await db
         .from(schema.Users)
         .select()
-        .where(eq(schema.Users.username, "conditionalSkip"));
+        .where(({ users }) => eq(users.username, "conditionalSkip"));
       expect(users).toHaveLength(1);
       expect(users[0].score).toBe(50); // should not be updated to 20
     });

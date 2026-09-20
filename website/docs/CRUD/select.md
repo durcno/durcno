@@ -10,28 +10,24 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 
 ### Builder methods (SelectBuilder)
 
-| Method                   | Description                            |
-| ------------------------ | -------------------------------------- |
-| `.innerJoin(table, on)`  | Add an inner join to the query         |
-| `.leftJoin(table, on)`   | Add a left join to the query           |
-| `.distinctOn(column)`    | Apply DISTINCT ON for a single column  |
-| `.distinctOn([...cols])` | Apply DISTINCT ON for multiple columns |
-| `.select()`              | Select all columns                     |
-| `.select({ ... })`       | Select specific columns                |
+| Method                        | Description                                          |
+| ----------------------------- | ---------------------------------------------------- |
+| `.innerJoin(table, callback)` | Add an inner join with `(view) => condition`         |
+| `.leftJoin(table, callback)`  | Add a left join with `(view) => condition`           |
+| `.distinctOn(callback)`       | Apply DISTINCT ON via `(view) => col` or `[...cols]` |
+| `.select()`                   | Select all columns                                   |
+| `.select(callback)`           | Select specific columns via `(view) => ({ ... })`    |
 
 ### Query methods (SelectQuery)
 
-| Method                  | Description                                               |
-| ----------------------- | --------------------------------------------------------- |
-| `.where(condition)`     | Filter results                                            |
-| `.groupBy(col)`         | Explicit GROUP BY (single column or expression)           |
-| `.groupBy([...cols])`   | Explicit GROUP BY (multiple columns/expressions)          |
-| `.groupBy(callback)`    | GROUP BY using named select aliases (callback form)       |
-| `.having(condition)`    | Filter grouped results (HAVING clause)                    |
-| `.orderBy(order)`       | Sort by a column                                          |
-| `.orderBy([...orders])` | Sort by multiple columns                                  |
-| `.limit(n)`             | Limit number of results (`n` can be `number` or `bigint`) |
-| `.offset(n)`            | Skip n results (`n` can be `number` or `bigint`)          |
+| Method               | Description                                                      |
+| -------------------- | ---------------------------------------------------------------- |
+| `.where(callback)`   | Filter results via `(view) => condition`                         |
+| `.groupBy(callback)` | Explicit GROUP BY via `(view, selects) => [cols/aliases]`        |
+| `.having(callback)`  | Filter grouped results via `(view) => condition` (HAVING clause) |
+| `.orderBy(callback)` | Sort results via `(view, selects) => order` or `[...orders]`     |
+| `.limit(n)`          | Limit number of results (`n` can be `number` or `bigint`)        |
+| `.offset(n)`         | Skip n results (`n` can be `number` or `bigint`)                 |
 
 ## Basic Usage
 
@@ -48,20 +44,20 @@ const users = await db.from(Users).select();
 
 ### Select Specific Columns
 
-Pass an object to `.select()` to choose specific columns:
+Pass a callback to `.select()` receiving a view of available tables to choose specific columns:
 
 ```typescript
 // Select only username
-const usernames = await db.from(Users).select({
-  username: Users.username,
-});
+const usernames = await db.from(Users).select(({ users }) => ({
+  username: users.username,
+}));
 // Type: { username: string }[]
 
 // Select multiple columns
-const userInfo = await db.from(Users).select({
-  id: Users.id,
-  email: Users.email,
-});
+const userInfo = await db.from(Users).select(({ users }) => ({
+  id: users.id,
+  email: users.email,
+}));
 // Type: { id: bigint; email: string | null }[]
 ```
 
@@ -70,70 +66,76 @@ const userInfo = await db.from(Users).select({
 You can alias columns by using different keys in the select object:
 
 ```typescript
-const users = await db.from(Users).select({
-  name: Users.username, // Alias "username" as "name"
-  mail: Users.email, // Alias "email" as "mail"
-});
+const users = await db.from(Users).select(({ users }) => ({
+  name: users.username, // Alias "username" as "name"
+  mail: users.email, // Alias "email" as "mail"
+}));
 // Type: { name: string; mail: string | null }[]
 ```
 
 ## Filtering with WHERE
 
-Use `.where()` to filter results. See [Filters](../Expressions/filters.md) for all available operators.
+Use `.where()` with a callback receiving the tables view to filter results. See [Filters](../Expressions/filters.md) for all available operators.
 
 ```typescript
 import { eq, and, gte } from "durcno";
 
 // Simple equality filter
-const admins = await db.from(Users).select().where(eq(Users.type, "admin"));
+const admins = await db
+  .from(Users)
+  .select()
+  .where(({ users }) => eq(users.type, "admin"));
 
 // Multiple conditions with AND
 const recentAdmins = await db
   .from(Users)
   .select()
-  .where(
-    and(eq(Users.type, "admin"), gte(Users.createdAt, new Date("2024-01-01"))),
+  .where(({ users }) =>
+    and(eq(users.type, "admin"), gte(users.createdAt, new Date("2024-01-01"))),
   );
 ```
 
 ## Sorting with ORDER BY
 
-Use `.orderBy()` with `asc()` or `desc()` to sort results:
+Use `.orderBy()` with `asc()` or `desc()` inside a callback to sort results:
 
 ```typescript
 import { asc, desc } from "durcno";
 
 // Sort by username ascending
-const users = await db.from(Users).select().orderBy(asc(Users.username));
+const users = await db
+  .from(Users)
+  .select()
+  .orderBy(({ users }) => asc(users.username));
 
 // Sort by creation date descending (newest first)
 const recentUsers = await db
   .from(Users)
   .select()
-  .orderBy(desc(Users.createdAt));
+  .orderBy(({ users }) => desc(users.createdAt));
 ```
 
 ### Multi-Column Sorting
 
-Pass an array to `.orderBy()` to sort by multiple columns:
+Return an array from `.orderBy()` to sort by multiple columns:
 
 ```typescript
 // Sort by type ascending, then by username ascending
 const sortedUsers = await db
   .from(Users)
   .select()
-  .orderBy([asc(Users.type), asc(Users.username)]);
+  .orderBy(({ users }) => [asc(users.type), asc(users.username)]);
 
 // Sort by type ascending, then by creation date descending
 const mixedSort = await db
   .from(Users)
   .select()
-  .orderBy([asc(Users.type), desc(Users.createdAt)]);
+  .orderBy(({ users }) => [asc(users.type), desc(users.createdAt)]);
 ```
 
 ### Sorting with Joins
 
-When using joins, you can sort by columns from any joined table:
+When using joins, you can sort by columns from any joined table in the view:
 
 ```typescript
 import { eq, asc, desc } from "durcno";
@@ -142,12 +144,29 @@ import { Users, Posts } from "./db/schema.ts";
 // Sort by username (Users), then by post creation date (Posts)
 const usersWithPosts = await db
   .from(Users)
-  .innerJoin(Posts, eq(Users.id, Posts.userId))
-  .select({
-    username: Users.username,
-    title: Posts.title,
-  })
-  .orderBy([asc(Users.username), desc(Posts.createdAt)]);
+  .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
+  .select(({ users, posts }) => ({
+    username: users.username,
+    title: posts.title,
+  }))
+  .orderBy(({ users, posts }) => [asc(users.username), desc(posts.createdAt)]);
+```
+
+### Sorting with Select Aliases
+
+The `.orderBy()` callback also receives a second parameter with output aliases defined in `.select()`:
+
+```typescript
+import { count, desc } from "durcno";
+
+const stats = await db
+  .from(Users)
+  .select(({ users }) => ({
+    userType: users.type,
+    userCount: count("*"),
+  }))
+  .groupBy(({ users }) => [users.type])
+  .orderBy(({ users }, { userCount }) => desc(userCount));
 ```
 
 ## Pagination with LIMIT and OFFSET
@@ -176,11 +195,11 @@ import { Users, Posts } from "./db/schema.ts";
 // Join Users with Posts
 const usersWithPosts = await db
   .from(Users)
-  .innerJoin(Posts, eq(Users.id, Posts.userId))
-  .select({
-    username: Users.username,
-    title: Posts.title,
-  });
+  .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
+  .select(({ users, posts }) => ({
+    username: users.username,
+    title: posts.title,
+  }));
 // Type: { username: string; title: string | null }[]
 ```
 
@@ -194,20 +213,18 @@ import { asc, eq } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
-const activeUsers = db
-  .with("activeUsers")
-  .as(
-    db
-      .from(Users)
-      .select({ id: Users.id, username: Users.username })
-      .where(eq(Users.status, "active")),
-  );
+const activeUsers = db.with("activeUsers").as(
+  db
+    .from(Users)
+    .select(({ users }) => ({ id: users.id, username: users.username }))
+    .where(({ users }) => eq(users.status, "active")),
+);
 
 const rows = await db
   .with(activeUsers)
   .from((ctes) => ctes.activeUsers)
   .select()
-  .orderBy(asc(activeUsers.username));
+  .orderBy(({ activeUsers }) => asc(activeUsers.username));
 
 // Type: { id: bigint; username: string }[]
 ```
@@ -218,7 +235,7 @@ CTEs can also wrap DML queries with `.returning(...)`, such as `INSERT`, `UPDATE
 
 ### Explicit GROUP BY
 
-Use `.groupBy()` to explicitly set the GROUP BY clause. Explicit GROUP BY **fully replaces** the auto GROUP BY that Durcno generates when aggregate functions are mixed with non-aggregate columns in `.select()`.
+Use `.groupBy()` with a callback receiving the tables view and select aliases to explicitly set the GROUP BY clause. Explicit GROUP BY **fully replaces** the auto GROUP BY that Durcno generates when aggregate functions are mixed with non-aggregate columns in `.select()`.
 
 **Single column:**
 
@@ -227,9 +244,9 @@ import { count, asc } from "durcno";
 
 const byType = await db
   .from(Users)
-  .select({ type: Users.type, total: count("*") })
-  .groupBy(Users.type)
-  .orderBy(asc(Users.type));
+  .select(({ users }) => ({ type: users.type, total: count("*") }))
+  .groupBy(({ users }) => [users.type])
+  .orderBy(({ users }) => asc(users.type));
 // SQL: ... GROUP BY "users"."type" ORDER BY ...
 ```
 
@@ -238,8 +255,12 @@ const byType = await db
 ```typescript
 const byTypeAndStatus = await db
   .from(Users)
-  .select({ type: Users.type, status: Users.status, total: count("*") })
-  .groupBy([Users.type, Users.status]);
+  .select(({ users }) => ({
+    type: users.type,
+    status: users.status,
+    total: count("*"),
+  }))
+  .groupBy(({ users }) => [users.type, users.status]);
 ```
 
 **Scalar expression:**
@@ -249,43 +270,37 @@ import { lower, count } from "durcno";
 
 const byLowerUsername = await db
   .from(Users)
-  .select({ lname: lower(Users.username), total: count("*") })
-  .groupBy(lower(Users.username));
+  .select(({ users }) => ({ lname: lower(users.username), total: count("*") }))
+  .groupBy(({ users }) => [lower(users.username)]);
 ```
 
-### Callback Form (alias references)
+### Using Select Aliases
 
-When `.select({ ... })` is called with a named map, `.groupBy()` also accepts a **callback** that receives the select aliases as `GroupByAlias` values. This avoids repeating expressions:
+When `.select()` defines named aliases, `.groupBy()` receives them in the second parameter:
 
 ```typescript
 import { lower, count } from "durcno";
 
 const results = await db
   .from(Users)
-  .select({ lname: lower(Users.username), total: count("*") })
-  .groupBy(({ lname }) => [lname]);
+  .select(({ users }) => ({ lname: lower(users.username), total: count("*") }))
+  .groupBy(({ users }, { lname }) => [lname]);
 // SQL: ... GROUP BY "lname"
 ```
 
-You can also mix aliases with direct columns:
+You can also mix select aliases with table columns:
 
 ```typescript
 const results = await db
   .from(Users)
-  .select({ lname: lower(Users.username), total: count("*") })
-  .groupBy(({ lname }) => [lname, Users.type]);
+  .select(({ users }) => ({ lname: lower(users.username), total: count("*") }))
+  .groupBy(({ users }, { lname }) => [lname, users.type]);
 // SQL: ... GROUP BY "lname", "users"."type"
 ```
 
-:::note
-
-The callback form requires a named `.select({ ... })`. Calling `.groupBy(callback)` after `.select()` (no argument) is a compile-time error.
-
-:::
-
 ### HAVING
 
-Use `.having()` to filter grouped results. It supports aggregate-to-literal and aggregate-to-aggregate comparisons:
+Use `.having()` with a callback to filter grouped results. It supports aggregate-to-literal and aggregate-to-aggregate comparisons:
 
 ```typescript
 import { count, gte } from "durcno";
@@ -293,9 +308,9 @@ import { count, gte } from "durcno";
 // Only return groups with 2 or more rows
 const busyTypes = await db
   .from(Users)
-  .select({ type: Users.type, total: count("*") })
-  .groupBy(Users.type)
-  .having(gte(count("*"), 2));
+  .select(({ users }) => ({ type: users.type, total: count("*") }))
+  .groupBy(({ users }) => [users.type])
+  .having(() => gte(count("*"), 2));
 ```
 
 **Aggregate-to-aggregate:**
@@ -305,9 +320,13 @@ import { count, sum, gt } from "durcno";
 
 const results = await db
   .from(Users)
-  .select({ type: Users.type, sumScore: sum(Users.score), total: count("*") })
-  .groupBy(Users.type)
-  .having(gt(sum(Users.score), count("*")));
+  .select(({ users }) => ({
+    type: users.type,
+    sumScore: sum(users.score),
+    total: count("*"),
+  }))
+  .groupBy(({ users }) => [users.type])
+  .having(({ users }) => gt(sum(users.score), count("*")));
 ```
 
 :::note
@@ -323,18 +342,18 @@ import { eq, count, gte, asc } from "durcno";
 
 const results = await db
   .from(Users)
-  .select({ type: Users.type, total: count("*") })
-  .where(eq(Users.status, "active"))
-  .groupBy(Users.type)
-  .having(gte(count("*"), 2))
-  .orderBy(asc(Users.type))
+  .select(({ users }) => ({ type: users.type, total: count("*") }))
+  .where(({ users }) => eq(users.status, "active"))
+  .groupBy(({ users }) => [users.type])
+  .having(() => gte(count("*"), 2))
+  .orderBy(({ users }) => asc(users.type))
   .limit(10);
 // Clause order: WHERE → GROUP BY → HAVING → ORDER BY → LIMIT
 ```
 
 ## DISTINCT ON
 
-Use `.distinctOn()` on the `FromBuilder` (before `.select()`) to select only the first row for each unique combination of the specified columns, using PostgreSQL's `DISTINCT ON (...)` syntax.
+Use `.distinctOn()` on the `SelectBuilder` (before `.select()`) to select only the first row for each unique combination of the specified columns, using PostgreSQL's `DISTINCT ON (...)` syntax.
 
 :::info
 
@@ -350,9 +369,9 @@ import { asc } from "durcno";
 // Get one user per type (e.g., one "admin", one "user")
 const onePerType = await db
   .from(Users)
-  .distinctOn(Users.type)
+  .distinctOn(({ users }) => users.type)
   .select()
-  .orderBy(asc(Users.type));
+  .orderBy(({ users }) => asc(users.type));
 ```
 
 ### Multiple Columns
@@ -363,24 +382,24 @@ Pass an array of columns to `.distinctOn()` for compound distinct expressions:
 // Get one user per (type, status) combination
 const onePerTypeAndStatus = await db
   .from(Users)
-  .distinctOn([Users.type, Users.status])
+  .distinctOn(({ users }) => [users.type, users.status])
   .select()
-  .orderBy([asc(Users.type), asc(Users.status)]);
+  .orderBy(({ users }) => [asc(users.type), asc(users.status)]);
 ```
 
 ### With Specific Columns and WHERE
 
-Combine `.distinctOn()` with `.select()`, `.where()`, and `.orderBy()` as usual:
+Combine `.distinctOn()` with `.select()`, `.where()`, and `.orderBy()`:
 
 ```typescript
-import { eq, asc } from "durcno";
+import { eq, asc, desc } from "durcno";
 
 const latestAdminPerType = await db
   .from(Users)
-  .distinctOn(Users.type)
-  .select({ type: Users.type, username: Users.username })
-  .where(eq(Users.type, "admin"))
-  .orderBy([asc(Users.type), desc(Users.createdAt)]);
+  .distinctOn(({ users }) => users.type)
+  .select(({ users }) => ({ type: users.type, username: users.username }))
+  .where(({ users }) => eq(users.type, "admin"))
+  .orderBy(({ users }) => [asc(users.type), desc(users.createdAt)]);
 // Type: { type: "admin" | "user"; username: string }[]
 ```
 
@@ -391,13 +410,13 @@ All methods can be chained in a fluent API:
 ```typescript
 const results = await db
   .from(Users)
-  .innerJoin(Posts, eq(Users.id, Posts.userId))
-  .select({
-    username: Users.username,
-    title: Posts.title,
-  })
-  .where(eq(Users.type, "admin"))
-  .orderBy(desc(Users.createdAt))
+  .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
+  .select(({ users, posts }) => ({
+    username: users.username,
+    title: posts.title,
+  }))
+  .where(({ users }) => eq(users.type, "admin"))
+  .orderBy(({ posts }) => desc(posts.createdAt))
   .limit(10)
   .offset(0);
 ```

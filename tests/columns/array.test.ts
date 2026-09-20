@@ -67,7 +67,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(eq(schema.SimpleArrayTests.id, insertedId));
+        .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredTags).toEqual(["a", "b", "c"]);
       expect(row.optionalTags).toBeNull();
     });
@@ -81,7 +81,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(eq(schema.SimpleArrayTests.id, insertedId));
+        .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredTags).toEqual(["x", "y"]);
     });
 
@@ -94,7 +94,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(eq(schema.SimpleArrayTests.id, insertedId));
+        .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredTags).toEqual([]);
     });
 
@@ -107,7 +107,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(eq(schema.SimpleArrayTests.id, insertedId));
+        .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.optionalTags).toEqual(["opt1", "opt2"]);
     });
 
@@ -120,7 +120,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(eq(schema.SimpleArrayTests.id, insertedId));
+        .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.optionalTags).toBeNull();
     });
   });
@@ -147,7 +147,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(eq(schema.SimpleArrayTests.id, insertedId));
+        .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredScores).toEqual([10, -20, 0, 100]);
       expect(row.optionalScores).toBeNull();
     });
@@ -161,7 +161,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(eq(schema.SimpleArrayTests.id, insertedId));
+        .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredScores).toEqual([99, 100]);
     });
   });
@@ -206,7 +206,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.FixedArrayTests)
         .select()
-        .where(eq(schema.FixedArrayTests.id, insertedId));
+        .where(({ fixedArrayTests }) => eq(fixedArrayTests.id, insertedId));
       expect(row.requiredCoords).toEqual([10, 20, 30]);
       expect(row.optionalCoords).toBeNull();
     });
@@ -220,7 +220,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.FixedArrayTests)
         .select()
-        .where(eq(schema.FixedArrayTests.id, insertedId));
+        .where(({ fixedArrayTests }) => eq(fixedArrayTests.id, insertedId));
       expect(row.requiredCoords).toEqual([-1, 0, 1]);
     });
   });
@@ -250,7 +250,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.FixedArrayTests)
         .select()
-        .where(eq(schema.FixedArrayTests.id, insertedId));
+        .where(({ fixedArrayTests }) => eq(fixedArrayTests.id, insertedId));
       expect(row.requiredPair).toEqual(["hello", "world"]);
       expect(row.optionalPair).toBeNull();
     });
@@ -264,7 +264,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.FixedArrayTests)
         .select()
-        .where(eq(schema.FixedArrayTests.id, insertedId));
+        .where(({ fixedArrayTests }) => eq(fixedArrayTests.id, insertedId));
       expect(row.requiredPair).toEqual(["updated", "pair"]);
     });
   });
@@ -318,7 +318,9 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
         .select()
-        .where(eq(schema.MultidimensionalArrayTests.id, insertedId));
+        .where(({ multidimensionalArrayTests }) =>
+          eq(multidimensionalArrayTests.id, insertedId),
+        );
       expect(row.requiredMatrix).toEqual([
         [1, 2, 3],
         [4, 5, 6],
@@ -340,7 +342,9 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
         .select()
-        .where(eq(schema.MultidimensionalArrayTests.id, insertedId));
+        .where(({ multidimensionalArrayTests }) =>
+          eq(multidimensionalArrayTests.id, insertedId),
+        );
       expect(row.requiredMatrix).toEqual([
         [10, 20],
         [30, 40],
@@ -356,7 +360,9 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
         .select()
-        .where(eq(schema.MultidimensionalArrayTests.id, insertedId));
+        .where(({ multidimensionalArrayTests }) =>
+          eq(multidimensionalArrayTests.id, insertedId),
+        );
       expect(row.requiredMatrix).toEqual([]);
     });
   });
@@ -390,7 +396,9 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
         .select()
-        .where(eq(schema.MultidimensionalArrayTests.id, insertedId));
+        .where(({ multidimensionalArrayTests }) =>
+          eq(multidimensionalArrayTests.id, insertedId),
+        );
       expect(row.requiredVectors).toEqual([
         [10, 20],
         [30, 40],
@@ -408,7 +416,9 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
         .select()
-        .where(eq(schema.MultidimensionalArrayTests.id, insertedId));
+        .where(({ multidimensionalArrayTests }) =>
+          eq(multidimensionalArrayTests.id, insertedId),
+        );
       expect(row.requiredVectors).toEqual([[-1, -2]]);
     });
   });
@@ -453,7 +463,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.EnumArrayTests)
         .select()
-        .where(eq(schema.EnumArrayTests.id, insertedId));
+        .where(({ enumArrayTests }) => eq(enumArrayTests.id, insertedId));
       expect(row.requiredStatuses).toEqual(["active", "pending"]);
       expect(row.optionalStatuses).toBeNull();
     });
@@ -467,7 +477,7 @@ describe("Array Column Types", () => {
       const [row] = await db
         .from(schema.EnumArrayTests)
         .select()
-        .where(eq(schema.EnumArrayTests.id, insertedId));
+        .where(({ enumArrayTests }) => eq(enumArrayTests.id, insertedId));
       expect(row.requiredStatuses).toEqual(["inactive"]);
     });
 
@@ -480,7 +490,7 @@ describe("Array Column Types", () => {
       const [fetched] = await db
         .from(schema.EnumArrayTests)
         .select()
-        .where(eq(schema.EnumArrayTests.id, row.id));
+        .where(({ enumArrayTests }) => eq(enumArrayTests.id, row.id));
       expect(fetched.requiredStatuses).toEqual([]);
     });
   });
@@ -505,7 +515,9 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(arrayContains(schema.SimpleArrayTests.requiredTags, ["a", "b"]));
+        .where(({ simpleArrayTests }) =>
+          arrayContains(simpleArrayTests.requiredTags, ["a", "b"]),
+        );
       expect(result).toHaveLength(1);
       expect(result[0].requiredTags).toEqual(["a", "b"]);
     });
@@ -515,12 +527,8 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(
-          arrayContainedBy(schema.SimpleArrayTests.requiredTags, [
-            "a",
-            "b",
-            "c",
-          ]),
+        .where(({ simpleArrayTests }) =>
+          arrayContainedBy(simpleArrayTests.requiredTags, ["a", "b", "c"]),
         );
       // ["a","b"] ⊆ ["a","b","c"] ✓ and ["b","c"] ⊆ ["a","b","c"] ✓
       expect(result).toHaveLength(2);
@@ -531,7 +539,9 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(arrayOverlaps(schema.SimpleArrayTests.requiredTags, ["a", "d"]));
+        .where(({ simpleArrayTests }) =>
+          arrayOverlaps(simpleArrayTests.requiredTags, ["a", "d"]),
+        );
       // ["a","b"] shares "a" ✓ and ["d","e"] shares "d" ✓
       expect(result).toHaveLength(2);
     });
@@ -541,7 +551,7 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(isNull(schema.SimpleArrayTests.optionalTags));
+        .where(({ simpleArrayTests }) => isNull(simpleArrayTests.optionalTags));
       expect(result).toHaveLength(3);
     });
 
@@ -554,7 +564,9 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(isNotNull(schema.SimpleArrayTests.optionalTags));
+        .where(({ simpleArrayTests }) =>
+          isNotNull(simpleArrayTests.optionalTags),
+        );
       expect(result).toHaveLength(1);
     });
   });
@@ -579,7 +591,9 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(arrayHas(schema.SimpleArrayTests.requiredScores, 2));
+        .where(({ simpleArrayTests }) =>
+          arrayHas(simpleArrayTests.requiredScores, 2),
+        );
       // [1,2] has 2 ✓ and [2,3] has 2 ✓
       expect(result).toHaveLength(2);
     });
@@ -589,7 +603,9 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.SimpleArrayTests)
         .select()
-        .where(arrayAll(schema.SimpleArrayTests.requiredScores, 5));
+        .where(({ simpleArrayTests }) =>
+          arrayAll(simpleArrayTests.requiredScores, 5),
+        );
       // only [5,5] qualifies
       expect(result).toHaveLength(1);
       expect(result[0].requiredTags).toEqual(["t3"]);
@@ -619,8 +635,8 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.EnumArrayTests)
         .select()
-        .where(
-          arrayContains(schema.EnumArrayTests.requiredStatuses, ["active"]),
+        .where(({ enumArrayTests }) =>
+          arrayContains(enumArrayTests.requiredStatuses, ["active"]),
         );
       // ["active","pending"] contains "active" ✓ and ["active"] contains "active" ✓
       expect(result).toHaveLength(2);
@@ -631,7 +647,9 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.EnumArrayTests)
         .select()
-        .where(arrayHas(schema.EnumArrayTests.requiredStatuses, "pending"));
+        .where(({ enumArrayTests }) =>
+          arrayHas(enumArrayTests.requiredStatuses, "pending"),
+        );
       expect(result).toHaveLength(1);
       expect(result[0].requiredStatuses).toEqual(["active", "pending"]);
     });
@@ -641,8 +659,8 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.EnumArrayTests)
         .select()
-        .where(
-          arrayOverlaps(schema.EnumArrayTests.requiredStatuses, [
+        .where(({ enumArrayTests }) =>
+          arrayOverlaps(enumArrayTests.requiredStatuses, [
             "pending",
             "inactive",
           ]),
@@ -656,8 +674,8 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.EnumArrayTests)
         .select()
-        .where(
-          arrayContainedBy(schema.EnumArrayTests.requiredStatuses, [
+        .where(({ enumArrayTests }) =>
+          arrayContainedBy(enumArrayTests.requiredStatuses, [
             "active",
             "pending",
           ]),
@@ -671,7 +689,9 @@ describe("Array Column Types", () => {
       const result = await db
         .from(schema.EnumArrayTests)
         .select()
-        .where(arrayAll(schema.EnumArrayTests.requiredPriorities, "low"));
+        .where(({ enumArrayTests }) =>
+          arrayAll(enumArrayTests.requiredPriorities, "low"),
+        );
       // only ["low","low"] qualifies
       expect(result).toHaveLength(1);
     });

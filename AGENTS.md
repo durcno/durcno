@@ -96,6 +96,13 @@ Executing type-safe queries:
 // Select all users
 const users = await db.from(Users).select();
 
+// Select specific columns with filter and ordering
+const activeUsers = await db
+  .from(Users)
+  .select(({ users }) => ({ id: users.id, name: users.name }))
+  .where(({ users }) => eq(users.type, "user"))
+  .orderBy(({ users }) => asc(users.name));
+
 // Insert a new user
 await db.insert(Users).values({
   name: "John Doe",
@@ -128,9 +135,11 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
 
 **Fluent API**: Chainable methods provide an intuitive query-building experience:
 
-- `.select()` - Define columns to return
-- `.where()` - Add filtering conditions
-- `.orderBy()` - Sort results
+- `.select()` - Define columns to return (e.g. `select()` for all columns, or `select(({ users }) => ({ ... }))` for specific columns)
+- `.where()` - Add filtering conditions via callback (`({ users }) => ...`)
+- `.orderBy()` - Sort results via callback (`({ users }) => ...` or `({ users }, { alias }) => ...`)
+- `.groupBy()` - Group results via callback (`({ users }) => [...]` or `({ users }, { alias }) => [...]`)
+- `.having()` - Filter grouped results via callback (`({ users }) => ...`)
 - `.limit()` > `.offset()` - Paginate results
 
 **Query Builders**: Separate classes in `src/query-builders/` handle different query types (SELECT, INSERT, UPDATE, DELETE, ...) with consistent patterns and full type safety.

@@ -33,15 +33,13 @@ export class WithStatement<
    * SELECT from a real table with the declared CTEs in scope.
    * @param table The table to query.
    */
-  from<TTable extends AnyTableWithColumns>(
-    table: TTable,
-  ): SelectBuilder<
-    TTable["_"]["schema"],
-    TTable["_"]["name"],
-    TTable["_"]["columns"],
-    TPrepare,
-    null
-  >;
+  from<
+    UTSchema extends string,
+    UTName extends string,
+    UTColumns extends Record<string, AnyColumn>,
+  >(
+    table: TableWithColumns<UTSchema, UTName, UTColumns>,
+  ): SelectBuilder<UTSchema, UTName, UTColumns, TPrepare, null>;
   /**
    * Build the CTE name→instance map and call the callback to pick the FROM target.
    * @param cb Callback receiving the typed CTE map; return the CTE to query from.
@@ -51,7 +49,7 @@ export class WithStatement<
   ): SelectBuilder<
     "",
     TChosenCte["_"]["name"],
-    TChosenCte["_"]["columns"],
+    TChosenCte["$"]["columns"],
     TPrepare,
     null
   >;

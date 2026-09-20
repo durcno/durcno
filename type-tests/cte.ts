@@ -1,18 +1,22 @@
-import type { CtesByName, InferQueryColumns } from "durcno";
-import { count, isIn, lower } from "durcno";
+import type { CtesByName, InferQueryColumns, TableColumn } from "durcno";
+import { asc, count, eq, isIn, lower } from "durcno";
 import { db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
 const projectedUsers = db
   .with("projectedUsers")
-  .as(db.from(Users).select({ id: Users.id, username: Users.username }));
+  .as(
+    db
+      .from(Users)
+      .select(({ users }) => ({ id: users.id, username: users.username })),
+  );
 const projectedUsersQuery = db
   .with(projectedUsers)
   .from((ctes) => ctes.projectedUsers)
   .select();
 const projectedUsersSource = db
   .from(Users)
-  .select({ id: Users.id, username: Users.username });
+  .select(({ users }) => ({ id: users.id, username: users.username }));
 
 type ProjectedRows = Awaited<typeof projectedUsersQuery>;
 Expect<Equal<ProjectedRows, { id: bigint; username: string }[]>>();
@@ -58,22 +62,34 @@ Expect<Equal<keyof CTEMap, "projectedUsers">>();
 
 const activeUserIds = db
   .with("activeUserIds")
-  .as(db.from(Users).select({ id: Users.id }));
+  .as(db.from(Users).select(({ users }) => ({ id: users.id })));
 
 db.from(Posts)
   .select()
-  .where(
-    isIn(Posts.userId, db.from(activeUserIds).select({ id: activeUserIds.id })),
+  .where(({ posts }) =>
+    isIn(
+      posts.userId,
+      db.from(activeUserIds).select(({ activeUserIds }) => ({
+        id: activeUserIds.id,
+      })),
+    ),
   );
 
 const mixedCte = db
   .with("mixed")
-  .as(db.from(Users).select({ id: Users.id, username: Users.username }));
+  .as(
+    db
+      .from(Users)
+      .select(({ users }) => ({ id: users.id, username: users.username })),
+  );
 db.from(Posts)
   .select()
-  .where(
-    // @ts-expect-error: subquery column type (string) does not match Posts.userId (bigint)
-    isIn(Posts.userId, db.from(mixedCte).select({ id: mixedCte.username })),
+  .where(({ posts }) =>
+    isIn(
+      posts.userId,
+      // @ts-expect-error: subquery column type (string) does not match Posts.userId (bigint)
+      db.from(mixedCte).select(({ mixed }) => ({ id: mixed.username })),
+    ),
   );
 
 // CTEs cannot be DML targets — only real tables are writable.
@@ -89,7 +105,9 @@ db.with(projectedUsers).delete(projectedUsers);
 // -------------------------------------------------------------------------
 
 // lower() CTE: virtual column should be string
-const lowerSource = db.from(Users).select({ lname: lower(Users.username) });
+const lowerSource = db
+  .from(Users)
+  .select(({ users }) => ({ lname: lower(users.username) }));
 type LowerColumns = InferQueryColumns<"lowerCte", typeof lowerSource>;
 Expect<Equal<keyof LowerColumns, "lname">>();
 const lowerCte = db.with("lowerCte").as(lowerSource);
@@ -101,7 +119,9 @@ type LowerRows = Awaited<typeof lowerQuery>;
 Expect<Equal<LowerRows, { lname: string | null }[]>>();
 
 // count() CTE: virtual column should be number | null
-const countSource = db.from(Users).select({ total: count(Users.id) });
+const countSource = db
+  .from(Users)
+  .select(({ users }) => ({ total: count(users.id) }));
 type CountColumns = InferQueryColumns<"countCte", typeof countSource>;
 Expect<Equal<keyof CountColumns, "total">>();
 const countCte = db.with("countCte").as(countSource);
@@ -111,3 +131,53 @@ const countQuery = db
   .select();
 type CountRows = Awaited<typeof countQuery>;
 Expect<Equal<CountRows, { total: number | null }[]>>();
+
+// Test for cte.test.ts line 387
+const activeUsersForJoin = db.with("activeUsers").as(
+  db
+    .from(Users)
+    .select(({ users }) => ({
+      username: users.username,
+    }))
+    .where(({ users }) => eq(users.username, "active")),
+);
+
+const testQuery = db
+  .with(activeUsersForJoin)
+  .from(Users)
+  .leftJoin(activeUsersForJoin, ({ users, activeUsers }) => {
+    Expect<Equal<typeof users.username, typeof Users.username>>();
+    Expect<
+      Equal<typeof activeUsers.username, typeof activeUsersForJoin.username>
+    >();
+    return eq(users.username, activeUsers.username);
+  })
+  .select(({ users, activeUsers }) => {
+    Expect<Equal<typeof users.username, typeof Users.username>>();
+    return {
+      username: users.username,
+      activeUser: activeUsers.username,
+    };
+  })
+  .orderBy(({ users }) => {
+    Expect<Equal<typeof users.username, typeof Users.username>>();
+    return asc(users.username);
+  });
+
+const directCteQuery = db
+  .with(activeUsersForJoin)
+  .from((ctes) => ctes.activeUsers)
+  .select(({ activeUsers }) => {
+    Expect<
+      Equal<typeof activeUsers.username, typeof activeUsersForJoin.username>
+    >();
+    return {
+      username: activeUsers.username,
+    };
+  })
+  .orderBy(({ activeUsers }) => {
+    Expect<
+      Equal<typeof activeUsers.username, typeof activeUsersForJoin.username>
+    >();
+    return asc(activeUsers.username);
+  });

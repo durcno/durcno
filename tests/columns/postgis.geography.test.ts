@@ -42,7 +42,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyPointTests)
         .select()
-        .where(eq(schema.GeographyPointTests.id, insertedId));
+        .where(({ geographyPointTests }) =>
+          eq(geographyPointTests.id, insertedId),
+        );
       expect(row.point).toBeDefined();
       expect(String(row.point?.[0])).toContain(String(pointA[0]));
     });
@@ -56,7 +58,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyPointTests)
         .select()
-        .where(eq(schema.GeographyPointTests.id, insertedId));
+        .where(({ geographyPointTests }) =>
+          eq(geographyPointTests.id, insertedId),
+        );
       expect(String(row.point?.[0])).toContain(String(pointB[0]));
     });
   });
@@ -97,7 +101,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyMultiPointTests)
         .select()
-        .where(eq(schema.GeographyMultiPointTests.id, insertedId));
+        .where(({ geographyMultipointTests }) =>
+          eq(geographyMultipointTests.id, insertedId),
+        );
       expect(row.multipoint).toBeDefined();
       expect(Array.isArray(row.multipoint)).toBe(true);
     });
@@ -111,7 +117,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyMultiPointTests)
         .select()
-        .where(eq(schema.GeographyMultiPointTests.id, insertedId));
+        .where(({ geographyMultipointTests }) =>
+          eq(geographyMultipointTests.id, insertedId),
+        );
       expect(row.multipoint).toBeDefined();
     });
   });
@@ -153,7 +161,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyLineStringTests)
         .select()
-        .where(eq(schema.GeographyLineStringTests.id, insertedId));
+        .where(({ geographyLinestringTests }) =>
+          eq(geographyLinestringTests.id, insertedId),
+        );
       expect(row.linestring).toBeDefined();
       expect(Array.isArray(row.linestring)).toBe(true);
     });
@@ -167,7 +177,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyLineStringTests)
         .select()
-        .where(eq(schema.GeographyLineStringTests.id, insertedId));
+        .where(({ geographyLinestringTests }) =>
+          eq(geographyLinestringTests.id, insertedId),
+        );
       expect(row.linestring).toBeDefined();
     });
   });
@@ -218,7 +230,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyMultiLineStringTests)
         .select()
-        .where(eq(schema.GeographyMultiLineStringTests.id, insertedId));
+        .where(({ geographyMultilinestringTests }) =>
+          eq(geographyMultilinestringTests.id, insertedId),
+        );
       expect(row.multilinestring).toBeDefined();
       expect(Array.isArray(row.multilinestring)).toBe(true);
     });
@@ -232,7 +246,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyMultiLineStringTests)
         .select()
-        .where(eq(schema.GeographyMultiLineStringTests.id, insertedId));
+        .where(({ geographyMultilinestringTests }) =>
+          eq(geographyMultilinestringTests.id, insertedId),
+        );
       expect(row.multilinestring).toBeDefined();
     });
   });
@@ -281,7 +297,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyPolygonTests)
         .select()
-        .where(eq(schema.GeographyPolygonTests.id, insertedId));
+        .where(({ geographyPolygonTests }) =>
+          eq(geographyPolygonTests.id, insertedId),
+        );
       expect(row.polygon).toBeDefined();
       expect(Array.isArray(row.polygon)).toBe(true);
     });
@@ -295,7 +313,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyPolygonTests)
         .select()
-        .where(eq(schema.GeographyPolygonTests.id, insertedId));
+        .where(({ geographyPolygonTests }) =>
+          eq(geographyPolygonTests.id, insertedId),
+        );
       expect(row.polygon).toBeDefined();
     });
   });
@@ -356,7 +376,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyMultiPolygonTests)
         .select()
-        .where(eq(schema.GeographyMultiPolygonTests.id, insertedId));
+        .where(({ geographyMultipolygonTests }) =>
+          eq(geographyMultipolygonTests.id, insertedId),
+        );
       expect(row.multipolygon).toBeDefined();
       expect(Array.isArray(row.multipolygon)).toBe(true);
     });
@@ -370,7 +392,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const [row] = await db
         .from(schema.GeographyMultiPolygonTests)
         .select()
-        .where(eq(schema.GeographyMultiPolygonTests.id, insertedId));
+        .where(({ geographyMultipolygonTests }) =>
+          eq(geographyMultipolygonTests.id, insertedId),
+        );
       expect(row.multipolygon).toBeDefined();
     });
   });
@@ -399,7 +423,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const rows = await db
         .from(schema.GeographyFilterTests)
         .select()
-        .where(stDWithin(schema.GeographyFilterTests.location, NYC, 5000));
+        .where(({ geographyFilterTests }) =>
+          stDWithin(geographyFilterTests.location, NYC, 5000),
+        );
       // Only NYC is within 5 km of NYC
       expect(rows).toHaveLength(1);
       expect(rows[0].name).toBe("NYC");
@@ -410,7 +436,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const rows = await db
         .from(schema.GeographyFilterTests)
         .select()
-        .where(stDWithin(schema.GeographyFilterTests.location, NYC, 5_000_000));
+        .where(({ geographyFilterTests }) =>
+          stDWithin(geographyFilterTests.location, NYC, 5_000_000),
+        );
       expect(rows).toHaveLength(2);
     });
 
@@ -419,7 +447,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const rows = await db
         .from(schema.GeographyFilterTests)
         .select()
-        .where(stIntersects(schema.GeographyFilterTests.location, NYC));
+        .where(({ geographyFilterTests }) =>
+          stIntersects(geographyFilterTests.location, NYC),
+        );
       expect(rows).toHaveLength(1);
       expect(rows[0].name).toBe("NYC");
     });
@@ -429,8 +459,13 @@ describe("Geography Column Types (PostGIS)", () => {
       const dist = stDistance(schema.GeographyFilterTests.location, LA);
       const rows = await db
         .from(schema.GeographyFilterTests)
-        .select({ name: schema.GeographyFilterTests.name, distance: dist })
-        .where(eq(schema.GeographyFilterTests.name, "NYC"));
+        .select(({ geographyFilterTests }) => ({
+          name: geographyFilterTests.name,
+          distance: dist,
+        }))
+        .where(({ geographyFilterTests }) =>
+          eq(geographyFilterTests.name, "NYC"),
+        );
       expect(rows).toHaveLength(1);
       expect(typeof rows[0].distance).toBe("number");
       // NYC to LA is ~3,944 km — distance is in meters
@@ -442,8 +477,11 @@ describe("Geography Column Types (PostGIS)", () => {
       const dist = stDistance(schema.GeographyFilterTests.location, NYC);
       const rows = await db
         .from(schema.GeographyFilterTests)
-        .select({ name: schema.GeographyFilterTests.name, distance: dist })
-        .orderBy(asc(dist));
+        .select(({ geographyFilterTests }) => ({
+          name: geographyFilterTests.name,
+          distance: dist,
+        }))
+        .orderBy(({ geographyFilterTests }) => asc(dist));
       expect(rows[0].name).toBe("NYC");
       expect(rows[1].name).toBe("LA");
       expect(rows[0].distance).toBeLessThan(rows[1].distance);
@@ -454,7 +492,9 @@ describe("Geography Column Types (PostGIS)", () => {
       const rows = await db
         .from(schema.GeographyFilterTests)
         .select()
-        .where(lt(stDistance(schema.GeographyFilterTests.location, NYC), 5000));
+        .where(({ geographyFilterTests }) =>
+          lt(stDistance(geographyFilterTests.location, NYC), 5000),
+        );
       expect(rows).toHaveLength(1);
       expect(rows[0].name).toBe("NYC");
     });
@@ -464,10 +504,10 @@ describe("Geography Column Types (PostGIS)", () => {
       const rows = await db
         .from(schema.GeographyFilterTests)
         .select()
-        .where(
+        .where(({ geographyFilterTests }) =>
           and(
-            stDWithin(schema.GeographyFilterTests.location, NYC, 5_000_000),
-            eq(schema.GeographyFilterTests.name, "LA"),
+            stDWithin(geographyFilterTests.location, NYC, 5_000_000),
+            eq(geographyFilterTests.name, "LA"),
           ),
         );
       expect(rows).toHaveLength(1);

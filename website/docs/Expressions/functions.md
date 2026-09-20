@@ -30,12 +30,12 @@ Counts rows. Pass `"*"` to count all rows (including nulls), or a column to coun
 import { count } from "durcno";
 
 // Count all rows
-const [{ total }] = await db.from(Users).select({ total: count("*") });
+const [{ total }] = await db.from(Users).select(() => ({ total: count("*") }));
 
 // Count non-null values in a specific column
 const [{ emailCount }] = await db
   .from(Users)
-  .select({ emailCount: count(Users.email) });
+  .select(({ users }) => ({ emailCount: count(users.email) }));
 ```
 
 ### `countDistinct`
@@ -47,7 +47,7 @@ import { countDistinct } from "durcno";
 
 const [{ uniqueTypes }] = await db
   .from(Users)
-  .select({ uniqueTypes: countDistinct(Users.type) });
+  .select(({ users }) => ({ uniqueTypes: countDistinct(users.type) }));
 ```
 
 ### `sum`
@@ -57,7 +57,9 @@ Returns the sum of all non-null values. The return type follows the column's Typ
 ```typescript
 import { sum } from "durcno";
 
-const [{ total }] = await db.from(Orders).select({ total: sum(Orders.amount) });
+const [{ total }] = await db
+  .from(Orders)
+  .select(({ orders }) => ({ total: sum(orders.amount) }));
 ```
 
 ### `avg`
@@ -69,7 +71,7 @@ import { avg } from "durcno";
 
 const [{ average }] = await db
   .from(Orders)
-  .select({ average: avg(Orders.amount) });
+  .select(({ orders }) => ({ average: avg(orders.amount) }));
 // average is `number | null`
 ```
 
@@ -80,10 +82,10 @@ Returns the minimum or maximum value. The return type matches the column's value
 ```typescript
 import { min, max } from "durcno";
 
-const [row] = await db.from(Orders).select({
-  earliest: min(Orders.createdAt),
-  latest: max(Orders.createdAt),
-});
+const [row] = await db.from(Orders).select(({ orders }) => ({
+  earliest: min(orders.createdAt),
+  latest: max(orders.createdAt),
+}));
 // earliest and latest are `Date | null`
 ```
 
@@ -94,32 +96,32 @@ When mixing aggregate and non-aggregate columns in a single `.select()`, Durcno 
 ```typescript
 import { count, sum } from "durcno";
 
-const stats = await db.from(Orders).select({
-  status: Orders.status,
+const stats = await db.from(Orders).select(({ orders }) => ({
+  status: orders.status,
   total: count("*"),
-  revenue: sum(Orders.amount),
-});
+  revenue: sum(orders.amount),
+}));
 // Equivalent to: SELECT status, count(*), sum(amount) FROM orders GROUP BY status
 ```
 
-### Aggregates in `orderBy` and `where`
+### Aggregates with `HAVING` and `orderBy`
 
-Aggregate functions can be used in `.orderBy()` and `.where()` clauses:
+Aggregate functions can be filtered in `.having()` clauses and sorted by alias in `.orderBy()`:
 
 ```typescript
-import { count, sum, gt, asc, desc } from "durcno";
+import { count, sum, gt, desc } from "durcno";
 
-// Order by aggregate
+// Order by aggregate alias
 await db
   .from(Orders)
-  .select({ status: Orders.status, total: count("*") })
-  .orderBy(desc(count("*")));
+  .select(({ orders }) => ({ status: orders.status, total: count("*") }))
+  .orderBy(({ orders }, { total }) => desc(total));
 
-// Filter by aggregate (HAVING equivalent)
+// Filter by aggregate in HAVING
 await db
   .from(Orders)
-  .select({ status: Orders.status, total: count("*") })
-  .where(gt(count("*"), 5));
+  .select(({ orders }) => ({ status: orders.status, total: count("*") }))
+  .having(() => gt(count("*"), 5));
 ```
 
 ---
@@ -145,10 +147,10 @@ Convert a string expression to lowercase or uppercase.
 ```typescript
 import { lower, upper } from "durcno";
 
-const result = await db.from(Users).select({
-  emailLower: lower(Users.email),
-  nameUpper: upper(Users.name),
-});
+const result = await db.from(Users).select(({ users }) => ({
+  emailLower: lower(users.email),
+  nameUpper: upper(users.name),
+}));
 ```
 
 ### `trim`
@@ -158,9 +160,9 @@ Removes leading and trailing whitespace.
 ```typescript
 import { trim } from "durcno";
 
-const result = await db.from(Users).select({
-  cleanName: trim(Users.name),
-});
+const result = await db.from(Users).select(({ users }) => ({
+  cleanName: trim(users.name),
+}));
 ```
 
 ### `length`
@@ -171,13 +173,15 @@ Returns the number of characters in a string expression.
 import { length, gt } from "durcno";
 
 // Select the length
-const result = await db.from(Users).select({ nameLength: length(Users.name) });
+const result = await db
+  .from(Users)
+  .select(({ users }) => ({ nameLength: length(users.name) }));
 
 // Filter by length
 await db
   .from(Users)
   .select()
-  .where(gt(length(Users.name), 5));
+  .where(({ users }) => gt(length(users.name), 5));
 ```
 
 ### `left` / `right`
@@ -187,10 +191,10 @@ Return the first or last `n` characters of a string.
 ```typescript
 import { left, right } from "durcno";
 
-const result = await db.from(Users).select({
-  prefix: left(Users.postalCode, 3),
-  suffix: right(Users.postalCode, 3),
-});
+const result = await db.from(Users).select(({ users }) => ({
+  prefix: left(users.postalCode, 3),
+  suffix: right(users.postalCode, 3),
+}));
 ```
 
 ### `position`
@@ -201,15 +205,15 @@ Returns the 1-based position of a substring within a string expression. Returns 
 import { position, gt } from "durcno";
 
 // Get position of '@' in email
-const result = await db.from(Users).select({
-  atPos: position(Users.email, "@"),
-});
+const result = await db.from(Users).select(({ users }) => ({
+  atPos: position(users.email, "@"),
+}));
 
 // Filter emails where '@' appears after position 5
 await db
   .from(Users)
   .select()
-  .where(gt(position(Users.email, "@"), 5));
+  .where(({ users }) => gt(position(users.email, "@"), 5));
 ```
 
 ### Composing String Functions
@@ -223,7 +227,7 @@ import { lower, trim, startsWith } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(startsWith(lower(trim(Users.email)), "admin"));
+  .where(({ users }) => startsWith(lower(trim(users.email)), "admin"));
 ```
 
 ---
@@ -251,9 +255,9 @@ Returns the absolute value of a numeric expression.
 ```typescript
 import { abs } from "durcno";
 
-const result = await db.from(Accounts).select({
-  absBalance: abs(Accounts.balance),
-});
+const result = await db.from(Accounts).select(({ accounts }) => ({
+  absBalance: abs(accounts.balance),
+}));
 ```
 
 ### `mod`
@@ -267,7 +271,7 @@ import { mod, eq } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(eq(mod(Users.id, 2), 0));
+  .where(({ users }) => eq(mod(users.id, 2), 0));
 ```
 
 ### `round`
@@ -277,10 +281,10 @@ Rounds a numeric expression. Omit `decimals` to round to the nearest integer, or
 ```typescript
 import { round } from "durcno";
 
-const result = await db.from(Products).select({
-  roundedPrice: round(Products.price),
-  twoDecimals: round(Products.price, 2),
-});
+const result = await db.from(Products).select(({ products }) => ({
+  roundedPrice: round(products.price),
+  twoDecimals: round(products.price, 2),
+}));
 ```
 
 ### `ceil` / `floor`
@@ -290,10 +294,10 @@ Round up or down to the nearest integer.
 ```typescript
 import { ceil, floor } from "durcno";
 
-const result = await db.from(Products).select({
-  ceiling: ceil(Products.price),
-  floored: floor(Products.price),
-});
+const result = await db.from(Products).select(({ products }) => ({
+  ceiling: ceil(products.price),
+  floored: floor(products.price),
+}));
 ```
 
 ### `trunc`
@@ -303,10 +307,10 @@ Truncates a numeric expression towards zero. Omit `decimals` to truncate to the 
 ```typescript
 import { trunc } from "durcno";
 
-const result = await db.from(Products).select({
-  truncatedPrice: trunc(Products.price),
-  twoDecimals: trunc(Products.price, 2),
-});
+const result = await db.from(Products).select(({ products }) => ({
+  truncatedPrice: trunc(products.price),
+  twoDecimals: trunc(products.price, 2),
+}));
 ```
 
 ### `power`
@@ -316,9 +320,9 @@ Returns a numeric expression raised to the power of `exponent`.
 ```typescript
 import { power } from "durcno";
 
-const result = await db.from(Products).select({
-  squared: power(Products.price, 2),
-});
+const result = await db.from(Products).select(({ products }) => ({
+  squared: power(products.price, 2),
+}));
 ```
 
 ---
@@ -339,12 +343,12 @@ Arithmetic operators combine two numeric expressions using standard math operato
 ```typescript
 import { add, sub, mul, div } from "durcno";
 
-const result = await db.from(Orders).select({
-  grossTotal: add(Orders.subtotal, Orders.tax),
-  discount: sub(Orders.price, Orders.discountAmount),
-  doubled: mul(Orders.quantity, 2),
-  half: div(Orders.amount, 2),
-});
+const result = await db.from(Orders).select(({ orders }) => ({
+  grossTotal: add(orders.subtotal, orders.tax),
+  discount: sub(orders.price, orders.discountAmount),
+  doubled: mul(orders.quantity, 2),
+  half: div(orders.amount, 2),
+}));
 ```
 
 ### Nesting Arithmetic Operators
@@ -355,9 +359,9 @@ Arithmetic results are wrapped in parentheses, so they compose safely:
 import { add, mul, sub } from "durcno";
 
 // (age * 2) + (5 - 1)
-const result = await db.from(Users).select({
-  derived: add(mul(Users.age, 2), sub(5, 1)),
-});
+const result = await db.from(Users).select(({ users }) => ({
+  derived: add(mul(users.age, 2), sub(5, 1)),
+}));
 ```
 
 ---
@@ -373,11 +377,11 @@ import { lower, length, asc, desc } from "durcno";
 await db
   .from(Users)
   .select()
-  .orderBy(asc(lower(Users.name)));
+  .orderBy(({ users }) => asc(lower(users.name)));
 
 // Order by name length descending
 await db
   .from(Users)
   .select()
-  .orderBy(desc(length(Users.name)));
+  .orderBy(({ users }) => desc(length(users.name)));
 ```

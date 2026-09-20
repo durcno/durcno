@@ -204,7 +204,7 @@ const queryVector = [0.1, 0.2, 0.3, ..., 0.5];
 const nearest = await db
   .from(Embeddings)
   .select()
-  .orderBy(asc(l2Distance(Embeddings.embedding, queryVector)))
+  .orderBy(({ embeddings }) => asc(l2Distance(embeddings.embedding, queryVector)))
   .limit(10);
 
 // Returns the 10 closest vectors
@@ -220,7 +220,7 @@ const queryVector = [0.1, 0.2, 0.3, ..., 0.5];
 const similar = await db
   .from(Embeddings)
   .select()
-  .where(lt(l2Distance(Embeddings.embedding, queryVector), 0.5));
+  .where(({ embeddings }) => lt(l2Distance(embeddings.embedding, queryVector), 0.5));
 
 // Returns all embeddings within 0.5 distance
 ```
@@ -239,11 +239,13 @@ const queryBits = "1010101010..."; // 1024 bits
 
 const results = await db
   .from(BinaryEmbeddings)
-  .select({
-    id: BinaryEmbeddings.id,
-    distance: hammingDistance(BinaryEmbeddings.bits, queryBits),
-  })
-  .orderBy(asc(hammingDistance(BinaryEmbeddings.bits, queryBits)))
+  .select(({ binaryEmbeddings }) => ({
+    id: binaryEmbeddings.id,
+    distance: hammingDistance(binaryEmbeddings.bits, queryBits),
+  }))
+  .orderBy(({ binaryEmbeddings }) =>
+    asc(hammingDistance(binaryEmbeddings.bits, queryBits)),
+  )
   .limit(5);
 
 // results[0].distance → number of bit differences
@@ -361,13 +363,13 @@ const db = database({ Documents }, config);
 async function searchSimilar(queryEmbedding: number[]) {
   const results = await db
     .from(Documents)
-    .select({
-      id: Documents.id,
-      content: Documents.content,
-      distance: l2Distance(Documents.embedding, queryEmbedding),
-    })
-    .where(lt(l2Distance(Documents.embedding, queryEmbedding), 1.0)) // threshold
-    .orderBy(asc(l2Distance(Documents.embedding, queryEmbedding)))
+    .select(({ documents }) => ({
+      id: documents.id,
+      content: documents.content,
+      distance: l2Distance(documents.embedding, queryEmbedding),
+    }))
+    .where(({ documents }) => lt(l2Distance(documents.embedding, queryEmbedding), 1.0)) // threshold
+    .orderBy(({ documents }) => asc(l2Distance(documents.embedding, queryEmbedding)))
     .limit(10);
 
   return results;

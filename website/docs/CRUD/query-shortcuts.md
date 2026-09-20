@@ -281,7 +281,11 @@ console.log(user.username);
 const user = await db.$first(Users, eq(Users.id, 1n));
 
 // Equivalent using select
-const [user] = await db.from(Users).select().where(eq(Users.id, 1n)).limit(1);
+const [user] = await db
+  .from(Users)
+  .select()
+  .where(({ users }) => eq(users.id, 1n))
+  .limit(1);
 ```
 
 Key differences:

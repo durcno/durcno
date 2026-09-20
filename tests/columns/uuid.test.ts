@@ -38,7 +38,7 @@ describe("UUID Column Type", () => {
       const [row] = await db
         .from(schema.UuidTests)
         .select()
-        .where(eq(schema.UuidTests.id, insertedId));
+        .where(({ uuidTests }) => eq(uuidTests.id, insertedId));
       expect(row.uuid).toBe(uuid1);
       expect(row.uuidWithDefault).toBe("00000000-0000-0000-8000-000000000000");
     });
@@ -52,7 +52,7 @@ describe("UUID Column Type", () => {
       const [row] = await db
         .from(schema.UuidTests)
         .select()
-        .where(eq(schema.UuidTests.id, insertedId));
+        .where(({ uuidTests }) => eq(uuidTests.id, insertedId));
       expect(row.uuid).toBe(uuid2);
     });
   });

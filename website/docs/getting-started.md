@@ -204,15 +204,18 @@ await db.insert(Users).values([
 const allUsers = await db.from(Users).select();
 
 // Select specific columns
-const userNames = await db.from(Users).select({
-  id: Users.id,
-  username: Users.username,
-});
+const userNames = await db.from(Users).select(({ users }) => ({
+  id: users.id,
+  username: users.username,
+}));
 
 // With conditions
 import { eq } from "durcno";
 
-const users = await db.from(Users).select().where(eq(Users.id, 1n));
+const users = await db
+  .from(Users)
+  .select()
+  .where(({ users }) => eq(users.id, 1n));
 ```
 
 ### Update Queries

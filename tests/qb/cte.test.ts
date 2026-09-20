@@ -87,20 +87,18 @@ describe("CTE queries", () => {
         createTestUser({ username: "active-charlie", status: "active" }),
       ]);
 
-    const activeUsers = db
-      .with("activeUsers")
-      .as(
-        db
-          .from(schema.Users)
-          .select({ id: schema.Users.id, username: schema.Users.username })
-          .where(eq(schema.Users.status, "active")),
-      );
+    const activeUsers = db.with("activeUsers").as(
+      db
+        .from(schema.Users)
+        .select(({ users }) => ({ id: users.id, username: users.username }))
+        .where(({ users }) => eq(users.status, "active")),
+    );
 
     const rows = await db
       .with(activeUsers)
       .from((ctes) => ctes.activeUsers)
       .select()
-      .orderBy(asc(activeUsers.username));
+      .orderBy(({ activeUsers }) => asc(activeUsers.username));
 
     expect(rows).toEqual([
       { id: rows[0].id, username: "active-alice" },
@@ -116,26 +114,24 @@ describe("CTE queries", () => {
         createTestUser({ username: "chain-b", status: "active" }),
       ]);
 
-    const activeUsers = db
-      .with("activeUsers")
-      .as(
-        db
-          .from(schema.Users)
-          .select({ id: schema.Users.id, username: schema.Users.username })
-          .where(eq(schema.Users.status, "active")),
-      );
+    const activeUsers = db.with("activeUsers").as(
+      db
+        .from(schema.Users)
+        .select(({ users }) => ({ id: users.id, username: users.username }))
+        .where(({ users }) => eq(users.status, "active")),
+    );
     const activeNames = db.with("activeNames").as(
       db
         .with(activeUsers)
         .from((ctes) => ctes.activeUsers)
-        .select({ username: activeUsers.username }),
+        .select(({ activeUsers }) => ({ username: activeUsers.username })),
     );
 
     const rows = await db
       .with(activeUsers, activeNames)
       .from((ctes) => ctes.activeNames)
       .select()
-      .orderBy(asc(activeNames.username));
+      .orderBy(({ activeNames }) => asc(activeNames.username));
 
     expect(rows).toEqual([{ username: "chain-a" }, { username: "chain-b" }]);
   });
@@ -155,7 +151,7 @@ describe("CTE queries", () => {
       .with(insertedUsers)
       .from((ctes) => ctes.insertedUsers)
       .select()
-      .orderBy(asc(insertedUsers.username));
+      .orderBy(({ insertedUsers }) => asc(insertedUsers.username));
 
     expect(rows).toEqual([
       { id: rows[0].id, username: "dml-a", status: "active" },
@@ -164,8 +160,11 @@ describe("CTE queries", () => {
 
     const users = await db
       .from(schema.Users)
-      .select({ username: schema.Users.username, status: schema.Users.status })
-      .orderBy(asc(schema.Users.username));
+      .select(({ users }) => ({
+        username: users.username,
+        status: users.status,
+      }))
+      .orderBy(({ users }) => asc(users.username));
 
     expect(users).toEqual([
       { username: "dml-a", status: "active" },
@@ -196,7 +195,7 @@ describe("CTE queries", () => {
       .with(updatedUsers)
       .from((ctes) => ctes.updatedUsers)
       .select()
-      .orderBy(asc(updatedUsers.username));
+      .orderBy(({ updatedUsers }) => asc(updatedUsers.username));
 
     expect(rows).toEqual([
       { username: "upd-a", status: "inactive" },
@@ -205,8 +204,11 @@ describe("CTE queries", () => {
 
     const allUsers = await db
       .from(schema.Users)
-      .select({ username: schema.Users.username, status: schema.Users.status })
-      .orderBy(asc(schema.Users.username));
+      .select(({ users }) => ({
+        username: users.username,
+        status: users.status,
+      }))
+      .orderBy(({ users }) => asc(users.username));
 
     expect(allUsers).toEqual([
       { username: "upd-a", status: "inactive" },
@@ -237,16 +239,17 @@ describe("CTE queries", () => {
       .with(deletedUsers)
       .from((ctes) => ctes.deletedUsers)
       .select()
-      .orderBy(asc(deletedUsers.username));
+      .orderBy(({ deletedUsers }) => asc(deletedUsers.username));
 
     expect(rows).toEqual([
       { username: "del-a", status: "inactive" },
       { username: "del-b", status: "inactive" },
     ]);
 
-    const remaining = await db
-      .from(schema.Users)
-      .select({ username: schema.Users.username, status: schema.Users.status });
+    const remaining = await db.from(schema.Users).select(({ users }) => ({
+      username: users.username,
+      status: users.status,
+    }));
 
     expect(remaining).toEqual([{ username: "del-c", status: "active" }]);
   });
@@ -267,26 +270,26 @@ describe("CTE queries", () => {
       { userId: activeCharlie.id, title: "Post C" },
     ]);
 
-    const activeUserIds = db
-      .with("activeUserIds")
-      .as(
-        db
-          .from(schema.Users)
-          .select({ id: schema.Users.id })
-          .where(eq(schema.Users.status, "active")),
-      );
+    const activeUserIds = db.with("activeUserIds").as(
+      db
+        .from(schema.Users)
+        .select(({ users }) => ({ id: users.id }))
+        .where(({ users }) => eq(users.status, "active")),
+    );
 
     const rows = await db
       .with(activeUserIds)
       .from(schema.Posts)
-      .select({ id: schema.Posts.id, title: schema.Posts.title })
-      .where(
+      .select(({ posts }) => ({ id: posts.id, title: posts.title }))
+      .where(({ posts }) =>
         isIn(
-          schema.Posts.userId,
-          db.from(activeUserIds).select({ id: activeUserIds.id }),
+          posts.userId,
+          db
+            .from(activeUserIds)
+            .select(({ activeUserIds }) => ({ id: activeUserIds.id })),
         ),
       )
-      .orderBy(asc(schema.Posts.id));
+      .orderBy(({ posts }) => asc(posts.id));
 
     expect(rows).toHaveLength(2);
     expect(rows.map((r) => r.title).sort()).toEqual(["Post A", "Post C"]);
@@ -303,14 +306,16 @@ describe("CTE queries", () => {
     const lowercased = db
       .with("lowercasedUsers")
       .as(
-        db.from(schema.Users).select({ lname: lower(schema.Users.username) }),
+        db
+          .from(schema.Users)
+          .select(({ users }) => ({ lname: lower(users.username) })),
       );
 
     const rows = await db
       .with(lowercased)
       .from((ctes) => ctes.lowercasedUsers)
       .select()
-      .orderBy(asc(lowercased.lname));
+      .orderBy(({ lowercasedUsers }) => asc(lowercasedUsers.lname));
 
     expect(rows).toHaveLength(2);
     expect(rows[0].lname).toBe("alice");
@@ -329,17 +334,17 @@ describe("CTE queries", () => {
       ]);
 
     const countCte = db.with("userCounts").as(
-      db.from(schema.Users).select({
-        status: schema.Users.status,
-        total: count(schema.Users.id),
-      }),
+      db.from(schema.Users).select(({ users }) => ({
+        status: users.status,
+        total: count(users.id),
+      })),
     );
 
     const rows = await db
       .with(countCte)
       .from((ctes) => ctes.userCounts)
       .select()
-      .orderBy(asc(countCte.status));
+      .orderBy(({ userCounts }) => asc(userCounts.status));
 
     expect(rows).toHaveLength(2);
     const activeRow = rows.find((r) => r.status === "active");
@@ -348,5 +353,41 @@ describe("CTE queries", () => {
     expect(inactiveRow?.total).toBe(1);
     // Ensure the counts are numbers, not strings (verifies fromDriverValue path)
     expect(typeof activeRow?.total).toBe("number");
+  });
+
+  it("WITH left-joining a CTE with virtual columns clones as nullable without corruption", async () => {
+    await db
+      .insert(schema.Users)
+      .values([
+        createTestUser({ username: "user_cte_1", status: "active" }),
+        createTestUser({ username: "user_cte_2", status: "inactive" }),
+      ]);
+
+    const activeUsersCte = db.with("activeUsers").as(
+      db
+        .from(schema.Users)
+        .select(({ users }) => ({
+          username: users.username,
+        }))
+        .where(({ users }) => eq(users.status, "active")),
+    );
+
+    const rows = await db
+      .with(activeUsersCte)
+      .from(schema.Users)
+      .leftJoin(activeUsersCte, ({ users, activeUsers }) =>
+        eq(users.username, activeUsers.username),
+      )
+      .select(({ users, activeUsers }) => ({
+        username: users.username,
+        activeUser: activeUsers.username,
+      }))
+      .orderBy(({ users }) => asc(users.username));
+
+    expect(rows).toHaveLength(2);
+    const u1 = rows.find((r) => r.username === "user_cte_1");
+    const u2 = rows.find((r) => r.username === "user_cte_2");
+    expect(u1?.activeUser).toBe("user_cte_1");
+    expect(u2?.activeUser).toBeNull();
   });
 });

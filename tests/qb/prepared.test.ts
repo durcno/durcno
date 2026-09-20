@@ -95,7 +95,7 @@ describe("prepare", () => {
           .prepare()
           .from(schema.Users)
           .select()
-          .where(eq(schema.Users.id, args.userId))
+          .where(({ users }) => eq(users.id, args.userId))
           .limit(args.lim),
     );
 
@@ -181,7 +181,7 @@ describe("prepare", () => {
     const remaining = await db
       .from(schema.Users)
       .select()
-      .where(eq(schema.Users.id, user.id));
+      .where(({ users }) => eq(users.id, user.id));
     expect(remaining).toHaveLength(0);
   });
 
@@ -232,7 +232,7 @@ describe("prepare", () => {
           .prepare()
           .from(schema.Users)
           .select()
-          .where(sql`age = ${args.ageArg}`),
+          .where(() => sql`age = ${args.ageArg}`),
       );
 
       const rows = await selectPre.run(db, { ageArg: 30 });

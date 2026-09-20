@@ -94,7 +94,7 @@ describe("SELECT aggregate functions", () => {
     it("count(*) should return 0 for an empty table", async () => {
       const [result] = await db
         .from(schema.Users)
-        .select({ total: count("*") });
+        .select(({ users }) => ({ total: count("*") }));
 
       expect(result.total).toBe(0);
     });
@@ -110,7 +110,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ total: count("*") });
+        .select(({ users }) => ({ total: count("*") }));
 
       expect(result.total).toBe(3);
     });
@@ -126,7 +126,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ withAge: count(schema.Users.age) });
+        .select(({ users }) => ({ withAge: count(users.age) }));
 
       expect(result.withAge).toBe(1);
     });
@@ -142,8 +142,8 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ admins: count("*") })
-        .where(eq(schema.Users.type, "admin"));
+        .select(({ users }) => ({ admins: count("*") }))
+        .where(({ users }) => eq(users.type, "admin"));
 
       expect(result.admins).toBe(2);
     });
@@ -165,7 +165,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ uniqueTypes: countDistinct(schema.Users.type) });
+        .select(({ users }) => ({ uniqueTypes: countDistinct(users.type) }));
 
       expect(result.uniqueTypes).toBe(2);
     });
@@ -181,7 +181,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ uniqueAges: countDistinct(schema.Users.age) });
+        .select(({ users }) => ({ uniqueAges: countDistinct(users.age) }));
 
       // Only 1 distinct non-null value (25)
       expect(result.uniqueAges).toBe(1);
@@ -196,7 +196,7 @@ describe("SELECT aggregate functions", () => {
     it("sum should return null for an empty table", async () => {
       const [result] = await db
         .from(schema.Users)
-        .select({ total: sum(schema.Users.age) });
+        .select(({ users }) => ({ total: sum(users.age) }));
 
       expect(result.total).toBeNull();
     });
@@ -212,7 +212,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ total: sum(schema.Users.score) });
+        .select(({ users }) => ({ total: sum(users.score) }));
 
       expect(result.total).toBe(60);
     });
@@ -228,7 +228,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ total: sum(schema.Users.age) });
+        .select(({ users }) => ({ total: sum(users.age) }));
 
       expect(result.total).toBe(30);
     });
@@ -242,7 +242,7 @@ describe("SELECT aggregate functions", () => {
     it("avg should return null for an empty table", async () => {
       const [result] = await db
         .from(schema.Users)
-        .select({ average: avg(schema.Users.age) });
+        .select(({ users }) => ({ average: avg(users.age) }));
 
       expect(result.average).toBeNull();
     });
@@ -258,7 +258,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ average: avg(schema.Users.score) });
+        .select(({ users }) => ({ average: avg(users.score) }));
 
       expect(Number(result.average)).toBe(20);
     });
@@ -274,7 +274,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ average: avg(schema.Users.age) });
+        .select(({ users }) => ({ average: avg(users.age) }));
 
       expect(Number(result.average)).toBe(20);
     });
@@ -288,7 +288,7 @@ describe("SELECT aggregate functions", () => {
     it("min should return null for an empty table", async () => {
       const [result] = await db
         .from(schema.Users)
-        .select({ lowest: min(schema.Users.age) });
+        .select(({ users }) => ({ lowest: min(users.age) }));
 
       expect(result.lowest).toBeNull();
     });
@@ -304,7 +304,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ lowest: min(schema.Users.score) });
+        .select(({ users }) => ({ lowest: min(users.score) }));
 
       expect(result.lowest).toBe(10);
     });
@@ -320,7 +320,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ first: min(schema.Users.username) });
+        .select(({ users }) => ({ first: min(users.username) }));
 
       expect(result.first).toBe("alice");
     });
@@ -336,7 +336,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ lowest: min(schema.Users.age) });
+        .select(({ users }) => ({ lowest: min(users.age) }));
 
       expect(result.lowest).toBe(20);
     });
@@ -350,7 +350,7 @@ describe("SELECT aggregate functions", () => {
     it("max should return null for an empty table", async () => {
       const [result] = await db
         .from(schema.Users)
-        .select({ highest: max(schema.Users.age) });
+        .select(({ users }) => ({ highest: max(users.age) }));
 
       expect(result.highest).toBeNull();
     });
@@ -366,7 +366,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ highest: max(schema.Users.score) });
+        .select(({ users }) => ({ highest: max(users.score) }));
 
       expect(result.highest).toBe(50);
     });
@@ -382,7 +382,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ last: max(schema.Users.username) });
+        .select(({ users }) => ({ last: max(users.username) }));
 
       expect(result.last).toBe("charlie");
     });
@@ -398,7 +398,7 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ highest: max(schema.Users.age) });
+        .select(({ users }) => ({ highest: max(users.age) }));
 
       expect(result.highest).toBe(40);
     });
@@ -418,13 +418,13 @@ describe("SELECT aggregate functions", () => {
           createTestUser({ username: "charlie", score: 30 }),
         ]);
 
-      const [result] = await db.from(schema.Users).select({
+      const [result] = await db.from(schema.Users).select(({ users }) => ({
         total: count("*"),
-        totalScore: sum(schema.Users.score),
-        avgScore: avg(schema.Users.score),
-        minScore: min(schema.Users.score),
-        maxScore: max(schema.Users.score),
-      });
+        totalScore: sum(users.score),
+        avgScore: avg(users.score),
+        minScore: min(users.score),
+        maxScore: max(users.score),
+      }));
 
       expect(result.total).toBe(3);
       expect(result.totalScore).toBe(60);
@@ -449,8 +449,8 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ maxScore: max(schema.Users.score) })
-        .orderBy(desc("maxScore"));
+        .select(({ users }) => ({ maxScore: max(users.score) }))
+        .orderBy(({ users }) => desc("maxScore"));
 
       expect(result.maxScore).toBe(30);
     });
@@ -466,8 +466,8 @@ describe("SELECT aggregate functions", () => {
 
       const [result] = await db
         .from(schema.Users)
-        .select({ total: count("*") })
-        .orderBy(asc("total"));
+        .select(({ users }) => ({ total: count("*") }))
+        .orderBy(({ users }) => asc("total"));
 
       expect(result.total).toBe(3);
     });
@@ -489,8 +489,8 @@ describe("SELECT aggregate functions", () => {
 
       const results = await db
         .from(schema.Users)
-        .select({ type: schema.Users.type, total: count("*") })
-        .orderBy(asc(schema.Users.type));
+        .select(({ users }) => ({ type: users.type, total: count("*") }))
+        .orderBy(({ users }) => asc(users.type));
 
       expect(results).toHaveLength(2);
       expect(results[0].type).toBe("admin");
@@ -510,12 +510,12 @@ describe("SELECT aggregate functions", () => {
 
       const results = await db
         .from(schema.Users)
-        .select({
-          type: schema.Users.type,
-          role: schema.Users.role,
+        .select(({ users }) => ({
+          type: users.type,
+          role: users.role,
           total: count("*"),
-        })
-        .orderBy(asc(schema.Users.type));
+        }))
+        .orderBy(({ users }) => asc(users.type));
 
       expect(results.length).toBeGreaterThanOrEqual(2);
       const adminGroup = results.find(
@@ -535,11 +535,11 @@ describe("SELECT aggregate functions", () => {
 
       const results = await db
         .from(schema.Users)
-        .select({
-          type: schema.Users.type,
-          totalScore: sum(schema.Users.score),
-        })
-        .orderBy(asc(schema.Users.type));
+        .select(({ users }) => ({
+          type: users.type,
+          totalScore: sum(users.score),
+        }))
+        .orderBy(({ users }) => asc(users.type));
 
       expect(results).toHaveLength(2);
       expect(results[0].type).toBe("admin");
@@ -560,9 +560,9 @@ describe("SELECT aggregate functions", () => {
 
       const results = await db
         .from(schema.Users)
-        .select({ type: schema.Users.type, total: count("*") })
-        .where(eq(schema.Users.type, "admin"))
-        .orderBy(asc(schema.Users.type));
+        .select(({ users }) => ({ type: users.type, total: count("*") }))
+        .where(({ users }) => eq(users.type, "admin"))
+        .orderBy(({ users }) => asc(users.type));
 
       expect(results).toHaveLength(1);
       expect(results[0].type).toBe("admin");
@@ -586,8 +586,11 @@ describe("SELECT aggregate functions", () => {
 
       const results = await db
         .from(schema.Users)
-        .select({ lowerName: lower(schema.Users.username), total: count("*") })
-        .orderBy(asc(lower(schema.Users.username)));
+        .select(({ users }) => ({
+          lowerName: lower(users.username),
+          total: count("*"),
+        }))
+        .orderBy(({ users }) => asc(lower(users.username)));
 
       // "Alice" and "adam" both lower to distinct values; "Bob" is also distinct
       expect(results.length).toBeGreaterThanOrEqual(2);
@@ -610,10 +613,10 @@ describe("SELECT aggregate functions", () => {
           createTestUser({ username: "charlie" }),
         ]);
 
-      const [result] = await db.from(schema.Users).select({
-        minLower: min(lower(schema.Users.username)),
-        maxLower: max(lower(schema.Users.username)),
-      });
+      const [result] = await db.from(schema.Users).select(({ users }) => ({
+        minLower: min(lower(users.username)),
+        maxLower: max(lower(users.username)),
+      }));
 
       expect(result.minLower).toBe("alice");
       expect(result.maxLower).toBe("charlie");
@@ -628,10 +631,10 @@ describe("SELECT aggregate functions", () => {
           createTestUser({ username: "charlie", score: -30 }),
         ]);
 
-      const [result] = await db.from(schema.Users).select({
-        totalAbs: sum(abs(schema.Users.score)),
-        avgAbs: avg(abs(schema.Users.score)),
-      });
+      const [result] = await db.from(schema.Users).select(({ users }) => ({
+        totalAbs: sum(abs(users.score)),
+        avgAbs: avg(abs(users.score)),
+      }));
 
       expect(result.totalAbs).toBe(60);
       expect(Number(result.avgAbs)).toBe(20);
@@ -646,9 +649,9 @@ describe("SELECT aggregate functions", () => {
           createTestUser({ username: "ccc" }),
         ]);
 
-      const [result] = await db.from(schema.Users).select({
-        totalLength: sum(length(schema.Users.username)),
-      });
+      const [result] = await db.from(schema.Users).select(({ users }) => ({
+        totalLength: sum(length(users.username)),
+      }));
 
       expect(result.totalLength).toBe(6);
     });
@@ -684,16 +687,16 @@ describe("SELECT aggregate functions", () => {
 
       const results = await db
         .from(schema.Users)
-        .leftJoin(schema.Posts, eq(schema.Posts.userId, schema.Users.id))
-        .select({
-          username: schema.Users.username,
-          postCount: count(schema.Posts.id),
-          viewCountSum: sum(schema.Posts.viewCount),
-          totalEngagement: sum(
-            mul(schema.Posts.viewCount, schema.Posts.likeCount),
-          ),
-        })
-        .orderBy(asc(schema.Users.username));
+        .leftJoin(schema.Posts, ({ users, posts }) =>
+          eq(posts.userId, users.id),
+        )
+        .select(({ users, posts }) => ({
+          username: users.username,
+          postCount: count(posts.id),
+          viewCountSum: sum(posts.viewCount),
+          totalEngagement: sum(mul(posts.viewCount, posts.likeCount)),
+        }))
+        .orderBy(({ users }) => asc(users.username));
 
       expect(results).toHaveLength(2);
       expect(results[0].username).toBe("alice");

@@ -20,6 +20,15 @@ export function buildWithClause(
 }
 
 /**
+ * View of select aliases passed to query clause callbacks (e.g. orderBy, groupBy).
+ * Maps each select alias key to its string literal name.
+ */
+export type SelectAliasesView<TSelects> =
+  TSelects extends Record<string, unknown>
+    ? { readonly [K in keyof TSelects]: Extract<K, string> }
+    : Record<never, never>;
+
+/**
  * Resolves the resulting column map type for a `RETURNING` clause.
  */
 export type ReturningColumns<

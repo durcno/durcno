@@ -105,16 +105,16 @@ describe("String and Numeric Functions", () => {
 
     const result = await db
       .from(schema.Users)
-      .select({
-        len: length(schema.Users.email),
-        low: lower(schema.Users.email),
-        up: upper(schema.Users.email),
-        trimmed: trim(schema.Users.username),
-        l: left(schema.Users.email, 4),
-        r: right(schema.Users.email, 4),
-        pos: position(schema.Users.email, "@"),
-      })
-      .where(eq(schema.Users.id, user.id));
+      .select(({ users }) => ({
+        len: length(users.email),
+        low: lower(users.email),
+        up: upper(users.email),
+        trimmed: trim(users.username),
+        l: left(users.email, 4),
+        r: right(users.email, 4),
+        pos: position(users.email, "@"),
+      }))
+      .where(({ users }) => eq(users.id, user.id));
 
     expect(result[0].len).toBe(16);
     expect(result[0].low).toBe("test@example.com");
@@ -140,16 +140,16 @@ describe("String and Numeric Functions", () => {
 
     const result = await db
       .from(schema.Users)
-      .select({
-        a: abs(schema.Users.age),
-        m: mod(schema.Users.age, 2),
-        r: round(schema.Users.age),
-        c: ceil(schema.Users.age),
-        f: floor(schema.Users.age),
-        t: trunc(schema.Users.age),
-        p: power(schema.Users.age, 2),
-      })
-      .where(eq(schema.Users.id, user.id));
+      .select(({ users }) => ({
+        a: abs(users.age),
+        m: mod(users.age, 2),
+        r: round(users.age),
+        c: ceil(users.age),
+        f: floor(users.age),
+        t: trunc(users.age),
+        p: power(users.age, 2),
+      }))
+      .where(({ users }) => eq(users.id, user.id));
 
     expect(Number(result[0].a)).toBe(age);
     expect(Number(result[0].m)).toBe(age % 2);
@@ -174,14 +174,14 @@ describe("String and Numeric Functions", () => {
 
     const result = await db
       .from(schema.Users)
-      .select({
-        added: add(schema.Users.age, 5),
-        subtracted: sub(schema.Users.age, 3),
-        multiplied: mul(schema.Users.age, 2),
-        divided: div(schema.Users.age, 2),
-        nested: add(mul(schema.Users.age, 2), sub(5, 1)), // (age * 2) + (5 - 1)
-      })
-      .where(eq(schema.Users.id, user.id));
+      .select(({ users }) => ({
+        added: add(users.age, 5),
+        subtracted: sub(users.age, 3),
+        multiplied: mul(users.age, 2),
+        divided: div(users.age, 2),
+        nested: add(mul(users.age, 2), sub(5, 1)), // (age * 2) + (5 - 1)
+      }))
+      .where(({ users }) => eq(users.id, user.id));
 
     expect(Number(result[0].added)).toBe(baseValue + 5); // 15
     expect(Number(result[0].subtracted)).toBe(baseValue - 3); // 7

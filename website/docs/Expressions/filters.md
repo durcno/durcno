@@ -43,10 +43,16 @@ Check if a column equals a value:
 import { eq } from "durcno";
 
 // Filter by exact value
-await db.from(Users).select().where(eq(Users.type, "admin"));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => eq(users.type, "admin"));
 
 // Compare two columns
-await db.from(Users).innerJoin(Posts, eq(Users.id, Posts.userId)).select();
+await db
+  .from(Users)
+  .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
+  .select();
 ```
 
 ### Not Equal (`ne`)
@@ -57,7 +63,10 @@ Check if a column does not equal a value:
 import { ne } from "durcno";
 
 // Get all non-admin users
-await db.from(Users).select().where(ne(Users.type, "admin"));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => ne(users.type, "admin"));
 ```
 
 ### Greater Than or Equal (`gte`)
@@ -71,10 +80,13 @@ import { gte } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(gte(Users.createdAt, new Date("2024-01-01")));
+  .where(({ users }) => gte(users.createdAt, new Date("2024-01-01")));
 
 // Get users with id >= 10
-await db.from(Users).select().where(gte(Users.id, 10n));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => gte(users.id, 10n));
 ```
 
 ### Less Than or Equal (`lte`)
@@ -88,7 +100,7 @@ import { lte } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(lte(Users.createdAt, new Date("2024-01-01")));
+  .where(({ users }) => lte(users.createdAt, new Date("2024-01-01")));
 ```
 
 ### Greater Than (`gt`)
@@ -99,13 +111,16 @@ Check if a column is strictly greater than a value:
 import { gt } from "durcno";
 
 // Get users with id > 10 (excludes 10)
-await db.from(Users).select().where(gt(Users.id, 10n));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => gt(users.id, 10n));
 
 // Get users created after a date
 await db
   .from(Users)
   .select()
-  .where(gt(Users.createdAt, new Date("2024-01-01")));
+  .where(({ users }) => gt(users.createdAt, new Date("2024-01-01")));
 ```
 
 ### Less Than (`lt`)
@@ -116,13 +131,16 @@ Check if a column is strictly less than a value:
 import { lt } from "durcno";
 
 // Get users with id < 100 (excludes 100)
-await db.from(Users).select().where(lt(Users.id, 100n));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => lt(users.id, 100n));
 
 // Get users created before a date
 await db
   .from(Users)
   .select()
-  .where(lt(Users.createdAt, new Date("2024-12-31")));
+  .where(({ users }) => lt(users.createdAt, new Date("2024-12-31")));
 ```
 
 ### IS NULL (`isNull`)
@@ -133,7 +151,10 @@ Check if a column is NULL:
 import { isNull } from "durcno";
 
 // Get users without an email
-await db.from(Users).select().where(isNull(Users.email));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => isNull(users.email));
 ```
 
 ### IS NOT NULL (`isNotNull`)
@@ -144,7 +165,10 @@ Check if a column is not NULL:
 import { isNotNull } from "durcno";
 
 // Get users with an email
-await db.from(Users).select().where(isNotNull(Users.email));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => isNotNull(users.email));
 ```
 
 ### IN Array (`isIn`)
@@ -158,13 +182,13 @@ import { isIn } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(isIn(Users.id, [1n, 2n, 3n]));
+  .where(({ users }) => isIn(users.id, [1n, 2n, 3n]));
 
 // Get users with specific types
 await db
   .from(Users)
   .select()
-  .where(isIn(Users.type, ["admin", "user"]));
+  .where(({ users }) => isIn(users.type, ["admin", "user"]));
 ```
 
 ### NOT IN Array (`notIn`)
@@ -178,7 +202,7 @@ import { notIn } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(notIn(Users.type, ["banned", "deleted"]));
+  .where(({ users }) => notIn(users.type, ["banned", "deleted"]));
 ```
 
 ### String Filters
@@ -193,13 +217,22 @@ Durcno provides case-sensitive text search operators:
 import { startsWith, endsWith, contains } from "durcno";
 
 // startsWith: Match records starting with a prefix (case-sensitive)
-await db.from(Users).select().where(startsWith(Users.username, "admin"));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => startsWith(users.username, "admin"));
 
 // endsWith: Match records ending with a suffix (case-sensitive)
-await db.from(Users).select().where(endsWith(Users.email, "@example.com"));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => endsWith(users.email, "@example.com"));
 
 // contains: Match records containing a substring (case-sensitive)
-await db.from(Users).select().where(contains(Users.bio, "typescript"));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => contains(users.bio, "typescript"));
 ```
 
 ### LIKE (`like`)
@@ -210,10 +243,16 @@ Case-sensitive pattern matching using PostgreSQL's `LIKE` operator. Use `%` for 
 import { like } from "durcno";
 
 // Match codes starting with "US" (case-sensitive)
-await db.from(Countries).select().where(like(Countries.code, "US%"));
+await db
+  .from(Countries)
+  .select()
+  .where(({ countries }) => like(countries.code, "US%"));
 
 // Match values with exactly 5 characters
-await db.from(Products).select().where(like(Products.sku, "_____"));
+await db
+  .from(Products)
+  .select()
+  .where(({ products }) => like(products.sku, "_____"));
 ```
 
 ### ILIKE (`ilike`)
@@ -224,7 +263,10 @@ Case-insensitive pattern matching using PostgreSQL's `ILIKE` operator:
 import { ilike } from "durcno";
 
 // Match email pattern case-insensitively
-await db.from(Users).select().where(ilike(Users.email, "%@EXAMPLE.COM"));
+await db
+  .from(Users)
+  .select()
+  .where(({ users }) => ilike(users.email, "%@EXAMPLE.COM"));
 ```
 
 :::tip Case sensitivity
@@ -246,16 +288,16 @@ import { and, eq, gte } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(
-    and(eq(Users.type, "admin"), gte(Users.createdAt, new Date("2024-01-01"))),
+  .where(({ users }) =>
+    and(eq(users.type, "admin"), gte(users.createdAt, new Date("2024-01-01"))),
   );
 
 // Combine more than two conditions
 await db
   .from(Users)
   .select()
-  .where(
-    and(eq(Users.type, "admin"), gte(Users.id, 10n), isNotNull(Users.email)),
+  .where(({ users }) =>
+    and(eq(users.type, "admin"), gte(users.id, 10n), isNotNull(users.email)),
   );
 ```
 
@@ -270,7 +312,7 @@ import { or, eq } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(or(eq(Users.type, "admin"), eq(Users.type, "user")));
+  .where(({ users }) => or(eq(users.type, "admin"), eq(users.type, "user")));
 ```
 
 ### Combining AND and OR
@@ -284,10 +326,10 @@ import { and, or, eq, gte, isNotNull } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(
+  .where(({ users }) =>
     and(
-      or(eq(Users.type, "admin"), eq(Users.type, "moderator")),
-      gte(Users.createdAt, new Date("2024-01-01")),
+      or(eq(users.type, "admin"), eq(users.type, "moderator")),
+      gte(users.createdAt, new Date("2024-01-01")),
     ),
   );
 ```
@@ -306,7 +348,7 @@ import { arrayContains } from "durcno";
 await db
   .from(Posts)
   .select()
-  .where(arrayContains(Posts.tags, ["typescript", "postgres"]));
+  .where(({ posts }) => arrayContains(posts.tags, ["typescript", "postgres"]));
 ```
 
 ### Array Contained By (`arrayContainedBy`)
@@ -319,7 +361,9 @@ import { arrayContainedBy } from "durcno";
 await db
   .from(Posts)
   .select()
-  .where(arrayContainedBy(Posts.tags, ["typescript", "postgres", "orm"]));
+  .where(({ posts }) =>
+    arrayContainedBy(posts.tags, ["typescript", "postgres", "orm"]),
+  );
 ```
 
 ### Array Overlaps (`arrayOverlaps`)
@@ -332,7 +376,7 @@ import { arrayOverlaps } from "durcno";
 await db
   .from(Posts)
   .select()
-  .where(arrayOverlaps(Posts.tags, ["postgres"]));
+  .where(({ posts }) => arrayOverlaps(posts.tags, ["postgres"]));
 ```
 
 ### Array Has (`arrayHas`)
@@ -342,7 +386,10 @@ Checks if a value exists in an array column (`= ANY(column)`):
 ```typescript
 import { arrayHas } from "durcno";
 
-await db.from(Posts).select().where(arrayHas(Posts.tags, "typescript"));
+await db
+  .from(Posts)
+  .select()
+  .where(({ posts }) => arrayHas(posts.tags, "typescript"));
 ```
 
 ### Array All (`arrayAll`)
@@ -352,7 +399,10 @@ Checks if all elements in an array column equal the provided value (`= ALL(colum
 ```typescript
 import { arrayAll } from "durcno";
 
-await db.from(Posts).select().where(arrayAll(Posts.publishedFlags, true));
+await db
+  .from(Posts)
+  .select()
+  .where(({ posts }) => arrayAll(posts.publishedFlags, true));
 ```
 
 ## Column Comparisons
@@ -363,10 +413,16 @@ All comparison operators support comparing two columns:
 import { eq, gte } from "durcno";
 
 // Join condition: compare columns from different tables
-await db.from(Users).innerJoin(Posts, eq(Users.id, Posts.userId)).select();
+await db
+  .from(Users)
+  .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
+  .select();
 
 // Compare columns from the same table
-await db.from(Events).select().where(gte(Events.endDate, Events.startDate));
+await db
+  .from(Events)
+  .select()
+  .where(({ events }) => gte(events.endDate, events.startDate));
 ```
 
 ## Raw SQL in Filters
@@ -379,5 +435,5 @@ import { sql } from "durcno";
 await db
   .from(Users)
   .select()
-  .where(sql`LOWER(username) = 'admin'`);
+  .where(() => sql`LOWER(username) = 'admin'`);
 ```

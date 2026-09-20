@@ -796,7 +796,41 @@ export abstract class Column<
 
   /** @internal */
   clone(): Column<TConfig, TColVal, TPgType> {
-    return new (this.constructor as new (config: TConfig) => this)(this.config);
+    const cloned = new (this.constructor as new (config: TConfig) => this)(
+      this.config,
+    );
+    if (this.name) cloned._.setName(this.name);
+    if (this.table) cloned._.setTable(this.table as unknown as StdTable);
+    return cloned;
+  }
+
+  /**
+   * Creates a nullable clone — strips `notNull` and `primaryKey` from the config.
+   * Used to build column views for LEFT JOIN tables where all columns become nullable.
+   *
+   * **Subclass note:** This base implementation calls `new this.constructor(config)`.
+   * Subclasses whose constructor takes additional arguments (e.g. `EnumedColumn`)
+   * **must** override this method to supply those extra arguments.
+   * @internal
+   */
+  cloneAsNullable(): Column<
+    Omit<TConfig, "notNull" | "primaryKey">,
+    TColVal,
+    TPgType
+  > {
+    const {
+      notNull: _nn,
+      primaryKey: _pk,
+      ...rest
+    } = this.config as Record<string, unknown>;
+    const cloned = new (
+      this.constructor as new (
+        config: ColumnConfig,
+      ) => Column<Omit<TConfig, "notNull" | "primaryKey">, TColVal, TPgType>
+    )(rest as Omit<TConfig, "notNull" | "primaryKey">);
+    if (this.name) cloned._.setName(this.name);
+    if (this.table) cloned._.setTable(this.table as unknown as StdTable);
+    return cloned;
   }
 }
 

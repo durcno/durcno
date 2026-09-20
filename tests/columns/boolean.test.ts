@@ -36,7 +36,7 @@ describe("Boolean Column Type", () => {
       const [row] = await db
         .from(schema.BooleanTests)
         .select()
-        .where(eq(schema.BooleanTests.id, insertedId));
+        .where(({ booleanTests }) => eq(booleanTests.id, insertedId));
       expect(row.flag).toBe(true);
       expect(row.flagWithDefault).toBe(false);
     });
@@ -50,7 +50,7 @@ describe("Boolean Column Type", () => {
       const [row] = await db
         .from(schema.BooleanTests)
         .select()
-        .where(eq(schema.BooleanTests.id, insertedId));
+        .where(({ booleanTests }) => eq(booleanTests.id, insertedId));
       expect(row.flag).toBe(false);
     });
   });

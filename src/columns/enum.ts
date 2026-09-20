@@ -1,6 +1,7 @@
 import * as z from "zod";
 import type { Enum } from "../enumtype";
 import { Sql } from "../sql";
+import type { StdTable } from "../table";
 import { Column, type ColumnConfig } from "./common";
 
 export type EnumedConfig = ColumnConfig;
@@ -51,7 +52,33 @@ export class EnumedColumn<
    * @internal
    */
   clone(): EnumedColumn<TValue, TConfig> {
-    return new EnumedColumn(this.#enum, this.config);
+    const cloned = new EnumedColumn(this.#enum, this.config);
+    if (this.name) cloned._.setName(this.name);
+    if (this.table) cloned._.setTable(this.table as unknown as StdTable);
+    return cloned;
+  }
+
+  /**
+   * Overrides `cloneAsNullable()` because `EnumedColumn` requires both the
+   * enum reference and the config to construct a valid instance.
+   * @internal
+   */
+  cloneAsNullable(): EnumedColumn<
+    TValue,
+    Omit<TConfig, "notNull" | "primaryKey">
+  > {
+    const {
+      notNull: _nn,
+      primaryKey: _pk,
+      ...rest
+    } = this.config as Record<string, unknown>;
+    const cloned = new EnumedColumn(
+      this.#enum,
+      rest as Omit<TConfig, "notNull" | "primaryKey">,
+    );
+    if (this.name) cloned._.setName(this.name);
+    if (this.table) cloned._.setTable(this.table as unknown as StdTable);
+    return cloned;
   }
 }
 

@@ -78,16 +78,23 @@ type TableConfig<
   readonly extra: TableExtra<TSchema, TName, TColumns>;
 };
 
+export type UnwrapTableColumn<T> = T extends {
+  $: { baseColumn: infer B extends AnyColumn };
+}
+  ? B
+  : T;
+
 export type TableColumn<
   TTSchema extends string,
   TTName extends string,
   TName extends Key,
   TColumn extends AnyColumn,
-> = TColumn & {
+> = UnwrapTableColumn<TColumn> & {
   /** Phantom type markers carrying the schema and table name for inference. */
   $: {
     schema: TTSchema;
     table: TTName;
+    baseColumn: UnwrapTableColumn<TColumn>;
   };
   name: TName;
   /** The snake_case column name used in generated SQL. */

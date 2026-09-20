@@ -93,7 +93,10 @@ const result = await db.transaction(async (tx) => {
     .values({ username: "john", type: "user" })
     .returning({ id: true, username: true });
 
-  const posts = await tx.from(Posts).select().where(eq(Posts.userId, user.id));
+  const posts = await tx
+    .from(Posts)
+    .select()
+    .where(({ posts }) => eq(posts.userId, user.id));
 
   return { user, posts };
 });
@@ -161,8 +164,8 @@ await db.transaction(async (tx) => {
   // Check current state
   const [user] = await tx
     .from(Users)
-    .select({ type: Users.type })
-    .where(eq(Users.id, userId));
+    .select(({ users }) => ({ type: users.type }))
+    .where(({ users }) => eq(users.id, userId));
 
   if (user.type === "user") {
     // Promote to admin

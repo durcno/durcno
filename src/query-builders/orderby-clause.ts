@@ -3,6 +3,7 @@ import type { AnyScalarSqlFn, SqlFn } from "../functions";
 import { escIdentifier } from "../sql";
 import type { AnyTableWithColumns, TableAnyColumn } from "../table";
 import type { Valueof } from "../types";
+import type { AnySelectableSource } from "../virtual-table";
 import type { Query, QueryContext } from "./query";
 
 export type OrderDirection = "ASC" | "DESC";
@@ -59,22 +60,30 @@ export class OrderSqlFn<TSqlFn extends AnyScalarSqlFn> {
 export type StdOrderSqlFn = OrderSqlFn<AnyScalarSqlFn>;
 
 /**
- * Valid orderBy item for a query on `TTableWC`.
+ * Valid orderBy item for a query.
  *
- * @template TTableWC - The table being queried.
+ * @template TTableOrCols - The table or column(s) being queried.
  * @template TPrepare - When `true`, `OrderSqlFn` items carrying `Arg` placeholders are allowed.
  *   Defaults to `false` (non-prepared context).
+ * @template TSelects - Select shape map for output alias references.
  */
 export type OrderExpression<
-  TTableWC extends AnyTableWithColumns,
-  TSelects extends Record<string, any> | undefined,
+  TTableOrCols extends AnyTableWithColumns | TableAnyColumn,
   TPrepare extends boolean = false,
+  TSelects extends Record<string, AnySelectableSource> | undefined = undefined,
 > =
-  | Order<Valueof<TTableWC["_"]["columns"]>, "ASC" | "DESC">
+  | Order<
+      TTableOrCols extends AnyTableWithColumns
+        ? Valueof<TTableOrCols["_"]["columns"]>
+        : TTableOrCols,
+      "ASC" | "DESC"
+    >
   | Order<Extract<keyof TSelects, string>, "ASC" | "DESC">
   | OrderSqlFn<
       SqlFn<
-        Valueof<TTableWC["_"]["columns"]>,
+        TTableOrCols extends AnyTableWithColumns
+          ? Valueof<TTableOrCols["_"]["columns"]>
+          : TTableOrCols,
         TPrepare extends true ? boolean : false,
         "scalar"
       >
@@ -84,8 +93,10 @@ export type OrderExpression<
  * Creates an ascending order clause for a column or a `SqlFn` expression.
  *
  * @example
- * db.from(Users).select().orderBy(asc(Users.createdAt))
- * db.from(Properties).select().orderBy(asc(stDistance(Properties.location, point)))
+ * ```ts
+ * db.from(Users).select().orderBy(({ users }) => asc(users.createdAt))
+ * db.from(Properties).select().orderBy(({ properties }) => asc(stDistance(properties.location, point)))
+ * ```
  */
 export function asc<TTableColumn extends TableAnyColumn | string>(
   field: TTableColumn,
@@ -104,8 +115,10 @@ export function asc(fieldOrFn: TableAnyColumn | AnyScalarSqlFn) {
  * Creates a descending order clause for a column or a `SqlFn` expression.
  *
  * @example
- * db.from(Users).select().orderBy(desc(Users.createdAt))
- * db.from(Properties).select().orderBy(desc(stDistance(Properties.location, point)))
+ * ```ts
+ * db.from(Users).select().orderBy(({ users }) => desc(users.createdAt))
+ * db.from(Properties).select().orderBy(({ properties }) => desc(stDistance(properties.location, point)))
+ * ```
  */
 export function desc<TTableColumn extends TableAnyColumn | string>(
   field: TTableColumn,

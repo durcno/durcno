@@ -29,7 +29,7 @@ console.log(queryFragment.toSQL());
 const users = await db
   .from(Users)
   .select()
-  .where(sql`LOWER(${Users.username}) = ${"admin"}`);
+  .where(() => sql`LOWER(${Users.username}) = ${"admin"}`);
 ```
 
 ### Static `Sql.raw()`

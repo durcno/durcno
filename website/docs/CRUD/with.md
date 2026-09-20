@@ -17,14 +17,12 @@ Use `db.with(name).as(query)` to define a CTE. The query can be a `SELECT`, `INS
 import { asc, db, eq } from "durcno";
 import { Users } from "./db/schema.ts";
 
-const activeUsers = db
-  .with("activeUsers")
-  .as(
-    db
-      .from(Users)
-      .select({ id: Users.id, username: Users.username })
-      .where(eq(Users.status, "active")),
-  );
+const activeUsers = db.with("activeUsers").as(
+  db
+    .from(Users)
+    .select(({ users }) => ({ id: users.id, username: users.username }))
+    .where(({ users }) => eq(users.status, "active")),
+);
 ```
 
 Durcno infers the CTE column types from the query you pass to `.as()`, so the returned CTE can be used with full type safety.
@@ -38,7 +36,7 @@ const rows = await db
   .with(activeUsers)
   .from((ctes) => ctes.activeUsers)
   .select()
-  .orderBy(asc(activeUsers.username));
+  .orderBy(({ activeUsers }) => asc(activeUsers.username));
 
 // Type: { id: bigint; username: string }[]
 ```
@@ -50,20 +48,18 @@ When you pass a callback to `.from()`, Durcno builds a typed object mapping CTE 
 You can declare one CTE in terms of another by nesting `db.with(...)` calls.
 
 ```typescript
-const activeUsers = db
-  .with("activeUsers")
-  .as(
-    db
-      .from(Users)
-      .select({ id: Users.id, username: Users.username })
-      .where(eq(Users.status, "active")),
-  );
+const activeUsers = db.with("activeUsers").as(
+  db
+    .from(Users)
+    .select(({ users }) => ({ id: users.id, username: users.username }))
+    .where(({ users }) => eq(users.status, "active")),
+);
 
 const activeNames = db.with("activeNames").as(
   db
     .with(activeUsers)
     .from((ctes) => ctes.activeUsers)
-    .select({ username: activeUsers.username }),
+    .select(({ activeUsers }) => ({ username: activeUsers.username })),
 );
 
 const rows = await db
@@ -80,18 +76,24 @@ You can use a CTE as a subquery in `isIn(...)` filters and also create an `UPDAT
 import { db, eq, isIn } from "durcno";
 import { Users } from "./db/schema.ts";
 
-const inactiveUsers = db
-  .with("inactiveUsers")
-  .as(
-    db.from(Users).select({ id: Users.id }).where(eq(Users.status, "inactive")),
-  );
+const inactiveUsers = db.with("inactiveUsers").as(
+  db
+    .from(Users)
+    .select(({ users }) => ({ id: users.id }))
+    .where(({ users }) => eq(users.status, "inactive")),
+);
 
 const updatedUsers = db.with("reactivatedUsers").as(
   db
     .update(Users)
     .set({ status: "active" })
     .where(
-      isIn(Users.id, db.from(inactiveUsers).select({ id: inactiveUsers.id })),
+      isIn(
+        Users.id,
+        db
+          .from(inactiveUsers)
+          .select(({ inactiveUsers }) => ({ id: inactiveUsers.id })),
+      ),
     )
     .returning({ id: true, username: true, status: true }),
 );

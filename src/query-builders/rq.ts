@@ -75,10 +75,7 @@ type Options<
     : never;
   orderBy?: TOpts["orderBy"] extends true
     ? SelfOrArray<
-        OrderExpression<
-          TableWithColumns<TTSchema, TTName, TTColumns>,
-          undefined
-        >
+        OrderExpression<TableWithColumns<TTSchema, TTName, TTColumns>, TPrepare>
       >
     : never;
   limit?: TOpts["limit"] extends true

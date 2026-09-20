@@ -7,9 +7,11 @@ import type { AnyQueryPromise } from "./query-builders/query-promise";
 import type { Sql } from "./sql";
 import {
   type AnyColumn,
+  type StdTable,
   Table,
   type TableAnyColumn,
   type TableColumn,
+  type UnwrapTableColumn,
 } from "./table";
 import type { Key } from "./types";
 
@@ -24,7 +26,12 @@ type VirtualizedColumn<
   TVirtualName extends string,
   TKey extends Key,
   TColumn extends AnyColumn,
-> = TableColumn<"", TVirtualName, TKey, VirtualColumn<TColumn>>;
+> = TableColumn<
+  "",
+  TVirtualName,
+  TKey,
+  VirtualColumn<UnwrapTableColumn<TColumn>>
+>;
 
 type VirtualizedSqlFn<
   TVirtualName extends string,
@@ -75,8 +82,10 @@ class VirtualColumn<TColumn extends AnyColumn> extends Column<
 > {
   readonly #source: AnySelectableSource;
 
-  constructor(source: AnySelectableSource) {
-    super((isCol(source) ? source.config : {}) as TColumn["config"]);
+  constructor(source: AnySelectableSource, config?: TColumn["config"]) {
+    super(
+      config ?? ((isCol(source) ? source.config : {}) as TColumn["config"]),
+    );
     this.#source = source;
   }
 
@@ -122,6 +131,42 @@ class VirtualColumn<TColumn extends AnyColumn> extends Column<
         | null;
     }
     return this.#source.fromDriverValue(value) as TColumn["$"]["TsType"] | null;
+  }
+
+  /** @internal */
+  clone(): VirtualColumn<TColumn> {
+    const cloned = new VirtualColumn<TColumn>(this.#source, this.config);
+    if (this.name) cloned._.setName(this.name);
+    if (this.table) cloned._.setTable(this.table as unknown as StdTable);
+    return cloned;
+  }
+
+  /**
+   * Creates a nullable clone — strips `notNull` and `primaryKey` from the config
+   * while preserving the underlying selectable source.
+   * @internal
+   */
+  cloneAsNullable(): Column<
+    Omit<TColumn["config"], "notNull" | "primaryKey">,
+    TColumn["$"]["TsType"],
+    TColumn["$"]["PgType"]
+  > {
+    const {
+      notNull: _nn,
+      primaryKey: _pk,
+      ...rest
+    } = this.config as Record<string, unknown>;
+    const cloned = new VirtualColumn<TColumn>(
+      this.#source,
+      rest as TColumn["config"],
+    );
+    if (this.name) cloned._.setName(this.name);
+    if (this.table) cloned._.setTable(this.table as unknown as StdTable);
+    return cloned as unknown as Column<
+      Omit<TColumn["config"], "notNull" | "primaryKey">,
+      TColumn["$"]["TsType"],
+      TColumn["$"]["PgType"]
+    >;
   }
 }
 

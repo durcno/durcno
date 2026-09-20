@@ -8,7 +8,7 @@ const basicQuery = prepare({ username: Users.username.arg() }, (args) => {
     .prepare()
     .from(Users)
     .select()
-    .where(eq(Users.username, args.username));
+    .where(({ users }) => eq(users.username, args.username));
 });
 
 const basicResult = basicQuery.run(db, { username: "john" });
@@ -40,11 +40,11 @@ const multiArgQuery = prepare(
       .prepare()
       .from(Users)
       .select()
-      .where(
+      .where(({ users }) =>
         and(
-          eq(Users.username, args.username),
-          eq(Users.email, args.email),
-          eq(Users.type, args.type),
+          eq(users.username, args.username),
+          eq(users.email, args.email),
+          eq(users.type, args.type),
         ),
       );
   },
@@ -76,8 +76,8 @@ const selectiveQuery = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select({ username: Users.username, email: Users.email })
-    .where(eq(Users.id, args.id));
+    .select(({ users }) => ({ username: users.username, email: users.email }))
+    .where(({ users }) => eq(users.id, args.id));
 });
 
 const selectiveResult = selectiveQuery.run(db, { id: 1n });
@@ -86,7 +86,11 @@ Expect<Equal<SelectiveResult, { username: string; email: string | null }[]>>();
 
 // Type test: prepared query with numeric argument
 const numericQuery = prepare({ userId: Users.id.arg() }, (args) => {
-  return db.prepare().from(Posts).select().where(eq(Posts.userId, args.userId));
+  return db
+    .prepare()
+    .from(Posts)
+    .select()
+    .where(({ posts }) => eq(posts.userId, args.userId));
 });
 
 const numericResult = numericQuery.run(db, { userId: 1n });
@@ -113,11 +117,11 @@ const orQuery = prepare(
     return db
       .prepare()
       .from(Users)
-      .select({ id: Users.id, username: Users.username })
-      .where(
+      .select(({ users }) => ({ id: users.id, username: users.username }))
+      .where(({ users }) =>
         or(
-          eq(Users.username, args.username1),
-          eq(Users.username, args.username2),
+          eq(users.username, args.username1),
+          eq(users.username, args.username2),
         ),
       );
   },
@@ -135,8 +139,8 @@ const enumQuery = prepare({ userType: Users.type.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select({ id: Users.id, type: Users.type })
-    .where(eq(Users.type, args.userType));
+    .select(({ users }) => ({ id: users.id, type: users.type }))
+    .where(({ users }) => eq(users.type, args.userType));
 });
 
 const enumResult = enumQuery.run(db, { userType: "admin" });
@@ -145,7 +149,11 @@ Expect<Equal<EnumResult, { id: bigint; type: "admin" | "user" }[]>>();
 
 // Type test: prepared query with nullable column argument
 const nullableQuery = prepare({ email: Users.email.arg() }, (args) => {
-  return db.prepare().from(Users).select().where(eq(Users.email, args.email));
+  return db
+    .prepare()
+    .from(Users)
+    .select()
+    .where(({ users }) => eq(users.email, args.email));
 });
 
 const nullableResult = nullableQuery.run(db, {
@@ -178,11 +186,11 @@ const complexQuery = prepare(
     return db
       .prepare()
       .from(Users)
-      .select({ username: Users.username, type: Users.type })
-      .where(
+      .select(({ users }) => ({ username: users.username, type: users.type }))
+      .where(({ users }) =>
         and(
-          eq(Users.username, args.username),
-          or(eq(Users.type, args.type1), eq(Users.type, args.type2)),
+          eq(users.username, args.username),
+          or(eq(users.type, args.type1), eq(users.type, args.type2)),
         ),
       );
   },
@@ -203,8 +211,10 @@ const postsQuery = prepare(
     return db
       .prepare()
       .from(Posts)
-      .select({ title: Posts.title, content: Posts.content })
-      .where(and(eq(Posts.id, args.postId), eq(Posts.userId, args.userId)));
+      .select(({ posts }) => ({ title: posts.title, content: posts.content }))
+      .where(({ posts }) =>
+        and(eq(posts.id, args.postId), eq(posts.userId, args.userId)),
+      );
   },
 );
 
@@ -225,8 +235,8 @@ const commentsQuery = prepare(
       .prepare()
       .from(Comments)
       .select()
-      .where(
-        and(eq(Comments.postId, args.postId), eq(Comments.userId, args.userId)),
+      .where(({ comments }) =>
+        and(eq(comments.postId, args.postId), eq(comments.userId, args.userId)),
       );
   },
 );
@@ -251,8 +261,8 @@ const singleColumnQuery = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select({ username: Users.username })
-    .where(eq(Users.id, args.id));
+    .select(({ users }) => ({ username: users.username }))
+    .where(({ users }) => eq(users.id, args.id));
 });
 
 const singleColumnResult = singleColumnQuery.run(db, { id: 1n });
@@ -264,8 +274,8 @@ const timestampQuery = prepare({ createdAt: Users.createdAt.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select({ id: Users.id, createdAt: Users.createdAt })
-    .where(eq(Users.createdAt, args.createdAt));
+    .select(({ users }) => ({ id: users.id, createdAt: users.createdAt }))
+    .where(({ users }) => eq(users.createdAt, args.createdAt));
 });
 
 const timestampResult = timestampQuery.run(db, { createdAt: new Date() });
@@ -277,7 +287,11 @@ Expect<Equal<TimestampResult, { id: bigint; createdAt: Date }[]>>();
 // ============================================================================
 
 const wrongArgTypeQuery = prepare({ id: Users.id.arg() }, (args) =>
-  db.prepare().from(Users).select().where(eq(Users.id, args.id)),
+  db
+    .prepare()
+    .from(Users)
+    .select()
+    .where(({ users }) => eq(users.id, args.id)),
 );
 // @ts-expect-error - Wrong argument type at runtime should not compile
 wrongArgTypeQuery.run(db, { id: "string_instead_of_number" });
@@ -289,25 +303,39 @@ const missingArgQuery = prepare(
       .prepare()
       .from(Users)
       .select()
-      .where(and(eq(Users.username, args.username), eq(Users.type, args.type))),
+      .where(({ users }) =>
+        and(eq(users.username, args.username), eq(users.type, args.type)),
+      ),
 );
 // @ts-expect-error - Missing required argument should not compile
 missingArgQuery.run(db, { username: "test" }); // missing type
 
 const enumArgQuery = prepare({ type: Users.type.arg() }, (args) =>
-  db.prepare().from(Users).select().where(eq(Users.type, args.type)),
+  db
+    .prepare()
+    .from(Users)
+    .select()
+    .where(({ users }) => eq(users.type, args.type)),
 );
 // @ts-expect-error - Invalid enum value at runtime should not compile
 enumArgQuery.run(db, { type: "invalid_type" });
 
 const bigintArgQuery = prepare({ userId: Posts.userId.arg() }, (args) =>
-  db.prepare().from(Posts).select().where(eq(Posts.userId, args.userId)),
+  db
+    .prepare()
+    .from(Posts)
+    .select()
+    .where(({ posts }) => eq(posts.userId, args.userId)),
 );
 // @ts-expect-error - Wrong type for bigint argument should not compile
 bigintArgQuery.run(db, { userId: "not_a_number" });
 
 const extraArgQuery = prepare({ id: Users.id.arg() }, (args) =>
-  db.prepare().from(Users).select().where(eq(Users.id, args.id)),
+  db
+    .prepare()
+    .from(Users)
+    .select()
+    .where(({ users }) => eq(users.id, args.id)),
 );
 // @ts-expect-error - Extra argument should not compile
 extraArgQuery.run(db, { id: 1n, extra: "unused" });
