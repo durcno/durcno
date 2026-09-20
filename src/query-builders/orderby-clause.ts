@@ -94,8 +94,8 @@ export type OrderExpression<
  *
  * @example
  * ```ts
- * db.from(Users).select().orderBy(({ users }) => asc(users.createdAt))
- * db.from(Properties).select().orderBy(({ properties }) => asc(stDistance(properties.location, point)))
+ * db.from(Users).select("*").orderBy(({ users }) => asc(users.createdAt))
+ * db.from(Properties).select("*").orderBy(({ properties }) => asc(stDistance(properties.location, point)))
  * ```
  */
 export function asc<TTableColumn extends TableAnyColumn | string>(
@@ -116,8 +116,8 @@ export function asc(fieldOrFn: TableAnyColumn | AnyScalarSqlFn) {
  *
  * @example
  * ```ts
- * db.from(Users).select().orderBy(({ users }) => desc(users.createdAt))
- * db.from(Properties).select().orderBy(({ properties }) => desc(stDistance(properties.location, point)))
+ * db.from(Users).select("*").orderBy(({ users }) => desc(users.createdAt))
+ * db.from(Properties).select("*").orderBy(({ properties }) => desc(stDistance(properties.location, point)))
  * ```
  */
 export function desc<TTableColumn extends TableAnyColumn | string>(

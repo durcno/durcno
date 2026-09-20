@@ -65,7 +65,7 @@ const users = await db.from(Users).select(({ users }) => ({
 // Result type: { id: bigint; username: string; email: string; role: "admin" | "moderator" | "user" }[]
 
 // TypeScript prevents invalid operations
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "john_doe",
   email: "john@example.com",
   role: "staff", // ❌ TypeScript error: Type '"staff"' is not assignable to type '"admin" | "moderator" | "user"'
@@ -85,7 +85,7 @@ const UserInsertSchema = createInsertSchema(Users);
 
 // Validates at runtime — throws for invalid data
 const data = UserInsertSchema.parse(req.body);
-await db.insert(Users).values(data);
+await db.insertInto(Users).values(data);
 ```
 
 This ensures your application handles untrusted data — from API requests, webhooks, or user input — safely and predictably.

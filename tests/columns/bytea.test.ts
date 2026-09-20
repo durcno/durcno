@@ -26,7 +26,7 @@ describe("Bytea Column Type", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.ByteaTests)
+        .insertInto(schema.ByteaTests)
         .values(zodSchema.parse({ data: Buffer.from("hello") }))
         .returning({ id: true });
       insertedId = row.id;
@@ -37,7 +37,7 @@ describe("Bytea Column Type", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.ByteaTests)
-        .select()
+        .select("*")
         .where(({ byteaTests }) => eq(byteaTests.id, insertedId));
       expect(Buffer.isBuffer(row.data)).toBe(true);
       expect((row.data as Buffer).equals(initialData)).toBe(true);
@@ -51,7 +51,7 @@ describe("Bytea Column Type", () => {
         .where(eq(schema.ByteaTests.id, insertedId));
       const [row] = await db
         .from(schema.ByteaTests)
-        .select()
+        .select("*")
         .where(({ byteaTests }) => eq(byteaTests.id, insertedId));
       expect((row.data as Buffer).equals(updatedData)).toBe(true);
     });

@@ -40,7 +40,7 @@ Expect<
 const usersWithPostsAllQuery = db
   .from(Users)
   .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
-  .select();
+  .select("*");
 
 type UsersWithPostsAll = Awaited<typeof usersWithPostsAllQuery>;
 Expect<
@@ -420,7 +420,7 @@ db.from(Users)
 
 db.from(Users)
   .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
-  .select()
+  .select("*")
   // @ts-expect-error - Wrong type in where clause after join
   .where(({ users }) => eq(users.id, "not_a_number"));
 
@@ -432,21 +432,21 @@ db.from(Users)
 
 db.from(Users)
   .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
-  .select()
+  .select("*")
   // @ts-expect-error - where clause on column from unjoined table
   .where(() => eq(Comments.body, "test"));
 
 db.from(Users)
   .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
-  .select()
+  .select("*")
   // @ts-expect-error - Invalid enum value in where clause after join
   .where(({ users }) => eq(users.type, "invalid_type"));
 
 db.from(Users)
   .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
+  // @ts-expect-error - Column from wrong table should not compile
   .select(({ users, posts }) => ({
     username: users.username,
-    // @ts-expect-error - Column from wrong table in where should not compile
     profileBio: UserProfiles.bio,
   }));
 
@@ -502,7 +502,7 @@ Expect<
 const leftJoinSelectAllQuery = db
   .from(Users)
   .leftJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
-  .select();
+  .select("*");
 
 type LeftJoinSelectAll = Awaited<typeof leftJoinSelectAllQuery>;
 Expect<
@@ -611,7 +611,7 @@ const mixedJoinQuery = db
   .from(Users)
   .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
   .leftJoin(Comments, ({ posts, comments }) => eq(posts.id, comments.postId))
-  .select();
+  .select("*");
 
 type MixedJoin = Awaited<typeof mixedJoinQuery>;
 Expect<
@@ -717,7 +717,7 @@ db.from(Users)
 
 db.from(Users)
   .leftJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
-  .select()
+  .select("*")
   // @ts-expect-error - Wrong type in where clause after left join
   .where(({ users }) => eq(users.id, "not_a_number"));
 

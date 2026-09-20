@@ -31,7 +31,7 @@ describe("Date/Time Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.TimestampTests)
+        .insertInto(schema.TimestampTests)
         .values(zodSchema.parse({ at: new Date("2024-06-15T10:30:45.000Z") }))
         .returning({ id: true });
       insertedId = row.id;
@@ -42,7 +42,7 @@ describe("Date/Time Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.TimestampTests)
-        .select()
+        .select("*")
         .where(({ timestampTests }) => eq(timestampTests.id, insertedId));
       const localTime = new Date("2024-06-15T10:30:45.000Z");
       // Since it's a timestamp without tz, the exact roundtrip depends on Node vs DB timezone.
@@ -60,7 +60,7 @@ describe("Date/Time Column Types", () => {
         .where(eq(schema.TimestampTests.id, insertedId));
       const [row] = await db
         .from(schema.TimestampTests)
-        .select()
+        .select("*")
         .where(({ timestampTests }) => eq(timestampTests.id, insertedId));
       expect(row.at).toBeInstanceOf(Date);
     });
@@ -82,7 +82,7 @@ describe("Date/Time Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.DateTests)
+        .insertInto(schema.DateTests)
         .values(zodSchema.parse({ date: new Date("2024-06-15T00:00:00.000Z") }))
         .returning({ id: true });
       insertedId = row.id;
@@ -93,7 +93,7 @@ describe("Date/Time Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.DateTests)
-        .select()
+        .select("*")
         .where(({ dateTests }) => eq(dateTests.id, insertedId));
       expect(row.date?.getUTCFullYear()).toBe(2024);
       expect(row.date?.getUTCMonth()).toBe(5); // June (0-indexed)
@@ -109,7 +109,7 @@ describe("Date/Time Column Types", () => {
         .where(eq(schema.DateTests.id, insertedId));
       const [row] = await db
         .from(schema.DateTests)
-        .select()
+        .select("*")
         .where(({ dateTests }) => eq(dateTests.id, insertedId));
       expect(row.date?.getUTCFullYear()).toBe(2025);
       expect(row.date?.getUTCMonth()).toBe(11); // December (0-indexed)
@@ -133,7 +133,7 @@ describe("Date/Time Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.TimeTests)
+        .insertInto(schema.TimeTests)
         .values(zodSchema.parse({ time: "10:30:00" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -144,7 +144,7 @@ describe("Date/Time Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.TimeTests)
-        .select()
+        .select("*")
         .where(({ timeTests }) => eq(timeTests.id, insertedId));
       expect(row.time).toBe("10:30:00");
       expect(row.timeWithDefault).toBe("00:00:00");
@@ -158,7 +158,7 @@ describe("Date/Time Column Types", () => {
         .where(eq(schema.TimeTests.id, insertedId));
       const [row] = await db
         .from(schema.TimeTests)
-        .select()
+        .select("*")
         .where(({ timeTests }) => eq(timeTests.id, insertedId));
       expect(row.time).toBe("14:00:00");
     });
@@ -183,7 +183,7 @@ describe("Date/Time Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.TimestamptzTests)
+        .insertInto(schema.TimestamptzTests)
         .values(zodSchema.parse({ at: new Date("2024-06-15T10:30:45.000Z") }))
         .returning({ id: true });
       insertedId = row.id;
@@ -194,7 +194,7 @@ describe("Date/Time Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.TimestamptzTests)
-        .select()
+        .select("*")
         .where(({ timestamptzTests }) => eq(timestamptzTests.id, insertedId));
       expect(row.at?.getTime()).toBe(
         new Date("2024-06-15T10:30:45.000Z").getTime(),
@@ -210,7 +210,7 @@ describe("Date/Time Column Types", () => {
         .where(eq(schema.TimestamptzTests.id, insertedId));
       const [row] = await db
         .from(schema.TimestamptzTests)
-        .select()
+        .select("*")
         .where(({ timestamptzTests }) => eq(timestamptzTests.id, insertedId));
       expect(row.at?.getTime()).toBe(
         new Date("2025-01-01T00:00:00.000Z").getTime(),
@@ -236,7 +236,7 @@ describe("Date/Time Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.TimetzTests)
+        .insertInto(schema.TimetzTests)
         .values(zodSchema.parse({ time: "10:30:00+02" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -247,7 +247,7 @@ describe("Date/Time Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.TimetzTests)
-        .select()
+        .select("*")
         .where(({ timetzTests }) => eq(timetzTests.id, insertedId));
       expect(row.time).toContain("10:30:00");
       expect(row.timeWithDefault).toBeDefined();
@@ -261,7 +261,7 @@ describe("Date/Time Column Types", () => {
         .where(eq(schema.TimetzTests.id, insertedId));
       const [row] = await db
         .from(schema.TimetzTests)
-        .select()
+        .select("*")
         .where(({ timetzTests }) => eq(timetzTests.id, insertedId));
       expect(row.time).toContain("14:00:00");
     });

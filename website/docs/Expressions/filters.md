@@ -45,14 +45,14 @@ import { eq } from "durcno";
 // Filter by exact value
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => eq(users.type, "admin"));
 
 // Compare two columns
 await db
   .from(Users)
   .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
-  .select();
+  .select("*");
 ```
 
 ### Not Equal (`ne`)
@@ -65,7 +65,7 @@ import { ne } from "durcno";
 // Get all non-admin users
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => ne(users.type, "admin"));
 ```
 
@@ -79,13 +79,13 @@ import { gte } from "durcno";
 // Get users created after a date
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => gte(users.createdAt, new Date("2024-01-01")));
 
 // Get users with id >= 10
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => gte(users.id, 10n));
 ```
 
@@ -99,7 +99,7 @@ import { lte } from "durcno";
 // Get users created before a date
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => lte(users.createdAt, new Date("2024-01-01")));
 ```
 
@@ -113,13 +113,13 @@ import { gt } from "durcno";
 // Get users with id > 10 (excludes 10)
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => gt(users.id, 10n));
 
 // Get users created after a date
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => gt(users.createdAt, new Date("2024-01-01")));
 ```
 
@@ -133,13 +133,13 @@ import { lt } from "durcno";
 // Get users with id < 100 (excludes 100)
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => lt(users.id, 100n));
 
 // Get users created before a date
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => lt(users.createdAt, new Date("2024-12-31")));
 ```
 
@@ -153,7 +153,7 @@ import { isNull } from "durcno";
 // Get users without an email
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => isNull(users.email));
 ```
 
@@ -167,7 +167,7 @@ import { isNotNull } from "durcno";
 // Get users with an email
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => isNotNull(users.email));
 ```
 
@@ -181,13 +181,13 @@ import { isIn } from "durcno";
 // Get users with specific IDs
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => isIn(users.id, [1n, 2n, 3n]));
 
 // Get users with specific types
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => isIn(users.type, ["admin", "user"]));
 ```
 
@@ -201,7 +201,7 @@ import { notIn } from "durcno";
 // Exclude specific statuses
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => notIn(users.type, ["banned", "deleted"]));
 ```
 
@@ -219,19 +219,19 @@ import { startsWith, endsWith, contains } from "durcno";
 // startsWith: Match records starting with a prefix (case-sensitive)
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => startsWith(users.username, "admin"));
 
 // endsWith: Match records ending with a suffix (case-sensitive)
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => endsWith(users.email, "@example.com"));
 
 // contains: Match records containing a substring (case-sensitive)
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => contains(users.bio, "typescript"));
 ```
 
@@ -245,13 +245,13 @@ import { like } from "durcno";
 // Match codes starting with "US" (case-sensitive)
 await db
   .from(Countries)
-  .select()
+  .select("*");
   .where(({ countries }) => like(countries.code, "US%"));
 
 // Match values with exactly 5 characters
 await db
   .from(Products)
-  .select()
+  .select("*");
   .where(({ products }) => like(products.sku, "_____"));
 ```
 
@@ -265,7 +265,7 @@ import { ilike } from "durcno";
 // Match email pattern case-insensitively
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => ilike(users.email, "%@EXAMPLE.COM"));
 ```
 
@@ -287,7 +287,7 @@ import { and, eq, gte } from "durcno";
 // Multiple conditions - all must be true
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) =>
     and(eq(users.type, "admin"), gte(users.createdAt, new Date("2024-01-01"))),
   );
@@ -295,7 +295,7 @@ await db
 // Combine more than two conditions
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) =>
     and(eq(users.type, "admin"), gte(users.id, 10n), isNotNull(users.email)),
   );
@@ -311,7 +311,7 @@ import { or, eq } from "durcno";
 // Either condition can be true
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => or(eq(users.type, "admin"), eq(users.type, "user")));
 ```
 
@@ -325,7 +325,7 @@ import { and, or, eq, gte, isNotNull } from "durcno";
 // (type = 'admin' OR type = 'moderator') AND createdAt >= date
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) =>
     and(
       or(eq(users.type, "admin"), eq(users.type, "moderator")),
@@ -347,7 +347,7 @@ import { arrayContains } from "durcno";
 
 await db
   .from(Posts)
-  .select()
+  .select("*");
   .where(({ posts }) => arrayContains(posts.tags, ["typescript", "postgres"]));
 ```
 
@@ -360,7 +360,7 @@ import { arrayContainedBy } from "durcno";
 
 await db
   .from(Posts)
-  .select()
+  .select("*");
   .where(({ posts }) =>
     arrayContainedBy(posts.tags, ["typescript", "postgres", "orm"]),
   );
@@ -375,7 +375,7 @@ import { arrayOverlaps } from "durcno";
 
 await db
   .from(Posts)
-  .select()
+  .select("*");
   .where(({ posts }) => arrayOverlaps(posts.tags, ["postgres"]));
 ```
 
@@ -388,7 +388,7 @@ import { arrayHas } from "durcno";
 
 await db
   .from(Posts)
-  .select()
+  .select("*");
   .where(({ posts }) => arrayHas(posts.tags, "typescript"));
 ```
 
@@ -401,7 +401,7 @@ import { arrayAll } from "durcno";
 
 await db
   .from(Posts)
-  .select()
+  .select("*");
   .where(({ posts }) => arrayAll(posts.publishedFlags, true));
 ```
 
@@ -416,12 +416,12 @@ import { eq, gte } from "durcno";
 await db
   .from(Users)
   .innerJoin(Posts, ({ users, posts }) => eq(users.id, posts.userId))
-  .select();
+  .select("*");
 
 // Compare columns from the same table
 await db
   .from(Events)
-  .select()
+  .select("*");
   .where(({ events }) => gte(events.endDate, events.startDate));
 ```
 
@@ -434,6 +434,6 @@ import { sql } from "durcno";
 
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(() => sql`LOWER(username) = 'admin'`);
 ```

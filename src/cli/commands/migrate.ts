@@ -43,7 +43,7 @@ export async function migrate(options: Options): Promise<void> {
     let previouslyApplied: string[] = [];
     if (await migrationsTableExists(client)) {
       const db = database({ Migrations }, config);
-      const records = await db.from(Migrations).select();
+      const records = await db.from(Migrations).select("*");
       await db.close();
       previouslyApplied = records.map((r) => r.name);
     }
@@ -125,7 +125,7 @@ export async function runUpMigration(
     );
 
     const db = database({ Migrations }, config);
-    await db.insert(Migrations).values({
+    await db.insertInto(Migrations).values({
       name: migrationDirName,
       createdAt: new Date(),
     });

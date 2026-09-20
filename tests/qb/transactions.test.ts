@@ -71,11 +71,11 @@ describe("Transactions", () => {
   it("should commit successful transaction", async () => {
     const result = await db.transaction(async (tx) => {
       const [user] = await tx
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "txuser" }))
         .returning({ id: true });
 
-      await tx.insert(schema.Posts).values({
+      await tx.insertInto(schema.Posts).values({
         userId: user.id,
         title: "Transaction Post",
         content: "Transaction Content",
@@ -87,8 +87,8 @@ describe("Transactions", () => {
     expect(result).toBeDefined();
 
     // Verify data was committed
-    const users = await db.from(schema.Users).select();
-    const posts = await db.from(schema.Posts).select();
+    const users = await db.from(schema.Users).select("*");
+    const posts = await db.from(schema.Posts).select("*");
 
     expect(users).toHaveLength(1);
     expect(posts).toHaveLength(1);
@@ -99,7 +99,7 @@ describe("Transactions", () => {
     await expect(
       db.transaction(async (tx) => {
         await tx
-          .insert(schema.Users)
+          .insertInto(schema.Users)
           .values(createTestUser({ username: "rollbackuser" }));
 
         // Force an error
@@ -108,20 +108,20 @@ describe("Transactions", () => {
     ).rejects.toThrow("Intentional rollback");
 
     // Verify no data was committed
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(0);
   });
 
   it("should rollback on constraint violation", async () => {
     const [existingUser] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "uniqueuser" }))
       .returning({ id: true });
 
     await expect(
       db.transaction(async (tx) => {
         // Try to insert duplicate username (violates unique constraint)
-        await tx.insert(schema.Users).values({
+        await tx.insertInto(schema.Users).values({
           username: "uniqueuser", // Duplicate!
           type: "user",
           status: "active",
@@ -131,7 +131,7 @@ describe("Transactions", () => {
     ).rejects.toThrow();
 
     // Verify original user still exists
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(1);
     expect(users[0].id).toEqual(existingUser.id);
   });
@@ -139,16 +139,16 @@ describe("Transactions", () => {
   it("should support multiple operations in transaction", async () => {
     await db.transaction(async (tx) => {
       const [user1] = await tx
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user1" }))
         .returning({ id: true });
 
       const [user2] = await tx
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user2" }))
         .returning({ id: true });
 
-      await tx.insert(schema.Posts).values([
+      await tx.insertInto(schema.Posts).values([
         { userId: user1.id, title: "Post 1", content: "Content 1" },
         { userId: user2.id, title: "Post 2", content: "Content 2" },
       ]);
@@ -159,8 +159,8 @@ describe("Transactions", () => {
         .where(eq(schema.Users.id, user1.id));
     });
 
-    const users = await db.from(schema.Users).select();
-    const posts = await db.from(schema.Posts).select();
+    const users = await db.from(schema.Users).select("*");
+    const posts = await db.from(schema.Posts).select("*");
 
     expect(users).toHaveLength(2);
     expect(posts).toHaveLength(2);
@@ -169,46 +169,46 @@ describe("Transactions", () => {
 
   it("should support SELECT queries in transaction", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
     await db.transaction(async (tx) => {
-      const users = await tx.from(schema.Users).select();
+      const users = await tx.from(schema.Users).select("*");
       expect(users).toHaveLength(1);
 
-      await tx.insert(schema.Posts).values({
+      await tx.insertInto(schema.Posts).values({
         userId: user.id,
         title: "Test",
         content: "Test",
       });
 
-      const posts = await tx.from(schema.Posts).select();
+      const posts = await tx.from(schema.Posts).select("*");
       expect(posts).toHaveLength(1);
     });
   });
 
   it("should support DELETE in transaction", async () => {
     const [user1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "delete1" }))
       .returning({ id: true });
 
     const [user2] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "delete2" }))
       .returning({ id: true });
 
     await db.transaction(async (tx) => {
-      await tx.delete(schema.Users).where(eq(schema.Users.id, user1.id));
+      await tx.deleteFrom(schema.Users).where(eq(schema.Users.id, user1.id));
 
-      const remaining = await tx.from(schema.Users).select();
+      const remaining = await tx.from(schema.Users).select("*");
       expect(remaining).toHaveLength(1);
       expect(remaining[0].id).toEqual(user2.id);
     });
 
     // Verify deletion was committed
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(1);
     expect(users[0].username).toBe("delete2");
   });
@@ -216,7 +216,7 @@ describe("Transactions", () => {
   it("should return value from transaction", async () => {
     const result = await db.transaction(async (tx) => {
       const [user] = await tx
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true, username: true });
 
@@ -232,41 +232,41 @@ describe("Transactions", () => {
 
   it("should isolate transaction from main connection", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
     await db.transaction(async (tx) => {
       // Insert in transaction
-      await tx.insert(schema.Posts).values({
+      await tx.insertInto(schema.Posts).values({
         userId: user.id,
         title: "TX Post",
         content: "TX Content",
       });
 
       // Query from main connection (should not see uncommitted data from tx)
-      const mainPosts = await db.from(schema.Posts).select();
+      const mainPosts = await db.from(schema.Posts).select("*");
       expect(mainPosts).toHaveLength(0);
 
       // Query from transaction (should see its own changes)
-      const txPosts = await tx.from(schema.Posts).select();
+      const txPosts = await tx.from(schema.Posts).select("*");
       expect(txPosts).toHaveLength(1);
     });
 
     // After commit, main connection should see the data
-    const posts = await db.from(schema.Posts).select();
+    const posts = await db.from(schema.Posts).select("*");
     expect(posts).toHaveLength(1);
   });
 
   it("should handle nested inserts in transaction", async () => {
     await db.transaction(async (tx) => {
       const [user] = await tx
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await tx
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values({
           userId: user.id,
           title: "Post",
@@ -274,16 +274,16 @@ describe("Transactions", () => {
         })
         .returning({ id: true });
 
-      await tx.insert(schema.Comments).values({
+      await tx.insertInto(schema.Comments).values({
         postId: post.id,
         userId: user.id,
         body: "Comment",
       });
     });
 
-    const users = await db.from(schema.Users).select();
-    const posts = await db.from(schema.Posts).select();
-    const comments = await db.from(schema.Comments).select();
+    const users = await db.from(schema.Users).select("*");
+    const posts = await db.from(schema.Posts).select("*");
+    const comments = await db.from(schema.Comments).select("*");
 
     expect(users).toHaveLength(1);
     expect(posts).toHaveLength(1);
@@ -292,19 +292,19 @@ describe("Transactions", () => {
 
   it("should rollback all changes on partial failure", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
     await expect(
       db.transaction(async (tx) => {
-        await tx.insert(schema.Posts).values([
+        await tx.insertInto(schema.Posts).values([
           { userId: user.id, title: "Post 1", content: "Content 1" },
           { userId: user.id, title: "Post 2", content: "Content 2" },
         ]);
 
         // Insert one more post
-        await tx.insert(schema.Posts).values({
+        await tx.insertInto(schema.Posts).values({
           userId: user.id,
           title: "Post 3",
           content: "Content 3",
@@ -316,7 +316,7 @@ describe("Transactions", () => {
     ).rejects.toThrow("Rollback all posts");
 
     // Verify no posts were committed
-    const posts = await db.from(schema.Posts).select();
+    const posts = await db.from(schema.Posts).select("*");
     expect(posts).toHaveLength(0);
   });
 });

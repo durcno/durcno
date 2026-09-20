@@ -70,81 +70,83 @@ describe("DELETE queries", () => {
 
   it("should delete a single row", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
-    await db.delete(schema.Users).where(eq(schema.Users.id, user.id));
+    await db.deleteFrom(schema.Users).where(eq(schema.Users.id, user.id));
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(0);
   });
 
   it("should delete multiple rows with WHERE clause", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ type: "user" }),
         createTestUser({ type: "user" }),
         createTestUser({ type: "admin" }),
       ]);
 
-    await db.delete(schema.Users).where(eq(schema.Users.type, "user"));
+    await db.deleteFrom(schema.Users).where(eq(schema.Users.type, "user"));
 
-    const remaining = await db.from(schema.Users).select();
+    const remaining = await db.from(schema.Users).select("*");
     expect(remaining).toHaveLength(1);
     expect(remaining[0].type).toBe("admin");
   });
 
   it("should delete with RETURNING clause", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "todelete" }))
       .returning({ id: true });
 
     const deleted = await db
-      .delete(schema.Users)
+      .deleteFrom(schema.Users)
       .where(eq(schema.Users.id, user.id))
       .returning({ id: true, username: true });
 
-    await db.delete(schema.Users).where(eq(schema.Users.id, user.id));
+    await db.deleteFrom(schema.Users).where(eq(schema.Users.id, user.id));
 
     expect(deleted).toHaveLength(1);
     expect(deleted[0].username).toBe("todelete");
 
-    const remaining = await db.from(schema.Users).select();
+    const remaining = await db.from(schema.Users).select("*");
     expect(remaining).toHaveLength(0);
   });
 
   it("should not delete rows when WHERE clause matches nothing", async () => {
-    await db.insert(schema.Users).values([createTestUser(), createTestUser()]);
+    await db
+      .insertInto(schema.Users)
+      .values([createTestUser(), createTestUser()]);
 
     await db
-      .delete(schema.Users)
+      .deleteFrom(schema.Users)
       .where(eq(schema.Users.username, "nonexistent"));
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(2);
   });
 
   it("should delete all rows when no WHERE clause", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([createTestUser(), createTestUser(), createTestUser()]);
 
-    await db.delete(schema.Users);
+    await db.deleteFrom(schema.Users);
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(0);
   });
 
   it("should cascade delete with foreign keys", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
-    await db.insert(schema.Posts).values([
+    await db.insertInto(schema.Posts).values([
       {
         userId: user.id,
         title: "Post 1",
@@ -158,25 +160,25 @@ describe("DELETE queries", () => {
     ]);
 
     // Delete user (should cascade to posts if FK is set up with CASCADE)
-    await db.delete(schema.Users).where(eq(schema.Users.id, user.id));
+    await db.deleteFrom(schema.Users).where(eq(schema.Users.id, user.id));
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(0);
 
     // Check if posts were also deleted (depends on FK constraint)
-    const posts = await db.from(schema.Posts).select();
+    const posts = await db.from(schema.Posts).select("*");
     // This will pass if CASCADE is configured, otherwise it would fail
     expect(posts).toHaveLength(0);
   });
 
   it("should delete and return all fields with RETURNING *", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "fulldelete" }))
       .returning({ id: true });
 
     const deleted = await db
-      .delete(schema.Users)
+      .deleteFrom(schema.Users)
       .where(eq(schema.Users.id, user.id))
       .returning({
         id: true,
@@ -184,7 +186,7 @@ describe("DELETE queries", () => {
         email: true,
       });
 
-    await db.delete(schema.Users).where(eq(schema.Users.id, user.id));
+    await db.deleteFrom(schema.Users).where(eq(schema.Users.id, user.id));
 
     expect(deleted).toHaveLength(1);
     expect(deleted[0]).toHaveProperty("id");
@@ -193,30 +195,32 @@ describe("DELETE queries", () => {
   });
 
   it("should handle deleting from empty table", async () => {
-    await db.delete(schema.Users).where(eq(schema.Users.username, "anyone"));
+    await db
+      .deleteFrom(schema.Users)
+      .where(eq(schema.Users.username, "anyone"));
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(0);
   });
 
   describe("table-level foreignKeys SET NULL on parent delete", () => {
     it("should nullify parentId on child comments when parent is deleted", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values({ userId: user.id, title: "Post" })
         .returning({ id: true });
 
       const [parent] = await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values({ postId: post.id, userId: user.id, body: "Parent comment" })
         .returning({ id: true });
 
-      await db.insert(schema.Comments).values({
+      await db.insertInto(schema.Comments).values({
         postId: post.id,
         userId: user.id,
         parentId: parent.id,
@@ -224,9 +228,11 @@ describe("DELETE queries", () => {
       });
 
       // Delete parent comment — should SET NULL on child's parentId
-      await db.delete(schema.Comments).where(eq(schema.Comments.id, parent.id));
+      await db
+        .deleteFrom(schema.Comments)
+        .where(eq(schema.Comments.id, parent.id));
 
-      const remaining = await db.from(schema.Comments).select();
+      const remaining = await db.from(schema.Comments).select("*");
       expect(remaining).toHaveLength(1);
       expect(remaining[0].body).toBe("Reply comment");
       expect(remaining[0].parentId).toBeNull();
@@ -235,12 +241,12 @@ describe("DELETE queries", () => {
 
   it("should delete with RETURNING * clause", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "returnstardelete" }))
       .returning({ id: true });
 
     const deleted = await db
-      .delete(schema.Users)
+      .deleteFrom(schema.Users)
       .where(eq(schema.Users.id, user.id))
       .returning("*");
 
@@ -255,7 +261,7 @@ describe("DELETE queries", () => {
     expect(deleted[0]).toHaveProperty("status");
     expect(deleted[0].username).toBe("returnstardelete");
 
-    const remaining = await db.from(schema.Users).select();
+    const remaining = await db.from(schema.Users).select("*");
     expect(remaining).toHaveLength(0);
   });
 });

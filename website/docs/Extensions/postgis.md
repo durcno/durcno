@@ -49,13 +49,13 @@ export const Locations = table("public", "locations", {
 });
 
 // Insert a point
-await db.insert(Locations).values({
+await db.insertInto(Locations).values({
   name: "Eiffel Tower",
   coordinates: [2.2945, 48.8584], // [longitude, latitude]
 });
 
 // Select returns the same tuple format
-const locations = await db.from(Locations).select();
+const locations = await db.from(Locations).select("*");
 // locations[0].coordinates → [2.2945, 48.8584]
 ```
 
@@ -72,7 +72,7 @@ export const Routes = table("public", "routes", {
   waypoints: geography.multipoint({ notNull }),
 });
 
-await db.insert(Routes).values({
+await db.insertInto(Routes).values({
   waypoints: [
     [2.2945, 48.8584],
     [2.3522, 48.8566],
@@ -95,7 +95,7 @@ export const Trails = table("public", "trails", {
   path: geography.linestring({ notNull }),
 });
 
-await db.insert(Trails).values({
+await db.insertInto(Trails).values({
   name: "River Walk",
   path: [
     [-73.9857, 40.7484],
@@ -119,7 +119,7 @@ export const TransitRoutes = table("public", "transitRoutes", {
   lines: geography.multilinestring({ notNull }),
 });
 
-await db.insert(TransitRoutes).values({
+await db.insertInto(TransitRoutes).values({
   name: "Bus Route 42",
   lines: [
     // First line segment
@@ -150,7 +150,7 @@ export const Zones = table("public", "zones", {
   boundary: geography.polygon({ notNull }),
 });
 
-await db.insert(Zones).values({
+await db.insertInto(Zones).values({
   name: "Central Park",
   boundary: [
     // Exterior ring (must be closed — first and last points match)
@@ -179,7 +179,7 @@ export const Districts = table("public", "districts", {
   areas: geography.multipolygon({ notNull }),
 });
 
-await db.insert(Districts).values({
+await db.insertInto(Districts).values({
   name: "Borough Parks",
   areas: [
     // First polygon
@@ -262,7 +262,7 @@ const Properties = table("public", "properties", {
 // Find properties near a given location
 const nearby = await db
   .from(Properties)
-  .select()
+  .select("*");
   .where(({ properties }) =>
     and(
       stDWithin(properties.location, [centerLon, centerLat], input.radius),
@@ -287,7 +287,7 @@ const rows = await db.from(Properties).select(({ properties }) => ({
 // 2. In orderBy — order results by proximity
 const byProximity = await db
   .from(Properties)
-  .select()
+  .select("*");
   .orderBy(({ properties }) =>
     asc(stDistance(properties.location, [centerLon, centerLat])),
   );
@@ -295,7 +295,7 @@ const byProximity = await db
 // 3. In where via comparison operators
 const withinRange = await db
   .from(Properties)
-  .select()
+  .select("*");
   .where(({ properties }) =>
     lt(stDistance(properties.location, [centerLon, centerLat]), 5000),
   ); // closer than 5 km

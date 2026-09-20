@@ -24,7 +24,7 @@ describe("Boolean Column Type", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.BooleanTests)
+        .insertInto(schema.BooleanTests)
         .values(zodSchema.parse({ flag: true }))
         .returning({ id: true });
       insertedId = row.id;
@@ -35,7 +35,7 @@ describe("Boolean Column Type", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.BooleanTests)
-        .select()
+        .select("*")
         .where(({ booleanTests }) => eq(booleanTests.id, insertedId));
       expect(row.flag).toBe(true);
       expect(row.flagWithDefault).toBe(false);
@@ -49,7 +49,7 @@ describe("Boolean Column Type", () => {
         .where(eq(schema.BooleanTests.id, insertedId));
       const [row] = await db
         .from(schema.BooleanTests)
-        .select()
+        .select("*")
         .where(({ booleanTests }) => eq(booleanTests.id, insertedId));
       expect(row.flag).toBe(false);
     });

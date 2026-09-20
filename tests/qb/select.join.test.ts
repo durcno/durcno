@@ -72,13 +72,13 @@ describe("SELECT with INNER JOIN", () => {
   it("should select with inner join between Users and Posts", async () => {
     // Insert test user
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "author1" }))
       .returning({ id: true });
 
     // Insert test post for the user
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user.id, { title: "My First Post" }));
 
     // Select with inner join
@@ -97,12 +97,12 @@ describe("SELECT with INNER JOIN", () => {
 
   it("should return multiple rows when user has multiple posts", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "prolific_author" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values([
         createTestPost(user.id, { title: "Post One" }),
         createTestPost(user.id, { title: "Post Two" }),
@@ -124,17 +124,17 @@ describe("SELECT with INNER JOIN", () => {
   it("should exclude users without posts in inner join", async () => {
     // Insert user with post
     const [userWithPost] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "has_posts" }))
       .returning({ id: true });
 
     // Insert user without post
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "no_posts" }));
 
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(userWithPost.id, { title: "A Post" }));
 
     const result = await db
@@ -150,17 +150,17 @@ describe("SELECT with INNER JOIN", () => {
 
   it("should work with WHERE clause after inner join", async () => {
     const [user1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "user_active", type: "admin" }))
       .returning({ id: true });
 
     const [user2] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "user_regular", type: "user" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values([
         createTestPost(user1.id, { title: "Admin Post" }),
         createTestPost(user2.id, { title: "User Post" }),
@@ -182,12 +182,12 @@ describe("SELECT with INNER JOIN", () => {
 
   it("should select columns from both tables in join", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "full_select_user" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(
         createTestPost(user.id, { title: "Full Select Post", viewCount: 42 }),
       );
@@ -210,17 +210,17 @@ describe("SELECT with INNER JOIN", () => {
 
   it("should handle inner join with Posts and Comments", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "commenter" }))
       .returning({ id: true });
 
     const [post] = await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user.id, { title: "Post with Comments" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Comments)
+      .insertInto(schema.Comments)
       .values(createTestComment(post.id, user.id, { body: "Great post!" }));
 
     const result = await db
@@ -241,13 +241,13 @@ describe("SELECT with INNER JOIN", () => {
   it("should return empty array when no matching rows exist", async () => {
     // Insert user without any posts
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "lonely_user" }));
 
     const result = await db
       .from(schema.Users)
       .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select();
+      .select("*");
 
     expect(result).toEqual([]);
   });
@@ -255,17 +255,17 @@ describe("SELECT with INNER JOIN", () => {
   // Double inner join tests
   it("should select with double inner join: Users -> Posts -> Comments", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "blogger" }))
       .returning({ id: true });
 
     const [post] = await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user.id, { title: "Interesting Article" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Comments)
+      .insertInto(schema.Comments)
       .values(createTestComment(post.id, user.id, { body: "Nice article!" }));
 
     const result = await db
@@ -288,17 +288,17 @@ describe("SELECT with INNER JOIN", () => {
 
   it("should return multiple rows with double inner join when post has multiple comments", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "popular_author" }))
       .returning({ id: true });
 
     const [post] = await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user.id, { title: "Viral Post" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Comments)
+      .insertInto(schema.Comments)
       .values([
         createTestComment(post.id, user.id, { body: "Comment 1" }),
         createTestComment(post.id, user.id, { body: "Comment 2" }),
@@ -324,26 +324,26 @@ describe("SELECT with INNER JOIN", () => {
 
   it("should filter double inner join results with WHERE clause", async () => {
     const [admin] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "admin_poster", type: "admin" }))
       .returning({ id: true });
 
     const [regularUser] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "regular_poster", type: "user" }))
       .returning({ id: true });
 
     const [adminPost] = await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(admin.id, { title: "Admin Announcement" }))
       .returning({ id: true });
 
     const [regularPost] = await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(regularUser.id, { title: "Regular Post" }))
       .returning({ id: true });
 
-    await db.insert(schema.Comments).values([
+    await db.insertInto(schema.Comments).values([
       createTestComment(adminPost.id, admin.id, { body: "Admin comment" }),
       createTestComment(regularPost.id, regularUser.id, {
         body: "User comment",
@@ -371,17 +371,17 @@ describe("SELECT with INNER JOIN", () => {
 
   it("should exclude rows in double inner join when intermediate table has no match", async () => {
     const [userWithFullChain] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "full_chain" }))
       .returning({ id: true });
 
     const [userWithPostOnly] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "post_only" }))
       .returning({ id: true });
 
     const [postWithComment] = await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(
         createTestPost(userWithFullChain.id, { title: "Post With Comment" }),
       )
@@ -389,12 +389,12 @@ describe("SELECT with INNER JOIN", () => {
 
     // This post has no comments, so it won't appear in double inner join
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(
         createTestPost(userWithPostOnly.id, { title: "Post Without Comment" }),
       );
 
-    await db.insert(schema.Comments).values(
+    await db.insertInto(schema.Comments).values(
       createTestComment(postWithComment.id, userWithFullChain.id, {
         body: "A comment",
       }),
@@ -419,12 +419,12 @@ describe("SELECT with INNER JOIN", () => {
   describe("ORDER BY with JOIN", () => {
     it("should order inner join results asc by joined table column", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "order_user" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values([
           createTestPost(user.id, { title: "Charlie Post" }),
           createTestPost(user.id, { title: "Alpha Post" }),
@@ -450,12 +450,12 @@ describe("SELECT with INNER JOIN", () => {
 
     it("should order inner join results desc by joined table column", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "order_desc_user" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values([
           createTestPost(user.id, { title: "Charlie Post" }),
           createTestPost(user.id, { title: "Alpha Post" }),
@@ -481,7 +481,7 @@ describe("SELECT with INNER JOIN", () => {
 
     it("should order by base table column in inner join", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "zzz_user" }),
           createTestUser({ username: "aaa_user" }),
@@ -495,7 +495,7 @@ describe("SELECT with INNER JOIN", () => {
 
       for (const u of users) {
         await db
-          .insert(schema.Posts)
+          .insertInto(schema.Posts)
           .values(createTestPost(u.id, { title: `Post by ${u.username}` }));
       }
 
@@ -516,17 +516,17 @@ describe("SELECT with INNER JOIN", () => {
 
     it("should order double inner join results by comment body", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "triple_join_user" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "Triple Join Post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "z-comment" }),
           createTestComment(post.id, user.id, { body: "a-comment" }),
@@ -610,18 +610,18 @@ describe("SELECT with LEFT JOIN", () => {
   it("should select with left join and return null for unmatched rows", async () => {
     // Insert two test users
     const [user1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "author_with_post" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "author_without_post" }))
       .returning({ id: true });
 
     // Insert test post for the first user only
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user1.id, { title: "User 1 Post" }));
 
     // Select with left join
@@ -643,14 +643,14 @@ describe("SELECT with LEFT JOIN", () => {
 
   it("should return null for all right side columns when selecting all", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "user_no_post" }))
       .returning({ id: true });
 
     const result = await db
       .from(schema.Users)
       .leftJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select();
+      .select("*");
 
     expect(result).toHaveLength(1);
     expect(result[0].username).toBe("user_no_post");
@@ -663,17 +663,17 @@ describe("SELECT with LEFT JOIN", () => {
   it("should handle left join with sql function correctly", async () => {
     const { lower } = await import("durcno");
     const [user1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "AUTHOR_1" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "AUTHOR_2" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user1.id, { title: "MIXED Case Title" }));
 
     const result = await db
@@ -695,23 +695,23 @@ describe("SELECT with LEFT JOIN", () => {
 
   it("should handle mixed inner and left joins properly", async () => {
     const [user1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "u1" }))
       .returning({ id: true });
 
     const [post1] = await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user1.id, { title: "Post 1" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user1.id, { title: "Post 2" }))
       .returning({ id: true });
 
     // Only post1 gets a comment
     await db
-      .insert(schema.Comments)
+      .insertInto(schema.Comments)
       .values(
         createTestComment(post1.id, user1.id, { body: "Comment on post 1" }),
       );
@@ -742,12 +742,12 @@ describe("SELECT with LEFT JOIN", () => {
 
   it("should handle left join on a table with enum columns without metadata corruption", async () => {
     const [user1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "author_enum", type: "admin" }))
       .returning({ id: true });
 
     await db
-      .insert(schema.Posts)
+      .insertInto(schema.Posts)
       .values(createTestPost(user1.id, { title: "Enum Post" }));
 
     const result = await db

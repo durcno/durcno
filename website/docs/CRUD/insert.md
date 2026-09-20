@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Insert
 
-Use `db.insert()` to insert rows into a table. Durcno provides full type safety, ensuring you provide all required columns and use correct types.
+Use `db.insertInto()` to insert rows into a table. Durcno provides full type safety, ensuring you provide all required columns and use correct types.
 
 ## Methods
 
@@ -29,7 +29,7 @@ Use `db.insert()` to insert rows into a table. Durcno provides full type safety,
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "john_doe",
   email: "john@example.com",
   type: "user",
@@ -41,7 +41,7 @@ await db.insert(Users).values({
 Pass an array to `.values()` to insert multiple rows:
 
 ```typescript
-await db.insert(Users).values([
+await db.insertInto(Users).values([
   { username: "john_doe", email: "john@example.com", type: "user" },
   { username: "jane_doe", email: "jane@example.com", type: "admin" },
 ]);
@@ -55,7 +55,7 @@ Use `.onConflict()` to build PostgreSQL `ON CONFLICT` clauses for insert operati
 
 ```typescript
 await db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "john_doe",
     email: "john@example.com",
@@ -71,7 +71,7 @@ Use `.doUpdateSet()` to update existing rows when a conflict occurs. The callbac
 
 ```javascript
 await db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "john_doe",
     email: "updated@example.com",
@@ -89,7 +89,7 @@ You can also provide an optional predicate to make the update conditional:
 import { gt } from "durcno";
 
 await db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "john_doe",
     score: 100,
@@ -130,7 +130,7 @@ const Users = table("public", "users", {
 
 ```typescript
 // Only username and type are required
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "john_doe", // Required
   type: "user", // Required
   // id: auto-generated
@@ -139,7 +139,7 @@ await db.insert(Users).values({
 });
 
 // You can optionally provide other columns
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "jane_doe",
   type: "admin",
   email: "jane@example.com", // Optional, but provided
@@ -153,21 +153,21 @@ Use `.returning()` to get data back from inserted rows:
 ```typescript
 // Return specific columns
 const inserted = await db
-  .insert(Users)
+  .insertInto(Users)
   .values({ username: "john_doe", type: "user" })
   .returning({ id: true, username: true });
 // Type: { id: bigint; username: string }[]
 
 // Return all columns except some
 const inserted = await db
-  .insert(Users)
+  .insertInto(Users)
   .values({ username: "john_doe", type: "user" })
   .returning({ email: false });
 // Type: { id: bigint; username: string; type: "admin" | "user"; createdAt: Date }[]
 
 // Return all columns using the wildcard
 const inserted = await db
-  .insert(Users)
+  .insertInto(Users)
   .values({ username: "john_doe", type: "user" })
   .returning("*");
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
@@ -179,7 +179,7 @@ Without `.returning()`, the insert returns `null`:
 
 ```typescript
 const result = await db
-  .insert(Users)
+  .insertInto(Users)
   .values({ username: "john_doe", type: "user" });
 // Type: null
 ```
@@ -197,13 +197,13 @@ const Posts = table("public", "posts", {
 });
 
 // createdAt is optional - insertFn generates it
-await db.insert(Posts).values({
+await db.insertInto(Posts).values({
   title: "My Post",
   // createdAt will be auto-generated
 });
 
 // You can still override with an explicit value
-await db.insert(Posts).values({
+await db.insertInto(Posts).values({
   title: "My Post",
   createdAt: new Date("2024-01-01"), // Override insertFn
 });
@@ -220,7 +220,7 @@ You can use `sql()` for raw SQL expressions in insert values:
 ```typescript
 import { sql } from "durcno";
 
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "john_doe",
   type: "user",
   createdAt: sql`NOW() - INTERVAL '1 day'`,
@@ -233,18 +233,18 @@ Durcno provides compile-time validation:
 
 ```typescript
 // ✅ Valid - all required fields provided
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "john",
   type: "user",
 });
 
 // ❌ TypeScript Error - missing required field "type"
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "john",
 });
 
 // ❌ TypeScript Error - invalid type value
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "john",
   type: "superadmin", // Not in enum
 });

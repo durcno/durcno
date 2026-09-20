@@ -93,7 +93,7 @@ describe("Filters", () => {
   describe("eq (equals)", () => {
     it("should filter rows with eq operator", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice" }),
           createTestUser({ username: "bob" }),
@@ -111,7 +111,7 @@ describe("Filters", () => {
 
     it("should work with numeric columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 25 }),
           createTestUser({ age: 30 }),
@@ -120,7 +120,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => eq(users.age, 30));
 
       expect(result).toHaveLength(1);
@@ -129,7 +129,7 @@ describe("Filters", () => {
 
     it("should work with boolean columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ isActive: true }),
           createTestUser({ isActive: false }),
@@ -138,7 +138,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => eq(users.isActive, true));
 
       expect(result).toHaveLength(2);
@@ -147,7 +147,7 @@ describe("Filters", () => {
 
   it("should ignore nullish conditions in and/or combinators", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "alice", type: "admin" }),
         createTestUser({ username: "bob", type: "user" }),
@@ -172,7 +172,7 @@ describe("Filters", () => {
   describe("ne (not equals)", () => {
     it("should filter rows with ne operator", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice" }),
           createTestUser({ username: "bob" }),
@@ -190,7 +190,7 @@ describe("Filters", () => {
 
     it("should work with numeric columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 25 }),
           createTestUser({ age: 30 }),
@@ -199,7 +199,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => ne(users.age, 30));
 
       expect(result).toHaveLength(1);
@@ -210,7 +210,7 @@ describe("Filters", () => {
   describe("gte (greater than or equal)", () => {
     it("should filter rows with gte operator", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 20 }),
           createTestUser({ age: 30 }),
@@ -219,7 +219,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => gte(users.age, 30));
 
       expect(result).toHaveLength(2);
@@ -228,7 +228,7 @@ describe("Filters", () => {
 
     it("should include boundary value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ score: 100 }),
           createTestUser({ score: 50 }),
@@ -236,7 +236,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => gte(users.score, 100));
 
       expect(result).toHaveLength(1);
@@ -247,7 +247,7 @@ describe("Filters", () => {
   describe("lte (less than or equal)", () => {
     it("should filter rows with lte operator", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 20 }),
           createTestUser({ age: 30 }),
@@ -256,7 +256,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => lte(users.age, 30));
 
       expect(result).toHaveLength(2);
@@ -265,7 +265,7 @@ describe("Filters", () => {
 
     it("should include boundary value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ score: 50 }),
           createTestUser({ score: 100 }),
@@ -273,7 +273,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => lte(users.score, 50));
 
       expect(result).toHaveLength(1);
@@ -284,7 +284,7 @@ describe("Filters", () => {
   describe("gt (greater than)", () => {
     it("should filter rows with gt operator", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 20 }),
           createTestUser({ age: 30 }),
@@ -293,7 +293,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => gt(users.age, 30));
 
       expect(result).toHaveLength(1);
@@ -302,7 +302,7 @@ describe("Filters", () => {
 
     it("should exclude boundary value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ score: 50 }),
           createTestUser({ score: 100 }),
@@ -311,7 +311,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => gt(users.score, 100));
 
       expect(result).toHaveLength(1);
@@ -322,7 +322,7 @@ describe("Filters", () => {
   describe("lt (less than)", () => {
     it("should filter rows with lt operator", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 20 }),
           createTestUser({ age: 30 }),
@@ -331,7 +331,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => lt(users.age, 30));
 
       expect(result).toHaveLength(1);
@@ -340,7 +340,7 @@ describe("Filters", () => {
 
     it("should exclude boundary value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ score: 50 }),
           createTestUser({ score: 100 }),
@@ -349,7 +349,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => lt(users.score, 100));
 
       expect(result).toHaveLength(1);
@@ -360,7 +360,7 @@ describe("Filters", () => {
   describe("isNull", () => {
     it("should filter rows with null values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ email: "test@example.com" }),
           createTestUser({ email: null }),
@@ -369,7 +369,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => isNull(users.email));
 
       expect(result).toHaveLength(2);
@@ -378,7 +378,7 @@ describe("Filters", () => {
 
     it("should work with optional numeric columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 25 }),
           createTestUser({ age: null }),
@@ -387,7 +387,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => isNull(users.age));
 
       expect(result).toHaveLength(2);
@@ -397,7 +397,7 @@ describe("Filters", () => {
   describe("isNotNull", () => {
     it("should filter rows with non-null values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ email: "test@example.com" }),
           createTestUser({ email: null }),
@@ -406,7 +406,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => isNotNull(users.email));
 
       expect(result).toHaveLength(2);
@@ -415,7 +415,7 @@ describe("Filters", () => {
 
     it("should work with optional boolean columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ isVerified: true }),
           createTestUser({ isVerified: null }),
@@ -424,7 +424,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => isNotNull(users.isVerified));
 
       expect(result).toHaveLength(2);
@@ -434,7 +434,7 @@ describe("Filters", () => {
   describe("isIn", () => {
     it("should filter rows with values in list", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice" }),
           createTestUser({ username: "bob" }),
@@ -456,7 +456,7 @@ describe("Filters", () => {
 
     it("should work with numeric values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 20 }),
           createTestUser({ age: 30 }),
@@ -466,7 +466,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => isIn(users.age, [20, 40]));
 
       expect(result).toHaveLength(2);
@@ -475,12 +475,12 @@ describe("Filters", () => {
 
     it("should handle empty list", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([createTestUser(), createTestUser()]);
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => isIn(users.username, []));
 
       expect(result).toHaveLength(0);
@@ -490,7 +490,7 @@ describe("Filters", () => {
   describe("and", () => {
     it("should combine multiple conditions with AND", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ type: "admin", status: "active" }),
           createTestUser({ type: "admin", status: "inactive" }),
@@ -499,7 +499,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) =>
           and(eq(users.type, "admin"), eq(users.status, "active")),
         );
@@ -511,7 +511,7 @@ describe("Filters", () => {
 
     it("should work with multiple AND conditions", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ type: "admin", status: "active", isActive: true }),
           createTestUser({ type: "admin", status: "active", isActive: false }),
@@ -520,7 +520,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) =>
           and(
             eq(users.type, "admin"),
@@ -534,7 +534,7 @@ describe("Filters", () => {
 
     it("should work with comparison operators", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 25, score: 100 }),
           createTestUser({ age: 30, score: 50 }),
@@ -543,7 +543,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => and(gte(users.age, 30), gte(users.score, 100)));
 
       expect(result).toHaveLength(1);
@@ -554,7 +554,7 @@ describe("Filters", () => {
   describe("or", () => {
     it("should combine multiple conditions with OR", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ type: "admin" }),
           createTestUser({ type: "user" }),
@@ -563,7 +563,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) =>
           or(eq(users.type, "admin"), eq(users.username, "never")),
         );
@@ -574,7 +574,7 @@ describe("Filters", () => {
 
     it("should work with multiple OR conditions", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ status: "active" }),
           createTestUser({ status: "inactive" }),
@@ -583,7 +583,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) =>
           or(eq(users.status, "active"), eq(users.status, "pending")),
         );
@@ -593,7 +593,7 @@ describe("Filters", () => {
 
     it("should work with isNull and isNotNull", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ email: "test@example.com" }),
           createTestUser({ email: null }),
@@ -602,7 +602,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) =>
           or(isNull(users.email), eq(users.email, "test@example.com")),
         );
@@ -614,7 +614,7 @@ describe("Filters", () => {
   describe("Complex combinations", () => {
     it("should combine AND and OR operators", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ type: "admin", status: "active", age: 30 }),
           createTestUser({ type: "user", status: "active", age: 30 }),
@@ -623,7 +623,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) =>
           and(
             or(eq(users.type, "admin"), gte(users.age, 30)),
@@ -636,7 +636,7 @@ describe("Filters", () => {
 
     it("should work with multiple operators in complex query", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 25, score: 100, type: "admin" }),
           createTestUser({ age: 30, score: 50, type: "user" }),
@@ -646,7 +646,7 @@ describe("Filters", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) =>
           and(
             or(eq(users.type, "admin"), gte(users.score, 150)),
@@ -661,7 +661,7 @@ describe("Filters", () => {
   describe("like / ilike / startsWith / endsWith / contains", () => {
     it("should filter rows with string pattern filters", async () => {
       const uniqueVal = Date.now().toString();
-      await db.insert(schema.Users).values(
+      await db.insertInto(schema.Users).values(
         createTestUser({
           username: `Prefix_${uniqueVal}_Suffix`,
           email: `filter${uniqueVal}@example.com`,
@@ -713,7 +713,7 @@ describe("Filters", () => {
       const uniqueEmail = `mixedCASE${Date.now()}@test.com`;
       const otherEmail = `other${Date.now()}@test.com`;
 
-      await db.insert(schema.Users).values([
+      await db.insertInto(schema.Users).values([
         createTestUser({
           username: "SqlFn Filter Test",
           email: uniqueEmail,

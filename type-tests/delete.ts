@@ -7,12 +7,12 @@ import { type Equal, Expect } from "./utils";
 // ============================================================================
 
 // Basic delete without where returns null
-const _basicDeleteQuery = db.delete(Users);
+const _basicDeleteQuery = db.deleteFrom(Users);
 type BasicDelete = Awaited<typeof _basicDeleteQuery>;
 Expect<Equal<BasicDelete, null>>();
 
 // Delete with simple where condition returns null
-const _deleteWithWhereQuery = db.delete(Users).where(eq(Users.id, 1n));
+const _deleteWithWhereQuery = db.deleteFrom(Users).where(eq(Users.id, 1n));
 type DeleteWithWhere = Awaited<typeof _deleteWithWhereQuery>;
 Expect<Equal<DeleteWithWhere, null>>();
 
@@ -22,40 +22,40 @@ Expect<Equal<DeleteWithWhere, null>>();
 
 // Logical combination with and / or
 const _deleteWithAndQuery = db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(and(eq(Users.id, 1n), eq(Users.type, "admin")));
 type DeleteWithAnd = Awaited<typeof _deleteWithAndQuery>;
 Expect<Equal<DeleteWithAnd, null>>();
 
 const _deleteWithOrQuery = db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(or(eq(Users.type, "admin"), eq(Users.type, "user")));
 type DeleteWithOr = Awaited<typeof _deleteWithOrQuery>;
 Expect<Equal<DeleteWithOr, null>>();
 
 // Comparison operators (gte, lte)
-const _deleteWithGteQuery = db.delete(Users).where(gte(Users.id, 10n));
+const _deleteWithGteQuery = db.deleteFrom(Users).where(gte(Users.id, 10n));
 type DeleteWithGte = Awaited<typeof _deleteWithGteQuery>;
 Expect<Equal<DeleteWithGte, null>>();
 
-const _deleteWithLteQuery = db.delete(Users).where(lte(Users.id, 100n));
+const _deleteWithLteQuery = db.deleteFrom(Users).where(lte(Users.id, 100n));
 type DeleteWithLte = Awaited<typeof _deleteWithLteQuery>;
 Expect<Equal<DeleteWithLte, null>>();
 
 // Nullability checks (isNull, isNotNull)
-const _deleteWithIsNullQuery = db.delete(Users).where(isNull(Users.email));
+const _deleteWithIsNullQuery = db.deleteFrom(Users).where(isNull(Users.email));
 type DeleteWithIsNull = Awaited<typeof _deleteWithIsNullQuery>;
 Expect<Equal<DeleteWithIsNull, null>>();
 
 const _deleteWithIsNotNullQuery = db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(isNotNull(Users.email));
 type DeleteWithIsNotNull = Awaited<typeof _deleteWithIsNotNullQuery>;
 Expect<Equal<DeleteWithIsNotNull, null>>();
 
 // Array membership check (isIn)
 const _deleteWithIsInQuery = db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(isIn(Users.type, ["admin", "user"]));
 type DeleteWithIsIn = Awaited<typeof _deleteWithIsInQuery>;
 Expect<Equal<DeleteWithIsIn, null>>();
@@ -66,7 +66,7 @@ Expect<Equal<DeleteWithIsIn, null>>();
 
 // Specific column returning selection
 const _deleteReturningSpecificQuery = db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(eq(Users.type, "admin"))
   .returning({ id: true, username: true });
 type DeleteReturningSpecific = Awaited<typeof _deleteReturningSpecificQuery>;
@@ -74,7 +74,7 @@ Expect<Equal<DeleteReturningSpecific, { id: bigint; username: string }[]>>();
 
 // False-map returning ({ column: false }) excludes specified column
 const _deleteReturningFalseMapQuery = db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(eq(Users.id, 1n))
   .returning({ email: false });
 type DeleteReturningFalseMap = Awaited<typeof _deleteReturningFalseMapQuery>;
@@ -93,13 +93,15 @@ Expect<
 >();
 
 // Single column returning
-const _deleteReturningSingleQuery = db.delete(Users).returning({ email: true });
+const _deleteReturningSingleQuery = db
+  .deleteFrom(Users)
+  .returning({ email: true });
 type DeleteReturningSingle = Awaited<typeof _deleteReturningSingleQuery>;
 Expect<Equal<DeleteReturningSingle, { email: string | null }[]>>();
 
 // Chaining order (returning before where)
 const _deleteReturningBeforeWhereQuery = db
-  .delete(Users)
+  .deleteFrom(Users)
   .returning({ id: true, username: true })
   .where(eq(Users.id, 1n));
 type DeleteReturningBeforeWhere = Awaited<
@@ -109,7 +111,7 @@ Expect<Equal<DeleteReturningBeforeWhere, { id: bigint; username: string }[]>>();
 
 // Wildcard returning ("*")
 const _deleteReturningWildcardQuery = db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(eq(Users.id, 1n))
   .returning("*");
 type DeleteReturningWildcard = Awaited<typeof _deleteReturningWildcardQuery>;
@@ -133,18 +135,22 @@ Expect<
 // ============================================================================
 
 // @ts-expect-error - Wrong type for comparison should not compile
-db.delete(Users).where(eq(Users.id, "string_instead_of_number"));
+db.deleteFrom(Users).where(eq(Users.id, "string_instead_of_number"));
 
 // @ts-expect-error - Invalid enum value should not compile
-db.delete(Users).where(eq(Users.type, "invalid_type"));
+db.deleteFrom(Users).where(eq(Users.type, "invalid_type"));
 
 // @ts-expect-error - Wrong field reference should not compile
-db.delete(Users).where(eq(Users.nonExistentField, "value"));
+db.deleteFrom(Users).where(eq(Users.nonExistentField, "value"));
 
 // @ts-expect-error - Comparing incompatible column and value types should not compile
-db.delete(Users).where(eq(Users.username, 123));
+db.deleteFrom(Users).where(eq(Users.username, 123));
 
-db.delete(Users)
+db.deleteFrom(Users)
   .where(eq(Users.id, 1n))
   // @ts-expect-error - Returning non-existent column should not compile
   .returning({ nonExistentColumn: true });
+
+// Negative test: db.delete does not exist; use db.deleteFrom
+// @ts-expect-error - Property 'delete' does not exist on db; use deleteFrom
+db.delete(Users);

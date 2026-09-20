@@ -75,18 +75,18 @@ export const db = database(schema, config);
 
 ```typescript
 // Select all
-const users = await db.from(Users).select();
+const users = await db.from(Users).select("*");
 
 // Insert
 await db
-  .insert(Users)
+  .insertInto(Users)
   .values({ name: "Jane", email: "jane@example.com", type: "user" });
 
 // Update
 await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
 
 // Delete
-await db.delete(Users).where(eq(Users.id, 1));
+await db.deleteFrom(Users).where(eq(Users.id, 1));
 ```
 
 ## Validation
@@ -110,7 +110,7 @@ const result = insertUserSchema.safeParse({
 });
 
 if (result.success) {
-  await db.insert(Users).values(result.data);
+  await db.insertInto(Users).values(result.data);
 }
 ```
 

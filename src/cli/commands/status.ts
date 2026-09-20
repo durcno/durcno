@@ -32,7 +32,7 @@ export async function status(options: Options): Promise<void> {
   connector.options.pool = { ...connector.options.pool, max: 1 };
   connector.options.logger = undefined;
   const db = database({ Migrations }, config);
-  const migrationsQuery = db.from(Migrations).select();
+  const migrationsQuery = db.from(Migrations).select("*");
   let migrations: Awaited<typeof migrationsQuery>;
   const client = connector.getClient();
   await client.connect();

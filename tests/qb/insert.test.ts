@@ -69,7 +69,7 @@ describe("INSERT queries", () => {
   });
 
   it("should insert a single row", async () => {
-    await db.insert(schema.Users).values({
+    await db.insertInto(schema.Users).values({
       username: "newuser",
       email: "new@example.com",
       type: "user",
@@ -77,7 +77,7 @@ describe("INSERT queries", () => {
       role: "user",
     });
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(1);
     expect(users[0].username).toBe("newuser");
     expect(users[0].email).toBe("new@example.com");
@@ -85,26 +85,26 @@ describe("INSERT queries", () => {
 
   it("should insert multiple rows", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "user1" }),
         createTestUser({ username: "user2" }),
         createTestUser({ username: "user3" }),
       ]);
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(3);
   });
 
   it("should insert with default values", async () => {
-    await db.insert(schema.Users).values({
+    await db.insertInto(schema.Users).values({
       username: "defaultuser",
       type: "user",
       status: "active",
       role: "user",
     });
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users[0].score).toBe(0);
     expect(users[0].balance).toBe(0n);
     expect(users[0].isActive).toBe(false);
@@ -112,7 +112,7 @@ describe("INSERT queries", () => {
 
   it("should insert with RETURNING clause", async () => {
     const result = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values({
         username: "returnuser",
         email: "return@example.com",
@@ -129,7 +129,7 @@ describe("INSERT queries", () => {
   });
 
   it("should insert with null values", async () => {
-    await db.insert(schema.Users).values({
+    await db.insertInto(schema.Users).values({
       username: "nulluser",
       // email: null, // TODO: null values not supported
       // bio: null, // TODO: null values not supported
@@ -140,7 +140,7 @@ describe("INSERT queries", () => {
 
     const users = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.username, "nulluser"));
 
     expect(users[0].email).toBeNull();
@@ -149,17 +149,17 @@ describe("INSERT queries", () => {
 
   it("should insert with foreign key reference", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
-    await db.insert(schema.Posts).values({
+    await db.insertInto(schema.Posts).values({
       userId: user.id,
       title: "Test Post",
       content: "Test Content",
     });
 
-    const posts = await db.from(schema.Posts).select();
+    const posts = await db.from(schema.Posts).select("*");
     expect(posts).toHaveLength(1);
     expect(posts[0].userId).toEqual(user.id);
   });
@@ -167,7 +167,7 @@ describe("INSERT queries", () => {
   it("should insert with all column types", async () => {
     const testDate = new Date("2024-01-15");
 
-    await db.insert(schema.Users).values({
+    await db.insertInto(schema.Users).values({
       username: "fulluser",
       email: "full@example.com",
       bio: "A comprehensive bio",
@@ -186,7 +186,7 @@ describe("INSERT queries", () => {
 
     const users = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.username, "fulluser"));
 
     expect(users[0]).toMatchObject({
@@ -207,12 +207,12 @@ describe("INSERT queries", () => {
 
   it("should auto-generate primary key", async () => {
     const [result1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
     const [result2] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
@@ -223,7 +223,7 @@ describe("INSERT queries", () => {
 
   it("should insert and return all fields with RETURNING *", async () => {
     const result = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values({
         username: "fullreturn",
         email: "fullreturn@example.com",
@@ -243,7 +243,7 @@ describe("INSERT queries", () => {
     const beforeInsert = new Date();
 
     const result = await db
-      .insert(schema.AuditLogs)
+      .insertInto(schema.AuditLogs)
       .values({
         action: "test_action",
         message: "Test message",
@@ -269,7 +269,7 @@ describe("INSERT queries", () => {
     const explicitDate = new Date("2020-01-01T00:00:00.000Z");
 
     const result = await db
-      .insert(schema.AuditLogs)
+      .insertInto(schema.AuditLogs)
       .values({
         action: "override_test",
         createdAt: explicitDate, // Explicitly provide value to override insertFn
@@ -284,7 +284,7 @@ describe("INSERT queries", () => {
   describe("returning('*')", () => {
     it("should return all columns for a single row insert", async () => {
       const result = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values({
           username: "wildcard_user",
           email: "wildcard@example.com",
@@ -307,7 +307,7 @@ describe("INSERT queries", () => {
 
     it("should return all columns for a multi-row insert", async () => {
       const result = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "multi1", type: "user" }),
           createTestUser({ username: "multi2", type: "admin" }),
@@ -325,19 +325,19 @@ describe("INSERT queries", () => {
 
     it("should include auto-generated values in returned columns", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "autogen_user" }))
         .returning("*");
 
       // Use the returned id to seed a related row
-      await db.insert(schema.Posts).values({
+      await db.insertInto(schema.Posts).values({
         userId: user.id,
         title: "Post using returned id",
       });
 
       const posts = await db
         .from(schema.Posts)
-        .select()
+        .select("*")
         .where(({ posts }) => eq(posts.userId, user.id));
 
       expect(posts).toHaveLength(1);
@@ -348,28 +348,28 @@ describe("INSERT queries", () => {
   describe("table-level foreignKeys (self-reference)", () => {
     it("should insert a reply with a valid parentId", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values({ userId: user.id, title: "Post" })
         .returning({ id: true });
 
       const [parent] = await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values({ postId: post.id, userId: user.id, body: "Parent comment" })
         .returning({ id: true });
 
-      await db.insert(schema.Comments).values({
+      await db.insertInto(schema.Comments).values({
         postId: post.id,
         userId: user.id,
         parentId: parent.id,
         body: "Reply comment",
       });
 
-      const comments = await db.from(schema.Comments).select();
+      const comments = await db.from(schema.Comments).select("*");
       expect(comments).toHaveLength(2);
       const reply = comments.find((c) => c.body === "Reply comment");
       expect(reply?.parentId).toEqual(parent.id);
@@ -377,17 +377,17 @@ describe("INSERT queries", () => {
 
     it("should reject insert with a non-existent parentId", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values({ userId: user.id, title: "Post" })
         .returning({ id: true });
 
       await expect(
-        db.insert(schema.Comments).values({
+        db.insertInto(schema.Comments).values({
           postId: post.id,
           userId: user.id,
           parentId: 999999n,
@@ -400,70 +400,70 @@ describe("INSERT queries", () => {
   describe("ON CONFLICT", () => {
     it("doNothing: should silently skip on unique violation", async () => {
       const user = createTestUser({ username: "conflictuser" });
-      await db.insert(schema.Users).values(user);
+      await db.insertInto(schema.Users).values(user);
 
       // Second insert on same unique username — should not throw
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values({ ...user, type: "admin" })
         .onConflict(schema.Users.username)
         .doNothing();
 
-      const users = await db.from(schema.Users).select();
+      const users = await db.from(schema.Users).select("*");
       expect(users).toHaveLength(1);
       expect(users[0].type).toBe("user"); // original row unchanged
     });
 
     it("doNothing: no target — silently skip on any conflict", async () => {
       const user = createTestUser({ username: "noTargetConflict" });
-      await db.insert(schema.Users).values(user);
+      await db.insertInto(schema.Users).values(user);
 
-      await db.insert(schema.Users).values(user).onConflict().doNothing();
+      await db.insertInto(schema.Users).values(user).onConflict().doNothing();
 
-      const users = await db.from(schema.Users).select();
+      const users = await db.from(schema.Users).select("*");
       expect(users).toHaveLength(1);
     });
 
     it("doUpdateSet: should update column from EXCLUDED on conflict", async () => {
       const user = createTestUser({ username: "upsertuser" });
-      await db.insert(schema.Users).values(user);
+      await db.insertInto(schema.Users).values(user);
 
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values({ ...user, email: "newemail@example.com" })
         .onConflict(schema.Users.username)
         .doUpdateSet(({ excluded }) => ({
           email: excluded.email,
         }));
 
-      const users = await db.from(schema.Users).select();
+      const users = await db.from(schema.Users).select("*");
       expect(users).toHaveLength(1);
       expect(users[0].email).toBe("newemail@example.com");
     });
 
     it("doUpdateSet: should set a literal value on conflict", async () => {
       const user = createTestUser({ username: "literalUpdate" });
-      await db.insert(schema.Users).values(user);
+      await db.insertInto(schema.Users).values(user);
 
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(user)
         .onConflict(schema.Users.username)
         .doUpdateSet(() => ({
           score: 999,
         }));
 
-      const users = await db.from(schema.Users).select();
+      const users = await db.from(schema.Users).select("*");
       expect(users).toHaveLength(1);
       expect(users[0].score).toBe(999);
     });
 
     it("doUpdateSet: should chain with returning()", async () => {
       const user = createTestUser({ username: "upsertReturn" });
-      await db.insert(schema.Users).values(user);
+      await db.insertInto(schema.Users).values(user);
 
       const result = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values({ ...user, email: "updated@example.com" })
         .onConflict(schema.Users.username)
         .doUpdateSet(({ excluded }) => ({
@@ -478,10 +478,10 @@ describe("INSERT queries", () => {
 
     it("doNothing: should chain with returning() and return nothing on conflict", async () => {
       const user = createTestUser({ username: "doNothingReturn" });
-      await db.insert(schema.Users).values(user);
+      await db.insertInto(schema.Users).values(user);
 
       const result = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(user)
         .onConflict(schema.Users.username)
         .doNothing()
@@ -493,10 +493,10 @@ describe("INSERT queries", () => {
 
     it("doUpdateSet: should update when where condition matches", async () => {
       const user = createTestUser({ username: "conditionalUpdate" });
-      await db.insert(schema.Users).values(user);
+      await db.insertInto(schema.Users).values(user);
 
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values({ ...user, score: 100 }) // new score is greater
         .onConflict(schema.Users.username)
         .doUpdateSet(
@@ -506,7 +506,7 @@ describe("INSERT queries", () => {
 
       const users = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => eq(users.username, "conditionalUpdate"));
       expect(users).toHaveLength(1);
       expect(users[0].score).toBe(100);
@@ -514,10 +514,10 @@ describe("INSERT queries", () => {
 
     it("doUpdateSet: should skip update when where condition does not match", async () => {
       const user = createTestUser({ username: "conditionalSkip", score: 50 });
-      await db.insert(schema.Users).values(user);
+      await db.insertInto(schema.Users).values(user);
 
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values({ ...user, score: 20 }) // new score is smaller
         .onConflict(schema.Users.username)
         .doUpdateSet(
@@ -527,7 +527,7 @@ describe("INSERT queries", () => {
 
       const users = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => eq(users.username, "conditionalSkip"));
       expect(users).toHaveLength(1);
       expect(users[0].score).toBe(50); // should not be updated to 20

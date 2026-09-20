@@ -15,25 +15,25 @@ import { type Equal, Expect } from "./utils";
 // ============================================================================
 
 type UsersInsertType = Parameters<
-  ReturnType<typeof db.insert<typeof Users>>["values"]
+  ReturnType<typeof db.insertInto<typeof Users>>["values"]
 >[0] extends (infer T)[] | object
   ? T
   : never;
 
 type UserProfilesInsertType = Parameters<
-  ReturnType<typeof db.insert<typeof UserProfiles>>["values"]
+  ReturnType<typeof db.insertInto<typeof UserProfiles>>["values"]
 >[0] extends (infer T)[] | object
   ? T
   : never;
 
 type EventsInsertType = Parameters<
-  ReturnType<typeof db.insert<typeof Events>>["values"]
+  ReturnType<typeof db.insertInto<typeof Events>>["values"]
 >[0] extends (infer T)[] | object
   ? T
   : never;
 
 type LogsInsertType = Parameters<
-  ReturnType<typeof db.insert<typeof Logs>>["values"]
+  ReturnType<typeof db.insertInto<typeof Logs>>["values"]
 >[0] extends (infer T)[] | object
   ? T
   : never;
@@ -66,7 +66,7 @@ Expect<Equal<LogsInsertType["createdAt"], Date | undefined | Sql>>();
 // ============================================================================
 
 // Single row insert
-db.insert(Users).values({
+db.insertInto(Users).values({
   username: "ghost",
   email: "email@example.com",
   type: "admin",
@@ -74,7 +74,7 @@ db.insert(Users).values({
 });
 
 // Multi-row insert with optional/nullable array column
-db.insert(Posts).values([
+db.insertInto(Posts).values([
   {
     userId: 1n,
     title: "title",
@@ -89,38 +89,38 @@ db.insert(Posts).values([
 ]);
 
 // Column with $insertFn default vs explicit value override
-db.insert(Logs).values({
+db.insertInto(Logs).values({
   message: "Log message",
   updatedAt: new Date(),
 });
 
-db.insert(Logs).values({
+db.insertInto(Logs).values({
   message: "Log message with explicit createdAt",
   createdAt: new Date(),
   updatedAt: new Date(),
 });
 
 // Sql expression in insert values
-db.insert(Users).values({
+db.insertInto(Users).values({
   username: sql`LOWER('ghost')`,
   type: "user",
   externalId: "550e8400-e29b-41d4-a716-446655440000",
 });
 
 // Column with $type override
-db.insert(Posts).values({
+db.insertInto(Posts).values({
   userId: 1n,
   title: "Metrics Post",
   metrics: { views: 100, likes: 50 },
 });
 
 // Bytea and Network address types
-db.insert(UserProfiles).values({
+db.insertInto(UserProfiles).values({
   userId: 1n,
   avatarData: Buffer.from("avatar"),
 });
 
-db.insert(NetworkDevices).values({
+db.insertInto(NetworkDevices).values({
   name: "Router",
   ipAddress: "192.168.1.1",
   networkRange: "192.168.0.0/24",
@@ -133,7 +133,7 @@ db.insert(NetworkDevices).values({
 
 // Specific column selection returning
 const _insertReturningSpecific = db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "ghost",
     type: "user",
@@ -150,7 +150,7 @@ Expect<
 
 // False-map returning ({ column: false }) excludes specified column
 const _insertReturningFalseMap = db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "ghost",
     type: "user",
@@ -174,7 +174,7 @@ Expect<
 
 // Wildcard returning ("*") single row
 const _insertReturningWildcardSingle = db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "ghost",
     type: "user",
@@ -201,7 +201,7 @@ Expect<
 
 // Wildcard returning ("*") multi row
 const _insertReturningWildcardMulti = db
-  .insert(Users)
+  .insertInto(Users)
   .values([
     {
       username: "user1",
@@ -239,7 +239,7 @@ Expect<
 
 // doUpdateSet with set and where callbacks referencing excluded
 const _upsertResult = db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "alice",
     type: "user",
@@ -256,7 +256,7 @@ Expect<Equal<UpsertResult, { id: bigint; username: string }[]>>();
 
 // doNothing with returning
 const _doNothingWithReturning = db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "bob",
     type: "admin",
@@ -270,7 +270,7 @@ Expect<Equal<DoNothingWithReturning, { id: bigint }[]>>();
 
 // Targetless conflict doUpdateSet returns `never`
 const _doUpdateSetNoTarget = db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "alice",
     type: "user",
@@ -286,7 +286,7 @@ Expect<Equal<DoUpdateSetNoTarget, never>>();
 // ============================================================================
 
 // Cannot pass generated ALWAYS column
-db.insert(Users).values({
+db.insertInto(Users).values({
   // @ts-expect-error - id is generated ALWAYS and excluded from insert type
   id: 1n,
   username: "ghost",
@@ -295,10 +295,10 @@ db.insert(Users).values({
 });
 
 // @ts-expect-error - Missing required username field should not compile
-db.insert(Users).values({ email: "email@example.com", type: "user" });
+db.insertInto(Users).values({ email: "email@example.com", type: "user" });
 
 // Field value type mismatch
-db.insert(Users).values({
+db.insertInto(Users).values({
   // @ts-expect-error - username should be string, not number
   username: 123,
   type: "admin",
@@ -306,7 +306,7 @@ db.insert(Users).values({
 });
 
 // Invalid enum value
-db.insert(Users).values({
+db.insertInto(Users).values({
   username: "ghost",
   // @ts-expect-error - invalid enum value
   type: "invalid_type",
@@ -314,7 +314,7 @@ db.insert(Users).values({
 });
 
 // Non-existent column on table payload
-db.insert(Users).values({
+db.insertInto(Users).values({
   // @ts-expect-error - postId does not exist on Users
   postId: 1,
   username: "test",
@@ -323,14 +323,14 @@ db.insert(Users).values({
 });
 
 // Mismatched $type override property
-db.insert(Posts).values({
+db.insertInto(Posts).values({
   userId: 1n,
   // @ts-expect-error - views in metrics should be a number, not string
   metrics: { views: "invalid", likes: 10 },
 });
 
 // Non-existent column in returning selection
-db.insert(Users)
+db.insertInto(Users)
   .values({
     username: "test",
     type: "user",
@@ -340,7 +340,7 @@ db.insert(Users)
   .returning({ nonExistentColumn: true });
 
 // Invalid column reference on excluded in onConflict
-db.insert(Users)
+db.insertInto(Users)
   .values({
     username: "alice",
     type: "user",
@@ -351,3 +351,7 @@ db.insert(Users)
     // @ts-expect-error - nonExistent does not exist on excluded
     ({ excluded }) => ({ username: excluded.nonExistent }),
   );
+
+// Negative test: db.insert does not exist; use db.insertInto
+// @ts-expect-error - Property 'insert' does not exist on db; use insertInto
+db.insert(Users);

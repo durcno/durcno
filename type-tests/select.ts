@@ -3,7 +3,7 @@ import { Comments, db, Posts, UserProfiles, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
 // Type test: select all columns
-const allUsersQuery = db.from(Users).select();
+const allUsersQuery = db.from(Users).select("*");
 type AllUsers = Awaited<typeof allUsersQuery>;
 Expect<
   Equal<
@@ -40,7 +40,7 @@ type None = Awaited<typeof noneQuery>;
 Expect<Equal<None, Record<never, never>[]>>();
 
 // Type test: select on Posts (includes array column)
-const allPostsQuery = db.from(Posts).select();
+const allPostsQuery = db.from(Posts).select("*");
 type AllPosts = Awaited<typeof allPostsQuery>;
 Expect<
   Equal<
@@ -136,28 +136,28 @@ db.from(Users).select(
 );
 
 db.from(Users)
-  .select()
+  .select("*")
   // @ts-expect-error - Wrong type in where condition should not compile
   .where(({ users }) => eq(users.id, "string_instead_of_number"));
 
 db.from(Users)
-  .select()
+  .select("*")
   // @ts-expect-error - Wrong enum value in where should not compile
   .where(({ users }) => eq(users.type, "invalid_type"));
 
 db.from(Users)
-  .select()
+  .select("*")
   // @ts-expect-error - Comparing incompatible types should not compile
   .where(({ users }) => eq(users.username, 123));
 
 // Cannot use string where Buffer is expected for bytea
 db.from(UserProfiles)
-  .select()
+  .select("*")
   // @ts-expect-error - string not assignable to ByteaValType
   .where(({ userProfiles }) => eq(userProfiles.avatarData, "not-a-buffer"));
 
 db.from(UserProfiles)
-  .select()
+  .select("*")
   // @ts-expect-error - Cannot use number where Buffer is expected for bytea
   .where(({ userProfiles }) => eq(userProfiles.avatarData, 123));
 
@@ -168,17 +168,17 @@ db.from(UserProfiles)
 import { NetworkDevices } from "./schema";
 
 db.from(NetworkDevices)
-  .select()
+  .select("*")
   // @ts-expect-error - Cannot use number for INET column (expects string)
   .where(({ network_devices }) => eq(network_devices.ipAddress, 123));
 
 db.from(NetworkDevices)
-  .select()
+  .select("*")
   // @ts-expect-error - Cannot use number for CIDR column (expects string)
   .where(({ network_devices }) => eq(network_devices.networkRange, 456));
 
 db.from(NetworkDevices)
-  .select()
+  .select("*")
   // @ts-expect-error - Cannot use number for MACADDR column (expects string)
   .where(({ network_devices }) => eq(network_devices.macAddress, 789));
 
@@ -190,7 +190,7 @@ db.from(NetworkDevices)
 const distinctOnSingleQuery = db
   .from(Users)
   .distinctOn(({ users }) => users.username)
-  .select();
+  .select("*");
 type DistinctOnSingle = Awaited<typeof distinctOnSingleQuery>;
 Expect<
   Equal<
@@ -250,7 +250,7 @@ _distinctOnNoJoin.innerJoin(Posts, ({ users, posts }) =>
 db.from(Users)
   // @ts-expect-error - Cannot use columns from a different table in distinctOn
   .distinctOn(({ users }) => Posts.title)
-  .select();
+  .select("*");
 
 // ============================================================================
 // Mixed aggregate + non-aggregate in select (auto GROUP BY)
@@ -413,8 +413,8 @@ db.from(Users)
   // @ts-expect-error - aggregate function not allowed in groupBy (only scalar)
   .groupBy(() => count("*"));
 
-// callback form when no named select (select() with no arg) — @ts-expect-error
+// callback form when no named select (select("*")) — @ts-expect-error
 db.from(Users)
-  .select()
+  .select("*")
   // @ts-expect-error - callback type is never without a named select
   .groupBy((_view: never, _selects: never) => [Users.type]);

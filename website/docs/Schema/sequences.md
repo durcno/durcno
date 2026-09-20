@@ -79,7 +79,7 @@ When you insert a new order without specifying `orderNumber`, PostgreSQL will au
 
 ```typescript
 // orderNumber will be 1000, 1001, 1002, etc.
-await db.insert(Orders).values({
+await db.insertInto(Orders).values({
   customerName: "John Doe",
 });
 ```

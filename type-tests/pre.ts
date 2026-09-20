@@ -7,7 +7,7 @@ const basicQuery = prepare({ username: Users.username.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select()
+    .select("*")
     .where(({ users }) => eq(users.username, args.username));
 });
 
@@ -39,7 +39,7 @@ const multiArgQuery = prepare(
     return db
       .prepare()
       .from(Users)
-      .select()
+      .select("*")
       .where(({ users }) =>
         and(
           eq(users.username, args.username),
@@ -89,7 +89,7 @@ const numericQuery = prepare({ userId: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Posts)
-    .select()
+    .select("*")
     .where(({ posts }) => eq(posts.userId, args.userId));
 });
 
@@ -152,7 +152,7 @@ const nullableQuery = prepare({ email: Users.email.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select()
+    .select("*")
     .where(({ users }) => eq(users.email, args.email));
 });
 
@@ -234,7 +234,7 @@ const commentsQuery = prepare(
     return db
       .prepare()
       .from(Comments)
-      .select()
+      .select("*")
       .where(({ comments }) =>
         and(eq(comments.postId, args.postId), eq(comments.userId, args.userId)),
       );
@@ -290,7 +290,7 @@ const wrongArgTypeQuery = prepare({ id: Users.id.arg() }, (args) =>
   db
     .prepare()
     .from(Users)
-    .select()
+    .select("*")
     .where(({ users }) => eq(users.id, args.id)),
 );
 // @ts-expect-error - Wrong argument type at runtime should not compile
@@ -302,7 +302,7 @@ const missingArgQuery = prepare(
     db
       .prepare()
       .from(Users)
-      .select()
+      .select("*")
       .where(({ users }) =>
         and(eq(users.username, args.username), eq(users.type, args.type)),
       ),
@@ -314,7 +314,7 @@ const enumArgQuery = prepare({ type: Users.type.arg() }, (args) =>
   db
     .prepare()
     .from(Users)
-    .select()
+    .select("*")
     .where(({ users }) => eq(users.type, args.type)),
 );
 // @ts-expect-error - Invalid enum value at runtime should not compile
@@ -324,7 +324,7 @@ const bigintArgQuery = prepare({ userId: Posts.userId.arg() }, (args) =>
   db
     .prepare()
     .from(Posts)
-    .select()
+    .select("*")
     .where(({ posts }) => eq(posts.userId, args.userId)),
 );
 // @ts-expect-error - Wrong type for bigint argument should not compile
@@ -334,7 +334,7 @@ const extraArgQuery = prepare({ id: Users.id.arg() }, (args) =>
   db
     .prepare()
     .from(Users)
-    .select()
+    .select("*")
     .where(({ users }) => eq(users.id, args.id)),
 );
 // @ts-expect-error - Extra argument should not compile
@@ -455,7 +455,7 @@ missingUpdateArg.run(db, { id: 1n });
 
 // Type test: basic prepared delete with single argument
 const deleteBasicQuery = prepare({ userId: Users.id.arg() }, (args) => {
-  return db.prepare().delete(Users).where(eq(Users.id, args.userId));
+  return db.prepare().deleteFrom(Users).where(eq(Users.id, args.userId));
 });
 
 const deleteBasicResult = deleteBasicQuery.run(db, { userId: 1n });
@@ -468,7 +468,7 @@ const deleteMultiArgQuery = prepare(
   (args) => {
     return db
       .prepare()
-      .delete(Users)
+      .deleteFrom(Users)
       .where(and(eq(Users.id, args.userId), eq(Users.type, args.userType)));
   },
 );
@@ -484,7 +484,7 @@ Expect<Equal<DeleteMultiArgResult, null>>();
 const deleteReturningQuery = prepare({ userId: Users.id.arg() }, (args) => {
   return db
     .prepare()
-    .delete(Users)
+    .deleteFrom(Users)
     .where(eq(Users.id, args.userId))
     .returning({ id: true, username: true });
 });
@@ -499,7 +499,7 @@ const deleteOrQuery = prepare(
   (args) => {
     return db
       .prepare()
-      .delete(Users)
+      .deleteFrom(Users)
       .where(or(eq(Users.type, args.type1), eq(Users.type, args.type2)));
   },
 );
@@ -517,7 +517,7 @@ const deletePostsPreQuery = prepare(
   (args) => {
     return db
       .prepare()
-      .delete(Posts)
+      .deleteFrom(Posts)
       .where(and(eq(Posts.id, args.postId), eq(Posts.userId, args.userId)));
   },
 );
@@ -532,7 +532,7 @@ Expect<Equal<DeletePostsPreResult, null>>();
 // Negative type tests for delete
 
 const wrongDeleteArgType = prepare({ id: Users.id.arg() }, (args) =>
-  db.prepare().delete(Users).where(eq(Users.id, args.id)),
+  db.prepare().deleteFrom(Users).where(eq(Users.id, args.id)),
 );
 // @ts-expect-error - Wrong argument type for delete should not compile
 wrongDeleteArgType.run(db, { id: "string_instead_of_number" });
@@ -542,7 +542,7 @@ const missingDeleteArg = prepare(
   (args) =>
     db
       .prepare()
-      .delete(Users)
+      .deleteFrom(Users)
       .where(and(eq(Users.id, args.id), eq(Users.type, args.type))),
 );
 // @ts-expect-error - Missing required argument for delete should not compile

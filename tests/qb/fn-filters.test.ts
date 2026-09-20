@@ -102,7 +102,7 @@ describe("Filters with Functions", () => {
   describe("upper(col) & value", () => {
     it("eq: matches uppercased value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "hello" }),
           createTestUser({ username: "world" }),
@@ -121,7 +121,7 @@ describe("Filters with Functions", () => {
   describe("trim(col) & value", () => {
     it("eq: matches after stripping whitespace", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "  padded  " }),
           createTestUser({ username: "clean" }),
@@ -140,7 +140,7 @@ describe("Filters with Functions", () => {
   describe("length(col) & value", () => {
     it("eq: matches exact length", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "abc" }),
           createTestUser({ username: "abcde" }),
@@ -157,7 +157,7 @@ describe("Filters with Functions", () => {
 
     it("gte: includes boundary length", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "ab" }),
           createTestUser({ username: "abc" }),
@@ -166,7 +166,7 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => gte(length(users.username), 3));
 
       expect(result).toHaveLength(2);
@@ -174,7 +174,7 @@ describe("Filters with Functions", () => {
 
     it("lte: includes boundary length", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "ab" }),
           createTestUser({ username: "abc" }),
@@ -183,7 +183,7 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => lte(length(users.username), 3));
 
       expect(result).toHaveLength(2);
@@ -191,7 +191,7 @@ describe("Filters with Functions", () => {
 
     it("ne: excludes exact length", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "abc" }),
           createTestUser({ username: "abcde" }),
@@ -210,7 +210,7 @@ describe("Filters with Functions", () => {
   describe("left(col, n) & value", () => {
     it("eq: matches prefix", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "foobar" }),
           createTestUser({ username: "bazqux" }),
@@ -229,7 +229,7 @@ describe("Filters with Functions", () => {
   describe("right(col, n) & value", () => {
     it("eq: matches suffix", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "foobar" }),
           createTestUser({ username: "foobaz" }),
@@ -248,7 +248,7 @@ describe("Filters with Functions", () => {
   describe("position(col, search) & value", () => {
     it("gt: only rows that contain the substring", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ email: "hello@world.com" }),
           createTestUser({ email: "no-at-sign-here" }),
@@ -266,7 +266,7 @@ describe("Filters with Functions", () => {
 
     it("eq: exact position match", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ email: "a@example.com" }),
           createTestUser({ email: "ab@example.com" }),
@@ -289,7 +289,7 @@ describe("Filters with Functions", () => {
   describe("abs(col) & value", () => {
     it("eq: matches row by absolute value of age", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([createTestUser({ age: 30 }), createTestUser({ age: 99 })]);
 
       const result = await db
@@ -303,7 +303,7 @@ describe("Filters with Functions", () => {
 
     it("gt: matches rows whose abs value exceeds threshold", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 5 }),
           createTestUser({ age: 50 }),
@@ -312,7 +312,7 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => gt(abs(users.age), 10));
 
       expect(result).toHaveLength(2);
@@ -322,7 +322,7 @@ describe("Filters with Functions", () => {
   describe("ceil(col) & value", () => {
     it("eq: matches after ceiling", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([createTestUser({ score: 10 }), createTestUser({ score: 20 })]);
 
       const result = await db
@@ -336,7 +336,7 @@ describe("Filters with Functions", () => {
 
     it("lte: filters by ceiling", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ score: 10 }),
           createTestUser({ score: 30 }),
@@ -345,7 +345,7 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => lte(ceil(users.score), 30));
 
       expect(result).toHaveLength(2);
@@ -355,7 +355,7 @@ describe("Filters with Functions", () => {
   describe("floor(col) & value", () => {
     it("eq: matches after floor", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([createTestUser({ score: 10 }), createTestUser({ score: 20 })]);
 
       const result = await db
@@ -369,7 +369,7 @@ describe("Filters with Functions", () => {
 
     it("gte: filters by floor", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ score: 10 }),
           createTestUser({ score: 30 }),
@@ -378,7 +378,7 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => gte(floor(users.score), 30));
 
       expect(result).toHaveLength(2);
@@ -388,7 +388,7 @@ describe("Filters with Functions", () => {
   describe("round(col) & value", () => {
     it("eq: matches after rounding", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([createTestUser({ age: 25 }), createTestUser({ age: 50 })]);
 
       const result = await db
@@ -404,7 +404,7 @@ describe("Filters with Functions", () => {
   describe("mod(col, n) & value", () => {
     it("eq: matches rows where age mod 2 equals 0 (even)", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ age: 10 }),
           createTestUser({ age: 11 }),
@@ -413,7 +413,7 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) => eq(mod(users.age, 2), 0));
 
       expect(result).toHaveLength(2);
@@ -431,7 +431,7 @@ describe("Filters with Functions", () => {
     it("eq: lower(email) = lower(username) — same lowercased value", async () => {
       // username and email happen to be the same word, different casing
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "MATCH", email: "match@x.com" }),
           createTestUser({ username: "NOPE", email: "match@x.com" }),
@@ -453,7 +453,7 @@ describe("Filters with Functions", () => {
 
     it("gt: length(email) > length(username)", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "ab", email: "longer@example.com" }),
           createTestUser({ username: "longusername", email: "x@y.com" }),
@@ -470,7 +470,7 @@ describe("Filters with Functions", () => {
 
     it("lt: length(username) < length(email)", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "hi", email: "longer@example.com" }),
           createTestUser({ username: "superlongusername", email: "a@b.com" }),
@@ -493,7 +493,7 @@ describe("Filters with Functions", () => {
   describe("Nested functions", () => {
     it("length(lower(col)) strips case before measuring", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "ABC" }),
           createTestUser({ username: "ABCDE" }),
@@ -510,7 +510,7 @@ describe("Filters with Functions", () => {
 
     it("length(trim(col)) measures after stripping whitespace", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "  hi  " }),
           createTestUser({ username: "  hello  " }),
@@ -527,7 +527,7 @@ describe("Filters with Functions", () => {
 
     it("upper(lower(col)) roundtrips to upper", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "mixedCase" }),
           createTestUser({ username: "OTHER" }),
@@ -549,7 +549,7 @@ describe("Filters with Functions", () => {
 
   describe("Combining function filters with and/or", () => {
     it("and: lower(email) = x AND length(username) > n", async () => {
-      await db.insert(schema.Users).values([
+      await db.insertInto(schema.Users).values([
         createTestUser({
           username: "longname",
           email: "TARGET@EXAMPLE.COM",
@@ -579,7 +579,7 @@ describe("Filters with Functions", () => {
     });
 
     it("or: lower(email) = x OR length(username) < n", async () => {
-      await db.insert(schema.Users).values([
+      await db.insertInto(schema.Users).values([
         createTestUser({ username: "hi", email: "other@example.com" }),
         createTestUser({
           username: "longname",
@@ -608,7 +608,7 @@ describe("Filters with Functions", () => {
 
     it("and(startsWith, gt(length)): prefix AND minimum length", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "pre_short" }),
           createTestUser({ username: "pre_longenough" }),
@@ -631,7 +631,7 @@ describe("Filters with Functions", () => {
 
     it("and(contains, lt(length)): substring AND max length", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "xhellox" }),
           createTestUser({ username: "xhelloworldx" }),
@@ -654,7 +654,7 @@ describe("Filters with Functions", () => {
 
     it("or(endsWith, abs(score) > n): suffix OR large absolute score", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "endsWithSuffix", score: 1 }),
           createTestUser({ username: "nope", score: 999 }),
@@ -675,7 +675,7 @@ describe("Filters with Functions", () => {
 
     it("and(ceil(score) >= x, floor(score) <= y): range via ceil/floor", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ score: 10 }),
           createTestUser({ score: 20 }),
@@ -684,7 +684,7 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select()
+        .select("*")
         .where(({ users }) =>
           and(gte(ceil(users.score), 10), lte(floor(users.score), 20)),
         );

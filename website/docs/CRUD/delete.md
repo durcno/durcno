@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Delete
 
-Use `db.delete()` to remove rows from a table. The delete builder supports filtering and returning deleted data.
+Use `db.deleteFrom()` to remove rows from a table. The delete builder supports filtering and returning deleted data.
 
 ## Methods
 
@@ -27,7 +27,7 @@ import { Users } from "./db/schema.ts";
 import { eq } from "durcno";
 
 // Delete a specific user
-await db.delete(Users).where(eq(Users.id, 1n));
+await db.deleteFrom(Users).where(eq(Users.id, 1n));
 ```
 
 :::warning
@@ -42,18 +42,18 @@ Use filter operators for complex conditions:
 import { and, eq, lte, or } from "durcno";
 
 // Delete all admin users
-await db.delete(Users).where(eq(Users.type, "admin"));
+await db.deleteFrom(Users).where(eq(Users.type, "admin"));
 
 // Delete users matching multiple conditions
 await db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(
     and(eq(Users.type, "user"), lte(Users.createdAt, new Date("2023-01-01"))),
   );
 
 // Delete users matching either condition
 await db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(
     or(eq(Users.email, "spam@example.com"), eq(Users.username, "spammer")),
   );
@@ -66,20 +66,23 @@ Use `.returning()` to get data from deleted rows:
 ```typescript
 // Return specific columns from deleted rows
 const deleted = await db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(eq(Users.id, 1n))
   .returning({ id: true, username: true });
 // Type: { id: bigint; username: string }[]
 
 // Return all columns except some
 const deleted = await db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(eq(Users.id, 1n))
   .returning({ createdAt: false });
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user" }[]
 
 // Return all columns using the wildcard
-const deleted = await db.delete(Users).where(eq(Users.id, 1n)).returning("*");
+const deleted = await db
+  .deleteFrom(Users)
+  .where(eq(Users.id, 1n))
+  .returning("*");
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; ... }[]
 ```
 
@@ -88,7 +91,7 @@ const deleted = await db.delete(Users).where(eq(Users.id, 1n)).returning("*");
 Without `.returning()`, the delete returns `null`:
 
 ```typescript
-const result = await db.delete(Users).where(eq(Users.id, 1n));
+const result = await db.deleteFrom(Users).where(eq(Users.id, 1n));
 // Type: null
 ```
 
@@ -98,8 +101,8 @@ const result = await db.delete(Users).where(eq(Users.id, 1n));
 
 ```typescript
 // These are equivalent
-await db.delete(Users).where(eq(Users.id, 1n)).returning({ id: true });
-await db.delete(Users).returning({ id: true }).where(eq(Users.id, 1n));
+await db.deleteFrom(Users).where(eq(Users.id, 1n)).returning({ id: true });
+await db.deleteFrom(Users).returning({ id: true }).where(eq(Users.id, 1n));
 ```
 
 ## Delete All Rows
@@ -108,7 +111,7 @@ To delete all rows from a table (use with caution):
 
 ```typescript
 // ⚠️ Deletes ALL rows from the table
-await db.delete(Users);
+await db.deleteFrom(Users);
 ```
 
 :::danger
@@ -135,7 +138,7 @@ Return deleted data to confirm what was removed:
 
 ```typescript
 const deletedUsers = await db
-  .delete(Users)
+  .deleteFrom(Users)
   .where(eq(Users.type, "user"))
   .returning({ id: true, username: true, email: true });
 
@@ -151,10 +154,10 @@ When deleting rows that have foreign key relationships, ensure you handle cascad
 
 ```typescript
 // Delete user's posts first (if no cascade)
-await db.delete(Posts).where(eq(Posts.userId, 1n));
+await db.deleteFrom(Posts).where(eq(Posts.userId, 1n));
 
 // Then delete the user
-await db.delete(Users).where(eq(Users.id, 1n));
+await db.deleteFrom(Users).where(eq(Users.id, 1n));
 ```
 
 ## Related

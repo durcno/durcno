@@ -23,7 +23,7 @@ describe("JSON/JSONB Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.JsonTests)
+        .insertInto(schema.JsonTests)
         .values(zodSchema.parse({ data: { key: "value", count: 1 } }))
         .returning({ id: true });
       insertedId = row.id;
@@ -34,7 +34,7 @@ describe("JSON/JSONB Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.JsonTests)
-        .select()
+        .select("*")
         .where(({ jsonTests }) => eq(jsonTests.id, insertedId));
       expect(row.data).toEqual({ key: "value", count: 1 });
       expect(row.dataWithDefault).toEqual({ status: "default" });
@@ -48,7 +48,7 @@ describe("JSON/JSONB Column Types", () => {
         .where(eq(schema.JsonTests.id, insertedId));
       const [row] = await db
         .from(schema.JsonTests)
-        .select()
+        .select("*")
         .where(({ jsonTests }) => eq(jsonTests.id, insertedId));
       expect(row.data).toEqual({ key: "updated" });
     });
@@ -65,7 +65,7 @@ describe("JSON/JSONB Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.JsonbTests)
+        .insertInto(schema.JsonbTests)
         .values(zodSchema.parse({ data: { key: "value", count: 1 } }))
         .returning({ id: true });
       insertedId = row.id;
@@ -76,7 +76,7 @@ describe("JSON/JSONB Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.JsonbTests)
-        .select()
+        .select("*")
         .where(({ jsonbTests }) => eq(jsonbTests.id, insertedId));
       expect(row.data).toEqual({ key: "value", count: 1 });
       expect(row.dataWithDefault).toEqual({ status: "default" });
@@ -90,7 +90,7 @@ describe("JSON/JSONB Column Types", () => {
         .where(eq(schema.JsonbTests.id, insertedId));
       const [row] = await db
         .from(schema.JsonbTests)
-        .select()
+        .select("*")
         .where(({ jsonbTests }) => eq(jsonbTests.id, insertedId));
       expect(row.data).toEqual({ key: "updated" });
     });

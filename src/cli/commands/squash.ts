@@ -100,7 +100,7 @@ export async function squash(
 
     if (await migrationsTableExists(client)) {
       const db = database({ Migrations }, config);
-      const records = await db.from(Migrations).select();
+      const records = await db.from(Migrations).select("*");
       await db.close();
 
       const appliedNames = new Set(records.map((r) => r.name));
@@ -208,9 +208,11 @@ export async function squash(
   if (client !== null && rangeAllApplied) {
     const db = database({ Migrations }, config);
     for (const migrationName of range) {
-      await db.delete(Migrations).where(eq(Migrations.name, migrationName));
+      await db.deleteFrom(Migrations).where(eq(Migrations.name, migrationName));
     }
-    await db.insert(Migrations).values({ name: start, createdAt: new Date() });
+    await db
+      .insertInto(Migrations)
+      .values({ name: start, createdAt: new Date() });
     await db.close();
   }
 

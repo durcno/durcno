@@ -96,7 +96,7 @@ describe("pgvector", () => {
 
     it("insert", async () => {
       const [row] = await db
-        .insert(schema.Items)
+        .insertInto(schema.Items)
         .values({
           vec: [1, 2, 3],
           hvec: [1.5, 2.5, 3.5],
@@ -111,7 +111,7 @@ describe("pgvector", () => {
     it("select", async () => {
       const [row] = await db
         .from(schema.Items)
-        .select()
+        .select("*")
         .where(({ items }) => eq(items.id, insertedId));
       expect(row.vec).toEqual([1, 2, 3]);
     });
@@ -123,7 +123,7 @@ describe("pgvector", () => {
         .where(eq(schema.Items.id, insertedId));
       const [row] = await db
         .from(schema.Items)
-        .select()
+        .select("*")
         .where(({ items }) => eq(items.id, insertedId));
       expect(row.vec).toEqual([4, 5, 6]);
     });
@@ -138,7 +138,7 @@ describe("pgvector", () => {
 
     it("insert", async () => {
       const [row] = await db
-        .insert(schema.Items)
+        .insertInto(schema.Items)
         .values({
           vec: [0, 0, 0],
           hvec: [1.5, 2.5, 3.5],
@@ -153,7 +153,7 @@ describe("pgvector", () => {
     it("select", async () => {
       const [row] = await db
         .from(schema.Items)
-        .select()
+        .select("*")
         .where(({ items }) => eq(items.id, insertedId));
       expect(row.hvec).toEqual([1.5, 2.5, 3.5]);
     });
@@ -168,7 +168,7 @@ describe("pgvector", () => {
 
     it("insert", async () => {
       const [row] = await db
-        .insert(schema.Items)
+        .insertInto(schema.Items)
         .values({
           vec: [0, 0, 0],
           hvec: [0, 0, 0],
@@ -183,7 +183,7 @@ describe("pgvector", () => {
     it("select", async () => {
       const [row] = await db
         .from(schema.Items)
-        .select()
+        .select("*")
         .where(({ items }) => eq(items.id, insertedId));
       expect(row.svec).toEqual("{1:1,3:2}/3");
     });
@@ -198,7 +198,7 @@ describe("pgvector", () => {
 
     it("insert", async () => {
       const [row] = await db
-        .insert(schema.Items)
+        .insertInto(schema.Items)
         .values({ vec: [0, 0, 0], hvec: [0, 0, 0], svec: "{1:1}/3", b: "101" })
         .returning({ id: true });
       insertedId = row.id;
@@ -208,7 +208,7 @@ describe("pgvector", () => {
     it("select", async () => {
       const [row] = await db
         .from(schema.Items)
-        .select()
+        .select("*")
         .where(({ items }) => eq(items.id, insertedId));
       expect(row.b).toEqual("101");
     });
@@ -224,7 +224,7 @@ describe("pgvector", () => {
     });
 
     it("l2Distance orderBy", async () => {
-      await db.insert(schema.Items).values([
+      await db.insertInto(schema.Items).values([
         { vec: [1, 1, 1], hvec: [1, 1, 1], svec: "{1:1}/3", b: "101" },
         { vec: [2, 2, 2], hvec: [2, 2, 2], svec: "{2:1}/3", b: "111" },
         { vec: [3, 3, 3], hvec: [3, 3, 3], svec: "{3:1}/3", b: "000" },
@@ -241,7 +241,7 @@ describe("pgvector", () => {
     });
 
     it("l2Distance select and where", async () => {
-      await db.insert(schema.Items).values([
+      await db.insertInto(schema.Items).values([
         { vec: [1, 1, 1], hvec: [1, 1, 1], svec: "{1:1}/3", b: "101" },
         { vec: [2, 2, 2], hvec: [2, 2, 2], svec: "{2:1}/3", b: "111" },
       ]);
@@ -256,7 +256,7 @@ describe("pgvector", () => {
     });
 
     it("hammingDistance on bit column", async () => {
-      await db.insert(schema.Items).values([
+      await db.insertInto(schema.Items).values([
         { vec: [1, 1, 1], hvec: [1, 1, 1], svec: "{1:1}/3", b: "101" },
         { vec: [2, 2, 2], hvec: [2, 2, 2], svec: "{2:1}/3", b: "111" },
         { vec: [3, 3, 3], hvec: [3, 3, 3], svec: "{3:1}/3", b: "000" },

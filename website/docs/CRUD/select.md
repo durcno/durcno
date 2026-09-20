@@ -15,7 +15,7 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 | `.innerJoin(table, callback)` | Add an inner join with `(view) => condition`         |
 | `.leftJoin(table, callback)`  | Add a left join with `(view) => condition`           |
 | `.distinctOn(callback)`       | Apply DISTINCT ON via `(view) => col` or `[...cols]` |
-| `.select()`                   | Select all columns                                   |
+| `.select("*")`                | Select all columns                                   |
 | `.select(callback)`           | Select specific columns via `(view) => ({ ... })`    |
 
 ### Query methods (SelectQuery)
@@ -38,7 +38,7 @@ import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
 // Select all columns from Users table
-const users = await db.from(Users).select();
+const users = await db.from(Users).select("*");
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
 ```
 
@@ -83,13 +83,13 @@ import { eq, and, gte } from "durcno";
 // Simple equality filter
 const admins = await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => eq(users.type, "admin"));
 
 // Multiple conditions with AND
 const recentAdmins = await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) =>
     and(eq(users.type, "admin"), gte(users.createdAt, new Date("2024-01-01"))),
   );
@@ -105,13 +105,13 @@ import { asc, desc } from "durcno";
 // Sort by username ascending
 const users = await db
   .from(Users)
-  .select()
+  .select("*");
   .orderBy(({ users }) => asc(users.username));
 
 // Sort by creation date descending (newest first)
 const recentUsers = await db
   .from(Users)
-  .select()
+  .select("*");
   .orderBy(({ users }) => desc(users.createdAt));
 ```
 
@@ -123,13 +123,13 @@ Return an array from `.orderBy()` to sort by multiple columns:
 // Sort by type ascending, then by username ascending
 const sortedUsers = await db
   .from(Users)
-  .select()
+  .select("*");
   .orderBy(({ users }) => [asc(users.type), asc(users.username)]);
 
 // Sort by type ascending, then by creation date descending
 const mixedSort = await db
   .from(Users)
-  .select()
+  .select("*");
   .orderBy(({ users }) => [asc(users.type), desc(users.createdAt)]);
 ```
 
@@ -175,13 +175,13 @@ Use `.limit()` and `.offset()` for pagination. Both accept `number` or `bigint`:
 
 ```typescript
 // Get first 10 users
-const firstPage = await db.from(Users).select().limit(10);
+const firstPage = await db.from(Users).select("*").limit(10);
 
 // Get users 11-20 (second page)
-const secondPage = await db.from(Users).select().limit(10).offset(10);
+const secondPage = await db.from(Users).select("*").limit(10).offset(10);
 
 // Using bigint values
-const page = await db.from(Users).select().limit(10n).offset(20n);
+const page = await db.from(Users).select("*").limit(10n).offset(20n);
 ```
 
 ## Joining Tables
@@ -223,7 +223,7 @@ const activeUsers = db.with("activeUsers").as(
 const rows = await db
   .with(activeUsers)
   .from((ctes) => ctes.activeUsers)
-  .select()
+  .select("*");
   .orderBy(({ activeUsers }) => asc(activeUsers.username));
 
 // Type: { id: bigint; username: string }[]
@@ -370,7 +370,7 @@ import { asc } from "durcno";
 const onePerType = await db
   .from(Users)
   .distinctOn(({ users }) => users.type)
-  .select()
+  .select("*");
   .orderBy(({ users }) => asc(users.type));
 ```
 
@@ -383,7 +383,7 @@ Pass an array of columns to `.distinctOn()` for compound distinct expressions:
 const onePerTypeAndStatus = await db
   .from(Users)
   .distinctOn(({ users }) => [users.type, users.status])
-  .select()
+  .select("*");
   .orderBy(({ users }) => [asc(users.type), asc(users.status)]);
 ```
 

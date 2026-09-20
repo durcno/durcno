@@ -88,7 +88,7 @@ export class StDWithinFilter<
  * @param radius - Search radius in meters, or an `Arg<number>` placeholder for prepared queries.
  *
  * @example
- * db.from(Properties).select().where(stDWithin(Properties.location, [2.29, 48.85], 5000))
+ * db.from(Properties).select("*").where(stDWithin(Properties.location, [2.29, 48.85], 5000))
  */
 export function stDWithin<
   TCol extends GeographyPointCol,

@@ -50,7 +50,7 @@ describe("Array Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.SimpleArrayTests)
+        .insertInto(schema.SimpleArrayTests)
         .values(
           zodSchema.parse({
             requiredTags: ["a", "b", "c"],
@@ -66,7 +66,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredTags).toEqual(["a", "b", "c"]);
       expect(row.optionalTags).toBeNull();
@@ -80,7 +80,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.SimpleArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredTags).toEqual(["x", "y"]);
     });
@@ -93,7 +93,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.SimpleArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredTags).toEqual([]);
     });
@@ -106,7 +106,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.SimpleArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.optionalTags).toEqual(["opt1", "opt2"]);
     });
@@ -119,7 +119,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.SimpleArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.optionalTags).toBeNull();
     });
@@ -135,7 +135,7 @@ describe("Array Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.SimpleArrayTests)
+        .insertInto(schema.SimpleArrayTests)
         .values({ requiredTags: ["t"], requiredScores: [10, -20, 0, 100] })
         .returning({ id: true });
       insertedId = row.id;
@@ -146,7 +146,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredScores).toEqual([10, -20, 0, 100]);
       expect(row.optionalScores).toBeNull();
@@ -160,7 +160,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.SimpleArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) => eq(simpleArrayTests.id, insertedId));
       expect(row.requiredScores).toEqual([99, 100]);
     });
@@ -189,7 +189,7 @@ describe("Array Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.FixedArrayTests)
+        .insertInto(schema.FixedArrayTests)
         .values(
           zodSchema.parse({
             requiredCoords: [10, 20, 30],
@@ -205,7 +205,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.FixedArrayTests)
-        .select()
+        .select("*")
         .where(({ fixedArrayTests }) => eq(fixedArrayTests.id, insertedId));
       expect(row.requiredCoords).toEqual([10, 20, 30]);
       expect(row.optionalCoords).toBeNull();
@@ -219,7 +219,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.FixedArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.FixedArrayTests)
-        .select()
+        .select("*")
         .where(({ fixedArrayTests }) => eq(fixedArrayTests.id, insertedId));
       expect(row.requiredCoords).toEqual([-1, 0, 1]);
     });
@@ -235,7 +235,7 @@ describe("Array Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.FixedArrayTests)
+        .insertInto(schema.FixedArrayTests)
         .values({
           requiredCoords: [1, 2, 3],
           requiredPair: ["hello", "world"],
@@ -249,7 +249,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.FixedArrayTests)
-        .select()
+        .select("*")
         .where(({ fixedArrayTests }) => eq(fixedArrayTests.id, insertedId));
       expect(row.requiredPair).toEqual(["hello", "world"]);
       expect(row.optionalPair).toBeNull();
@@ -263,7 +263,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.FixedArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.FixedArrayTests)
-        .select()
+        .select("*")
         .where(({ fixedArrayTests }) => eq(fixedArrayTests.id, insertedId));
       expect(row.requiredPair).toEqual(["updated", "pair"]);
     });
@@ -295,7 +295,7 @@ describe("Array Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.MultidimensionalArrayTests)
+        .insertInto(schema.MultidimensionalArrayTests)
         .values(
           zodSchema.parse({
             requiredMatrix: [
@@ -317,7 +317,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
-        .select()
+        .select("*")
         .where(({ multidimensionalArrayTests }) =>
           eq(multidimensionalArrayTests.id, insertedId),
         );
@@ -341,7 +341,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.MultidimensionalArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
-        .select()
+        .select("*")
         .where(({ multidimensionalArrayTests }) =>
           eq(multidimensionalArrayTests.id, insertedId),
         );
@@ -359,7 +359,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.MultidimensionalArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
-        .select()
+        .select("*")
         .where(({ multidimensionalArrayTests }) =>
           eq(multidimensionalArrayTests.id, insertedId),
         );
@@ -377,7 +377,7 @@ describe("Array Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.MultidimensionalArrayTests)
+        .insertInto(schema.MultidimensionalArrayTests)
         .values({
           requiredMatrix: [[0]],
           requiredVectors: [
@@ -395,7 +395,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
-        .select()
+        .select("*")
         .where(({ multidimensionalArrayTests }) =>
           eq(multidimensionalArrayTests.id, insertedId),
         );
@@ -415,7 +415,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.MultidimensionalArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.MultidimensionalArrayTests)
-        .select()
+        .select("*")
         .where(({ multidimensionalArrayTests }) =>
           eq(multidimensionalArrayTests.id, insertedId),
         );
@@ -446,7 +446,7 @@ describe("Array Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.EnumArrayTests)
+        .insertInto(schema.EnumArrayTests)
         .values(
           zodSchema.parse({
             requiredStatuses: ["active", "pending"],
@@ -462,7 +462,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.EnumArrayTests)
-        .select()
+        .select("*")
         .where(({ enumArrayTests }) => eq(enumArrayTests.id, insertedId));
       expect(row.requiredStatuses).toEqual(["active", "pending"]);
       expect(row.optionalStatuses).toBeNull();
@@ -476,7 +476,7 @@ describe("Array Column Types", () => {
         .where(eq(schema.EnumArrayTests.id, insertedId));
       const [row] = await db
         .from(schema.EnumArrayTests)
-        .select()
+        .select("*")
         .where(({ enumArrayTests }) => eq(enumArrayTests.id, insertedId));
       expect(row.requiredStatuses).toEqual(["inactive"]);
     });
@@ -484,12 +484,12 @@ describe("Array Column Types", () => {
     it("empty enum array", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.EnumArrayTests)
+        .insertInto(schema.EnumArrayTests)
         .values({ requiredStatuses: [], requiredPriorities: [] })
         .returning({ id: true });
       const [fetched] = await db
         .from(schema.EnumArrayTests)
-        .select()
+        .select("*")
         .where(({ enumArrayTests }) => eq(enumArrayTests.id, row.id));
       expect(fetched.requiredStatuses).toEqual([]);
     });
@@ -503,7 +503,7 @@ describe("Array Column Types", () => {
     beforeEach(async () => {
       await cleanTestData([schema.SimpleArrayTests]);
       const db = getDb();
-      await db.insert(schema.SimpleArrayTests).values([
+      await db.insertInto(schema.SimpleArrayTests).values([
         { requiredTags: ["a", "b"], requiredScores: [1, 2] },
         { requiredTags: ["b", "c"], requiredScores: [2, 3] },
         { requiredTags: ["d", "e"], requiredScores: [4, 5] },
@@ -514,7 +514,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) =>
           arrayContains(simpleArrayTests.requiredTags, ["a", "b"]),
         );
@@ -526,7 +526,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) =>
           arrayContainedBy(simpleArrayTests.requiredTags, ["a", "b", "c"]),
         );
@@ -538,7 +538,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) =>
           arrayOverlaps(simpleArrayTests.requiredTags, ["a", "d"]),
         );
@@ -550,7 +550,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) => isNull(simpleArrayTests.optionalTags));
       expect(result).toHaveLength(3);
     });
@@ -563,7 +563,7 @@ describe("Array Column Types", () => {
         .where(arrayContains(schema.SimpleArrayTests.requiredTags, ["a"]));
       const result = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) =>
           isNotNull(simpleArrayTests.optionalTags),
         );
@@ -579,7 +579,7 @@ describe("Array Column Types", () => {
     beforeEach(async () => {
       await cleanTestData([schema.SimpleArrayTests]);
       const db = getDb();
-      await db.insert(schema.SimpleArrayTests).values([
+      await db.insertInto(schema.SimpleArrayTests).values([
         { requiredTags: ["t1"], requiredScores: [1, 2] },
         { requiredTags: ["t2"], requiredScores: [2, 3] },
         { requiredTags: ["t3"], requiredScores: [5, 5] },
@@ -590,7 +590,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) =>
           arrayHas(simpleArrayTests.requiredScores, 2),
         );
@@ -602,7 +602,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.SimpleArrayTests)
-        .select()
+        .select("*")
         .where(({ simpleArrayTests }) =>
           arrayAll(simpleArrayTests.requiredScores, 5),
         );
@@ -620,7 +620,7 @@ describe("Array Column Types", () => {
     beforeEach(async () => {
       await cleanTestData([schema.EnumArrayTests]);
       const db = getDb();
-      await db.insert(schema.EnumArrayTests).values([
+      await db.insertInto(schema.EnumArrayTests).values([
         {
           requiredStatuses: ["active", "pending"],
           requiredPriorities: ["high"],
@@ -634,7 +634,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.EnumArrayTests)
-        .select()
+        .select("*")
         .where(({ enumArrayTests }) =>
           arrayContains(enumArrayTests.requiredStatuses, ["active"]),
         );
@@ -646,7 +646,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.EnumArrayTests)
-        .select()
+        .select("*")
         .where(({ enumArrayTests }) =>
           arrayHas(enumArrayTests.requiredStatuses, "pending"),
         );
@@ -658,7 +658,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.EnumArrayTests)
-        .select()
+        .select("*")
         .where(({ enumArrayTests }) =>
           arrayOverlaps(enumArrayTests.requiredStatuses, [
             "pending",
@@ -673,7 +673,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.EnumArrayTests)
-        .select()
+        .select("*")
         .where(({ enumArrayTests }) =>
           arrayContainedBy(enumArrayTests.requiredStatuses, [
             "active",
@@ -688,7 +688,7 @@ describe("Array Column Types", () => {
       const db = getDb();
       const result = await db
         .from(schema.EnumArrayTests)
-        .select()
+        .select("*")
         .where(({ enumArrayTests }) =>
           arrayAll(enumArrayTests.requiredPriorities, "low"),
         );

@@ -27,15 +27,19 @@ type TransactionTest = Parameters<TransactionMethod>[0];
 
 // Test that transaction context has all expected methods
 type TransactionContext = Parameters<TransactionTest>[0];
-type HasInsert = "insert" extends keyof TransactionContext ? true : false;
+type HasInsertInto = "insertInto" extends keyof TransactionContext
+  ? true
+  : false;
 type HasFrom = "from" extends keyof TransactionContext ? true : false;
 type HasUpdate = "update" extends keyof TransactionContext ? true : false;
-type HasDelete = "delete" extends keyof TransactionContext ? true : false;
+type HasDeleteFrom = "deleteFrom" extends keyof TransactionContext
+  ? true
+  : false;
 
-Expect<Equal<HasInsert, true>>();
+Expect<Equal<HasInsertInto, true>>();
 Expect<Equal<HasFrom, true>>();
 Expect<Equal<HasUpdate, true>>();
-Expect<Equal<HasDelete, true>>();
+Expect<Equal<HasDeleteFrom, true>>();
 
 // Test basic transaction structure - transaction exists and is callable
 const _testTransactionExists = db.transaction;
@@ -43,18 +47,18 @@ const _testTransactionExists = db.transaction;
 // Test that we can call transaction with a callback
 const _testTransactionPromise = db.transaction(async (tx) => {
   // Test that transaction context has the expected methods
-  const _insertBuilder = tx.insert(Users);
+  const _insertBuilder = tx.insertInto(Users);
   const _selectBuilder = tx.from(Users);
   const _updateBuilder = tx.update(Users);
-  const _deleteBuilder = tx.delete(Users);
+  const _deleteBuilder = tx.deleteFrom(Users);
 
   // Test basic query execution pattern
-  await tx.insert(Users).values({
+  await tx.insertInto(Users).values({
     username: "test",
     email: "test@example.com",
   });
 
-  const users = await tx.from(Users).select();
+  const users = await tx.from(Users).select("*");
   return users;
 });
 
@@ -82,7 +86,7 @@ Expect<
 
 db.transaction(async (tx) => {
   // @ts-expect-error - Accessing non-existent table in transaction should not compile
-  await tx.from(NonExistentTable).select();
+  await tx.from(NonExistentTable).select("*");
 });
 
 db.transaction(async (tx) => {

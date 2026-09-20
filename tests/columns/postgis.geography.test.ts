@@ -30,7 +30,7 @@ describe("Geography Column Types (PostGIS)", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.GeographyPointTests)
+        .insertInto(schema.GeographyPointTests)
         .values(zodSchema.parse({ point: pointA }))
         .returning({ id: true });
       insertedId = row.id;
@@ -41,7 +41,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.GeographyPointTests)
-        .select()
+        .select("*")
         .where(({ geographyPointTests }) =>
           eq(geographyPointTests.id, insertedId),
         );
@@ -57,7 +57,7 @@ describe("Geography Column Types (PostGIS)", () => {
         .where(eq(schema.GeographyPointTests.id, insertedId));
       const [row] = await db
         .from(schema.GeographyPointTests)
-        .select()
+        .select("*")
         .where(({ geographyPointTests }) =>
           eq(geographyPointTests.id, insertedId),
         );
@@ -89,7 +89,7 @@ describe("Geography Column Types (PostGIS)", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.GeographyMultiPointTests)
+        .insertInto(schema.GeographyMultiPointTests)
         .values(zodSchema.parse({ multipoint: mpA }))
         .returning({ id: true });
       insertedId = row.id;
@@ -100,7 +100,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.GeographyMultiPointTests)
-        .select()
+        .select("*")
         .where(({ geographyMultipointTests }) =>
           eq(geographyMultipointTests.id, insertedId),
         );
@@ -116,7 +116,7 @@ describe("Geography Column Types (PostGIS)", () => {
         .where(eq(schema.GeographyMultiPointTests.id, insertedId));
       const [row] = await db
         .from(schema.GeographyMultiPointTests)
-        .select()
+        .select("*")
         .where(({ geographyMultipointTests }) =>
           eq(geographyMultipointTests.id, insertedId),
         );
@@ -149,7 +149,7 @@ describe("Geography Column Types (PostGIS)", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.GeographyLineStringTests)
+        .insertInto(schema.GeographyLineStringTests)
         .values(zodSchema.parse({ linestring: lsA }))
         .returning({ id: true });
       insertedId = row.id;
@@ -160,7 +160,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.GeographyLineStringTests)
-        .select()
+        .select("*")
         .where(({ geographyLinestringTests }) =>
           eq(geographyLinestringTests.id, insertedId),
         );
@@ -176,7 +176,7 @@ describe("Geography Column Types (PostGIS)", () => {
         .where(eq(schema.GeographyLineStringTests.id, insertedId));
       const [row] = await db
         .from(schema.GeographyLineStringTests)
-        .select()
+        .select("*")
         .where(({ geographyLinestringTests }) =>
           eq(geographyLinestringTests.id, insertedId),
         );
@@ -218,7 +218,7 @@ describe("Geography Column Types (PostGIS)", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.GeographyMultiLineStringTests)
+        .insertInto(schema.GeographyMultiLineStringTests)
         .values(zodSchema.parse({ multilinestring: mlsA }))
         .returning({ id: true });
       insertedId = row.id;
@@ -229,7 +229,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.GeographyMultiLineStringTests)
-        .select()
+        .select("*")
         .where(({ geographyMultilinestringTests }) =>
           eq(geographyMultilinestringTests.id, insertedId),
         );
@@ -245,7 +245,7 @@ describe("Geography Column Types (PostGIS)", () => {
         .where(eq(schema.GeographyMultiLineStringTests.id, insertedId));
       const [row] = await db
         .from(schema.GeographyMultiLineStringTests)
-        .select()
+        .select("*")
         .where(({ geographyMultilinestringTests }) =>
           eq(geographyMultilinestringTests.id, insertedId),
         );
@@ -285,7 +285,7 @@ describe("Geography Column Types (PostGIS)", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.GeographyPolygonTests)
+        .insertInto(schema.GeographyPolygonTests)
         .values(zodSchema.parse({ polygon: polyA }))
         .returning({ id: true });
       insertedId = row.id;
@@ -296,7 +296,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.GeographyPolygonTests)
-        .select()
+        .select("*")
         .where(({ geographyPolygonTests }) =>
           eq(geographyPolygonTests.id, insertedId),
         );
@@ -312,7 +312,7 @@ describe("Geography Column Types (PostGIS)", () => {
         .where(eq(schema.GeographyPolygonTests.id, insertedId));
       const [row] = await db
         .from(schema.GeographyPolygonTests)
-        .select()
+        .select("*")
         .where(({ geographyPolygonTests }) =>
           eq(geographyPolygonTests.id, insertedId),
         );
@@ -364,7 +364,7 @@ describe("Geography Column Types (PostGIS)", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.GeographyMultiPolygonTests)
+        .insertInto(schema.GeographyMultiPolygonTests)
         .values(zodSchema.parse({ multipolygon: mpolyA }))
         .returning({ id: true });
       insertedId = row.id;
@@ -375,7 +375,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.GeographyMultiPolygonTests)
-        .select()
+        .select("*")
         .where(({ geographyMultipolygonTests }) =>
           eq(geographyMultipolygonTests.id, insertedId),
         );
@@ -391,7 +391,7 @@ describe("Geography Column Types (PostGIS)", () => {
         .where(eq(schema.GeographyMultiPolygonTests.id, insertedId));
       const [row] = await db
         .from(schema.GeographyMultiPolygonTests)
-        .select()
+        .select("*")
         .where(({ geographyMultipolygonTests }) =>
           eq(geographyMultipolygonTests.id, insertedId),
         );
@@ -411,10 +411,10 @@ describe("Geography Column Types (PostGIS)", () => {
     beforeAll(async () => {
       const db = getDb();
       await db
-        .insert(schema.GeographyFilterTests)
+        .insertInto(schema.GeographyFilterTests)
         .values({ name: "NYC", location: NYC });
       await db
-        .insert(schema.GeographyFilterTests)
+        .insertInto(schema.GeographyFilterTests)
         .values({ name: "LA", location: LA });
     });
 
@@ -422,7 +422,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const rows = await db
         .from(schema.GeographyFilterTests)
-        .select()
+        .select("*")
         .where(({ geographyFilterTests }) =>
           stDWithin(geographyFilterTests.location, NYC, 5000),
         );
@@ -435,7 +435,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const rows = await db
         .from(schema.GeographyFilterTests)
-        .select()
+        .select("*")
         .where(({ geographyFilterTests }) =>
           stDWithin(geographyFilterTests.location, NYC, 5_000_000),
         );
@@ -446,7 +446,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const rows = await db
         .from(schema.GeographyFilterTests)
-        .select()
+        .select("*")
         .where(({ geographyFilterTests }) =>
           stIntersects(geographyFilterTests.location, NYC),
         );
@@ -491,7 +491,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const rows = await db
         .from(schema.GeographyFilterTests)
-        .select()
+        .select("*")
         .where(({ geographyFilterTests }) =>
           lt(stDistance(geographyFilterTests.location, NYC), 5000),
         );
@@ -503,7 +503,7 @@ describe("Geography Column Types (PostGIS)", () => {
       const db = getDb();
       const rows = await db
         .from(schema.GeographyFilterTests)
-        .select()
+        .select("*")
         .where(({ geographyFilterTests }) =>
           and(
             stDWithin(geographyFilterTests.location, NYC, 5_000_000),

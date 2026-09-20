@@ -434,7 +434,9 @@ export class SelectBuilder<
     );
   }
 
-  select(): SelectQuery<
+  select(
+    star: "*",
+  ): SelectQuery<
     TTSchema,
     TTName,
     TColumns,
@@ -479,11 +481,14 @@ export class SelectBuilder<
         >
       | undefined,
   >(
-    callback?: (
-      view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
-    ) => TSelects,
+    starOrCallback:
+      | "*"
+      | ((view: ColumnsView<TTSchema, TTName, TColumns, TJoins>) => TSelects),
   ) {
-    const selects = callback ? callback(this.#getView() as never) : undefined;
+    const selects =
+      typeof starOrCallback === "function"
+        ? starOrCallback(this.#getView() as never)
+        : undefined;
     return new SelectQuery(
       this.#table,
       this.#$joins,

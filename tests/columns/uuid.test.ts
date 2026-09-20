@@ -26,7 +26,7 @@ describe("UUID Column Type", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.UuidTests)
+        .insertInto(schema.UuidTests)
         .values(zodSchema.parse({ uuid: uuid1 }))
         .returning({ id: true });
       insertedId = row.id;
@@ -37,7 +37,7 @@ describe("UUID Column Type", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.UuidTests)
-        .select()
+        .select("*")
         .where(({ uuidTests }) => eq(uuidTests.id, insertedId));
       expect(row.uuid).toBe(uuid1);
       expect(row.uuidWithDefault).toBe("00000000-0000-0000-8000-000000000000");
@@ -51,7 +51,7 @@ describe("UUID Column Type", () => {
         .where(eq(schema.UuidTests.id, insertedId));
       const [row] = await db
         .from(schema.UuidTests)
-        .select()
+        .select("*")
         .where(({ uuidTests }) => eq(uuidTests.id, insertedId));
       expect(row.uuid).toBe(uuid2);
     });

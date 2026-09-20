@@ -93,7 +93,7 @@ class Base<
    * @param table The table to insert into
    * @returns An InsertBuilder instance to chain `.values()` and execute the insert
    */
-  insert<TTable extends TTables[keyof TTables]>(table: TTable) {
+  insertInto<TTable extends TTables[keyof TTables]>(table: TTable) {
     return new InsertBuilder(table, this.#getExecutor(), this.$.pre);
   }
 
@@ -130,7 +130,7 @@ class Base<
    * @param table The table to delete from
    * @returns A DeleteQuery instance to chain `.where()` and execute the deletion
    */
-  delete<TTable extends TTables[keyof TTables]>(table: TTable) {
+  deleteFrom<TTable extends TTables[keyof TTables]>(table: TTable) {
     return new DeleteQuery(
       table,
       undefined,
@@ -471,7 +471,7 @@ class Base<
    * @returns A `WithStatement` to build the SELECT/INSERT/UPDATE/DELETE against
    *
    * @example
-   * const rows = await db.with(activeCte).from(ctes => ctes.activeUsers).select();
+   * const rows = await db.with(activeCte).from(ctes => ctes.activeUsers).select("*");
    */
   with<TCtes extends [AnyCteWithColumns, ...AnyCteWithColumns[]]>(
     ...ctes: TCtes

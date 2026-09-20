@@ -35,7 +35,7 @@ Attach the CTE to an outer query with `db.with(cte)` and choose the CTE source u
 const rows = await db
   .with(activeUsers)
   .from((ctes) => ctes.activeUsers)
-  .select()
+  .select("*");
   .orderBy(({ activeUsers }) => asc(activeUsers.username));
 
 // Type: { id: bigint; username: string }[]
@@ -65,7 +65,7 @@ const activeNames = db.with("activeNames").as(
 const rows = await db
   .with(activeUsers, activeNames)
   .from((ctes) => ctes.activeNames)
-  .select();
+  .select("*");
 ```
 
 ## CTEs with `isIn(...)` and `UPDATE`
@@ -101,7 +101,7 @@ const updatedUsers = db.with("reactivatedUsers").as(
 const rows = await db
   .with(inactiveUsers, updatedUsers)
   .from((ctes) => ctes.reactivatedUsers)
-  .select();
+  .select("*");
 ```
 
 This pattern is useful when an update depends on a filtered set of rows and you want the updated records available to the same statement.
@@ -115,7 +115,7 @@ const insertedUsers = db
   .with("insertedUsers")
   .as(
     db
-      .insert(Users)
+      .insertInto(Users)
       .values({ username: "new-user", type: "user" })
       .returning({ id: true, username: true }),
   );
@@ -123,7 +123,7 @@ const insertedUsers = db
 const rows = await db
   .with(insertedUsers)
   .from((ctes) => ctes.insertedUsers)
-  .select();
+  .select("*");
 ```
 
 These DML CTEs are useful when you need the inserted/updated/deleted rows available to the same statement.
@@ -142,8 +142,8 @@ These DML CTEs are useful when you need the inserted/updated/deleted rows availa
 await db
   .with(activeUsers)
   .from((ctes) => ctes.activeUsers)
-  .select();
+  .select("*");
 
 // Invalid: Cannot write into a CTE
-// db.with(activeUsers).insert(activeUsers);
+// db.with(activeUsers).insertInto(activeUsers);
 ```

@@ -69,7 +69,7 @@ describe("SELECT queries", () => {
 
   it("should select all columns from Users", async () => {
     // Insert test data
-    await db.insert(schema.Users).values({
+    await db.insertInto(schema.Users).values({
       username: "testuser",
       email: "test@example.com",
       type: "user",
@@ -78,7 +78,7 @@ describe("SELECT queries", () => {
     });
 
     // Select all columns
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
 
     expect(users).toHaveLength(1);
     expect(users[0]).toMatchObject({
@@ -93,7 +93,7 @@ describe("SELECT queries", () => {
   });
 
   it("should select specific columns", async () => {
-    await db.insert(schema.Users).values({
+    await db.insertInto(schema.Users).values({
       username: "specificuser",
       email: "specific@example.com",
       type: "admin",
@@ -116,7 +116,7 @@ describe("SELECT queries", () => {
 
   it("should select with WHERE clause", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "alice", type: "admin" }),
         createTestUser({ username: "bob", type: "user" }),
@@ -134,7 +134,7 @@ describe("SELECT queries", () => {
 
   it("should select with LIMIT", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "user1" }),
         createTestUser({ username: "user2" }),
@@ -152,7 +152,7 @@ describe("SELECT queries", () => {
 
   it("should select with OFFSET", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "user1" }),
         createTestUser({ username: "user2" }),
@@ -170,7 +170,7 @@ describe("SELECT queries", () => {
 
   it("should select with ORDER BY ASC", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "charlie" }),
         createTestUser({ username: "alice" }),
@@ -187,7 +187,7 @@ describe("SELECT queries", () => {
 
   it("should select with ORDER BY DESC", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "alice" }),
         createTestUser({ username: "charlie" }),
@@ -204,7 +204,7 @@ describe("SELECT queries", () => {
 
   it("should select with multi-column ORDER BY (array syntax)", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "alice", type: "user" }),
         createTestUser({ username: "bob", type: "admin" }),
@@ -228,7 +228,7 @@ describe("SELECT queries", () => {
 
   it("should select with multi-column ORDER BY mixed directions", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "alice", type: "user" }),
         createTestUser({ username: "bob", type: "admin" }),
@@ -253,14 +253,14 @@ describe("SELECT queries", () => {
   it("should return empty array when no rows match", async () => {
     const result = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.username, "nonexistent"));
 
     expect(result).toEqual([]);
   });
 
   it("should handle nullable columns correctly", async () => {
-    await db.insert(schema.Users).values({
+    await db.insertInto(schema.Users).values({
       username: "nulltest",
       email: null,
       type: "user",
@@ -279,18 +279,18 @@ describe("SELECT queries", () => {
 
   it("should select from multiple tables independently", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
-    await db.insert(schema.Posts).values({
+    await db.insertInto(schema.Posts).values({
       userId: user.id,
       title: "Test Post",
       content: "Test Content",
     });
 
-    const users = await db.from(schema.Users).select();
-    const posts = await db.from(schema.Posts).select();
+    const users = await db.from(schema.Users).select("*");
+    const posts = await db.from(schema.Posts).select("*");
 
     expect(users).toHaveLength(1);
     expect(posts).toHaveLength(1);
@@ -305,7 +305,7 @@ describe("SELECT queries", () => {
     it("should return distinct rows based on a single column", async () => {
       // Insert users with duplicate types
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "admin1", type: "admin" }),
           createTestUser({ username: "admin2", type: "admin" }),
@@ -326,7 +326,7 @@ describe("SELECT queries", () => {
     });
 
     it("should return distinct rows based on multiple columns", async () => {
-      await db.insert(schema.Users).values([
+      await db.insertInto(schema.Users).values([
         createTestUser({ username: "alice", type: "admin", status: "active" }),
         createTestUser({ username: "bob", type: "admin", status: "active" }),
         createTestUser({
@@ -357,7 +357,7 @@ describe("SELECT queries", () => {
 
     it("should work with where clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "admin1", type: "admin" }),
           createTestUser({ username: "admin2", type: "admin" }),
@@ -379,7 +379,7 @@ describe("SELECT queries", () => {
       const result = await db
         .from(schema.Users)
         .distinctOn(({ users }) => users.type)
-        .select()
+        .select("*")
         .orderBy(({ users }) => asc(users.type));
 
       expect(result).toEqual([]);

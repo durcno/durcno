@@ -37,7 +37,7 @@ export async function down(m: string, options: Options): Promise<void> {
 
   if (await migrationsTableExists(client)) {
     const db = database({ Migrations }, config);
-    const migrations = await db.from(Migrations).select();
+    const migrations = await db.from(Migrations).select("*");
     await db.close();
     const migrationDirsReversed = migrationDirNames.sort().reverse();
     for (let i = 0; i < migrationDirsReversed.length; i++) {
@@ -109,7 +109,7 @@ export async function runDownMigration(
 
     if (!isFirstMigration) {
       const db = database({ Migrations }, config);
-      await db.delete(Migrations).where(eq(Migrations.name, migrationName));
+      await db.deleteFrom(Migrations).where(eq(Migrations.name, migrationName));
       await db.close();
     }
     console.log(

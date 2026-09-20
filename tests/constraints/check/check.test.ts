@@ -87,72 +87,78 @@ describe("check constraints — insert acceptance and rejection", () => {
 
     it("accepts a valid row", async () => {
       await expect(
-        db.insert(schema.Products).values(validRow),
+        db.insertInto(schema.Products).values(validRow),
       ).resolves.not.toThrow();
     });
 
     it("rejects price = 0 (positive_price: price > 0)", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, price: 0n }),
+        db.insertInto(schema.Products).values({ ...validRow, price: 0n }),
       ).rejects.toThrow();
     });
 
     it("rejects negative price (positive_price: price > 0)", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, price: -1n }),
+        db.insertInto(schema.Products).values({ ...validRow, price: -1n }),
       ).rejects.toThrow();
     });
 
     it("rejects price >= 1_000_000 (max_price: price < 1_000_000)", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, price: 1_000_000n }),
+        db
+          .insertInto(schema.Products)
+          .values({ ...validRow, price: 1_000_000n }),
       ).rejects.toThrow();
     });
 
     it("rejects negative quantity (valid_quantity: quantity >= 0)", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, quantity: -1 }),
+        db.insertInto(schema.Products).values({ ...validRow, quantity: -1 }),
       ).rejects.toThrow();
     });
 
     it("rejects quantity > 10000 (valid_quantity: quantity <= 10000)", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, quantity: 10001 }),
+        db.insertInto(schema.Products).values({ ...validRow, quantity: 10001 }),
       ).rejects.toThrow();
     });
 
     it("accepts quantity at boundary values 0 and 10000", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, quantity: 0 }),
+        db.insertInto(schema.Products).values({ ...validRow, quantity: 0 }),
       ).resolves.not.toThrow();
 
       await expect(
-        db.insert(schema.Products).values({ ...validRow, quantity: 10000 }),
+        db.insertInto(schema.Products).values({ ...validRow, quantity: 10000 }),
       ).resolves.not.toThrow();
     });
 
     it("rejects email not matching LIKE '%@%.%'", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, email: "notanemail" }),
+        db
+          .insertInto(schema.Products)
+          .values({ ...validRow, email: "notanemail" }),
       ).rejects.toThrow();
     });
 
     it("accepts a null email (LIKE only applies when non-null)", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, email: undefined }),
+        db
+          .insertInto(schema.Products)
+          .values({ ...validRow, email: undefined }),
       ).resolves.not.toThrow();
     });
 
     it("rejects userName shorter than 3 chars (name_length: length > 2)", async () => {
       await expect(
-        db.insert(schema.Products).values({ ...validRow, userName: "ab" }),
+        db.insertInto(schema.Products).values({ ...validRow, userName: "ab" }),
       ).rejects.toThrow();
     });
 
     it("rejects userName longer than 100 chars (name_length: length <= 100)", async () => {
       await expect(
         db
-          .insert(schema.Products)
+          .insertInto(schema.Products)
           .values({ ...validRow, userName: "a".repeat(101) }),
       ).rejects.toThrow();
     });
@@ -168,20 +174,20 @@ describe("check constraints — insert acceptance and rejection", () => {
 
     it("accepts a valid row", async () => {
       await expect(
-        db.insert(schema.Orders).values(validRow),
+        db.insertInto(schema.Orders).values(validRow),
       ).resolves.not.toThrow();
     });
 
     it("rejects categoryId not in (1, 2, 3)", async () => {
       await expect(
-        db.insert(schema.Orders).values({ ...validRow, categoryId: 4 }),
+        db.insertInto(schema.Orders).values({ ...validRow, categoryId: 4 }),
       ).rejects.toThrow();
     });
 
     it("accepts all valid category ids (1, 2, 3)", async () => {
       for (const categoryId of [1, 2, 3]) {
         await expect(
-          db.insert(schema.Orders).values({ ...validRow, categoryId }),
+          db.insertInto(schema.Orders).values({ ...validRow, categoryId }),
         ).resolves.not.toThrow();
       }
     });
@@ -189,32 +195,32 @@ describe("check constraints — insert acceptance and rejection", () => {
     it("rejects excluded category ids (99, 100)", async () => {
       for (const categoryId of [99, 100]) {
         await expect(
-          db.insert(schema.Orders).values({ ...validRow, categoryId }),
+          db.insertInto(schema.Orders).values({ ...validRow, categoryId }),
         ).rejects.toThrow();
       }
     });
 
     it("rejects status not in the allowed set", async () => {
       await expect(
-        db.insert(schema.Orders).values({ ...validRow, status: "unknown" }),
+        db.insertInto(schema.Orders).values({ ...validRow, status: "unknown" }),
       ).rejects.toThrow();
     });
 
     it("accepts all valid statuses ('active', 'pending', 'closed')", async () => {
       for (const status of ["active", "pending", "closed"] as const) {
         await expect(
-          db.insert(schema.Orders).values({ ...validRow, status }),
+          db.insertInto(schema.Orders).values({ ...validRow, status }),
         ).resolves.not.toThrow();
       }
     });
 
     it("accepts valid dimensions ([1,2] and [2,1])", async () => {
       await expect(
-        db.insert(schema.Orders).values({ ...validRow, array: [1, 2] }),
+        db.insertInto(schema.Orders).values({ ...validRow, array: [1, 2] }),
       ).resolves.not.toThrow();
 
       await expect(
-        db.insert(schema.Orders).values({ ...validRow, array: [2, 1] }),
+        db.insertInto(schema.Orders).values({ ...validRow, array: [2, 1] }),
       ).resolves.not.toThrow();
     });
 
@@ -225,7 +231,9 @@ describe("check constraints — insert acceptance and rejection", () => {
         [1, 2, 3],
       ]) {
         await expect(
-          db.insert(schema.Orders).values({ ...validRow, array: dimensions }),
+          db
+            .insertInto(schema.Orders)
+            .values({ ...validRow, array: dimensions }),
         ).rejects.toThrow();
       }
     });
@@ -241,47 +249,47 @@ describe("check constraints — insert acceptance and rejection", () => {
 
     it("accepts a valid row", async () => {
       await expect(
-        db.insert(schema.Employees).values(validRow),
+        db.insertInto(schema.Employees).values(validRow),
       ).resolves.not.toThrow();
     });
 
     it("rejects salary = -1 (salary >= 0)", async () => {
       await expect(
-        db.insert(schema.Employees).values({ ...validRow, salary: -1 }),
+        db.insertInto(schema.Employees).values({ ...validRow, salary: -1 }),
       ).rejects.toThrow();
     });
 
     it("accepts salary = 0 (boundary)", async () => {
       await expect(
-        db.insert(schema.Employees).values({ ...validRow, salary: 0 }),
+        db.insertInto(schema.Employees).values({ ...validRow, salary: 0 }),
       ).resolves.not.toThrow();
     });
 
     it("rejects age = 17 (age >= 18)", async () => {
       await expect(
-        db.insert(schema.Employees).values({ ...validRow, age: 17 }),
+        db.insertInto(schema.Employees).values({ ...validRow, age: 17 }),
       ).rejects.toThrow();
     });
 
     it("rejects age = 121 (age <= 120)", async () => {
       await expect(
-        db.insert(schema.Employees).values({ ...validRow, age: 121 }),
+        db.insertInto(schema.Employees).values({ ...validRow, age: 121 }),
       ).rejects.toThrow();
     });
 
     it("accepts age = 18 and age = 120 (boundaries)", async () => {
       await expect(
-        db.insert(schema.Employees).values({ ...validRow, age: 18 }),
+        db.insertInto(schema.Employees).values({ ...validRow, age: 18 }),
       ).resolves.not.toThrow();
 
       await expect(
-        db.insert(schema.Employees).values({ ...validRow, age: 120 }),
+        db.insertInto(schema.Employees).values({ ...validRow, age: 120 }),
       ).resolves.not.toThrow();
     });
 
     it("rejects code not matching LIKE 'EMP-%'", async () => {
       await expect(
-        db.insert(schema.Employees).values({ ...validRow, code: "XXXX" }),
+        db.insertInto(schema.Employees).values({ ...validRow, code: "XXXX" }),
       ).rejects.toThrow();
     });
 

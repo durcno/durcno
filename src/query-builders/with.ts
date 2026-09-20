@@ -12,8 +12,8 @@ import { UpdateBuilder } from "./update";
 
 /**
  * List of CTEs to be attached to a query statement.
- * Created via `db.with(cte1, cte2, ...)` and provides `.from()`, `.insert()`,
- * `.update()`, and `.delete()` to build the query that uses the declared CTEs.
+ * Created via `db.with(cte1, cte2, ...)` and provides `.from()`, `.insertInto()`,
+ * `.update()`, and `.deleteFrom()` to build the query that uses the declared CTEs.
  */
 export class WithStatement<
   TCtes extends AnyCteWithColumns[],
@@ -86,7 +86,7 @@ export class WithStatement<
    * Start an INSERT into a real table with CTEs in scope.
    * @param table The table to insert into.
    */
-  insert<TTable extends AnyTableWithColumns & { $isVirtual?: never }>(
+  insertInto<TTable extends AnyTableWithColumns & { $isVirtual?: never }>(
     table: TTable,
   ) {
     return new InsertBuilder(table, this.#executor, this.#prepare, this.#ctes);
@@ -106,7 +106,7 @@ export class WithStatement<
    * Start a DELETE from a real table with CTEs declared in the WITH clause.
    * @param table The table to delete from.
    */
-  delete<TTable extends AnyTableWithColumns & { $isVirtual?: never }>(
+  deleteFrom<TTable extends AnyTableWithColumns & { $isVirtual?: never }>(
     table: TTable,
   ) {
     return new DeleteQuery(

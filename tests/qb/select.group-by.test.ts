@@ -86,7 +86,7 @@ describe("SELECT .groupBy() and .having()", () => {
   describe("explicit groupBy — direct form", () => {
     it("groupBy(col) produces the same SQL grouping as auto GROUP BY", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin" }),
           createTestUser({ username: "a2", type: "admin" }),
@@ -106,7 +106,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
     it("groupBy([col1, col2]) groups by multiple columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin", status: "active" }),
           createTestUser({ username: "a2", type: "admin", status: "inactive" }),
@@ -136,7 +136,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
     it("explicit groupBy overrides auto GROUP BY", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin", status: "active" }),
           createTestUser({ username: "a2", type: "admin", status: "inactive" }),
@@ -158,7 +158,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
     it("groupBy with scalar SqlFn expression", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "Alice", email: "alice@test.com" }),
           createTestUser({ username: "alice2", email: "alice2@test.com" }),
@@ -185,7 +185,7 @@ describe("SELECT .groupBy() and .having()", () => {
   describe("explicit groupBy — callback form", () => {
     it("callback form — single alias", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "Alice", email: "alice@test.com" }),
           createTestUser({ username: "alice2", email: "ALICE2@test.com" }),
@@ -213,7 +213,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
     it("callback form — multiple aliases", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin" }),
           createTestUser({ username: "a2", type: "admin" }),
@@ -236,7 +236,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
     it("callback form — mix alias + direct column", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin" }),
           createTestUser({ username: "u1", type: "user" }),
@@ -263,7 +263,7 @@ describe("SELECT .groupBy() and .having()", () => {
   describe("having()", () => {
     it("having with literal — only returns groups with >= 2 rows", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin" }),
           createTestUser({ username: "a2", type: "admin" }),
@@ -284,7 +284,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
     it("having with aggregate-to-aggregate generates valid SQL", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin", score: 10 }),
           createTestUser({ username: "a2", type: "admin", score: 20 }),
@@ -311,7 +311,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
     it("having without explicit groupBy — auto GROUP BY still fires", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin" }),
           createTestUser({ username: "a2", type: "admin" }),
@@ -335,7 +335,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
     it("GROUP BY + HAVING + WHERE + ORDER BY clause ordering", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a1", type: "admin" }),
           createTestUser({ username: "a2", type: "admin" }),

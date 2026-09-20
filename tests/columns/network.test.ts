@@ -28,7 +28,7 @@ describe("Network Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.InetTests)
+        .insertInto(schema.InetTests)
         .values(zodSchema.parse({ ip: "192.168.1.1" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -39,7 +39,7 @@ describe("Network Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.InetTests)
-        .select()
+        .select("*")
         .where(({ inetTests }) => eq(inetTests.id, insertedId));
       expect(row.ip).toBe("192.168.1.1");
       expect(row.ipWithDefault).toBe("127.0.0.1");
@@ -53,7 +53,7 @@ describe("Network Column Types", () => {
         .where(eq(schema.InetTests.id, insertedId));
       const [row] = await db
         .from(schema.InetTests)
-        .select()
+        .select("*")
         .where(({ inetTests }) => eq(inetTests.id, insertedId));
       expect(row.ip).toBe("10.0.0.1");
     });
@@ -75,7 +75,7 @@ describe("Network Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.CidrTests)
+        .insertInto(schema.CidrTests)
         .values(zodSchema.parse({ network: "10.0.0.0/8" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -86,7 +86,7 @@ describe("Network Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.CidrTests)
-        .select()
+        .select("*")
         .where(({ cidrTests }) => eq(cidrTests.id, insertedId));
       expect(row.network).toBe("10.0.0.0/8");
       expect(row.networkWithDefault).toBe("0.0.0.0/0");
@@ -100,7 +100,7 @@ describe("Network Column Types", () => {
         .where(eq(schema.CidrTests.id, insertedId));
       const [row] = await db
         .from(schema.CidrTests)
-        .select()
+        .select("*")
         .where(({ cidrTests }) => eq(cidrTests.id, insertedId));
       expect(row.network).toBe("192.168.0.0/16");
     });
@@ -122,7 +122,7 @@ describe("Network Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.MacaddrTests)
+        .insertInto(schema.MacaddrTests)
         .values(zodSchema.parse({ mac: "00:11:22:33:44:55" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -133,7 +133,7 @@ describe("Network Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.MacaddrTests)
-        .select()
+        .select("*")
         .where(({ macaddrTests }) => eq(macaddrTests.id, insertedId));
       expect(row.mac).toBe("00:11:22:33:44:55");
       expect(row.macWithDefault).toBe("00:00:00:00:00:00");
@@ -147,7 +147,7 @@ describe("Network Column Types", () => {
         .where(eq(schema.MacaddrTests.id, insertedId));
       const [row] = await db
         .from(schema.MacaddrTests)
-        .select()
+        .select("*")
         .where(({ macaddrTests }) => eq(macaddrTests.id, insertedId));
       expect(row.mac).toBe("aa:bb:cc:dd:ee:ff");
     });

@@ -24,7 +24,7 @@ describe("Enum Column Type", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.EnumTests)
+        .insertInto(schema.EnumTests)
         .values(zodSchema.parse({ status: "active" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -35,7 +35,7 @@ describe("Enum Column Type", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.EnumTests)
-        .select()
+        .select("*")
         .where(({ enumTests }) => eq(enumTests.id, insertedId));
       expect(row.status).toBe("active");
       expect(row.statusWithDefault).toBe("medium");
@@ -49,7 +49,7 @@ describe("Enum Column Type", () => {
         .where(eq(schema.EnumTests.id, insertedId));
       const [row] = await db
         .from(schema.EnumTests)
-        .select()
+        .select("*")
         .where(({ enumTests }) => eq(enumTests.id, insertedId));
       expect(row.status).toBe("inactive");
     });

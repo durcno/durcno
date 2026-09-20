@@ -80,7 +80,7 @@ describe("CTE queries", () => {
 
   it("WITH (SELECT) → SELECT from CTE", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "active-alice", status: "active" }),
         createTestUser({ username: "inactive-bob", status: "inactive" }),
@@ -97,7 +97,7 @@ describe("CTE queries", () => {
     const rows = await db
       .with(activeUsers)
       .from((ctes) => ctes.activeUsers)
-      .select()
+      .select("*")
       .orderBy(({ activeUsers }) => asc(activeUsers.username));
 
     expect(rows).toEqual([
@@ -108,7 +108,7 @@ describe("CTE queries", () => {
 
   it("WITH chained CTEs (SELECT → SELECT) → SELECT from outer CTE", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "chain-a", status: "active" }),
         createTestUser({ username: "chain-b", status: "active" }),
@@ -130,7 +130,7 @@ describe("CTE queries", () => {
     const rows = await db
       .with(activeUsers, activeNames)
       .from((ctes) => ctes.activeNames)
-      .select()
+      .select("*")
       .orderBy(({ activeNames }) => asc(activeNames.username));
 
     expect(rows).toEqual([{ username: "chain-a" }, { username: "chain-b" }]);
@@ -139,7 +139,7 @@ describe("CTE queries", () => {
   it("WITH (INSERT RETURNING) → SELECT from CTE", async () => {
     const insertedUsers = db.with("insertedUsers").as(
       db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "dml-a" }),
           createTestUser({ username: "dml-b", status: "inactive" }),
@@ -150,7 +150,7 @@ describe("CTE queries", () => {
     const rows = await db
       .with(insertedUsers)
       .from((ctes) => ctes.insertedUsers)
-      .select()
+      .select("*")
       .orderBy(({ insertedUsers }) => asc(insertedUsers.username));
 
     expect(rows).toEqual([
@@ -174,7 +174,7 @@ describe("CTE queries", () => {
 
   it("WITH (UPDATE RETURNING) → SELECT from CTE", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "upd-a", status: "active" }),
         createTestUser({ username: "upd-b", status: "active" }),
@@ -194,7 +194,7 @@ describe("CTE queries", () => {
     const rows = await db
       .with(updatedUsers)
       .from((ctes) => ctes.updatedUsers)
-      .select()
+      .select("*")
       .orderBy(({ updatedUsers }) => asc(updatedUsers.username));
 
     expect(rows).toEqual([
@@ -219,7 +219,7 @@ describe("CTE queries", () => {
 
   it("WITH (DELETE RETURNING) → SELECT from CTE", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "del-a", status: "inactive" }),
         createTestUser({ username: "del-b", status: "inactive" }),
@@ -230,7 +230,7 @@ describe("CTE queries", () => {
       .with("deletedUsers")
       .as(
         db
-          .delete(schema.Users)
+          .deleteFrom(schema.Users)
           .where(eq(schema.Users.status, "inactive"))
           .returning({ username: true, status: true }),
       );
@@ -238,7 +238,7 @@ describe("CTE queries", () => {
     const rows = await db
       .with(deletedUsers)
       .from((ctes) => ctes.deletedUsers)
-      .select()
+      .select("*")
       .orderBy(({ deletedUsers }) => asc(deletedUsers.username));
 
     expect(rows).toEqual([
@@ -256,7 +256,7 @@ describe("CTE queries", () => {
 
   it("WITH CTE → isIn(col, subquery from cte)", async () => {
     const [activeAlice, inactiveBob, activeCharlie] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "isin-alice", status: "active" }),
         createTestUser({ username: "isin-bob", status: "inactive" }),
@@ -264,7 +264,7 @@ describe("CTE queries", () => {
       ])
       .returning({ id: true });
 
-    await db.insert(schema.Posts).values([
+    await db.insertInto(schema.Posts).values([
       { userId: activeAlice.id, title: "Post A" },
       { userId: inactiveBob.id, title: "Post B" },
       { userId: activeCharlie.id, title: "Post C" },
@@ -297,7 +297,7 @@ describe("CTE queries", () => {
 
   it("WITH function-backed virtual columns: lower() resolves via fromDriverValue", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "Alice" }),
         createTestUser({ username: "BOB" }),
@@ -314,7 +314,7 @@ describe("CTE queries", () => {
     const rows = await db
       .with(lowercased)
       .from((ctes) => ctes.lowercasedUsers)
-      .select()
+      .select("*")
       .orderBy(({ lowercasedUsers }) => asc(lowercasedUsers.lname));
 
     expect(rows).toHaveLength(2);
@@ -326,7 +326,7 @@ describe("CTE queries", () => {
 
   it("WITH function-backed virtual columns: count() resolves via fromDriverValue", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "u1", status: "active" }),
         createTestUser({ username: "u2", status: "active" }),
@@ -343,7 +343,7 @@ describe("CTE queries", () => {
     const rows = await db
       .with(countCte)
       .from((ctes) => ctes.userCounts)
-      .select()
+      .select("*")
       .orderBy(({ userCounts }) => asc(userCounts.status));
 
     expect(rows).toHaveLength(2);
@@ -357,7 +357,7 @@ describe("CTE queries", () => {
 
   it("WITH left-joining a CTE with virtual columns clones as nullable without corruption", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "user_cte_1", status: "active" }),
         createTestUser({ username: "user_cte_2", status: "inactive" }),

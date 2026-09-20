@@ -22,7 +22,7 @@ const findUserByUsername = prepare(
     return db
       .prepare()
       .from(Users)
-      .select()
+      .select("*");
       .where(({ users }) => eq(users.username, args.username));
   },
 );
@@ -68,7 +68,7 @@ const findUser = prepare(
     return db
       .prepare()
       .from(Users)
-      .select()
+      .select("*");
       .where(({ users }) =>
         and(
           eq(users.username, args.username),
@@ -95,7 +95,7 @@ Prepared arguments can also be used inside `insert().values(...)` when you want 
 const createUser = prepare({ username: Users.username.arg() }, (args) => {
   return db
     .prepare()
-    .insert(Users)
+    .insertInto(Users)
     .values({
       username: args.username,
       email: "prepare@example.com",
@@ -204,7 +204,7 @@ const findPostsByUser = prepare({ userId: Posts.userId.arg() }, (args) => {
   return db
     .prepare()
     .from(Posts)
-    .select()
+    .select("*");
     .where(({ posts }) => eq(posts.userId, args.userId));
 });
 
@@ -284,7 +284,12 @@ const paginatedUsers = prepare(
     off: Arg.number(),
   },
   (args) => {
-    return db.prepare().from(Users).select().limit(args.lim).offset(args.off);
+    return db
+      .prepare()
+      .from(Users)
+      .select("*")
+      .limit(args.lim)
+      .offset(args.off);
   },
 );
 
@@ -302,7 +307,12 @@ const paginatedUsers = prepare(
     off: Arg.bigint(),
   },
   (args) => {
-    return db.prepare().from(Users).select().limit(args.lim).offset(args.off);
+    return db
+      .prepare()
+      .from(Users)
+      .select("*")
+      .limit(args.lim)
+      .offset(args.off);
   },
 );
 
@@ -320,7 +330,7 @@ const findUsersByAge = prepare({ age: Arg.number() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select()
+    .select("*");
     .where(() => sql`age = ${args.age}`);
 });
 

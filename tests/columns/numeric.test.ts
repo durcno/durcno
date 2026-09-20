@@ -27,7 +27,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.IntegerTests)
+        .insertInto(schema.IntegerTests)
         .values(zodSchema.parse({ count: 42 }))
         .returning({ id: true });
       insertedId = row.id;
@@ -38,7 +38,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.IntegerTests)
-        .select()
+        .select("*")
         .where(({ integerTests }) => eq(integerTests.id, insertedId));
       expect(row.count).toBe(42);
       expect(row.countWithDefault).toBe(0);
@@ -52,7 +52,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.IntegerTests.id, insertedId));
       const [row] = await db
         .from(schema.IntegerTests)
-        .select()
+        .select("*")
         .where(({ integerTests }) => eq(integerTests.id, insertedId));
       expect(row.count).toBe(99);
     });
@@ -73,7 +73,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.SmallintTests)
+        .insertInto(schema.SmallintTests)
         .values(zodSchema.parse({ value: 100 }))
         .returning({ id: true });
       insertedId = row.id;
@@ -84,7 +84,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.SmallintTests)
-        .select()
+        .select("*")
         .where(({ smallintTests }) => eq(smallintTests.id, insertedId));
       expect(row.value).toBe(100);
       expect(row.valueWithDefault).toBe(10);
@@ -98,7 +98,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.SmallintTests.id, insertedId));
       const [row] = await db
         .from(schema.SmallintTests)
-        .select()
+        .select("*")
         .where(({ smallintTests }) => eq(smallintTests.id, insertedId));
       expect(row.value).toBe(200);
     });
@@ -120,7 +120,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.BigintTests)
+        .insertInto(schema.BigintTests)
         .values(zodSchema.parse({ amount: 1000000000n }))
         .returning({ id: true });
       insertedId = row.id;
@@ -131,7 +131,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.BigintTests)
-        .select()
+        .select("*")
         .where(({ bigintTests }) => eq(bigintTests.id, insertedId));
       expect(row.amount).toBe(1000000000n);
       expect(row.amountWithDefault).toBe(1000n);
@@ -145,7 +145,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.BigintTests.id, insertedId));
       const [row] = await db
         .from(schema.BigintTests)
-        .select()
+        .select("*")
         .where(({ bigintTests }) => eq(bigintTests.id, insertedId));
       expect(row.amount).toBe(2000000000n);
     });
@@ -167,7 +167,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.SerialTests)
+        .insertInto(schema.SerialTests)
         .values(zodSchema.parse({ name: "test" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -178,7 +178,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.SerialTests)
-        .select()
+        .select("*")
         .where(({ serialTests }) => eq(serialTests.id, insertedId));
       expect(row.name).toBe("test");
     });
@@ -191,7 +191,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.SerialTests.id, insertedId));
       const [row] = await db
         .from(schema.SerialTests)
-        .select()
+        .select("*")
         .where(({ serialTests }) => eq(serialTests.id, insertedId));
       expect(row.name).toBe("updated");
     });
@@ -213,7 +213,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.SmallserialTests)
+        .insertInto(schema.SmallserialTests)
         .values(zodSchema.parse({ name: "test" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -224,7 +224,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.SmallserialTests)
-        .select()
+        .select("*")
         .where(({ smallserialTests }) => eq(smallserialTests.id, insertedId));
       expect(row.name).toBe("test");
     });
@@ -237,7 +237,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.SmallserialTests.id, insertedId));
       const [row] = await db
         .from(schema.SmallserialTests)
-        .select()
+        .select("*")
         .where(({ smallserialTests }) => eq(smallserialTests.id, insertedId));
       expect(row.name).toBe("updated");
     });
@@ -259,7 +259,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.BigserialTests)
+        .insertInto(schema.BigserialTests)
         .values(zodSchema.parse({ name: "test" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -270,7 +270,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.BigserialTests)
-        .select()
+        .select("*")
         .where(({ bigserialTests }) => eq(bigserialTests.id, insertedId));
       expect(row.name).toBe("test");
     });
@@ -283,7 +283,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.BigserialTests.id, insertedId));
       const [row] = await db
         .from(schema.BigserialTests)
-        .select()
+        .select("*")
         .where(({ bigserialTests }) => eq(bigserialTests.id, insertedId));
       expect(row.name).toBe("updated");
     });
@@ -305,7 +305,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.NumericTests)
+        .insertInto(schema.NumericTests)
         .values(zodSchema.parse({ value: "3.14" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -316,7 +316,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.NumericTests)
-        .select()
+        .select("*")
         .where(({ numericTests }) => eq(numericTests.id, insertedId));
       expect(row.value).toBe("3.14");
       expect(row.valueWithDefault).toBe("0");
@@ -330,7 +330,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.NumericTests.id, insertedId));
       const [row] = await db
         .from(schema.NumericTests)
-        .select()
+        .select("*")
         .where(({ numericTests }) => eq(numericTests.id, insertedId));
       expect(row.value).toBe("999.99");
     });
@@ -352,7 +352,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.RealTests)
+        .insertInto(schema.RealTests)
         .values(zodSchema.parse({ value: 3.14 }))
         .returning({ id: true });
       insertedId = row.id;
@@ -363,7 +363,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.RealTests)
-        .select()
+        .select("*")
         .where(({ realTests }) => eq(realTests.id, insertedId));
       expect(row.value).toBeCloseTo(3.14, 2);
       expect(row.valueWithDefault).toBe(0);
@@ -377,7 +377,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.RealTests.id, insertedId));
       const [row] = await db
         .from(schema.RealTests)
-        .select()
+        .select("*")
         .where(({ realTests }) => eq(realTests.id, insertedId));
       expect(row.value).toBeCloseTo(9.99, 2);
     });
@@ -404,7 +404,7 @@ describe("Numeric Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.DoublePrecisionTests)
+        .insertInto(schema.DoublePrecisionTests)
         .values(zodSchema.parse({ value: Math.PI }))
         .returning({ id: true });
       insertedId = row.id;
@@ -415,7 +415,7 @@ describe("Numeric Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.DoublePrecisionTests)
-        .select()
+        .select("*")
         .where(({ doublePrecisionTests }) =>
           eq(doublePrecisionTests.id, insertedId),
         );
@@ -431,7 +431,7 @@ describe("Numeric Column Types", () => {
         .where(eq(schema.DoublePrecisionTests.id, insertedId));
       const [row] = await db
         .from(schema.DoublePrecisionTests)
-        .select()
+        .select("*")
         .where(({ doublePrecisionTests }) =>
           eq(doublePrecisionTests.id, insertedId),
         );

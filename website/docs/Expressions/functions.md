@@ -180,7 +180,7 @@ const result = await db
 // Filter by length
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => gt(length(users.name), 5));
 ```
 
@@ -212,7 +212,7 @@ const result = await db.from(Users).select(({ users }) => ({
 // Filter emails where '@' appears after position 5
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => gt(position(users.email, "@"), 5));
 ```
 
@@ -226,7 +226,7 @@ import { lower, trim, startsWith } from "durcno";
 // Trim whitespace then lowercase before filtering
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => startsWith(lower(trim(users.email)), "admin"));
 ```
 
@@ -270,7 +270,7 @@ import { mod, eq } from "durcno";
 // Get rows with even IDs
 await db
   .from(Users)
-  .select()
+  .select("*");
   .where(({ users }) => eq(mod(users.id, 2), 0));
 ```
 
@@ -376,12 +376,12 @@ import { lower, length, asc, desc } from "durcno";
 // Order by lowercased name
 await db
   .from(Users)
-  .select()
+  .select("*");
   .orderBy(({ users }) => asc(lower(users.name)));
 
 // Order by name length descending
 await db
   .from(Users)
-  .select()
+  .select("*");
   .orderBy(({ users }) => desc(length(users.name)));
 ```

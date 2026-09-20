@@ -321,7 +321,7 @@ const usersWithPosts = await db
   .with({
     posts: PostsRelations,
   })
-  .select();
+  .select("*");
 ```
 
 ## Common Relationship Patterns

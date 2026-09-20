@@ -13,7 +13,7 @@ const projectedUsers = db
 const projectedUsersQuery = db
   .with(projectedUsers)
   .from((ctes) => ctes.projectedUsers)
-  .select();
+  .select("*");
 const projectedUsersSource = db
   .from(Users)
   .select(({ users }) => ({ id: users.id, username: users.username }));
@@ -28,7 +28,7 @@ type ProjectedColumns = InferQueryColumns<
 Expect<Equal<keyof ProjectedColumns, "id" | "username">>();
 
 const insertedUsersSource = db
-  .insert(Users)
+  .insertInto(Users)
   .values({
     username: "cte-user",
     type: "user",
@@ -46,7 +46,7 @@ const insertedUsers = db.with("insertedUsers").as(insertedUsersSource);
 const insertedUsersQuery = db
   .with(insertedUsers)
   .from((ctes) => ctes.insertedUsers)
-  .select();
+  .select("*");
 
 type InsertedRow = Awaited<typeof insertedUsersQuery>[number];
 Expect<Equal<keyof InsertedRow, "id" | "username">>();
@@ -65,7 +65,7 @@ const activeUserIds = db
   .as(db.from(Users).select(({ users }) => ({ id: users.id })));
 
 db.from(Posts)
-  .select()
+  .select("*")
   .where(({ posts }) =>
     isIn(
       posts.userId,
@@ -83,7 +83,7 @@ const mixedCte = db
       .select(({ users }) => ({ id: users.id, username: users.username })),
   );
 db.from(Posts)
-  .select()
+  .select("*")
   .where(({ posts }) =>
     isIn(
       posts.userId,
@@ -94,11 +94,11 @@ db.from(Posts)
 
 // CTEs cannot be DML targets — only real tables are writable.
 // @ts-expect-error: Cannot INSERT INTO a CTE table
-db.with(projectedUsers).insert(projectedUsers);
+db.with(projectedUsers).insertInto(projectedUsers);
 // @ts-expect-error: Cannot UPDATE a CTE table
 db.with(projectedUsers).update(projectedUsers);
 // @ts-expect-error: Cannot DELETE FROM a CTE table
-db.with(projectedUsers).delete(projectedUsers);
+db.with(projectedUsers).deleteFrom(projectedUsers);
 
 // -------------------------------------------------------------------------
 // Function-backed virtual columns: InferQueryColumns preserves SqlFn types
@@ -114,7 +114,7 @@ const lowerCte = db.with("lowerCte").as(lowerSource);
 const lowerQuery = db
   .with(lowerCte)
   .from((ctes) => ctes.lowerCte)
-  .select();
+  .select("*");
 type LowerRows = Awaited<typeof lowerQuery>;
 Expect<Equal<LowerRows, { lname: string | null }[]>>();
 
@@ -128,7 +128,7 @@ const countCte = db.with("countCte").as(countSource);
 const countQuery = db
   .with(countCte)
   .from((ctes) => ctes.countCte)
-  .select();
+  .select("*");
 type CountRows = Awaited<typeof countQuery>;
 Expect<Equal<CountRows, { total: number | null }[]>>();
 

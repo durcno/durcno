@@ -70,7 +70,7 @@ describe("UPDATE queries", () => {
 
   it("should update a single row", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "oldname" }))
       .returning({ id: true });
 
@@ -81,7 +81,7 @@ describe("UPDATE queries", () => {
 
     const updated = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.id, user.id));
 
     expect(updated[0].username).toBe("newname");
@@ -89,7 +89,7 @@ describe("UPDATE queries", () => {
 
   it("should update multiple columns", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
@@ -104,7 +104,7 @@ describe("UPDATE queries", () => {
 
     const updated = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.id, user.id));
 
     expect(updated[0]).toMatchObject({
@@ -116,7 +116,7 @@ describe("UPDATE queries", () => {
 
   it("should update multiple rows with WHERE clause", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ type: "user", score: 0 }),
         createTestUser({ type: "user", score: 0 }),
@@ -130,7 +130,7 @@ describe("UPDATE queries", () => {
 
     const users = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.type, "user"));
 
     expect(users).toHaveLength(2);
@@ -138,7 +138,7 @@ describe("UPDATE queries", () => {
 
     const admins = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.type, "admin"));
 
     expect(admins[0].score).toBe(0);
@@ -146,7 +146,7 @@ describe("UPDATE queries", () => {
 
   it("should update with RETURNING clause", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "beforeupdate" }))
       .returning({ id: true });
 
@@ -163,7 +163,7 @@ describe("UPDATE queries", () => {
 
   it("should update to null value", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ email: "test@example.com" }))
       .returning({ id: true });
 
@@ -182,7 +182,7 @@ describe("UPDATE queries", () => {
 
   it("should update boolean columns", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
@@ -193,7 +193,7 @@ describe("UPDATE queries", () => {
 
     const updated = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.id, user.id));
 
     expect(updated[0].isActive).toBe(true);
@@ -202,7 +202,7 @@ describe("UPDATE queries", () => {
 
   it("should update enum columns", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ status: "active" }))
       .returning({ id: true });
 
@@ -213,7 +213,7 @@ describe("UPDATE queries", () => {
 
     const updated = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.id, user.id));
 
     expect(updated[0].status).toBe("inactive");
@@ -221,7 +221,7 @@ describe("UPDATE queries", () => {
 
   it("should update numeric columns", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ age: 25, score: 10 }))
       .returning({ id: true });
 
@@ -232,7 +232,7 @@ describe("UPDATE queries", () => {
 
     const updated = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.id, user.id));
 
     expect(updated[0].age).toBe(30);
@@ -240,7 +240,9 @@ describe("UPDATE queries", () => {
   });
 
   it("should not update rows when WHERE clause matches nothing", async () => {
-    await db.insert(schema.Users).values(createTestUser({ username: "test" }));
+    await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "test" }));
 
     await db
       .update(schema.Users)
@@ -249,7 +251,7 @@ describe("UPDATE queries", () => {
 
     const users = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.username, "test"));
 
     expect(users[0].username).toBe("test");
@@ -257,7 +259,7 @@ describe("UPDATE queries", () => {
 
   it("should update all rows when no WHERE clause", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ score: 0 }),
         createTestUser({ score: 0 }),
@@ -266,7 +268,7 @@ describe("UPDATE queries", () => {
 
     await db.update(schema.Users).set({ score: 100 });
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
 
     expect(users).toHaveLength(3);
     expect(users.every((u) => u.score === 100)).toBe(true);
@@ -275,7 +277,7 @@ describe("UPDATE queries", () => {
   it("should auto-generate values using updateFn on every update", async () => {
     // Insert a row first
     const [inserted] = await db
-      .insert(schema.AuditLogs)
+      .insertInto(schema.AuditLogs)
       .values({
         action: "initial_action",
         message: "Initial message",
@@ -317,7 +319,7 @@ describe("UPDATE queries", () => {
   it("should allow explicit value to override updateFn", async () => {
     // Insert a row first
     const [inserted] = await db
-      .insert(schema.AuditLogs)
+      .insertInto(schema.AuditLogs)
       .values({
         action: "initial_action",
         modifiedAt: new Date("2020-01-01T00:00:00.000Z"),
@@ -341,7 +343,7 @@ describe("UPDATE queries", () => {
 
   it("should update with RETURNING * clause", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "returnstar" }))
       .returning({ id: true });
 
@@ -365,7 +367,7 @@ describe("UPDATE queries", () => {
 
   it("should update column with Sql value", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "mixedCASE" }))
       .returning({ id: true });
 
@@ -376,7 +378,7 @@ describe("UPDATE queries", () => {
 
     const updated = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.id, user.id));
 
     expect(updated[0].username).toBe("mixedcase");

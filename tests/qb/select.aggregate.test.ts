@@ -101,7 +101,7 @@ describe("SELECT aggregate functions", () => {
 
     it("count(*) should count all rows including those with NULL columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", age: 30 }),
           createTestUser({ username: "bob", age: null }),
@@ -117,7 +117,7 @@ describe("SELECT aggregate functions", () => {
 
     it("count(col) should only count non-null values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", age: 25 }),
           createTestUser({ username: "bob", age: null }),
@@ -133,7 +133,7 @@ describe("SELECT aggregate functions", () => {
 
     it("count(*) with WHERE filter should count only matching rows", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "admin1", type: "admin" }),
           createTestUser({ username: "admin2", type: "admin" }),
@@ -156,7 +156,7 @@ describe("SELECT aggregate functions", () => {
   describe("countDistinct", () => {
     it("countDistinct should count each distinct value once", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", type: "admin" }),
           createTestUser({ username: "bob", type: "admin" }),
@@ -172,7 +172,7 @@ describe("SELECT aggregate functions", () => {
 
     it("countDistinct should not count NULL values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", age: 25 }),
           createTestUser({ username: "bob", age: 25 }),
@@ -203,7 +203,7 @@ describe("SELECT aggregate functions", () => {
 
     it("sum should return the total of all non-null values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", score: 10 }),
           createTestUser({ username: "bob", score: 20 }),
@@ -219,7 +219,7 @@ describe("SELECT aggregate functions", () => {
 
     it("sum should ignore NULL values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", age: 10 }),
           createTestUser({ username: "bob", age: 20 }),
@@ -249,7 +249,7 @@ describe("SELECT aggregate functions", () => {
 
     it("avg should return the average of non-null values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", score: 10 }),
           createTestUser({ username: "bob", score: 20 }),
@@ -265,7 +265,7 @@ describe("SELECT aggregate functions", () => {
 
     it("avg should ignore NULL values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", age: 10 }),
           createTestUser({ username: "bob", age: 30 }),
@@ -295,7 +295,7 @@ describe("SELECT aggregate functions", () => {
 
     it("min should return the smallest numeric value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", score: 50 }),
           createTestUser({ username: "bob", score: 10 }),
@@ -311,7 +311,7 @@ describe("SELECT aggregate functions", () => {
 
     it("min should return the alphabetically first string value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "charlie" }),
           createTestUser({ username: "alice" }),
@@ -327,7 +327,7 @@ describe("SELECT aggregate functions", () => {
 
     it("min should ignore NULL values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", age: 40 }),
           createTestUser({ username: "bob", age: null }),
@@ -357,7 +357,7 @@ describe("SELECT aggregate functions", () => {
 
     it("max should return the largest numeric value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", score: 50 }),
           createTestUser({ username: "bob", score: 10 }),
@@ -373,7 +373,7 @@ describe("SELECT aggregate functions", () => {
 
     it("max should return the alphabetically last string value", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "charlie" }),
           createTestUser({ username: "alice" }),
@@ -389,7 +389,7 @@ describe("SELECT aggregate functions", () => {
 
     it("max should ignore NULL values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", age: 40 }),
           createTestUser({ username: "bob", age: null }),
@@ -411,7 +411,7 @@ describe("SELECT aggregate functions", () => {
   describe("multiple aggregates in one select", () => {
     it("should compute count, sum, avg, min, and max in a single query", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", score: 10 }),
           createTestUser({ username: "bob", score: 20 }),
@@ -441,7 +441,7 @@ describe("SELECT aggregate functions", () => {
   describe("aggregates in ORDER BY", () => {
     it("should allow ordering an aggregate-only query by the same aggregate ASC", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", score: 10 }),
           createTestUser({ username: "bob", score: 30 }),
@@ -457,7 +457,7 @@ describe("SELECT aggregate functions", () => {
 
     it("should allow ordering an aggregate-only query by count DESC", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "user1" }),
           createTestUser({ username: "user2" }),
@@ -480,7 +480,7 @@ describe("SELECT aggregate functions", () => {
   describe("auto GROUP BY with plain columns", () => {
     it("should group by a plain column and count per group", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", type: "admin" }),
           createTestUser({ username: "bob", type: "admin" }),
@@ -501,7 +501,7 @@ describe("SELECT aggregate functions", () => {
 
     it("should group by multiple plain columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", type: "admin", role: "admin" }),
           createTestUser({ username: "bob", type: "admin", role: "user" }),
@@ -526,7 +526,7 @@ describe("SELECT aggregate functions", () => {
 
     it("should compute sum per group", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", type: "admin", score: 10 }),
           createTestUser({ username: "bob", type: "admin", score: 20 }),
@@ -550,7 +550,7 @@ describe("SELECT aggregate functions", () => {
 
     it("should work with WHERE + auto GROUP BY", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", type: "admin", score: 10 }),
           createTestUser({ username: "bob", type: "admin", score: 20 }),
@@ -577,7 +577,7 @@ describe("SELECT aggregate functions", () => {
   describe("auto GROUP BY with scalar functions", () => {
     it("should group by a scalar fn result and count per group", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "Alice" }),
           createTestUser({ username: "adam" }),
@@ -606,7 +606,7 @@ describe("SELECT aggregate functions", () => {
   describe("scalar functions inside aggregate functions", () => {
     it("should compute min and max of a scalar function (e.g. min(lower(col)), max(lower(col)))", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "Alice" }),
           createTestUser({ username: "BOB" }),
@@ -624,7 +624,7 @@ describe("SELECT aggregate functions", () => {
 
     it("should compute sum and avg of a scalar numeric function (e.g. sum(abs(col)))", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", score: -10 }),
           createTestUser({ username: "bob", score: 20 }),
@@ -642,7 +642,7 @@ describe("SELECT aggregate functions", () => {
 
     it("should compute sum of scalar string function (e.g. sum(length(col)))", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "a" }),
           createTestUser({ username: "bb" }),
@@ -658,16 +658,16 @@ describe("SELECT aggregate functions", () => {
 
     it("should compute scalar inside aggregate with leftJoin multiplying two joined columns (e.g. sum(mul(Posts.viewCount, Posts.likeCount)))", async () => {
       const [user1] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "alice" }))
         .returning({ id: true });
 
       const [user2] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "bob" }))
         .returning({ id: true });
 
-      await db.insert(schema.Posts).values([
+      await db.insertInto(schema.Posts).values([
         createTestPost(user1.id, {
           title: "Post 1",
           viewCount: 10,

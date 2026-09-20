@@ -83,7 +83,7 @@ describe("Relational queries", () => {
   describe("findMany", () => {
     it("should find all records without filters", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "user1" }),
           createTestUser({ username: "user2" }),
@@ -98,7 +98,7 @@ describe("Relational queries", () => {
 
     it("should select specific columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "testuser" }));
 
       const users = await db.query(schema.Users).findMany({
@@ -117,7 +117,7 @@ describe("Relational queries", () => {
 
     it("should exclude columns using false", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "testuser" }));
 
       const users = await db.query(schema.Users).findMany({
@@ -136,7 +136,7 @@ describe("Relational queries", () => {
 
     it("should filter with WHERE clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ type: "admin" }),
           createTestUser({ type: "user" }),
@@ -153,11 +153,11 @@ describe("Relational queries", () => {
 
     it("should load one-to-one relation (profile)", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
-      await db.insert(schema.UserProfiles).values({
+      await db.insertInto(schema.UserProfiles).values({
         userId: user.id,
         bio: "Test bio",
         avatarUrl: "https://example.com/avatar.jpg",
@@ -188,12 +188,12 @@ describe("Relational queries", () => {
 
     it("should load one-to-many relation (posts)", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values([
           createTestPost(user.id, { title: "Post 1" }),
           createTestPost(user.id, { title: "Post 2" }),
@@ -222,17 +222,17 @@ describe("Relational queries", () => {
 
     it("should load nested relations", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "Comment 1" }),
           createTestComment(post.id, user.id, { body: "Comment 2" }),
@@ -259,7 +259,7 @@ describe("Relational queries", () => {
     });
 
     it("should handle empty relations", async () => {
-      await db.insert(schema.Users).values(createTestUser());
+      await db.insertInto(schema.Users).values(createTestUser());
 
       const users = await db.query(schema.Users).findMany({
         with: {
@@ -272,7 +272,7 @@ describe("Relational queries", () => {
     });
 
     it("should handle missing one-to-one relation", async () => {
-      await db.insert(schema.Users).values(createTestUser());
+      await db.insertInto(schema.Users).values(createTestUser());
 
       const users = await db.query(schema.Users).findMany({
         with: {
@@ -286,7 +286,7 @@ describe("Relational queries", () => {
 
     it("should support limit and offset", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser(),
           createTestUser(),
@@ -310,7 +310,7 @@ describe("Relational queries", () => {
 
     it("should support single column orderBy", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "charlie" }),
           createTestUser({ username: "alice" }),
@@ -327,7 +327,7 @@ describe("Relational queries", () => {
 
     it("should support single column orderBy DESC", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice" }),
           createTestUser({ username: "charlie" }),
@@ -344,7 +344,7 @@ describe("Relational queries", () => {
 
     it("should support multi-column orderBy (array syntax)", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", type: "user" }),
           createTestUser({ username: "bob", type: "admin" }),
@@ -367,7 +367,7 @@ describe("Relational queries", () => {
 
     it("should support multi-column orderBy with mixed directions", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", type: "user" }),
           createTestUser({ username: "bob", type: "admin" }),
@@ -392,7 +392,7 @@ describe("Relational queries", () => {
   describe("findFirst", () => {
     it("should find first record", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "first" }),
           createTestUser({ username: "second" }),
@@ -412,7 +412,7 @@ describe("Relational queries", () => {
 
     it("should filter with WHERE clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice" }),
           createTestUser({ username: "bob" }),
@@ -429,12 +429,12 @@ describe("Relational queries", () => {
 
     it("should load relations", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values([
           createTestPost(user.id, { title: "Post 1" }),
           createTestPost(user.id, { title: "Post 2" }),
@@ -452,7 +452,7 @@ describe("Relational queries", () => {
 
     it("should select specific columns", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "testuser" }));
 
       const user = await db.query(schema.Users).findFirst({
@@ -470,7 +470,7 @@ describe("Relational queries", () => {
 
     it("should return first matching record when multiple exist", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values([
           createTestUser({ type: "admin" }),
           createTestUser({ type: "admin" }),
@@ -489,17 +489,17 @@ describe("Relational queries", () => {
   describe("Complex relational scenarios", () => {
     it("should load multiple relations on the same query", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
-      await db.insert(schema.UserProfiles).values({
+      await db.insertInto(schema.UserProfiles).values({
         userId: user.id,
         bio: "Bio",
       });
 
-      await db.insert(schema.Posts).values(createTestPost(user.id));
-      await db.insert(schema.Comments).values({
+      await db.insertInto(schema.Posts).values(createTestPost(user.id));
+      await db.insertInto(schema.Comments).values({
         postId: 1n,
         userId: user.id,
         body: "Comment",
@@ -521,17 +521,17 @@ describe("Relational queries", () => {
 
     it("should filter parent and load relations", async () => {
       const [admin] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ type: "admin" }))
         .returning({ id: true });
 
       const [regularUser] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ type: "user" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values([
           createTestPost(admin.id, { title: "Admin Post" }),
           createTestPost(regularUser.id, { title: "User Post" }),
@@ -553,12 +553,12 @@ describe("Relational queries", () => {
   describe("fk relations", () => {
     it("should load fk relation (author from post)", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "author1" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "Test Post" }));
 
       const posts = await db.query(schema.Posts).findMany({
@@ -583,11 +583,11 @@ describe("Relational queries", () => {
 
     it("should load fk relation with notNull FK column (non-nullable result)", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "article_author" }))
         .returning({ id: true });
 
-      await db.insert(schema.Articles).values({
+      await db.insertInto(schema.Articles).values({
         title: "Test Article",
         authorId: user.id,
         categoryId: null,
@@ -607,12 +607,12 @@ describe("Relational queries", () => {
 
     it("should load fk relation with nullable FK column (nullable result)", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       // Article without category (categoryId is nullable)
-      await db.insert(schema.Articles).values({
+      await db.insertInto(schema.Articles).values({
         title: "Article without category",
         authorId: user.id,
         categoryId: null,
@@ -631,16 +631,16 @@ describe("Relational queries", () => {
 
     it("should load fk relation when nullable FK has a value", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [category] = await db
-        .insert(schema.Categories)
+        .insertInto(schema.Categories)
         .values({ name: "Tech" })
         .returning({ id: true });
 
-      await db.insert(schema.Articles).values({
+      await db.insertInto(schema.Articles).values({
         title: "Article with category",
         authorId: user.id,
         categoryId: category.id,
@@ -664,16 +664,16 @@ describe("Relational queries", () => {
 
     it("should load multiple fk relations on the same query", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "multi_fk_author" }))
         .returning({ id: true });
 
       const [category] = await db
-        .insert(schema.Categories)
+        .insertInto(schema.Categories)
         .values({ name: "Science" })
         .returning({ id: true });
 
-      await db.insert(schema.Articles).values({
+      await db.insertInto(schema.Articles).values({
         title: "Multi FK Article",
         authorId: user.id,
         categoryId: category.id,
@@ -707,17 +707,17 @@ describe("Relational queries", () => {
 
     it("should load nested fk relations (comment -> post -> author)", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "nested_author" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "Nested Post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values(
           createTestComment(post.id, user.id, { body: "Nested Comment" }),
         );
@@ -754,11 +754,11 @@ describe("Relational queries", () => {
   describe("one relation from FK-owning side (fk-style)", () => {
     it("should load user from UserProfiles via fk relation", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "profile_user" }))
         .returning({ id: true });
 
-      await db.insert(schema.UserProfiles).values({
+      await db.insertInto(schema.UserProfiles).values({
         userId: user.id,
         bio: "My bio",
         avatarUrl: "https://example.com/avatar.jpg",
@@ -789,22 +789,22 @@ describe("Relational queries", () => {
   describe("Nested with relations", () => {
     it("should load 2-level nested with (posts -> comments -> author)", async () => {
       const [user1] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "post_author" }))
         .returning({ id: true });
 
       const [user2] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "comment_author" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user1.id, { title: "Test Post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user2.id, { body: "Comment 1" }),
           createTestComment(post.id, user2.id, { body: "Comment 2" }),
@@ -842,22 +842,22 @@ describe("Relational queries", () => {
 
     it("should load 3-level nested with (users -> posts -> comments -> author)", async () => {
       const [mainUser] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "main_user" }))
         .returning({ id: true });
 
       const [commentUser] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "commenter" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(mainUser.id, { title: "Deep Nested Post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values(
           createTestComment(post.id, commentUser.id, { body: "Deep Comment" }),
         );
@@ -905,21 +905,21 @@ describe("Relational queries", () => {
 
     it("should load multiple nested branches (posts with author AND comments.author)", async () => {
       const [postAuthor] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "post_writer" }))
         .returning({ id: true });
 
       const [commentAuthor] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "comment_writer" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(postAuthor.id, { title: "Multi Branch Post" }))
         .returning({ id: true });
 
-      await db.insert(schema.Comments).values(
+      await db.insertInto(schema.Comments).values(
         createTestComment(post.id, commentAuthor.id, {
           body: "Branch Comment",
         }),
@@ -964,12 +964,12 @@ describe("Relational queries", () => {
 
     it("should handle empty nested relations", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "lonely_user" }))
         .returning({ id: true });
 
       const [_] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "No Comments Post" }))
         .returning({ id: true });
 
@@ -1005,17 +1005,17 @@ describe("Relational queries", () => {
 
     it("should load nested with all columns (no column selection)", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "all_cols_user" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "All Cols Post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values(
           createTestComment(post.id, user.id, { body: "All Cols Comment" }),
         );
@@ -1051,17 +1051,17 @@ describe("Relational queries", () => {
 
     it("should handle multiple levels with different relation types (Many -> Fk)", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "mixed_rel_user" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "Mixed Relations Post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "Comment A" }),
           createTestComment(post.id, user.id, { body: "Comment B" }),
@@ -1115,17 +1115,17 @@ describe("Relational queries", () => {
   describe("Nested orderBy (2-level deep Many relation)", () => {
     it("should orderBy asc on a 2nd-level nested Many relation", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "nest_order_user" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "Nest Post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "zebra" }),
           createTestComment(post.id, user.id, { body: "apple" }),
@@ -1160,17 +1160,17 @@ describe("Relational queries", () => {
 
     it("should orderBy desc on a 2nd-level nested Many relation", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "nest_order_desc_user" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "alpha" }),
           createTestComment(post.id, user.id, { body: "gamma" }),
@@ -1205,18 +1205,18 @@ describe("Relational queries", () => {
   describe("Nested Many relation filtering (where/orderBy/limit)", () => {
     it("should filter nested Many relation rows with where", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id))
         .returning({ id: true });
 
       // Insert two comments, one edited and one not
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "edited comment" }),
           createTestComment(post.id, user.id, { body: "normal comment" }),
@@ -1247,17 +1247,17 @@ describe("Relational queries", () => {
 
     it("should return empty array for nested Many relation when where matches nothing", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values(createTestComment(post.id, user.id, { body: "a comment" }));
 
       const posts = await db.query(schema.Posts).findMany({
@@ -1276,17 +1276,17 @@ describe("Relational queries", () => {
 
     it("should apply limit to nested Many relation rows", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "c1" }),
           createTestComment(post.id, user.id, { body: "c2" }),
@@ -1309,17 +1309,17 @@ describe("Relational queries", () => {
 
     it("should apply orderBy to nested Many relation rows", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "charlie" }),
           createTestComment(post.id, user.id, { body: "alice" }),
@@ -1346,18 +1346,18 @@ describe("Relational queries", () => {
 
     it("should combine where + orderBy + limit on nested Many relation", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser())
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id))
         .returning({ id: true });
 
       // 3 edited comments, 1 normal — we want the top-2 edited by body desc
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "edited-a" }),
           createTestComment(post.id, user.id, { body: "edited-b" }),
@@ -1397,28 +1397,28 @@ describe("Relational queries", () => {
 
     it("should apply nested where independently per parent row", async () => {
       const [user1] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user_a" }))
         .returning({ id: true });
 
       const [user2] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user_b" }))
         .returning({ id: true });
 
       const [post1] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user1.id, { title: "Post A" }))
         .returning({ id: true });
 
       const [post2] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user2.id, { title: "Post B" }))
         .returning({ id: true });
 
       // post1: 1 edited + 1 normal
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post1.id, user1.id, { body: "p1-edited" }),
           createTestComment(post1.id, user1.id, { body: "p1-normal" }),
@@ -1430,7 +1430,7 @@ describe("Relational queries", () => {
 
       // post2: 0 edited + 2 normal
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post2.id, user2.id, { body: "p2-normal-1" }),
           createTestComment(post2.id, user2.id, { body: "p2-normal-2" }),
@@ -1462,17 +1462,17 @@ describe("Relational queries", () => {
   describe("2nd-level nested Many relation where filter (QueryContext alias fix)", () => {
     it("should apply where filter in a 2nd-level nested Many relation", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "ctx_user1" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "ctx post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "edited comment" }),
           createTestComment(post.id, user.id, { body: "normal comment" }),
@@ -1510,17 +1510,17 @@ describe("Relational queries", () => {
 
     it("should apply and()/or() where in a 2nd-level nested Many relation", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "ctx_user2" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "ctx and/or post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "alpha" }),
           createTestComment(post.id, user.id, { body: "beta" }),
@@ -1562,17 +1562,17 @@ describe("Relational queries", () => {
 
     it("should apply scalar function (lower) in where in a 2nd-level nested Many relation", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "ctx_user3" }))
         .returning({ id: true });
 
       const [post] = await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "ctx fn post" }))
         .returning({ id: true });
 
       await db
-        .insert(schema.Comments)
+        .insertInto(schema.Comments)
         .values([
           createTestComment(post.id, user.id, { body: "HELLO" }),
           createTestComment(post.id, user.id, { body: "world" }),

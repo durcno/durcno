@@ -94,7 +94,7 @@ describe("String and Numeric Functions", () => {
   it("String functions evaluate correctly", async () => {
     // Insert a test user
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({
           username: "  TEST User  ",
@@ -129,7 +129,7 @@ describe("String and Numeric Functions", () => {
     const age = 25;
     // Insert a test user to test numeric functions on its age
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({
           username: "Num",
@@ -163,7 +163,7 @@ describe("String and Numeric Functions", () => {
   it("Arithmetic functions (add, sub, mul, div) evaluate correctly", async () => {
     const baseValue = 10;
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({
           username: "ArithmeticTest",

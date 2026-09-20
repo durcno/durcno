@@ -62,7 +62,7 @@ Consecutive uppercase sequences (acronyms) are handled correctly: `XMLParser` be
 When querying, results are returned with the camelCase keys you defined — not the snake_case names from the database. This keeps your application code consistent with your schema definitions.
 
 ```typescript
-const posts = await db.from(BlogPosts).select();
+const posts = await db.from(BlogPosts).select("*");
 
 // Result keys match your schema definition
 posts[0].authorId; // ✅

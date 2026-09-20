@@ -28,7 +28,7 @@ describe("String Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.VarcharTests)
+        .insertInto(schema.VarcharTests)
         .values(zodSchema.parse({ name: "alice" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -39,7 +39,7 @@ describe("String Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.VarcharTests)
-        .select()
+        .select("*")
         .where(({ varcharTests }) => eq(varcharTests.id, insertedId));
       expect(row.name).toBe("alice");
       expect(row.nameWithDefault).toBe("default_value");
@@ -53,7 +53,7 @@ describe("String Column Types", () => {
         .where(eq(schema.VarcharTests.id, insertedId));
       const [row] = await db
         .from(schema.VarcharTests)
-        .select()
+        .select("*")
         .where(({ varcharTests }) => eq(varcharTests.id, insertedId));
       expect(row.name).toBe("bob");
     });
@@ -75,7 +75,7 @@ describe("String Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.TextTests)
+        .insertInto(schema.TextTests)
         .values(zodSchema.parse({ content: "hello world" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -86,7 +86,7 @@ describe("String Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.TextTests)
-        .select()
+        .select("*")
         .where(({ textTests }) => eq(textTests.id, insertedId));
       expect(row.content).toBe("hello world");
       expect(row.contentWithDefault).toBe("default text");
@@ -100,7 +100,7 @@ describe("String Column Types", () => {
         .where(eq(schema.TextTests.id, insertedId));
       const [row] = await db
         .from(schema.TextTests)
-        .select()
+        .select("*")
         .where(({ textTests }) => eq(textTests.id, insertedId));
       expect(row.content).toBe("updated content");
     });
@@ -122,7 +122,7 @@ describe("String Column Types", () => {
     it("insert", async () => {
       const db = getDb();
       const [row] = await db
-        .insert(schema.CharTests)
+        .insertInto(schema.CharTests)
         .values(zodSchema.parse({ code: "HELLO" }))
         .returning({ id: true });
       insertedId = row.id;
@@ -133,7 +133,7 @@ describe("String Column Types", () => {
       const db = getDb();
       const [row] = await db
         .from(schema.CharTests)
-        .select()
+        .select("*")
         .where(({ charTests }) => eq(charTests.id, insertedId));
       expect(row.code).toBe("HELLO");
       expect(row.codeWithDefault).toBe("XX");
@@ -147,7 +147,7 @@ describe("String Column Types", () => {
         .where(eq(schema.CharTests.id, insertedId));
       const [row] = await db
         .from(schema.CharTests)
-        .select()
+        .select("*")
         .where(({ charTests }) => eq(charTests.id, insertedId));
       expect(row.code).toBe("WORLD");
     });

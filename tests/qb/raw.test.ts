@@ -70,7 +70,7 @@ describe("Raw SQL queries", () => {
 
   it("should execute raw SELECT query", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "user1" }),
         createTestUser({ username: "user2" }),
@@ -88,7 +88,7 @@ describe("Raw SQL queries", () => {
 
   it("should execute raw query with parameters", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "alice", age: 25 }),
         createTestUser({ username: "bob", age: 30 }),
@@ -113,14 +113,14 @@ describe("Raw SQL queries", () => {
       undefined,
     );
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(1);
     expect(users[0].username).toBe("rawuser");
   });
 
   it("should execute raw UPDATE query", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "original" }))
       .returning({ id: true });
 
@@ -130,13 +130,13 @@ describe("Raw SQL queries", () => {
       undefined,
     );
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users[0].username).toBe("updated");
   });
 
   it("should execute raw DELETE query", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser())
       .returning({ id: true });
 
@@ -146,13 +146,13 @@ describe("Raw SQL queries", () => {
       undefined,
     );
 
-    const users = await db.from(schema.Users).select();
+    const users = await db.from(schema.Users).select("*");
     expect(users).toHaveLength(0);
   });
 
   it("should execute aggregate queries", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([createTestUser(), createTestUser(), createTestUser()]);
 
     const result = await db.raw<{ count: string }[]>(
@@ -166,11 +166,11 @@ describe("Raw SQL queries", () => {
 
   it("should execute JOIN queries", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "author" }))
       .returning({ id: true });
 
-    await db.insert(schema.Posts).values({
+    await db.insertInto(schema.Posts).values({
       userId: user.id,
       title: "Test Post",
       content: "Test Content",
@@ -191,7 +191,7 @@ describe("Raw SQL queries", () => {
 
   it("should handle NULL values in raw queries", async () => {
     // Insert user without email (will be null since it's nullable)
-    await db.insert(schema.Users).values({
+    await db.insertInto(schema.Users).values({
       username: `user_${Date.now()}`,
       type: "user",
       status: "active",
@@ -210,7 +210,7 @@ describe("Raw SQL queries", () => {
 
   it("should execute complex WHERE clauses", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ type: "admin", age: 30 }),
         createTestUser({ type: "user", age: 25 }),
@@ -265,7 +265,7 @@ describe("Raw SQL queries", () => {
 
   it("should handle multiple parameters of different types", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "user1", age: 25, isActive: true }),
         createTestUser({ username: "user2", age: 30, isActive: false }),
@@ -285,7 +285,7 @@ describe("Raw SQL queries", () => {
 
   it("should work with custom row handlers", async () => {
     await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "user1" }),
         createTestUser({ username: "user2" }),

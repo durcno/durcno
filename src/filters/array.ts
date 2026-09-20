@@ -57,7 +57,7 @@ export class ArrayContainsFilter<
  * SQL: column @> ARRAY[values]
  *
  * @example
- * db.from(Posts).select().where(arrayContains(Posts.tags, ['typescript', 'postgres']))
+ * db.from(Posts).select("*").where(arrayContains(Posts.tags, ['typescript', 'postgres']))
  */
 export function arrayContains<
   TCol extends AnyColumn,

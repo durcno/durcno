@@ -80,13 +80,13 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should count all rows in a table", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user1" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user2" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user3" }));
 
       const count = await db.$count(schema.Users);
@@ -95,10 +95,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should count rows with where clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "Dan", email: "dan@test.com" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "Alice", email: "alice@test.com" }));
 
       const count = await db.$count(
@@ -120,7 +120,7 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return true when rows exist", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }));
       const exists = await db.$exists(schema.Users);
       expect(exists).toBe(true);
@@ -128,10 +128,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return true when rows match where clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "admin1", type: "admin" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user1", type: "user" }));
 
       const adminExists = await db.$exists(
@@ -143,7 +143,7 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return false when no rows match where clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user1", type: "user" }));
 
       const adminExists = await db.$exists(
@@ -155,7 +155,7 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should work with then/catch pattern", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }));
 
       const exists = await new Promise<boolean>((resolve, reject) => {
@@ -177,10 +177,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return first row", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "first_user" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "second_user" }));
 
       const first = await db.$first(schema.Users);
@@ -190,10 +190,10 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return first matching row with where clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "admin1", type: "admin" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user1", type: "user" }));
 
       const firstAdmin = await db.$first(
@@ -207,7 +207,7 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return null when no rows match where clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user1", type: "user" }));
 
       const firstAdmin = await db.$first(
@@ -218,7 +218,7 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
     });
 
     it("should include all columns in result", async () => {
-      await db.insert(schema.Users).values(
+      await db.insertInto(schema.Users).values(
         createTestUser({
           username: "test",
           email: "test@example.com",
@@ -246,17 +246,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should sum column values", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 20 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 30 }));
 
       const sum = await db.$sum(schema.Posts, schema.Posts.viewCount);
@@ -265,17 +265,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should sum with where clause", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 10 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 20 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "B", viewCount: 100 }));
 
       const sum = await db.$sum(
@@ -298,17 +298,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should calculate average", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 20 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 30 }));
 
       const avg = await db.$avg(schema.Posts, schema.Posts.viewCount);
@@ -317,17 +317,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should calculate average with where clause", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 10 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 30 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "B", viewCount: 1000 }));
 
       const avg = await db.$avg(
@@ -350,17 +350,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should find minimum value", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 50 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 100 }));
 
       const min = await db.$min(schema.Posts, schema.Posts.viewCount);
@@ -369,17 +369,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should find minimum with where clause", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 50 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 30 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "B", viewCount: 1 }));
 
       const min = await db.$min(
@@ -402,17 +402,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should find maximum value", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 50 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 100 }));
 
       const max = await db.$max(schema.Posts, schema.Posts.viewCount);
@@ -421,17 +421,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should find maximum with where clause", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 50 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "A", viewCount: 30 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { title: "B", viewCount: 1000 }));
 
       const max = await db.$max(
@@ -454,13 +454,13 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return distinct values", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "Alice", type: "user" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "Bob", type: "user" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "Charlie", type: "admin" }));
 
       const distinctUsernames = await db.$distinct(
@@ -472,13 +472,13 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return distinct values with where clause", async () => {
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "admin1", type: "admin" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "admin2", type: "admin" }));
       await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "user1", type: "user" }));
 
       const distinctAdminUsernames = await db.$distinct(
@@ -491,17 +491,17 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
 
     it("should return distinct numeric values", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "test" }))
         .returning("*");
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 20 }));
       await db
-        .insert(schema.Posts)
+        .insertInto(schema.Posts)
         .values(createTestPost(user.id, { viewCount: 10 })); // duplicate
 
       const distinctViewCounts = await db.$distinct(

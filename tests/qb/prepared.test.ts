@@ -80,7 +80,7 @@ describe("prepare", () => {
   // Arg in: where (Users.id.arg()) + limit (Arg.number())
   it("should select with Arg in where and limit", async () => {
     const [user1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "alice" }),
         createTestUser({ username: "bob" }),
@@ -94,7 +94,7 @@ describe("prepare", () => {
         db
           .prepare()
           .from(schema.Users)
-          .select()
+          .select("*")
           .where(({ users }) => eq(users.id, args.userId))
           .limit(args.lim),
     );
@@ -114,7 +114,7 @@ describe("prepare", () => {
       (args) =>
         db
           .prepare()
-          .insert(schema.Users)
+          .insertInto(schema.Users)
           .values({
             username: args.username,
             email: "prepare@test.com",
@@ -136,7 +136,7 @@ describe("prepare", () => {
   // Arg in: where (Users.id.arg())
   it("should update with Arg in where", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "to_update", email: "old@test.com" }))
       .returning("*");
 
@@ -160,14 +160,14 @@ describe("prepare", () => {
   // Arg in: where (Users.id.arg())
   it("should delete with Arg in where", async () => {
     const [user] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values(createTestUser({ username: "to_delete" }))
       .returning("*");
 
     const deletePre = prepare({ userId: schema.Users.id.arg() }, (args) =>
       db
         .prepare()
-        .delete(schema.Users)
+        .deleteFrom(schema.Users)
         .where(eq(schema.Users.id, args.userId))
         .returning("*"),
     );
@@ -180,7 +180,7 @@ describe("prepare", () => {
     // Verify user no longer exists
     const remaining = await db
       .from(schema.Users)
-      .select()
+      .select("*")
       .where(({ users }) => eq(users.id, user.id));
     expect(remaining).toHaveLength(0);
   });
@@ -189,7 +189,7 @@ describe("prepare", () => {
   // Arg in: where option (Users.id.arg())
   it("should query with Arg in where option of findMany", async () => {
     const [user1] = await db
-      .insert(schema.Users)
+      .insertInto(schema.Users)
       .values([
         createTestUser({ username: "query_user_1" }),
         createTestUser({ username: "query_user_2" }),
@@ -223,7 +223,7 @@ describe("prepare", () => {
 
     it("should handle Arg in raw sql WHERE expression", async () => {
       const [user] = await db
-        .insert(schema.Users)
+        .insertInto(schema.Users)
         .values(createTestUser({ username: "raw_arg_user", age: 30 }))
         .returning("*");
 
@@ -231,7 +231,7 @@ describe("prepare", () => {
         db
           .prepare()
           .from(schema.Users)
-          .select()
+          .select("*")
           .where(() => sql`age = ${args.ageArg}`),
       );
 

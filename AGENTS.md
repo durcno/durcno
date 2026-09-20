@@ -94,7 +94,7 @@ Executing type-safe queries:
 
 ```typescript
 // Select all users
-const users = await db.from(Users).select();
+const users = await db.from(Users).select("*");
 
 // Select specific columns with filter and ordering
 const activeUsers = await db
@@ -104,7 +104,7 @@ const activeUsers = await db
   .orderBy(({ users }) => asc(users.name));
 
 // Insert a new user
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   name: "John Doe",
   email: "john@example.com",
   type: "user",
@@ -135,7 +135,7 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
 
 **Fluent API**: Chainable methods provide an intuitive query-building experience:
 
-- `.select()` - Define columns to return (e.g. `select()` for all columns, or `select(({ users }) => ({ ... }))` for specific columns)
+- `.select()` - Define columns to return (e.g. `select("*")` for all columns, or `select(({ users }) => ({ ... }))` for specific columns)
 - `.where()` - Add filtering conditions via callback (`({ users }) => ...`)
 - `.orderBy()` - Sort results via callback (`({ users }) => ...` or `({ users }, { alias }) => ...`)
 - `.groupBy()` - Group results via callback (`({ users }) => [...]` or `({ users }, { alias }) => [...]`)
@@ -269,13 +269,13 @@ Examples:
 
 ```typescript
 // ✅ Positive test: Assert return type
-const q = db.from(Users).select();
+const q = db.from(Users).select("*");
 type R = Awaited<typeof q>;
 Expect<Equal<R, User[]>>();
 
 // ❌ Negative test: Invalid usage (should not compile)
 db.from(Users)
-  .select()
+  .select("*")
   // @ts-expect-error: eq expects a column, not a string
   .where(eq("invalid", 123));
 ```

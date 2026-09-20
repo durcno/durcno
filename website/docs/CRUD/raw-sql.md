@@ -28,7 +28,7 @@ console.log(queryFragment.toSQL());
 // Embed inside query builder clauses:
 const users = await db
   .from(Users)
-  .select()
+  .select("*");
   .where(() => sql`LOWER(${Users.username}) = ${"admin"}`);
 ```
 
