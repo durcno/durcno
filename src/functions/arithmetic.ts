@@ -1,18 +1,30 @@
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
+import { Sql } from "../sql";
 import type { AnyScalarColumn } from "../table";
 import type { Or } from "../types";
-import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from "./index";
+import {
+  type AnySqlFn,
+  type ExprColumns,
+  type HasArg,
+  SqlFn,
+  type StrictFnReturn,
+} from "./index";
 
 /**
  * Union of every valid operand for arithmetic operators:
- * a numeric column or SqlFn, a plain number literal, or an `Arg<number>`.
+ * a numeric column or SqlFn, a plain number/bigint literal, an `Arg`, or a typed `Sql`.
  */
 export type NumericOperand =
   | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "numeric" | "float" } })
   | number
-  | Arg<number>;
+  | bigint
+  | Arg<number>
+  | Arg<bigint>
+  | Sql<number>
+  | Sql<bigint>
+  | null;
 
 /**
  * Computes the `THasArg` slot for a two-operand arithmetic expression.
@@ -25,17 +37,21 @@ export type BinaryOpHasArg<
 
 /**
  * Appends a single numeric operand fragment to the query.
- * Handles `Arg<number>`, literal `number`, and column/SqlFn operands.
+ * Handles `null`, `Arg`, literal numbers/bigints, `Sql`, and column/SqlFn operands.
  */
 function numericExprToQuery(
   query: Query,
   ctx: QueryContext | undefined,
   operand: NumericOperand,
 ): void {
-  if (is(operand, Arg<number>)) {
+  if (operand === null) {
+    query.sql += "NULL";
+  } else if (is(operand, Arg)) {
     query.addArg(operand);
-  } else if (typeof operand === "number") {
+  } else if (typeof operand === "number" || typeof operand === "bigint") {
     query.sql += operand.toString();
+  } else if (operand instanceof Sql) {
+    operand.toQuery(query, ctx);
   } else {
     (operand as AnyScalarColumn | AnySqlFn).toQuery(query, ctx);
   }
@@ -48,12 +64,13 @@ function numericExprToQuery(
 export class AddFn<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
+  TTsType = StrictFnReturn<[TLeft, TRight], number>,
 > extends SqlFn<
   ExprColumns<TLeft> | ExprColumns<TRight>,
   BinaryOpHasArg<TLeft, TRight>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly left: TLeft,
@@ -62,14 +79,14 @@ export class AddFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -85,7 +102,10 @@ export class AddFn<
 export function add<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
->(left: TLeft, right: TRight): AddFn<TLeft, TRight> {
+>(
+  left: TLeft,
+  right: TRight,
+): AddFn<TLeft, TRight, StrictFnReturn<[TLeft, TRight], number>> {
   return new AddFn(left, right);
 }
 
@@ -96,12 +116,13 @@ export function add<
 export class SubFn<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
+  TTsType = StrictFnReturn<[TLeft, TRight], number>,
 > extends SqlFn<
   ExprColumns<TLeft> | ExprColumns<TRight>,
   BinaryOpHasArg<TLeft, TRight>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly left: TLeft,
@@ -110,14 +131,14 @@ export class SubFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -133,7 +154,10 @@ export class SubFn<
 export function sub<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
->(left: TLeft, right: TRight): SubFn<TLeft, TRight> {
+>(
+  left: TLeft,
+  right: TRight,
+): SubFn<TLeft, TRight, StrictFnReturn<[TLeft, TRight], number>> {
   return new SubFn(left, right);
 }
 
@@ -144,12 +168,13 @@ export function sub<
 export class MulFn<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
+  TTsType = StrictFnReturn<[TLeft, TRight], number>,
 > extends SqlFn<
   ExprColumns<TLeft> | ExprColumns<TRight>,
   BinaryOpHasArg<TLeft, TRight>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly left: TLeft,
@@ -158,14 +183,14 @@ export class MulFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -181,7 +206,10 @@ export class MulFn<
 export function mul<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
->(left: TLeft, right: TRight): MulFn<TLeft, TRight> {
+>(
+  left: TLeft,
+  right: TRight,
+): MulFn<TLeft, TRight, StrictFnReturn<[TLeft, TRight], number>> {
   return new MulFn(left, right);
 }
 
@@ -192,12 +220,13 @@ export function mul<
 export class DivFn<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
+  TTsType = StrictFnReturn<[TLeft, TRight], number>,
 > extends SqlFn<
   ExprColumns<TLeft> | ExprColumns<TRight>,
   BinaryOpHasArg<TLeft, TRight>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly left: TLeft,
@@ -206,14 +235,14 @@ export class DivFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -229,6 +258,9 @@ export class DivFn<
 export function div<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
->(left: TLeft, right: TRight): DivFn<TLeft, TRight> {
+>(
+  left: TLeft,
+  right: TRight,
+): DivFn<TLeft, TRight, StrictFnReturn<[TLeft, TRight], number>> {
   return new DivFn(left, right);
 }

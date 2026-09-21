@@ -28,19 +28,54 @@ console.log(queryFragment.toSQL());
 // Embed inside query builder clauses:
 const users = await db
   .from(Users)
-  .select("*");
+  .select("*")
   .where(() => sql`LOWER(${Users.username}) = ${"admin"}`);
 ```
 
-### Static `Sql.raw()`
+### Typed `sql<T>` Expressions
 
-If you already have a plain SQL string that does not require template string interpolation, use `Sql.raw(string)`:
+`sql` accepts a generic type parameter `sql<T>` that declares the inferred TypeScript return type of the expression. This type is preserved when projecting the SQL fragment in `.select()` or inside a CTE:
 
 ```typescript
-import { Sql } from "durcno";
+import { sql } from "durcno";
 
-const rawVal = Sql.raw("nextval('my_sequence')");
-console.log(rawVal.toSQL()); // Output: nextval('my_sequence')
+const score = sql<number>`${Users.points} * 1.5`;
+const formattedDate = sql<string>`to_char(${Users.createdAt}, 'YYYY-MM-DD')`;
+
+const results = await db.from(Users).select(({ users }) => ({
+  username: users.username,
+  score, // Inferred as number
+  formattedDate, // Inferred as string
+}));
+```
+
+Built-in date and identifier functions also return typed `Sql` instances: `now()` returns `Sql<Date>`, and `uuidv4()` / `uuidv7()` return `Sql<string>`.
+
+### Nesting `sql` Fragments
+
+You can interpolate `Sql` fragments inside other `sql` tagged templates:
+
+```typescript
+const condition = sql`${Users.age} >= 21`;
+const statement = sql`SELECT * FROM ${Users} WHERE ${condition}`;
+```
+
+### `sql.raw()` and `sql.null`
+
+If you already have a plain SQL string that does not require template string interpolation, use `sql.raw<T>(string)` (or `Sql.raw<T>(string)`):
+
+```typescript
+import { sql } from "durcno";
+
+const nextId = sql.raw<number>("nextval('my_sequence')");
+```
+
+Use `sql.null` (or `Sql.null`) to represent a typed SQL `NULL` literal (`Sql<null>`):
+
+```typescript
+import { sql } from "durcno";
+
+const nullExpr = sql.null;
 ```
 
 ---

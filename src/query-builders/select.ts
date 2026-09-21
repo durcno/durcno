@@ -1,21 +1,19 @@
 import type { Column, SetValueType } from "../columns/common";
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
-import { is, isCol } from "../entity";
+import { is, isTCol } from "../entity";
 import type {
   FilterExpression,
   HavingExpression,
   StdCondition,
 } from "../filters/index";
-import type { AnySqlFn, StdSqlFn } from "../functions/index";
-import { SqlFn } from "../functions/index";
-import { escIdentifier } from "../sql";
+import { type InferValueType, SqlFn } from "../functions/index";
+import { escIdentifier, Sql, toSqlValue } from "../sql";
 import type {
   AnyColumn,
   AnyTableWithColumns,
   StdTableColumn,
   StdTableWithColumns,
-  TableAnyColumn,
   TableColumn,
   TableWithColumns,
   UnwrapTableColumn,
@@ -251,6 +249,35 @@ type JoinOnView<
 > = ColumnsView<TTSchema, TTName, TColumns, TJoins> &
   Record<TJoinName, ViewColumns<TJoinSchema, TJoinName, TJoinColumns>>;
 
+/**
+ * Any item that can be selected in a `.select(...)` projection:
+ * - TableColumn in query scope
+ * - SqlFn in query scope
+ * - Sql instance (raw SQL expression)
+ * - `null` literal (SQL NULL)
+ * - Primitive literals: `string | number | bigint | boolean`
+ */
+export type SelectableItem<
+  TScopeColumns extends AnyColumn,
+  TPrepare extends boolean = false,
+> =
+  | TScopeColumns
+  | SqlFn<TScopeColumns, TPrepare extends true ? boolean : false>
+  | Sql
+  | null
+  | string
+  | number
+  | bigint
+  | boolean;
+
+/** Resolves the TypeScript inferred return type for a single selected projection entry. */
+export type InferSelectValue<T> = InferValueType<T>;
+
+/** Infers the full row object type for an object-mapping `.select(...)` callback. */
+export type InferSelectRow<TSelects> = {
+  [K in keyof TSelects]: InferSelectValue<TSelects[K]>;
+};
+
 export class SelectBuilder<
   TTSchema extends string,
   TTName extends string,
@@ -449,11 +476,10 @@ export class SelectBuilder<
   select<
     TSelects extends Record<
       string,
-      | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
-      | SqlFn<
-          AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
-          TPrepare extends true ? boolean : false
-        >
+      SelectableItem<
+        AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
+        TPrepare
+      >
     >,
   >(
     callback: (
@@ -473,11 +499,10 @@ export class SelectBuilder<
     TSelects extends
       | Record<
           string,
-          | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
-          | SqlFn<
-              AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
-              TPrepare extends true ? boolean : false
-            >
+          SelectableItem<
+            AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
+            TPrepare
+          >
         >
       | undefined,
   >(
@@ -535,11 +560,10 @@ export class SelectQuery<
   TSelects extends
     | Record<
         string,
-        | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
-        | SqlFn<
-            AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
-            TPrepare extends true ? boolean : false
-          >
+        SelectableItem<
+          AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
+          TPrepare
+        >
       >
     | undefined,
   TWhere extends
@@ -571,11 +595,7 @@ export class SelectQuery<
     | undefined = undefined,
   TReturn = (TSelects extends Record<string, unknown>
     ? {
-        [TCol in keyof TSelects]: TSelects[TCol] extends TableAnyColumn
-          ? TSelects[TCol]["ValTypeSelect"]
-          : TSelects[TCol] extends AnySqlFn
-            ? TSelects[TCol]["$"]["TsType"]
-            : never;
+        [K in keyof TSelects]: InferSelectValue<TSelects[K]>;
       }
     : Prettify<
         TableWithColumns<TTSchema, TTName, TColumns>["$"]["inferSelect"] &
@@ -853,12 +873,19 @@ export class SelectQuery<
     const entries = this.#$select ? Object.entries(this.#$select) : null;
     if (entries) {
       for (let i = 0; i < entries.length; i++) {
-        const [key, colOrFn] = entries[i];
-        if (colOrFn instanceof SqlFn) {
-          colOrFn.toQuery(query);
+        const [key, item] = entries[i];
+        if (item === null) {
+          query.sql += `NULL AS "${escIdentifier(key)}"`;
+        } else if (item instanceof SqlFn) {
+          item.toQuery(query);
+          query.sql += ` AS "${escIdentifier(key)}"`;
+        } else if (isTCol(item)) {
+          query.sql += `${item.fullName} AS "${escIdentifier(key)}"`;
+        } else if (item instanceof Sql) {
+          item.toQuery(query);
           query.sql += ` AS "${escIdentifier(key)}"`;
         } else {
-          query.sql += `${(colOrFn as StdTableColumn).fullName} AS "${escIdentifier(key)}"`;
+          query.sql += `${toSqlValue(item as never)} AS "${escIdentifier(key)}"`;
         }
         if (i < entries.length - 1) query.sql += ", ";
       }
@@ -892,19 +919,18 @@ export class SelectQuery<
       }
     } else if (entries) {
       const hasAggregate = entries.some(
-        ([, colOrFn]) => colOrFn instanceof SqlFn && colOrFn.isAggregate,
+        ([, item]) => item instanceof SqlFn && item.isAggregate,
       );
       if (hasAggregate) {
         const nonAggEntries = entries.filter(
-          ([, colOrFn]) => !(colOrFn instanceof SqlFn) || !colOrFn.isAggregate,
+          ([, item]) =>
+            isTCol(item) || (item instanceof SqlFn && !item.isAggregate),
         );
         if (nonAggEntries.length > 0) {
           query.sql += " GROUP BY ";
           for (let i = 0; i < nonAggEntries.length; i++) {
-            const [, colOrFn] = nonAggEntries[i];
-            (colOrFn as { toQuery: (q: Query<unknown>) => void }).toQuery(
-              query,
-            );
+            const [, item] = nonAggEntries[i];
+            (item as { toQuery: (q: Query<unknown>) => void }).toQuery(query);
             if (i < nonAggEntries.length - 1) query.sql += ", ";
           }
         }
@@ -956,13 +982,13 @@ export class SelectQuery<
    * Returns the resolved output columns of this query.
    */
   getResolvedColumns(): Prettify<
-    TSelects extends Record<string, AnySelectableSource>
+    TSelects extends Record<string, unknown>
       ? TSelects
       : MergeJoinedColumns<TColumns, TJoins>
   > {
     if (this.#$select) {
       return { ...this.#$select } as Prettify<
-        TSelects extends Record<string, AnySelectableSource>
+        TSelects extends Record<string, unknown>
           ? TSelects
           : MergeJoinedColumns<TColumns, TJoins>
       >;
@@ -974,7 +1000,7 @@ export class SelectQuery<
       Object.assign(cols, j.table._.columns);
     });
     return cols as Prettify<
-      TSelects extends Record<string, AnySelectableSource>
+      TSelects extends Record<string, unknown>
         ? TSelects
         : MergeJoinedColumns<TColumns, TJoins>
     >;
@@ -986,12 +1012,29 @@ export class SelectQuery<
       const keys = Object.keys(rows[0]);
       rows.forEach((row) => {
         keys.forEach((key) => {
-          const colOrFn = (
-            this.#$select as Record<string, StdTableColumn | StdSqlFn>
-          )[key];
-          row[key] = isCol(colOrFn)
-            ? colOrFn.fromDriver(row[key])
-            : colOrFn.fromDriverValue(row[key]);
+          const item = (this.#$select as Record<string, unknown>)[key];
+          if (item === null) {
+            row[key] = null;
+          } else if (isTCol(item)) {
+            row[key] = item.fromDriver(row[key]);
+          } else if (item instanceof SqlFn) {
+            row[key] = item.fromDriverValue(row[key]);
+          } else if (typeof item === "bigint") {
+            row[key] =
+              row[key] === null || row[key] === undefined
+                ? null
+                : BigInt(row[key] as string | number);
+          } else if (typeof item === "boolean") {
+            row[key] =
+              row[key] === null || row[key] === undefined
+                ? null
+                : row[key] === true || row[key] === "t" || row[key] === "true";
+          } else if (typeof item === "number") {
+            row[key] =
+              row[key] === null || row[key] === undefined
+                ? null
+                : Number(row[key]);
+          }
         });
       });
       return rows as TReturn;
@@ -1002,10 +1045,12 @@ export class SelectQuery<
       rows.forEach((row) => {
         const newRow: Record<string, unknown> = {};
         keys.forEach((key) => {
-          let column = this.#table._.columnsBySql[key];
+          let column =
+            this.#table._.columnsBySql[key] ?? this.#table._.columns[key];
           if (column === undefined) {
             this.#$joins?.forEach((join) => {
-              const joinCol = join.table._.columnsBySql[key];
+              const joinCol =
+                join.table._.columnsBySql[key] ?? join.table._.columns[key];
               if (joinCol !== undefined) {
                 column = joinCol;
               }

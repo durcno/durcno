@@ -3,7 +3,6 @@ import type { AnyScalarSqlFn, SqlFn } from "../functions";
 import { escIdentifier } from "../sql";
 import type { AnyTableWithColumns, TableAnyColumn } from "../table";
 import type { Valueof } from "../types";
-import type { AnySelectableSource } from "../virtual-table";
 import type { Query, QueryContext } from "./query";
 
 export type OrderDirection = "ASC" | "DESC";
@@ -70,7 +69,7 @@ export type StdOrderSqlFn = OrderSqlFn<AnyScalarSqlFn>;
 export type OrderExpression<
   TTableOrCols extends AnyTableWithColumns | TableAnyColumn,
   TPrepare extends boolean = false,
-  TSelects extends Record<string, AnySelectableSource> | undefined = undefined,
+  TSelects extends Record<string, unknown> | undefined = undefined,
 > =
   | Order<
       TTableOrCols extends AnyTableWithColumns

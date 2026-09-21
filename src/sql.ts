@@ -1,9 +1,15 @@
 import { is, isCol } from "./entity";
+import { type AnySqlFn, SqlFn } from "./functions/index";
 import { type AnyArg, Arg } from "./query-builders/prepare";
 import type { Query, QueryContext } from "./query-builders/query";
 import type { TableAnyColumn } from "./table";
 
-export class Sql {
+export class Sql<TTsType = unknown> {
+  readonly $!: {
+    kind: "sql";
+    TsType: TTsType;
+  };
+
   readonly #strings: TemplateStringsArray;
   readonly #params: SqlParam[];
 
@@ -20,9 +26,12 @@ export class Sql {
   }
 
   /** Creates a Sql instance from a raw SQL string (no interpolation). */
-  static raw(s: string): Sql {
-    return new Sql(s);
+  static raw<T = unknown>(s: string): Sql<T> {
+    return new Sql<T>(s);
   }
+
+  /** Represents a SQL NULL value with TypeScript return type `null`. */
+  static readonly null: Sql<null> = new Sql<null>("NULL");
 
   get string(): string {
     return this.toSQL();
@@ -40,6 +49,10 @@ export class Sql {
           );
         } else if (isCol(param)) {
           s += param.fullName;
+        } else if (param instanceof Sql) {
+          s += param.toSQL();
+        } else if (param instanceof SqlFn) {
+          s += param.toSQL();
         } else {
           s += toSqlValue(param);
         }
@@ -57,6 +70,10 @@ export class Sql {
           query.addArg(param);
         } else if (isCol(param)) {
           param.toQuery(query, ctx);
+        } else if (param instanceof Sql) {
+          param.toQuery(query, ctx);
+        } else if (param instanceof SqlFn) {
+          param.toQuery(query, ctx);
         } else {
           query.sql += toSqlValue(param);
         }
@@ -73,11 +90,19 @@ type SqlParam =
   | null
   | undefined
   | TableAnyColumn
-  | AnyArg;
+  | AnyArg
+  | Sql
+  | AnySqlFn;
 
-export function sql(strings: TemplateStringsArray, ...params: SqlParam[]) {
-  return new Sql(strings, params);
+export function sql<T = unknown>(
+  strings: TemplateStringsArray,
+  ...params: SqlParam[]
+): Sql<T> {
+  return new Sql<T>(strings, params);
 }
+
+sql.raw = <T = unknown>(s: string): Sql<T> => Sql.raw<T>(s);
+sql.null = Sql.null;
 
 /**
  * Escapes a string for use as a double-quoted PostgreSQL identifier.
@@ -96,19 +121,32 @@ export function escLiteral(value: string): string {
 }
 
 export function toSqlValue(
-  value: string | number | bigint | boolean | null | undefined | TableAnyColumn,
+  value:
+    | string
+    | number
+    | bigint
+    | boolean
+    | null
+    | undefined
+    | TableAnyColumn
+    | Sql
+    | AnySqlFn,
 ): string {
   if (value === null || value === undefined) {
     return "NULL";
+  } else if (value instanceof Sql) {
+    return value.toSQL();
+  } else if (value instanceof SqlFn) {
+    return value.toSQL();
   } else if (typeof value === "string") {
     return `'${escLiteral(value)}'`;
   } else if (typeof value === "number" || typeof value === "bigint") {
     return value.toString();
   } else if (typeof value === "boolean") {
-    return value ? "'t'" : "'f'";
+    return value ? "TRUE" : "FALSE";
   } else if (isCol(value)) {
     return value.fullName;
   } else {
-    return "NULL";
+    return (value as { toSQL(): string }).toSQL();
   }
 }

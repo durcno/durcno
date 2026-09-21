@@ -1,3 +1,4 @@
+import type { Arg } from "../query-builders/prepare";
 import { Query, type QueryContext } from "../query-builders/query";
 import { type Sql, sql } from "../sql";
 import type { AnyColumn, StdTableColumn } from "../table";
@@ -139,43 +140,93 @@ export type HasArg<TExpr> = TExpr extends {
   : false;
 
 /**
- * Extracts the value/return type of a scalar expression.
- * For a raw column, returns its `ValType`.
- * For a `SqlFn`, returns its `ReturnType` phantom.
+ * Resolves the runtime/select TypeScript type of any expression:
+ * - `null` -> `null`
+ * - Column with `ValTypeSelect` -> `TCol["ValTypeSelect"]`
+ * - `SqlFn` -> `TSqlFn["$"]["TsType"]`
+ * - `Arg<A>` -> `A`
+ * - Primitive literals / types -> `string`, `number`, `bigint`, `boolean`
  */
-export type ExprReturnType<TExpr> = TExpr extends {
-  $: { kind: "column" };
-  ValType: infer T;
-}
-  ? T
-  : TExpr extends { $: { kind: "sqlFn" }; TsType: infer U }
-    ? U
-    : never;
+export type InferValueType<TExpr> = TExpr extends null
+  ? null
+  : TExpr extends { ValTypeSelect: infer V }
+    ? V
+    : TExpr extends { $: { kind: "sqlFn"; TsType: infer T } }
+      ? T
+      : TExpr extends Sql<infer S>
+        ? S
+        : TExpr extends Arg<infer A>
+          ? A
+          : TExpr extends string
+            ? string
+            : TExpr extends number
+              ? number
+              : TExpr extends bigint
+                ? bigint
+                : TExpr extends boolean
+                  ? boolean
+                  : TExpr;
+
+/** Checks if any element in a tuple of expressions is definitely null. */
+export type HasStrictNull<TTuple extends readonly unknown[]> =
+  TTuple extends readonly [infer Head, ...infer Tail]
+    ? [InferValueType<Head>] extends [null]
+      ? true
+      : HasStrictNull<Tail>
+    : false;
+
+/** Checks if any element in a tuple of expressions contains null in its union. */
+export type HasNullable<TTuple extends readonly unknown[]> =
+  TTuple extends readonly [infer Head, ...infer Tail]
+    ? null extends InferValueType<Head>
+      ? true
+      : HasNullable<Tail>
+    : false;
+
+/**
+ * Calculates the return type of a strict PostgreSQL function given its argument tuple:
+ * - If ANY argument is strictly `null` (e.g. `lower(null)`), returns `null`.
+ * - If NO argument is strictly `null` but AT LEAST ONE can be `null` (e.g. `lower(users.email)`), returns `TBase | null`.
+ * - If ALL arguments are non-null (e.g. `lower(users.username)` or `lower("HELLO")`), returns `TBase`.
+ */
+export type StrictFnReturn<TTuple extends readonly unknown[], TBase> =
+  HasStrictNull<TTuple> extends true
+    ? null
+    : HasNullable<TTuple> extends true
+      ? TBase | null
+      : TBase;
+
+/**
+ * Extracts the value/return type of a scalar expression.
+ * For a raw column, returns its `ValTypeSelect`.
+ * For a `SqlFn`, returns its `TsType`.
+ */
+export type ExprReturnType<TExpr> = InferValueType<TExpr>;
 
 /**
  * Returns a Sql object that represents the SQL function `now()`.
- * @returns Sql
+ * @returns Sql<Date>
  */
-export function now(): Sql {
-  return sql`now()`;
+export function now(): Sql<Date> {
+  return sql<Date>`now()`;
 }
 
 /**
  * Returns a Sql object that represents the SQL function `gen_random_uuid()` (UUID v4).
  *
  * Note: Requires the pgcrypto extension in PostgreSQL.
- * @returns Sql
+ * @returns Sql<string>
  */
-export function uuidv4(): Sql {
-  return sql`gen_random_uuid()`;
+export function uuidv4(): Sql<string> {
+  return sql<string>`gen_random_uuid()`;
 }
 
 /**
  * Returns a Sql object that represents the SQL function `uuid_generate_v7()` (UUID v7).
  *
  * Note: Requires the uuid-ossp extension in PostgreSQL.
- * @returns Sql
+ * @returns Sql<string>
  */
-export function uuidv7(): Sql {
-  return sql`uuid_generate_v7()`;
+export function uuidv7(): Sql<string> {
+  return sql<string>`uuid_generate_v7()`;
 }

@@ -95,7 +95,7 @@ const result = await db.transaction(async (tx) => {
 
   const posts = await tx
     .from(Posts)
-    .select("*");
+    .select("*")
     .where(({ posts }) => eq(posts.userId, user.id));
 
   return { user, posts };

@@ -1,10 +1,11 @@
 import * as z from "zod";
 import { Column } from "./columns/common";
 import { isCol } from "./entity";
-import type { AnySqlFn } from "./functions";
+import { SqlFn } from "./functions";
 import type { AnyQuery } from "./query-builders/query";
 import type { AnyQueryPromise } from "./query-builders/query-promise";
-import type { Sql } from "./sql";
+import type { SelectableItem } from "./query-builders/select";
+import { Sql, toSqlValue } from "./sql";
 import {
   type AnyColumn,
   type StdTable,
@@ -15,7 +16,7 @@ import {
 } from "./table";
 import type { Key } from "./types";
 
-export type AnySelectableSource = AnyColumn | AnySqlFn;
+export type AnySelectableSource = SelectableItem<AnyColumn, boolean>;
 
 export type AnySubquery = AnyQueryPromise & {
   toQuery(parentQuery?: AnyQuery): AnyQuery;
@@ -33,16 +34,23 @@ type VirtualizedColumn<
   VirtualColumn<UnwrapTableColumn<TColumn>>
 >;
 
-type VirtualizedSqlFn<
+type VirtualizedValue<
   TVirtualName extends string,
   TKey extends Key,
   TTsType,
   TPgType extends string,
+  TNotNull extends boolean = false,
 > = TableColumn<
   "",
   TVirtualName,
   TKey,
-  VirtualColumn<Column<Record<never, never>, TTsType, TPgType>>
+  VirtualColumn<
+    Column<
+      TNotNull extends true ? { notNull: true } : Record<never, never>,
+      TTsType,
+      TPgType
+    >
+  >
 >;
 
 type MapSourcesToColumns<
@@ -54,13 +62,67 @@ type MapSourcesToColumns<
     : TSources[K] extends {
           $: { TsType: infer TTsType; PgType: infer TPgType extends string };
         }
-      ? VirtualizedSqlFn<
+      ? VirtualizedValue<
           TVirtualName,
           K extends Key ? K : never,
           TTsType,
-          TPgType
+          TPgType,
+          null extends TTsType ? false : true
         >
-      : never;
+      : TSources[K] extends Sql<infer TTsType>
+        ? VirtualizedValue<
+            TVirtualName,
+            K extends Key ? K : never,
+            TTsType,
+            "unknown",
+            null extends TTsType ? false : true
+          >
+        : TSources[K] extends null
+          ? VirtualizedValue<
+              TVirtualName,
+              K extends Key ? K : never,
+              null,
+              "unknown",
+              false
+            >
+          : TSources[K] extends string
+            ? VirtualizedValue<
+                TVirtualName,
+                K extends Key ? K : never,
+                string,
+                "text",
+                true
+              >
+            : TSources[K] extends number
+              ? VirtualizedValue<
+                  TVirtualName,
+                  K extends Key ? K : never,
+                  number,
+                  "numeric",
+                  true
+                >
+              : TSources[K] extends bigint
+                ? VirtualizedValue<
+                    TVirtualName,
+                    K extends Key ? K : never,
+                    bigint,
+                    "numeric",
+                    true
+                  >
+                : TSources[K] extends boolean
+                  ? VirtualizedValue<
+                      TVirtualName,
+                      K extends Key ? K : never,
+                      boolean,
+                      "boolean",
+                      true
+                    >
+                  : VirtualizedValue<
+                      TVirtualName,
+                      K extends Key ? K : never,
+                      unknown,
+                      "unknown"
+                    >;
 };
 
 export type InferQueryColumns<
@@ -89,11 +151,22 @@ class VirtualColumn<TColumn extends AnyColumn> extends Column<
     this.#source = source;
   }
 
+  override get nameSql(): string {
+    return this.name ?? "";
+  }
+
   get sqlTypeScalar() {
     if (isCol(this.#source)) {
       return this.#source.sqlTypeScalar;
     }
-    return this.#source.$.PgType;
+    if (this.#source instanceof SqlFn) {
+      return this.#source.$.PgType;
+    }
+    if (typeof this.#source === "number") return "numeric";
+    if (typeof this.#source === "string") return "text";
+    if (typeof this.#source === "boolean") return "boolean";
+    if (typeof this.#source === "bigint") return "bigint";
+    return "unknown";
   }
 
   get sqlCastScalar() {
@@ -114,23 +187,45 @@ class VirtualColumn<TColumn extends AnyColumn> extends Column<
     if (isCol(this.#source)) {
       return this.#source.toDriverScalar(value as never);
     }
-    return this.#source.toDriverValue(value as never) as string | number | null;
+    if (this.#source instanceof SqlFn) {
+      return this.#source.toDriverValue(value as never) as
+        | string
+        | number
+        | null;
+    }
+    return value as never;
   }
 
   toSQLScalar(value: TColumn["$"]["TsType"] | Sql | null): string {
     if (isCol(this.#source)) {
       return this.#source.toSQLScalar(value as never);
     }
-    return this.#source.toSQLValue(value as never);
+    if (this.#source instanceof SqlFn) {
+      return this.#source.toSQLValue(value as never);
+    }
+    if (value === null) return "NULL";
+    if (value instanceof Sql) return value.toSQL();
+    return toSqlValue(value as never);
   }
 
   fromDriverScalar(value: unknown): TColumn["$"]["TsType"] | null {
+    if (value === null) return null;
     if (isCol(this.#source)) {
       return this.#source.fromDriverScalar(value) as
         | TColumn["$"]["TsType"]
         | null;
     }
-    return this.#source.fromDriverValue(value) as TColumn["$"]["TsType"] | null;
+    if (this.#source instanceof SqlFn) {
+      return this.#source.fromDriverValue(value) as
+        | TColumn["$"]["TsType"]
+        | null;
+    }
+    if (typeof this.#source === "number") return Number(value) as never;
+    if (typeof this.#source === "bigint")
+      return BigInt(value as string | number) as never;
+    if (typeof this.#source === "boolean")
+      return (value === true || value === "t" || value === "true") as never;
+    return value as TColumn["$"]["TsType"] | null;
   }
 
   /** @internal */
@@ -176,7 +271,7 @@ function createVirtualColumns(
   return Object.fromEntries(
     Object.entries(sources).map(([name, source]) => [
       name,
-      new VirtualColumn(source as AnyColumn),
+      new VirtualColumn(source as never),
     ]),
   ) as Record<string, AnyColumn>;
 }

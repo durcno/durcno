@@ -130,15 +130,17 @@ await db
 
 String functions accept any string column (`varchar`, `text`, `char`) or the result of another string-producing function.
 
-| Function                 | SQL                    | Returns  | Description                                  |
-| ------------------------ | ---------------------- | -------- | -------------------------------------------- |
-| `length(expr)`           | `length(expr)`         | `number` | Number of characters in the string           |
-| `lower(expr)`            | `lower(expr)`          | `string` | Converts to lowercase                        |
-| `upper(expr)`            | `upper(expr)`          | `string` | Converts to uppercase                        |
-| `trim(expr)`             | `trim(expr)`           | `string` | Removes leading and trailing whitespace      |
-| `left(expr, n)`          | `left(expr, n)`        | `string` | First `n` characters of the string           |
-| `right(expr, n)`         | `right(expr, n)`       | `string` | Last `n` characters of the string            |
-| `position(expr, substr)` | `strpos(expr, substr)` | `number` | 1-based position of `substr`; 0 if not found |
+| Function                  | SQL                    | Returns  | Description                                  |
+| ------------------------- | ---------------------- | -------- | -------------------------------------------- |
+| `length(expr)`            | `length(expr)`         | `number` | Number of characters in the string           |
+| `lower(expr)`             | `lower(expr)`          | `string` | Converts to lowercase                        |
+| `upper(expr)`             | `upper(expr)`          | `string` | Converts to uppercase                        |
+| `trim(expr)`              | `trim(expr)`           | `string` | Removes leading and trailing whitespace      |
+| `left(expr, n)`           | `left(expr, n)`        | `string` | First `n` characters of the string           |
+| `right(expr, n)`          | `right(expr, n)`       | `string` | Last `n` characters of the string            |
+| `position(expr, substr)`  | `strpos(expr, substr)` | `number` | 1-based position of `substr`; 0 if not found |
+| `concat(...exprs)`        | `concat(...)`          | `string` | Concatenates text representations of args    |
+| `concatWs(sep, ...exprs)` | `concat_ws(...)`       | `string` | Concatenates arguments with a separator      |
 
 ### `lower` / `upper`
 
@@ -180,7 +182,7 @@ const result = await db
 // Filter by length
 await db
   .from(Users)
-  .select("*");
+  .select("*")
   .where(({ users }) => gt(length(users.name), 5));
 ```
 
@@ -212,8 +214,33 @@ const result = await db.from(Users).select(({ users }) => ({
 // Filter emails where '@' appears after position 5
 await db
   .from(Users)
-  .select("*");
+  .select("*")
   .where(({ users }) => gt(position(users.email, "@"), 5));
+```
+
+### `concat`
+
+Concatenates the text representations of all arguments into a single string. `null` arguments are ignored, matching PostgreSQL's `concat()` behavior. Arguments can be columns, SQL functions, raw `sql` expressions, prepared `Arg`s, or primitive values.
+
+```typescript
+import { concat } from "durcno";
+
+const result = await db.from(Users).select(({ users }) => ({
+  fullName: concat(users.firstName, " ", users.lastName),
+  identifier: concat(users.username, "#", users.id),
+}));
+```
+
+### `concatWs`
+
+Concatenates arguments with a separator string (`concat_ws`). If the separator is `null`, the result is `null`. Any `null` values among the expressions to concatenate are skipped.
+
+```typescript
+import { concatWs } from "durcno";
+
+const result = await db.from(Users).select(({ users }) => ({
+  address: concatWs(", ", users.city, users.state, users.country),
+}));
 ```
 
 ### Composing String Functions
@@ -226,7 +253,7 @@ import { lower, trim, startsWith } from "durcno";
 // Trim whitespace then lowercase before filtering
 await db
   .from(Users)
-  .select("*");
+  .select("*")
   .where(({ users }) => startsWith(lower(trim(users.email)), "admin"));
 ```
 
@@ -270,7 +297,7 @@ import { mod, eq } from "durcno";
 // Get rows with even IDs
 await db
   .from(Users)
-  .select("*");
+  .select("*")
   .where(({ users }) => eq(mod(users.id, 2), 0));
 ```
 
@@ -329,7 +356,7 @@ const result = await db.from(Products).select(({ products }) => ({
 
 ## Arithmetic Operators
 
-Arithmetic operators combine two numeric expressions using standard math operators. Both operands can be a numeric column, the result of another numeric function, a plain number literal, or an `Arg<number>`.
+Arithmetic operators combine two numeric expressions using standard math operators. Both operands can be a numeric column, the result of another numeric function, a plain number or `bigint` literal, an `Arg`, or a typed `Sql` expression (`Sql<number>` / `Sql<bigint>`).
 
 | Function    | SQL       | Returns  | Description                           |
 | ----------- | --------- | -------- | ------------------------------------- |
@@ -366,6 +393,73 @@ const result = await db.from(Users).select(({ users }) => ({
 
 ---
 
+## Conditional Functions
+
+Conditional functions evaluate expressions based on conditions or nullability. Operands can be columns, SQL functions, raw `sql` expressions, prepared `Arg`s, primitive literals (`string`, `number`, `bigint`, `boolean`), or `null`.
+
+| Function             | SQL                 | Returns     | Description                                                                   |
+| -------------------- | ------------------- | ----------- | ----------------------------------------------------------------------------- |
+| `coalesce(...exprs)` | `coalesce(...)`     | Inferred    | Returns the first non-null argument; drops `null` if any argument is non-null |
+| `nullif(expr, val)`  | `nullif(expr, val)` | `T \| null` | Returns `null` if `expr = val`, otherwise returns `expr`                      |
+| `greatest(...exprs)` | `greatest(...)`     | Inferred    | Returns the largest value; skips nulls; drops `null` if any is non-null       |
+| `least(...exprs)`    | `least(...)`        | Inferred    | Returns the smallest value; skips nulls; drops `null` if any is non-null      |
+
+### `coalesce`
+
+Returns the first non-null expression among its arguments. Durcno evaluates argument nullability from left to right: if any argument is guaranteed non-null, `null` is automatically excluded from the inferred return type.
+
+```typescript
+import { coalesce } from "durcno";
+
+// If fallback is non-null, result type is guaranteed non-null string
+const result = await db.from(Users).select(({ users }) => ({
+  displayName: coalesce(users.nickname, users.username),
+  contactEmail: coalesce(
+    users.alternateEmail,
+    users.email,
+    "no-reply@example.com",
+  ),
+}));
+```
+
+### `nullif`
+
+Returns `null` if `expr` equals `val`, otherwise returns `expr`. Useful for converting sentinel values or empty states into SQL `NULL`.
+
+```typescript
+import { nullif } from "durcno";
+
+const result = await db.from(Users).select(({ users }) => ({
+  status: nullif(users.status, "unknown"),
+}));
+// status is string | null
+```
+
+### `greatest` / `least`
+
+Returns the largest or smallest value among its arguments, skipping `null` values (unless all arguments are `null`). If any argument is guaranteed non-null, `null` is automatically excluded from the inferred return type.
+
+```typescript
+import { greatest, least } from "durcno";
+
+const result = await db.from(Users).select(({ users }) => ({
+  latestActivity: greatest(users.updatedAt, users.createdAt),
+  minScore: least(users.examScore, users.quizScore, 0),
+}));
+```
+
+---
+
+## Null Safety & Return Typing
+
+Durcno SQL functions accurately model PostgreSQL strict function nullability semantics in TypeScript:
+
+- **Strict null**: Passing `null` directly (e.g., `lower(null)`) infers `null`.
+- **Nullable inputs**: If an argument is a nullable column or expression, the return type is automatically inferred as `T | null`.
+- **Guaranteed non-null**: When all arguments are guaranteed non-null (`notNull` columns, literal constants), the return type is inferred as `T`.
+
+---
+
 ## Functions in `orderBy`
 
 All scalar functions can be used with `asc()` / `desc()` in `.orderBy()`:
@@ -376,12 +470,12 @@ import { lower, length, asc, desc } from "durcno";
 // Order by lowercased name
 await db
   .from(Users)
-  .select("*");
+  .select("*")
   .orderBy(({ users }) => asc(lower(users.name)));
 
 // Order by name length descending
 await db
   .from(Users)
-  .select("*");
+  .select("*")
   .orderBy(({ users }) => desc(length(users.name)));
 ```

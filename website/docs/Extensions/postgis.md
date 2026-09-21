@@ -262,7 +262,7 @@ const Properties = table("public", "properties", {
 // Find properties near a given location
 const nearby = await db
   .from(Properties)
-  .select("*");
+  .select("*")
   .where(({ properties }) =>
     and(
       stDWithin(properties.location, [centerLon, centerLat], input.radius),
@@ -287,7 +287,7 @@ const rows = await db.from(Properties).select(({ properties }) => ({
 // 2. In orderBy — order results by proximity
 const byProximity = await db
   .from(Properties)
-  .select("*");
+  .select("*")
   .orderBy(({ properties }) =>
     asc(stDistance(properties.location, [centerLon, centerLat])),
   );
@@ -295,7 +295,7 @@ const byProximity = await db
 // 3. In where via comparison operators
 const withinRange = await db
   .from(Properties)
-  .select("*");
+  .select("*")
   .where(({ properties }) =>
     lt(stDistance(properties.location, [centerLon, centerLat]), 5000),
   ); // closer than 5 km

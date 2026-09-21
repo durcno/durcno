@@ -22,7 +22,7 @@ const findUserByUsername = prepare(
     return db
       .prepare()
       .from(Users)
-      .select("*");
+      .select("*")
       .where(({ users }) => eq(users.username, args.username));
   },
 );
@@ -68,7 +68,7 @@ const findUser = prepare(
     return db
       .prepare()
       .from(Users)
-      .select("*");
+      .select("*")
       .where(({ users }) =>
         and(
           eq(users.username, args.username),
@@ -204,7 +204,7 @@ const findPostsByUser = prepare({ userId: Posts.userId.arg() }, (args) => {
   return db
     .prepare()
     .from(Posts)
-    .select("*");
+    .select("*")
     .where(({ posts }) => eq(posts.userId, args.userId));
 });
 
@@ -330,7 +330,7 @@ const findUsersByAge = prepare({ age: Arg.number() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select("*");
+    .select("*")
     .where(() => sql`age = ${args.age}`);
 });
 

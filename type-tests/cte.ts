@@ -1,5 +1,5 @@
-import type { CtesByName, InferQueryColumns, TableColumn } from "durcno";
-import { asc, count, eq, isIn, lower } from "durcno";
+import type { CtesByName, InferQueryColumns } from "durcno";
+import { add, asc, concat, count, eq, isIn, lower, now, sql } from "durcno";
 import { db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
@@ -116,9 +116,9 @@ const lowerQuery = db
   .from((ctes) => ctes.lowerCte)
   .select("*");
 type LowerRows = Awaited<typeof lowerQuery>;
-Expect<Equal<LowerRows, { lname: string | null }[]>>();
+Expect<Equal<LowerRows, { lname: string }[]>>();
 
-// count() CTE: virtual column should be number | null
+// count() CTE: virtual column should be number
 const countSource = db
   .from(Users)
   .select(({ users }) => ({ total: count(users.id) }));
@@ -130,7 +130,7 @@ const countQuery = db
   .from((ctes) => ctes.countCte)
   .select("*");
 type CountRows = Awaited<typeof countQuery>;
-Expect<Equal<CountRows, { total: number | null }[]>>();
+Expect<Equal<CountRows, { total: number }[]>>();
 
 // Test for cte.test.ts line 387
 const activeUsersForJoin = db.with("activeUsers").as(
@@ -181,3 +181,109 @@ const directCteQuery = db
     >();
     return asc(activeUsers.username);
   });
+
+// -------------------------------------------------------------------------
+// Literal, Sql, and null projection CTEs: InferQueryColumns preserves types
+// -------------------------------------------------------------------------
+
+const literalCteSource = db.from(Users).select(({ users }) => ({
+  userId: users.id,
+  rawStr: "literal_string",
+  rawNum: 42,
+  rawBigInt: 100n,
+  rawBool: true,
+  directNull: null,
+  sqlNull: sql.null,
+  sqlCustom: sql<string>`'custom_sql'`,
+}));
+
+type LiteralCteColumns = InferQueryColumns<
+  "literalCte",
+  typeof literalCteSource
+>;
+Expect<
+  Equal<
+    keyof LiteralCteColumns,
+    | "userId"
+    | "rawStr"
+    | "rawNum"
+    | "rawBigInt"
+    | "rawBool"
+    | "directNull"
+    | "sqlNull"
+    | "sqlCustom"
+  >
+>();
+
+const literalCte = db.with("literalCte").as(literalCteSource);
+const literalCteQuery = db
+  .with(literalCte)
+  .from((ctes) => ctes.literalCte)
+  .select("*");
+
+type LiteralCteRows = Awaited<typeof literalCteQuery>;
+Expect<
+  Equal<
+    LiteralCteRows,
+    {
+      userId: bigint;
+      rawStr: string;
+      rawNum: number;
+      rawBigInt: bigint;
+      rawBool: boolean;
+      directNull: null;
+      sqlNull: null;
+      sqlCustom: string;
+    }[]
+  >
+>();
+
+const cteFnQuery = db
+  .with(literalCte)
+  .from((ctes) => ctes.literalCte)
+  .select(({ literalCte }) => ({
+    lowered: lower(literalCte.rawStr),
+    incremented: add(literalCte.rawBigInt, 1),
+    created: now(),
+  }));
+
+type CteFnRows = Awaited<typeof cteFnQuery>;
+Expect<
+  Equal<
+    CteFnRows,
+    {
+      lowered: string;
+      incremented: number;
+      created: Date;
+    }[]
+  >
+>();
+
+// -------------------------------------------------------------------------
+// SqlFn in CTE: InferQueryColumns preserves non-nullability
+// -------------------------------------------------------------------------
+
+const fnCteSource = db.from(Users).select(({ users }) => ({
+  userCount: count("*"),
+  fullName: concat(users.username, " user"),
+}));
+
+const fnCte = db.with("fnCte").as(fnCteSource);
+const fnCteQuery = db
+  .with(fnCte)
+  .from((ctes) => ctes.fnCte)
+  .select(({ fnCte }) => ({
+    total: fnCte.userCount,
+    name: fnCte.fullName,
+  }));
+
+type FnCteRows = Awaited<typeof fnCteQuery>;
+Expect<
+  Equal<
+    FnCteRows,
+    {
+      total: number;
+      name: string;
+    }[]
+  >
+>();

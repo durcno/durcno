@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, lower, sum } from "durcno";
+import { and, asc, count, desc, eq, gt, gte, lower, sql, sum } from "durcno";
 import { Comments, db, Posts, UserProfiles, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
@@ -249,7 +249,7 @@ _distinctOnNoJoin.innerJoin(Posts, ({ users, posts }) =>
 
 db.from(Users)
   // @ts-expect-error - Cannot use columns from a different table in distinctOn
-  .distinctOn(({ users }) => Posts.title)
+  .distinctOn(() => Posts.title)
   .select("*");
 
 // ============================================================================
@@ -269,7 +269,7 @@ const mixedFnAggQuery = db.from(Users).select(({ users }) => ({
   total: count("*"),
 }));
 type MixedFnAgg = Awaited<typeof mixedFnAggQuery>;
-Expect<Equal<MixedFnAgg, { lowerEmail: string; total: number }[]>>();
+Expect<Equal<MixedFnAgg, { lowerEmail: string | null; total: number }[]>>();
 
 // Type test: multiple aggregates + multiple plain columns
 const multiMixedQuery = db.from(Users).select(({ users }) => ({
@@ -305,7 +305,7 @@ const pureScalarQuery = db.from(Users).select(({ users }) => ({
   lowerEmail: lower(users.email),
 }));
 type PureScalar = Awaited<typeof pureScalarQuery>;
-Expect<Equal<PureScalar, { username: string; lowerEmail: string }[]>>();
+Expect<Equal<PureScalar, { username: string; lowerEmail: string | null }[]>>();
 
 // ============================================================================
 // GROUP BY type tests
@@ -418,3 +418,34 @@ db.from(Users)
   .select("*")
   // @ts-expect-error - callback type is never without a named select
   .groupBy((_view: never, _selects: never) => [Users.type]);
+
+// ============================================================================
+// Null and literal projection type tests
+// ============================================================================
+
+const nullAndLiteralSelectQuery = db.from(Users).select(({ users }) => ({
+  directNull: null,
+  sqlNull: sql.null,
+  rawStr: "hello",
+  rawNum: 100,
+  rawBool: true,
+  lowerNull: lower(null),
+  lowerUsername: lower(users.username),
+  lowerEmail: lower(users.email),
+}));
+type NullAndLiteralSelect = Awaited<typeof nullAndLiteralSelectQuery>;
+Expect<
+  Equal<
+    NullAndLiteralSelect,
+    {
+      directNull: null;
+      sqlNull: null;
+      rawStr: string;
+      rawNum: number;
+      rawBool: boolean;
+      lowerNull: null;
+      lowerUsername: string;
+      lowerEmail: string | null;
+    }[]
+  >
+>();

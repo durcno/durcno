@@ -152,6 +152,7 @@ import {
   innerProduct,
   l1Distance,
   hammingDistance,
+  jaccardDistance,
 } from "durcno";
 ```
 
@@ -164,6 +165,7 @@ import {
 | `innerProduct(col, vector)`    | `col <#> vector` | Inner product (negative)           |
 | `l1Distance(col, vector)`      | `col <+> vector` | Manhattan/Taxicab distance         |
 | `hammingDistance(col, vector)` | `col <~> vector` | Hamming distance (for bit columns) |
+| `jaccardDistance(col, vector)` | `col <%> vector` | Jaccard distance (for bit columns) |
 
 Each function accepts:
 
@@ -185,11 +187,11 @@ const queryVector = [0.1, 0.2, 0.3, ..., 0.5]; // 1536 dimensions
 
 const rows = await db
   .from(Embeddings)
-  .select({
-    id: Embeddings.id,
-    text: Embeddings.text,
-    distance: l2Distance(Embeddings.embedding, queryVector),
-  });
+  .select(({ embeddings }) => ({
+    id: embeddings.id,
+    text: embeddings.text,
+    distance: l2Distance(embeddings.embedding, queryVector),
+  }));
 
 // rows[0].distance → 0.123 (numeric distance)
 ```
@@ -203,7 +205,7 @@ const queryVector = [0.1, 0.2, 0.3, ..., 0.5];
 
 const nearest = await db
   .from(Embeddings)
-  .select("*");
+  .select("*")
   .orderBy(({ embeddings }) => asc(l2Distance(embeddings.embedding, queryVector)))
   .limit(10);
 
@@ -219,7 +221,7 @@ const queryVector = [0.1, 0.2, 0.3, ..., 0.5];
 
 const similar = await db
   .from(Embeddings)
-  .select("*");
+  .select("*")
   .where(({ embeddings }) => lt(l2Distance(embeddings.embedding, queryVector), 0.5));
 
 // Returns all embeddings within 0.5 distance

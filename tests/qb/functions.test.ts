@@ -6,20 +6,27 @@ import {
   abs,
   add,
   ceil,
+  coalesce,
+  concat,
+  concatWs,
   database,
   defineConfig,
   div,
   eq,
   floor,
+  greatest,
+  least,
   left,
   length,
   lower,
   mod,
   mul,
+  nullif,
   position,
   power,
   right,
   round,
+  sql,
   sub,
   trim,
   trunc,
@@ -188,5 +195,100 @@ describe("String and Numeric Functions", () => {
     expect(Number(result[0].multiplied)).toBe(baseValue * 2); // 20
     expect(Number(result[0].divided)).toBe(baseValue / 2); // 5
     expect(Number(result[0].nested)).toBe(baseValue * 2 + (5 - 1)); // 24
+  });
+
+  it("Null-sensitive functions and null projections evaluate correctly", async () => {
+    // Insert a test user with null email and age
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({
+          username: "NullSensUser",
+          email: null,
+          age: null,
+        }),
+      ])
+      .returning({ id: true });
+
+    const result = await db
+      .from(schema.Users)
+      .select(({ users }) => ({
+        directNull: null,
+        sqlNull: sql.null,
+        rawStr: "hello",
+        rawNum: 42,
+        lowNull: lower(null),
+        upNull: upper(null),
+        trimNull: trim(null),
+        lenNull: length(null),
+        absNull: abs(null),
+        addNull: add(5, null),
+        lowEmail: lower(users.email),
+        absAge: abs(users.age),
+      }))
+      .where(({ users }) => eq(users.id, user.id));
+
+    expect(result[0].directNull).toBeNull();
+    expect(result[0].sqlNull).toBeNull();
+    expect(result[0].rawStr).toBe("hello");
+    expect(result[0].rawNum).toBe(42);
+    expect(result[0].lowNull).toBeNull();
+    expect(result[0].upNull).toBeNull();
+    expect(result[0].trimNull).toBeNull();
+    expect(result[0].lenNull).toBeNull();
+    expect(result[0].absNull).toBeNull();
+    expect(result[0].addNull).toBeNull();
+    expect(result[0].lowEmail).toBeNull();
+    expect(result[0].absAge).toBeNull();
+  });
+
+  it("coalesce, nullif, concat, concatWs, and primitive projections evaluate correctly", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({
+          username: "CondUser",
+          email: null,
+          age: 25,
+        }),
+      ])
+      .returning({ id: true });
+
+    const result = await db
+      .from(schema.Users)
+      .select(({ users }) => ({
+        coalEmail: coalesce(users.email, "default@test.com"),
+        coalNull: coalesce(users.email, null),
+        coalId: coalesce(users.id, 0n),
+        nullIfMatch: nullif(users.age, 25),
+        nullIfDiff: nullif(users.age, 30),
+        concatenated: concat(users.username, "!", 42),
+        concatColumn: concat(users.username, "#", users.id),
+        greatestAge: greatest(users.age, 30),
+        leastAge: least(users.age, 20),
+        separated: concatWs(" - ", users.username, "active"),
+        nullSep: concatWs(null, users.username),
+        directBigInt: 100n,
+        directBoolTrue: true,
+        directBoolFalse: false,
+        addBigInt: add(users.id, 10n),
+      }))
+      .where(({ users }) => eq(users.id, user.id));
+
+    expect(result[0].coalEmail).toBe("default@test.com");
+    expect(result[0].coalNull).toBeNull();
+    expect(result[0].coalId).toBe(user.id);
+    expect(typeof result[0].coalId).toBe("bigint");
+    expect(result[0].nullIfMatch).toBeNull();
+    expect(result[0].nullIfDiff).toBe(25);
+    expect(result[0].concatenated).toBe("CondUser!42");
+    expect(result[0].concatColumn).toBe(`CondUser#${user.id}`);
+    expect(result[0].greatestAge).toBe(30);
+    expect(result[0].leastAge).toBe(20);
+    expect(result[0].separated).toBe("CondUser - active");
+    expect(result[0].nullSep).toBeNull();
+    expect(result[0].directBigInt).toBe(100n);
+    expect(result[0].directBoolTrue).toBe(true);
+    expect(result[0].directBoolFalse).toBe(false);
   });
 });

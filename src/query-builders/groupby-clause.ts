@@ -8,7 +8,6 @@ import type {
   TableWithColumns,
 } from "../table";
 import type { Valueof } from "../types";
-import type { AnySelectableSource } from "../virtual-table";
 
 /**
  * Valid group-by item for a query on `TTableWC`.
@@ -20,7 +19,7 @@ import type { AnySelectableSource } from "../virtual-table";
 export type GroupByExpression<
   TTableOrCols extends AnyTableWithColumns | TableAnyColumn,
   TPrepare extends boolean = false,
-  TSelects extends Record<string, AnySelectableSource> | undefined = undefined,
+  TSelects extends Record<string, unknown> | undefined = undefined,
 > =
   | (TTableOrCols extends AnyTableWithColumns
       ? Valueof<TTableOrCols["_"]["columns"]>
@@ -37,13 +36,13 @@ export type GroupByExpression<
 export type StdGroupByExpression = GroupByExpression<
   StdTableWithColumns,
   boolean,
-  Record<string, AnySelectableSource>
+  Record<string, unknown>
 >;
 
 export type AnyGroupByExpression = GroupByExpression<
   TableWithColumns<string, string, Record<string, AnyColumn>>,
   boolean,
-  Record<string, AnySelectableSource>
+  Record<string, unknown>
 >;
 
 /**

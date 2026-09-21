@@ -301,8 +301,8 @@ describe("Raw SQL queries", () => {
   describe("Sql template evaluation", () => {
     it("should lazily evaluate primitive values on toSQL()", () => {
       const s = sql`SELECT ${"hello'world"}, ${42}, ${true}, ${null}`;
-      expect(s.toSQL()).toBe("SELECT 'hello''world', 42, 't', NULL");
-      expect(s.string).toBe("SELECT 'hello''world', 42, 't', NULL");
+      expect(s.toSQL()).toBe("SELECT 'hello''world', 42, TRUE, NULL");
+      expect(s.string).toBe("SELECT 'hello''world', 42, TRUE, NULL");
     });
 
     it("should evaluate column references in toSQL()", () => {

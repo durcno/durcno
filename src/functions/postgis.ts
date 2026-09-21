@@ -3,7 +3,7 @@ import { pointToQuery } from "../filters/postgis";
 import type { Arg, IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { Or } from "../types";
-import { SqlFn } from "./index";
+import { SqlFn, type StrictFnReturn } from "./index";
 
 // ============================================================================
 // ST_Distance (SqlFn — value expression, not a boolean filter)
@@ -24,14 +24,15 @@ import { SqlFn } from "./index";
  */
 export class StDistanceFn<
   TCol extends GeographyPointCol,
-  TPoint extends TCol["ValType"] | Arg<TCol["ValType"]>,
+  TPoint extends TCol["ValType"] | Arg<TCol["ValType"]> | null,
   TSrid extends number | Arg<number> = number,
+  TTsType = StrictFnReturn<[TCol, TPoint], number>,
 > extends SqlFn<
   TCol,
   Or<IsArg<TPoint>, IsArg<TSrid>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly col: TCol,
@@ -40,21 +41,25 @@ export class StDistanceFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "ST_Distance(";
     this.col.toQuery(query, ctx);
     query.sql += ", ";
-    pointToQuery(query, this.point, this.col.toSQL.bind(this.col));
+    if (this.point === null) {
+      query.sql += "NULL";
+    } else {
+      pointToQuery(query, this.point, this.col.toSQL.bind(this.col));
+    }
     query.sql += ")";
   }
 }
@@ -66,7 +71,7 @@ export class StDistanceFn<
  * SQL: `ST_Distance(col, ST_SetSRID(ST_MakePoint(lon, lat), srid))`
  *
  * @param col - The geography point column (must be in query scope).
- * @param point - Raw coordinate or `Arg` placeholder typed as the column's `ValType`.
+ * @param point - Raw coordinate, `Arg` placeholder, or `null`.
  * @param srid - Spatial reference ID (default: 4326).
  *
  * @example
@@ -76,10 +81,44 @@ export class StDistanceFn<
  *   .orderBy(asc(dist))
  *   .where(lt(dist, 5000))
  */
+export function stDistance<TCol extends GeographyPointCol>(
+  col: TCol,
+  point: TCol["ValType"],
+): StDistanceFn<
+  TCol,
+  TCol["ValType"],
+  number,
+  StrictFnReturn<[TCol, TCol["ValType"]], number>
+>;
+export function stDistance<TCol extends GeographyPointCol>(
+  col: TCol,
+  point: Arg<TCol["ValType"]>,
+): StDistanceFn<
+  TCol,
+  Arg<TCol["ValType"]>,
+  number,
+  StrictFnReturn<[TCol, Arg<TCol["ValType"]>], number>
+>;
+export function stDistance<TCol extends GeographyPointCol>(
+  col: TCol,
+  point: null,
+): StDistanceFn<TCol, null, number, null>;
 export function stDistance<
   TCol extends GeographyPointCol,
-  TPoint extends TCol["ValType"] | Arg<TCol["ValType"]>,
+  TPoint extends TCol["ValType"] | Arg<TCol["ValType"]> | null,
   TSrid extends number | Arg<number> = number,
->(col: TCol, point: TPoint): StDistanceFn<TCol, TPoint, TSrid> {
+>(
+  col: TCol,
+  point: TPoint,
+): StDistanceFn<TCol, TPoint, TSrid, StrictFnReturn<[TCol, TPoint], number>>;
+export function stDistance<TCol extends GeographyPointCol>(
+  col: TCol,
+  point: TCol["ValType"] | Arg<TCol["ValType"]> | null,
+): StDistanceFn<
+  TCol,
+  typeof point,
+  number,
+  StrictFnReturn<[TCol, typeof point], number>
+> {
   return new StDistanceFn(col, point);
 }

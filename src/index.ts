@@ -75,7 +75,14 @@ export {
   stWithin,
 } from "./filters/postgis";
 export { contains, endsWith, ilike, like, startsWith } from "./filters/string";
-export { now, SqlFn, uuidv4, uuidv7 } from "./functions";
+export {
+  type InferValueType,
+  now,
+  SqlFn,
+  type StrictFnReturn,
+  uuidv4,
+  uuidv7,
+} from "./functions";
 export {
   avg,
   count,
@@ -85,6 +92,12 @@ export {
   sum,
 } from "./functions/aggregate";
 export { add, div, mul, sub } from "./functions/arithmetic";
+export {
+  coalesce,
+  greatest,
+  least,
+  nullif,
+} from "./functions/conditional";
 export {
   abs,
   ceil,
@@ -104,6 +117,8 @@ export {
 } from "./functions/pgvector";
 export { stDistance } from "./functions/postgis";
 export {
+  concat,
+  concatWs,
   left,
   length,
   lower,
@@ -121,6 +136,11 @@ export {
 export { Arg, prepare } from "./query-builders/prepare";
 export type { QueryContext } from "./query-builders/query";
 export { Query } from "./query-builders/query";
+export type {
+  InferSelectRow,
+  InferSelectValue,
+  SelectableItem,
+} from "./query-builders/select";
 export { sequence } from "./sequence";
 
 import { is } from "./entity";
@@ -141,7 +161,11 @@ export {
   type TableWithColumns,
   table,
 } from "./table";
-export type { AnySubquery, InferQueryColumns } from "./virtual-table";
+export type {
+  AnySelectableSource,
+  AnySubquery,
+  InferQueryColumns,
+} from "./virtual-table";
 
 import { Enum } from "./enumtype";
 import { Sequence } from "./sequence";

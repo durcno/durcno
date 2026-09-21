@@ -11,6 +11,7 @@ import {
   isIn,
   lower,
   ne,
+  sql,
 } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -389,5 +390,39 @@ describe("CTE queries", () => {
     const u2 = rows.find((r) => r.username === "user_cte_2");
     expect(u1?.activeUser).toBe("user_cte_1");
     expect(u2?.activeUser).toBeNull();
+  });
+
+  it("WITH (SELECT literals, raw sql, null) → SELECT from CTE", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([createTestUser({ username: "literal_user", status: "active" })]);
+
+    const literalCte = db.with("literalData").as(
+      db.from(schema.Users).select(({ users }) => ({
+        username: users.username,
+        rawStr: "hello",
+        rawNum: 42,
+        rawBool: true,
+        rawBoolFalse: false,
+        directNull: null,
+        sqlNull: sql.null,
+        sqlCustom: sql<string>`'computed'`,
+      })),
+    );
+
+    const rows = await db
+      .with(literalCte)
+      .from((ctes) => ctes.literalData)
+      .select("*");
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].username).toBe("literal_user");
+    expect(rows[0].rawStr).toBe("hello");
+    expect(rows[0].rawNum).toBe(42);
+    expect(rows[0].rawBool).toBe(true);
+    expect(rows[0].rawBoolFalse).toBe(false);
+    expect(rows[0].directNull).toBeNull();
+    expect(rows[0].sqlNull).toBeNull();
+    expect(rows[0].sqlCustom).toBe("computed");
   });
 });

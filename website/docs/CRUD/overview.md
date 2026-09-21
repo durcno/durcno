@@ -65,7 +65,7 @@ const users = await db.from(Users).select("*");
 
 // Using .then()
 db.from(Users)
-  .select("*");
+  .select("*")
   .then((users) => {
     console.log(users);
   });

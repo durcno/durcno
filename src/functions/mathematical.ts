@@ -1,26 +1,42 @@
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
+import { Sql } from "../sql";
 import type { AnyScalarColumn } from "../table";
 import type { Or } from "../types";
-import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from "./index";
+import {
+  type AnySqlFn,
+  type ExprColumns,
+  type HasArg,
+  SqlFn,
+  type StrictFnReturn,
+} from "./index";
 
 export type NumericExpr =
   | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "numeric" | "float" } })
   | number
-  | Arg<number>;
+  | bigint
+  | Arg<number>
+  | Arg<bigint>
+  | Sql<number>
+  | Sql<bigint>
+  | null;
 
 function appendNumericExpr(
   query: Query,
   expr: NumericExpr,
   ctx?: QueryContext,
 ) {
-  if (typeof expr === "number") {
+  if (expr === null) {
+    query.sql += "NULL";
+  } else if (typeof expr === "number" || typeof expr === "bigint") {
     query.sql += expr.toString();
-  } else if (is(expr, Arg<number>)) {
+  } else if (is(expr, Arg)) {
     query.addArg(expr);
-  } else {
+  } else if (expr instanceof Sql) {
     expr.toQuery(query, ctx);
+  } else {
+    (expr as AnyScalarColumn | AnySqlFn).toQuery(query, ctx);
   }
 }
 
@@ -28,25 +44,28 @@ function appendNumericExpr(
 // abs
 // ============================================================================
 
-export class AbsFn<TExpr extends NumericExpr> extends SqlFn<
+export class AbsFn<
+  TExpr extends NumericExpr,
+  TTsType = StrictFnReturn<[TExpr], number>,
+> extends SqlFn<
   ExprColumns<TExpr>,
   Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(private readonly expr: TExpr) {
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -57,7 +76,9 @@ export class AbsFn<TExpr extends NumericExpr> extends SqlFn<
 }
 
 /** Returns the absolute value of a numeric expression. */
-export function abs<TExpr extends NumericExpr>(expr: TExpr): AbsFn<TExpr> {
+export function abs<TExpr extends NumericExpr>(
+  expr: TExpr,
+): AbsFn<TExpr, StrictFnReturn<[TExpr], number>> {
   return new AbsFn(expr);
 }
 
@@ -67,13 +88,14 @@ export function abs<TExpr extends NumericExpr>(expr: TExpr): AbsFn<TExpr> {
 
 export class ModFn<
   TExpr extends NumericExpr,
-  TN extends number | Arg<number>,
+  TN extends number | bigint | Arg<number> | Arg<bigint> | null,
+  TTsType = StrictFnReturn<[TExpr, TN], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
   Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TN>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly expr: TExpr,
@@ -82,21 +104,23 @@ export class ModFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "mod(";
     appendNumericExpr(query, this.expr, ctx);
     query.sql += ", ";
-    if (is(this.n, Arg<number>)) {
+    if (this.n === null) {
+      query.sql += "NULL";
+    } else if (is(this.n, Arg)) {
       query.addArg(this.n);
     } else {
       query.sql += this.n.toString();
@@ -106,10 +130,10 @@ export class ModFn<
 }
 
 /** Returns the remainder of `expr` divided by `n`. */
-export function mod<TExpr extends NumericExpr, TN extends number | Arg<number>>(
-  expr: TExpr,
-  n: TN,
-): ModFn<TExpr, TN> {
+export function mod<
+  TExpr extends NumericExpr,
+  TN extends number | bigint | Arg<number> | Arg<bigint> | null,
+>(expr: TExpr, n: TN): ModFn<TExpr, TN, StrictFnReturn<[TExpr, TN], number>> {
   return new ModFn(expr, n);
 }
 
@@ -119,13 +143,16 @@ export function mod<TExpr extends NumericExpr, TN extends number | Arg<number>>(
 
 export class RoundFn<
   TExpr extends NumericExpr,
-  TDecimals extends number | Arg<number> | undefined = undefined,
+  TDecimals extends number | Arg<number> | null | undefined = undefined,
+  TTsType = TDecimals extends undefined
+    ? StrictFnReturn<[TExpr], number>
+    : StrictFnReturn<[TExpr, TDecimals], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
   Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TDecimals>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly expr: TExpr,
@@ -134,14 +161,14 @@ export class RoundFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -149,7 +176,9 @@ export class RoundFn<
     appendNumericExpr(query, this.expr, ctx);
     if (this.decimals !== undefined) {
       query.sql += ", ";
-      if (is(this.decimals, Arg<number>)) {
+      if (this.decimals === null) {
+        query.sql += "NULL";
+      } else if (is(this.decimals, Arg<number>)) {
         query.addArg(this.decimals);
       } else {
         query.sql += this.decimals.toString();
@@ -160,10 +189,29 @@ export class RoundFn<
 }
 
 /** Rounds a numeric expression to the nearest integer, or to `decimals` decimal places. */
+export function round<TExpr extends NumericExpr>(
+  expr: TExpr,
+): RoundFn<TExpr, undefined, StrictFnReturn<[TExpr], number>>;
 export function round<
   TExpr extends NumericExpr,
-  TDecimals extends number | Arg<number> | undefined = undefined,
->(expr: TExpr, decimals?: TDecimals): RoundFn<TExpr, TDecimals> {
+  TDecimals extends number | Arg<number> | null,
+>(
+  expr: TExpr,
+  decimals: TDecimals,
+): RoundFn<TExpr, TDecimals, StrictFnReturn<[TExpr, TDecimals], number>>;
+export function round<
+  TExpr extends NumericExpr,
+  TDecimals extends number | Arg<number> | null | undefined = undefined,
+>(
+  expr: TExpr,
+  decimals?: TDecimals,
+): RoundFn<
+  TExpr,
+  TDecimals,
+  TDecimals extends undefined
+    ? StrictFnReturn<[TExpr], number>
+    : StrictFnReturn<[TExpr, TDecimals], number>
+> {
   return new RoundFn(expr, decimals);
 }
 
@@ -171,25 +219,28 @@ export function round<
 // ceil
 // ============================================================================
 
-export class CeilFn<TExpr extends NumericExpr> extends SqlFn<
+export class CeilFn<
+  TExpr extends NumericExpr,
+  TTsType = StrictFnReturn<[TExpr], number>,
+> extends SqlFn<
   ExprColumns<TExpr>,
   Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(private readonly expr: TExpr) {
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -200,7 +251,9 @@ export class CeilFn<TExpr extends NumericExpr> extends SqlFn<
 }
 
 /** Returns the smallest integer greater than or equal to the numeric expression. */
-export function ceil<TExpr extends NumericExpr>(expr: TExpr): CeilFn<TExpr> {
+export function ceil<TExpr extends NumericExpr>(
+  expr: TExpr,
+): CeilFn<TExpr, StrictFnReturn<[TExpr], number>> {
   return new CeilFn(expr);
 }
 
@@ -208,25 +261,28 @@ export function ceil<TExpr extends NumericExpr>(expr: TExpr): CeilFn<TExpr> {
 // floor
 // ============================================================================
 
-export class FloorFn<TExpr extends NumericExpr> extends SqlFn<
+export class FloorFn<
+  TExpr extends NumericExpr,
+  TTsType = StrictFnReturn<[TExpr], number>,
+> extends SqlFn<
   ExprColumns<TExpr>,
   Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(private readonly expr: TExpr) {
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -237,7 +293,9 @@ export class FloorFn<TExpr extends NumericExpr> extends SqlFn<
 }
 
 /** Returns the largest integer less than or equal to the numeric expression. */
-export function floor<TExpr extends NumericExpr>(expr: TExpr): FloorFn<TExpr> {
+export function floor<TExpr extends NumericExpr>(
+  expr: TExpr,
+): FloorFn<TExpr, StrictFnReturn<[TExpr], number>> {
   return new FloorFn(expr);
 }
 
@@ -247,13 +305,16 @@ export function floor<TExpr extends NumericExpr>(expr: TExpr): FloorFn<TExpr> {
 
 export class TruncFn<
   TExpr extends NumericExpr,
-  TDecimals extends number | Arg<number> | undefined = undefined,
+  TDecimals extends number | Arg<number> | null | undefined = undefined,
+  TTsType = TDecimals extends undefined
+    ? StrictFnReturn<[TExpr], number>
+    : StrictFnReturn<[TExpr, TDecimals], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
   Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TDecimals>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly expr: TExpr,
@@ -262,14 +323,14 @@ export class TruncFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -277,7 +338,9 @@ export class TruncFn<
     appendNumericExpr(query, this.expr, ctx);
     if (this.decimals !== undefined) {
       query.sql += ", ";
-      if (is(this.decimals, Arg<number>)) {
+      if (this.decimals === null) {
+        query.sql += "NULL";
+      } else if (is(this.decimals, Arg<number>)) {
         query.addArg(this.decimals);
       } else {
         query.sql += this.decimals.toString();
@@ -288,10 +351,29 @@ export class TruncFn<
 }
 
 /** Truncates a numeric expression to the nearest integer, or to `decimals` decimal places. */
+export function trunc<TExpr extends NumericExpr>(
+  expr: TExpr,
+): TruncFn<TExpr, undefined, StrictFnReturn<[TExpr], number>>;
 export function trunc<
   TExpr extends NumericExpr,
-  TDecimals extends number | Arg<number> | undefined = undefined,
->(expr: TExpr, decimals?: TDecimals): TruncFn<TExpr, TDecimals> {
+  TDecimals extends number | Arg<number> | null,
+>(
+  expr: TExpr,
+  decimals: TDecimals,
+): TruncFn<TExpr, TDecimals, StrictFnReturn<[TExpr, TDecimals], number>>;
+export function trunc<
+  TExpr extends NumericExpr,
+  TDecimals extends number | Arg<number> | null | undefined = undefined,
+>(
+  expr: TExpr,
+  decimals?: TDecimals,
+): TruncFn<
+  TExpr,
+  TDecimals,
+  TDecimals extends undefined
+    ? StrictFnReturn<[TExpr], number>
+    : StrictFnReturn<[TExpr, TDecimals], number>
+> {
   return new TruncFn(expr, decimals);
 }
 
@@ -301,13 +383,14 @@ export function trunc<
 
 export class PowerFn<
   TExpr extends NumericExpr,
-  TN extends number | Arg<number>,
+  TN extends number | bigint | Arg<number> | Arg<bigint> | null,
+  TTsType = StrictFnReturn<[TExpr, TN], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
   Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TN>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly expr: TExpr,
@@ -316,21 +399,23 @@ export class PowerFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "power(";
     appendNumericExpr(query, this.expr, ctx);
     query.sql += ", ";
-    if (is(this.exponent, Arg<number>)) {
+    if (this.exponent === null) {
+      query.sql += "NULL";
+    } else if (is(this.exponent, Arg)) {
       query.addArg(this.exponent);
     } else {
       query.sql += this.exponent.toString();
@@ -342,7 +427,10 @@ export class PowerFn<
 /** Returns the numeric expression raised to the power of `exponent`. */
 export function power<
   TExpr extends NumericExpr,
-  TN extends number | Arg<number>,
->(expr: TExpr, exponent: TN): PowerFn<TExpr, TN> {
+  TN extends number | bigint | Arg<number> | Arg<bigint> | null,
+>(
+  expr: TExpr,
+  exponent: TN,
+): PowerFn<TExpr, TN, StrictFnReturn<[TExpr, TN], number>> {
   return new PowerFn(expr, exponent);
 }

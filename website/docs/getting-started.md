@@ -214,7 +214,7 @@ import { eq } from "durcno";
 
 const users = await db
   .from(Users)
-  .select("*");
+  .select("*")
   .where(({ users }) => eq(users.id, 1n));
 ```
 

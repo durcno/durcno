@@ -1,22 +1,55 @@
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
+import { Sql } from "../sql";
 import type { AnyScalarColumn } from "../table";
 import type { Or } from "../types";
-import { type AnySqlFn, type ExprColumns, type HasArg, SqlFn } from "./index";
+import {
+  type AnySqlFn,
+  type ExprColumns,
+  type HasArg,
+  SqlFn,
+  type StrictFnReturn,
+} from "./index";
 
 export type TextExpr =
   | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "text" } })
   | string
-  | Arg<string>;
+  | Arg<string>
+  | Sql<string>
+  | null;
 
-function appendTextExpr(query: Query, expr: TextExpr, ctx?: QueryContext) {
-  if (typeof expr === "string") {
+export type ConcatOperand =
+  | AnyScalarColumn
+  | AnySqlFn
+  | Sql
+  | Arg<any>
+  | string
+  | number
+  | bigint
+  | boolean
+  | null;
+
+export type HasArgInTuple<TTuple extends readonly unknown[]> =
+  TTuple extends readonly [infer Head, ...infer Tail]
+    ? Or<Or<IsArg<Head>, HasArg<Head>>, HasArgInTuple<Tail>>
+    : false;
+
+function appendTextExpr(query: Query, expr: ConcatOperand, ctx?: QueryContext) {
+  if (expr === null) {
+    query.sql += "NULL";
+  } else if (typeof expr === "string") {
     query.sql += `'${expr.replace(/'/g, "''")}'`;
-  } else if (is(expr, Arg<string>)) {
+  } else if (typeof expr === "number" || typeof expr === "bigint") {
+    query.sql += expr.toString();
+  } else if (typeof expr === "boolean") {
+    query.sql += expr ? "TRUE" : "FALSE";
+  } else if (is(expr, Arg)) {
     query.addArg(expr);
-  } else {
+  } else if (expr instanceof Sql) {
     expr.toQuery(query, ctx);
+  } else {
+    (expr as AnyScalarColumn | AnySqlFn).toQuery(query, ctx);
   }
 }
 
@@ -24,25 +57,28 @@ function appendTextExpr(query: Query, expr: TextExpr, ctx?: QueryContext) {
 // length
 // ============================================================================
 
-export class LengthFn<TExpr extends TextExpr> extends SqlFn<
+export class LengthFn<
+  TExpr extends TextExpr,
+  TTsType = StrictFnReturn<[TExpr], number>,
+> extends SqlFn<
   ExprColumns<TExpr>,
   Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(private readonly expr: TExpr) {
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -53,7 +89,9 @@ export class LengthFn<TExpr extends TextExpr> extends SqlFn<
 }
 
 /** Returns the number of characters in a string expression. */
-export function length<TExpr extends TextExpr>(expr: TExpr): LengthFn<TExpr> {
+export function length<TExpr extends TextExpr>(
+  expr: TExpr,
+): LengthFn<TExpr, StrictFnReturn<[TExpr], number>> {
   return new LengthFn(expr);
 }
 
@@ -61,25 +99,28 @@ export function length<TExpr extends TextExpr>(expr: TExpr): LengthFn<TExpr> {
 // lower
 // ============================================================================
 
-export class LowerFn<TExpr extends TextExpr> extends SqlFn<
+export class LowerFn<
+  TExpr extends TextExpr,
+  TTsType = StrictFnReturn<[TExpr], string>,
+> extends SqlFn<
   ExprColumns<TExpr>,
   Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "text",
-  string
+  TTsType
 > {
   constructor(private readonly expr: TExpr) {
     super();
   }
 
-  toDriverValue(value: string | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: string | null): string {
-    return SqlFn._stringToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._stringToSQL(value as string | null);
   }
-  fromDriverValue(value: unknown): string | null {
-    return SqlFn._stringFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._stringFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -90,7 +131,9 @@ export class LowerFn<TExpr extends TextExpr> extends SqlFn<
 }
 
 /** Converts a string expression to lower case. */
-export function lower<TExpr extends TextExpr>(expr: TExpr): LowerFn<TExpr> {
+export function lower<TExpr extends TextExpr>(
+  expr: TExpr,
+): LowerFn<TExpr, StrictFnReturn<[TExpr], string>> {
   return new LowerFn(expr);
 }
 
@@ -98,25 +141,28 @@ export function lower<TExpr extends TextExpr>(expr: TExpr): LowerFn<TExpr> {
 // upper
 // ============================================================================
 
-export class UpperFn<TExpr extends TextExpr> extends SqlFn<
+export class UpperFn<
+  TExpr extends TextExpr,
+  TTsType = StrictFnReturn<[TExpr], string>,
+> extends SqlFn<
   ExprColumns<TExpr>,
   Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "text",
-  string
+  TTsType
 > {
   constructor(private readonly expr: TExpr) {
     super();
   }
 
-  toDriverValue(value: string | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: string | null): string {
-    return SqlFn._stringToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._stringToSQL(value as string | null);
   }
-  fromDriverValue(value: unknown): string | null {
-    return SqlFn._stringFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._stringFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -127,7 +173,9 @@ export class UpperFn<TExpr extends TextExpr> extends SqlFn<
 }
 
 /** Converts a string expression to upper case. */
-export function upper<TExpr extends TextExpr>(expr: TExpr): UpperFn<TExpr> {
+export function upper<TExpr extends TextExpr>(
+  expr: TExpr,
+): UpperFn<TExpr, StrictFnReturn<[TExpr], string>> {
   return new UpperFn(expr);
 }
 
@@ -135,25 +183,28 @@ export function upper<TExpr extends TextExpr>(expr: TExpr): UpperFn<TExpr> {
 // trim
 // ============================================================================
 
-export class TrimFn<TExpr extends TextExpr> extends SqlFn<
+export class TrimFn<
+  TExpr extends TextExpr,
+  TTsType = StrictFnReturn<[TExpr], string>,
+> extends SqlFn<
   ExprColumns<TExpr>,
   Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "text",
-  string
+  TTsType
 > {
   constructor(private readonly expr: TExpr) {
     super();
   }
 
-  toDriverValue(value: string | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: string | null): string {
-    return SqlFn._stringToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._stringToSQL(value as string | null);
   }
-  fromDriverValue(value: unknown): string | null {
-    return SqlFn._stringFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._stringFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -164,7 +215,9 @@ export class TrimFn<TExpr extends TextExpr> extends SqlFn<
 }
 
 /** Removes leading and trailing whitespace from a string expression. */
-export function trim<TExpr extends TextExpr>(expr: TExpr): TrimFn<TExpr> {
+export function trim<TExpr extends TextExpr>(
+  expr: TExpr,
+): TrimFn<TExpr, StrictFnReturn<[TExpr], string>> {
   return new TrimFn(expr);
 }
 
@@ -174,42 +227,45 @@ export function trim<TExpr extends TextExpr>(expr: TExpr): TrimFn<TExpr> {
 
 export class LeftFn<
   TExpr extends TextExpr,
-  THasArg extends boolean = false,
+  TN extends number | Arg<number> | null = number,
+  TTsType = StrictFnReturn<[TExpr, TN], string>,
 > extends SqlFn<
   ExprColumns<TExpr>,
   Or<
     TExpr extends string | Arg<string> ? IsArg<TExpr> : HasArg<TExpr>,
-    THasArg
+    IsArg<TN>
   >,
   "scalar",
   "text",
-  string
+  TTsType
 > {
   constructor(
     private readonly expr: TExpr,
-    private readonly n: number | Arg<number>,
+    private readonly n: TN,
   ) {
     super();
   }
 
-  toDriverValue(value: string | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: string | null): string {
-    return SqlFn._stringToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._stringToSQL(value as string | null);
   }
-  fromDriverValue(value: unknown): string | null {
-    return SqlFn._stringFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._stringFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "left(";
     appendTextExpr(query, this.expr, ctx);
     query.sql += ", ";
-    if (is(this.n, Arg)) {
+    if (this.n === null) {
+      query.sql += "NULL";
+    } else if (is(this.n, Arg)) {
       query.addArg(this.n);
     } else {
-      query.sql += this.n.toString();
+      query.sql += (this.n as number).toString();
     }
     query.sql += ")";
   }
@@ -219,15 +275,23 @@ export class LeftFn<
 export function left<TExpr extends TextExpr>(
   expr: TExpr,
   n: number,
-): LeftFn<TExpr, false>;
+): LeftFn<TExpr, number, StrictFnReturn<[TExpr, number], string>>;
 export function left<TExpr extends TextExpr>(
   expr: TExpr,
   n: Arg<number>,
-): LeftFn<TExpr, true>;
+): LeftFn<TExpr, Arg<number>, StrictFnReturn<[TExpr, Arg<number>], string>>;
 export function left<TExpr extends TextExpr>(
   expr: TExpr,
-  n: number | Arg<number>,
-): LeftFn<TExpr, boolean> {
+  n: null,
+): LeftFn<TExpr, null, null>;
+export function left<
+  TExpr extends TextExpr,
+  TN extends number | Arg<number> | null,
+>(expr: TExpr, n: TN): LeftFn<TExpr, TN, StrictFnReturn<[TExpr, TN], string>>;
+export function left<TExpr extends TextExpr>(
+  expr: TExpr,
+  n: number | Arg<number> | null,
+): LeftFn<TExpr, typeof n, StrictFnReturn<[TExpr, typeof n], string>> {
   return new LeftFn(expr, n);
 }
 
@@ -237,42 +301,45 @@ export function left<TExpr extends TextExpr>(
 
 export class RightFn<
   TExpr extends TextExpr,
-  THasArg extends boolean = false,
+  TN extends number | Arg<number> | null = number,
+  TTsType = StrictFnReturn<[TExpr, TN], string>,
 > extends SqlFn<
   ExprColumns<TExpr>,
   Or<
     TExpr extends string | Arg<string> ? IsArg<TExpr> : HasArg<TExpr>,
-    THasArg
+    IsArg<TN>
   >,
   "scalar",
   "text",
-  string
+  TTsType
 > {
   constructor(
     private readonly expr: TExpr,
-    private readonly n: number | Arg<number>,
+    private readonly n: TN,
   ) {
     super();
   }
 
-  toDriverValue(value: string | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: string | null): string {
-    return SqlFn._stringToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._stringToSQL(value as string | null);
   }
-  fromDriverValue(value: unknown): string | null {
-    return SqlFn._stringFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._stringFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "right(";
     appendTextExpr(query, this.expr, ctx);
     query.sql += ", ";
-    if (is(this.n, Arg)) {
+    if (this.n === null) {
+      query.sql += "NULL";
+    } else if (is(this.n, Arg)) {
       query.addArg(this.n);
     } else {
-      query.sql += this.n.toString();
+      query.sql += (this.n as number).toString();
     }
     query.sql += ")";
   }
@@ -282,15 +349,23 @@ export class RightFn<
 export function right<TExpr extends TextExpr>(
   expr: TExpr,
   n: number,
-): RightFn<TExpr, false>;
+): RightFn<TExpr, number, StrictFnReturn<[TExpr, number], string>>;
 export function right<TExpr extends TextExpr>(
   expr: TExpr,
   n: Arg<number>,
-): RightFn<TExpr, true>;
+): RightFn<TExpr, Arg<number>, StrictFnReturn<[TExpr, Arg<number>], string>>;
 export function right<TExpr extends TextExpr>(
   expr: TExpr,
-  n: number | Arg<number>,
-): RightFn<TExpr, boolean> {
+  n: null,
+): RightFn<TExpr, null, null>;
+export function right<
+  TExpr extends TextExpr,
+  TN extends number | Arg<number> | null,
+>(expr: TExpr, n: TN): RightFn<TExpr, TN, StrictFnReturn<[TExpr, TN], string>>;
+export function right<TExpr extends TextExpr>(
+  expr: TExpr,
+  n: number | Arg<number> | null,
+): RightFn<TExpr, typeof n, StrictFnReturn<[TExpr, typeof n], string>> {
   return new RightFn(expr, n);
 }
 
@@ -300,7 +375,8 @@ export function right<TExpr extends TextExpr>(
 
 export class PositionFn<
   TExpr extends TextExpr,
-  TSearch extends string | Arg<string>,
+  TSearch extends string | Arg<string> | null,
+  TTsType = StrictFnReturn<[TExpr, TSearch], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
   Or<
@@ -309,7 +385,7 @@ export class PositionFn<
   >,
   "scalar",
   "numeric",
-  number
+  TTsType
 > {
   constructor(
     private readonly expr: TExpr,
@@ -318,21 +394,23 @@ export class PositionFn<
     super();
   }
 
-  toDriverValue(value: number | null): unknown {
+  toDriverValue(value: TTsType | null): unknown {
     return value;
   }
-  toSQLValue(value: number | null): string {
-    return SqlFn._numericToSQL(value);
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._numericToSQL(value as number | null);
   }
-  fromDriverValue(value: unknown): number | null {
-    return SqlFn._numericFromDriver(value);
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._numericFromDriver(value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "strpos(";
     appendTextExpr(query, this.expr, ctx);
     query.sql += ", ";
-    if (is(this.search, Arg<string>)) {
+    if (this.search === null) {
+      query.sql += "NULL";
+    } else if (is(this.search, Arg<string>)) {
       query.addArg(this.search);
     } else {
       query.sql += `'${this.search.replace(/'/g, "''")}'`;
@@ -344,7 +422,121 @@ export class PositionFn<
 /** Returns the 1-based position of `search` within a string expression, or 0 if not found. */
 export function position<
   TExpr extends TextExpr,
-  TSearch extends string | Arg<string>,
->(expr: TExpr, search: TSearch): PositionFn<TExpr, TSearch> {
+  TSearch extends string | Arg<string> | null,
+>(
+  expr: TExpr,
+  search: TSearch,
+): PositionFn<TExpr, TSearch, StrictFnReturn<[TExpr, TSearch], number>> {
   return new PositionFn(expr, search);
+}
+
+// ============================================================================
+// concat
+// ============================================================================
+
+export class ConcatFn<
+  TExprs extends readonly ConcatOperand[],
+  THasArg extends boolean = HasArgInTuple<TExprs>,
+> extends SqlFn<
+  ExprColumns<TExprs[number]>,
+  THasArg,
+  "scalar",
+  "text",
+  string
+> {
+  constructor(private readonly exprs: TExprs) {
+    super();
+  }
+
+  toDriverValue(value: string | null): unknown {
+    return value;
+  }
+  toSQLValue(value: string | null): string {
+    return SqlFn._stringToSQL(value);
+  }
+  fromDriverValue(value: unknown): string | null {
+    return SqlFn._stringFromDriver(value);
+  }
+
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "concat(";
+    this.exprs.forEach((expr, i) => {
+      appendTextExpr(query, expr, ctx);
+      if (i < this.exprs.length - 1) query.sql += ", ";
+    });
+    query.sql += ")";
+  }
+}
+
+/** Concatenates the text representations of all arguments into a single string. NULL arguments are ignored. */
+export function concat<
+  TExprs extends readonly [ConcatOperand, ...ConcatOperand[]],
+>(...exprs: TExprs): ConcatFn<TExprs, HasArgInTuple<TExprs>> {
+  return new ConcatFn(exprs);
+}
+
+// ============================================================================
+// concat_ws
+// ============================================================================
+
+export class ConcatWsFn<
+  TSep extends ConcatOperand,
+  TExprs extends readonly ConcatOperand[],
+  TTsType = StrictFnReturn<[TSep], string>,
+  THasArg extends boolean = Or<
+    Or<IsArg<TSep>, HasArg<TSep>>,
+    HasArgInTuple<TExprs>
+  >,
+> extends SqlFn<
+  ExprColumns<TSep> | ExprColumns<TExprs[number]>,
+  THasArg,
+  "scalar",
+  "text",
+  TTsType
+> {
+  constructor(
+    private readonly sep: TSep,
+    private readonly exprs: TExprs,
+  ) {
+    super();
+  }
+
+  toDriverValue(value: TTsType | null): unknown {
+    return value;
+  }
+  toSQLValue(value: TTsType | null): string {
+    return SqlFn._stringToSQL(value as string | null);
+  }
+  fromDriverValue(value: unknown): TTsType | null {
+    return SqlFn._stringFromDriver(value) as TTsType | null;
+  }
+
+  toQuery(query: Query, ctx?: QueryContext): void {
+    query.sql += "concat_ws(";
+    appendTextExpr(query, this.sep, ctx);
+    if (this.exprs.length > 0) {
+      query.sql += ", ";
+      this.exprs.forEach((expr, i) => {
+        appendTextExpr(query, expr, ctx);
+        if (i < this.exprs.length - 1) query.sql += ", ";
+      });
+    }
+    query.sql += ")";
+  }
+}
+
+/** Concatenates arguments with a separator. If the separator is NULL, the result is NULL. */
+export function concatWs<
+  TSep extends ConcatOperand,
+  TExprs extends readonly [ConcatOperand, ...ConcatOperand[]],
+>(
+  sep: TSep,
+  ...exprs: TExprs
+): ConcatWsFn<
+  TSep,
+  TExprs,
+  StrictFnReturn<[TSep], string>,
+  Or<Or<IsArg<TSep>, HasArg<TSep>>, HasArgInTuple<TExprs>>
+> {
+  return new ConcatWsFn(sep, exprs);
 }

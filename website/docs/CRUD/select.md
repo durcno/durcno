@@ -73,6 +73,38 @@ const users = await db.from(Users).select(({ users }) => ({
 // Type: { name: string; mail: string | null }[]
 ```
 
+### Selecting Expressions, Literals & Raw SQL
+
+The `.select()` object projection can include more than just columns. You can project:
+
+- **SQL functions**: `lower(users.username)`, `count("*")`, `coalesce(...)`, etc.
+- **Literal constants**: strings, numbers, bigints, and booleans
+- **Literal null**: `null` or `sql.null`
+- **Raw SQL expressions**: `sql<T>` template fragments with typed return inference
+
+```typescript
+import { sql, lower, coalesce } from "durcno";
+
+const results = await db.from(Users).select(({ users }) => ({
+  id: users.id,
+  normalizedEmail: lower(coalesce(users.email, "")),
+  greeting: "Welcome",
+  statusFlag: true,
+  retryCount: 0,
+  fallbackDate: null,
+  computedScore: sql<number>`${users.points} * 1.5`,
+}));
+// Type: {
+//   id: bigint;
+//   normalizedEmail: string;
+//   greeting: string;
+//   statusFlag: boolean;
+//   retryCount: number;
+//   fallbackDate: null;
+//   computedScore: number;
+// }[]
+```
+
 ## Filtering with WHERE
 
 Use `.where()` with a callback receiving the tables view to filter results. See [Filters](../Expressions/filters.md) for all available operators.
@@ -83,13 +115,13 @@ import { eq, and, gte } from "durcno";
 // Simple equality filter
 const admins = await db
   .from(Users)
-  .select("*");
+  .select("*")
   .where(({ users }) => eq(users.type, "admin"));
 
 // Multiple conditions with AND
 const recentAdmins = await db
   .from(Users)
-  .select("*");
+  .select("*")
   .where(({ users }) =>
     and(eq(users.type, "admin"), gte(users.createdAt, new Date("2024-01-01"))),
   );
@@ -105,13 +137,13 @@ import { asc, desc } from "durcno";
 // Sort by username ascending
 const users = await db
   .from(Users)
-  .select("*");
+  .select("*")
   .orderBy(({ users }) => asc(users.username));
 
 // Sort by creation date descending (newest first)
 const recentUsers = await db
   .from(Users)
-  .select("*");
+  .select("*")
   .orderBy(({ users }) => desc(users.createdAt));
 ```
 
@@ -123,13 +155,13 @@ Return an array from `.orderBy()` to sort by multiple columns:
 // Sort by type ascending, then by username ascending
 const sortedUsers = await db
   .from(Users)
-  .select("*");
+  .select("*")
   .orderBy(({ users }) => [asc(users.type), asc(users.username)]);
 
 // Sort by type ascending, then by creation date descending
 const mixedSort = await db
   .from(Users)
-  .select("*");
+  .select("*")
   .orderBy(({ users }) => [asc(users.type), desc(users.createdAt)]);
 ```
 
@@ -223,7 +255,7 @@ const activeUsers = db.with("activeUsers").as(
 const rows = await db
   .with(activeUsers)
   .from((ctes) => ctes.activeUsers)
-  .select("*");
+  .select("*")
   .orderBy(({ activeUsers }) => asc(activeUsers.username));
 
 // Type: { id: bigint; username: string }[]
@@ -370,7 +402,7 @@ import { asc } from "durcno";
 const onePerType = await db
   .from(Users)
   .distinctOn(({ users }) => users.type)
-  .select("*");
+  .select("*")
   .orderBy(({ users }) => asc(users.type));
 ```
 
@@ -383,7 +415,7 @@ Pass an array of columns to `.distinctOn()` for compound distinct expressions:
 const onePerTypeAndStatus = await db
   .from(Users)
   .distinctOn(({ users }) => [users.type, users.status])
-  .select("*");
+  .select("*")
   .orderBy(({ users }) => [asc(users.type), asc(users.status)]);
 ```
 

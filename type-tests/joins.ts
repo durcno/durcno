@@ -678,7 +678,7 @@ Expect<
     LeftJoinSqlFn,
     {
       username: string;
-      lowerPostTitle: string;
+      lowerPostTitle: string | null;
     }[]
   >
 >();

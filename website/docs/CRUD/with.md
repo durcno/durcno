@@ -35,7 +35,7 @@ Attach the CTE to an outer query with `db.with(cte)` and choose the CTE source u
 const rows = await db
   .with(activeUsers)
   .from((ctes) => ctes.activeUsers)
-  .select("*");
+  .select("*")
   .orderBy(({ activeUsers }) => asc(activeUsers.username));
 
 // Type: { id: bigint; username: string }[]
