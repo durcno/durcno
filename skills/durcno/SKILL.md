@@ -11,22 +11,22 @@ A PostgreSQL query builder and migration manager for TypeScript.
 
 Full reference documentation is symlinked in the `docs/` directory alongside this skill file. Read the relevant doc files **before** writing or reviewing any Durcno code. The `package.json` file is also symlinked alongside, so that the package metadata is available for inspection.
 
-| Path                      | Contents                                 |
-| ------------------------- | ---------------------------------------- |
-| `docs/intro.md`           | Overview and core concepts               |
-| `docs/getting-started.md` | Installation and first steps             |
-| `docs/configuration.md`   | `defineConfig` options                   |
-| `docs/connectors.md`      | Database connector setup                 |
-| `docs/cli.md`             | CLI commands reference                   |
-| `docs/Schema/`            | Table, column, enum, index definitions   |
-| `docs/CRUD/`              | Select, insert, update, delete queries   |
-| `docs/Expressions/`       | Functions and filters                    |
-| `docs/Migrations/`        | Migration generation, applying, rollback |
-| `docs/Validation/`        | Runtime validators                       |
-| `docs/Guides/`            | How-to guides and recipes                |
-| `docs/Advanced/`          | Query logging, etc                       |
-| `docs/Conventions/`       | Naming and casing conventions            |
-| `docs/Extensions/`        | PostGIS and pgvector extensions          |
+| Path                      | Contents                                    |
+| ------------------------- | ------------------------------------------- |
+| `docs/intro.md`           | Overview and core concepts                  |
+| `docs/getting-started.md` | Installation and first steps                |
+| `docs/configuration.md`   | `defineConfig` options                      |
+| `docs/connectors.md`      | Database connector setup                    |
+| `docs/cli.md`             | CLI commands reference                      |
+| `docs/Schema/`            | Table, column, enum, index, constraint, etc |
+| `docs/CRUD/`              | Select, insert, update, delete, etc queries |
+| `docs/Expressions/`       | Functions and filters                       |
+| `docs/Migrations/`        | Migration generation, applying, rollback    |
+| `docs/Validation/`        | Runtime data validators                     |
+| `docs/Guides/`            | How-to guides and recipes                   |
+| `docs/Advanced/`          | Query logging, etc                          |
+| `docs/Conventions/`       | Naming and casing conventions               |
+| `docs/Extensions/`        | PostGIS and pgvector extensions             |
 
 ## Configuration
 
@@ -46,7 +46,18 @@ export default defineConfig({
 
 ```typescript
 // db/schema.ts
-import { table, pk, varchar, enumtype, notNull, unique } from "durcno";
+import {
+  table,
+  pk,
+  varchar,
+  bigint,
+  enumtype,
+  notNull,
+  unique,
+  relations,
+  many,
+  fk,
+} from "durcno";
 
 export { Migrations } from "durcno"; // Required for migration tracking
 
@@ -58,6 +69,20 @@ export const Users = table("public", "users", {
   email: varchar({ length: 255, notNull, unique }),
   type: UserTypeEnm.enumed({ notNull }),
 });
+
+export const UsersRelations = relations(Users, () => ({
+  posts: many(Posts, Posts.userId),
+}));
+
+export const Posts = table("public", "posts", {
+  id: pk(),
+  userId: bigint({ notNull }).references(() => Users.id),
+  title: varchar({ length: 255, notNull }),
+});
+
+export const PostsRelations = relations(Posts, () => ({
+  author: fk(Posts.userId, Users),
+}));
 ```
 
 ## Database Connection
@@ -76,6 +101,15 @@ export const db = database(schema, config);
 ```typescript
 // Select all
 const users = await db.from(Users).select("*");
+// Type: { id: bigint; name: string; email: string; type: "admin" | "user" }[]
+
+// Relational query
+const usersWithPosts = await db.query(Users).findMany({
+  with: {
+    posts: {},
+  },
+});
+// Type: { id: bigint; name: string; email: string; type: "admin" | "user"; posts: { id: bigint; userId: bigint; title: string }[] }[]
 
 // Insert
 await db
