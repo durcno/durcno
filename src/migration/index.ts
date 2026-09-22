@@ -29,6 +29,7 @@
  * ```
  */
 
+export { identity, notNull, primaryKey, unique } from "../columns/common";
 export { sql } from "../sql";
 export { MIGRATION_NAME_REGEX } from "./consts";
 export {

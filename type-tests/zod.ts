@@ -7,6 +7,7 @@ import {
   table,
   timestamp,
   type UuidVersion,
+  unique,
   uuid,
   varchar,
 } from "durcno";
@@ -20,7 +21,7 @@ const TestTable = table("public", "testTable", {
   id: pk(), // auto-generated, should not be in insert schema
   requiredField: varchar({ length: 50, notNull }),
   optionalField: varchar({ length: 100 }), // nullable, should be optional
-  uniqueField: varchar({ length: 30 }),
+  uniqueField: varchar({ length: 30, unique }),
   booleanField: boolean({ notNull }),
   enumField: TestEnum.enumed({ notNull }),
   timestampField: timestamp({}).default(now()), // has default, should be optional

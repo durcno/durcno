@@ -1,4 +1,4 @@
-import { database, eq, integer, pk, table, varchar } from "durcno";
+import { database, eq, integer, notNull, pk, table, varchar } from "durcno";
 import { type Equal, Expect, testSetup } from "./utils";
 
 // Setup test schema
@@ -10,7 +10,7 @@ const Users = table("public", "users", {
 
 const Posts = table("public", "posts", {
   id: pk(),
-  userId: integer({ notNull: true }),
+  userId: integer({ notNull }),
   title: varchar({ length: 200 }),
   content: varchar({ length: 1000 }),
 });

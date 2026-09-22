@@ -11,6 +11,7 @@ export {
   Column,
   type ColumnConfig,
   Dimension,
+  identity,
   notNull,
   primaryKey,
   tuple,
