@@ -21,6 +21,8 @@ Aggregate functions collapse multiple rows into a single value. When you mix agg
 | `avg(col)`           | `avg(col)`            | `ColType \| null` | Average value; type follows the column; `null` if empty                  |
 | `min(col)`           | `min(col)`            | `ColType \| null` | Minimum value; type follows the column                                   |
 | `max(col)`           | `max(col)`            | `ColType \| null` | Maximum value; type follows the column                                   |
+| `jsonAgg(expr)`      | `json_agg(expr)`      | `T[] \| null`     | Aggregates values or objects into a JSON array; `null` if 0 rows match   |
+| `jsonbAgg(expr)`     | `jsonb_agg(expr)`     | `T[] \| null`     | Aggregates values or objects into a JSONB array; `null` if 0 rows match  |
 
 ### `count`
 
@@ -122,6 +124,39 @@ await db
   .from(Orders)
   .select(({ orders }) => ({ status: orders.status, total: count("*") }))
   .having(() => gt(count("*"), 5));
+```
+
+### Filter and OrderBy Modifiers (`FILTER (WHERE ...)` and `ORDER BY`)
+
+All aggregate functions inherit from `AggregateSqlFn` and support inline `.filter()` and `.orderBy()` modifiers:
+
+```typescript
+import {
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  jsonAgg,
+  jsonBuildObject,
+  sum,
+} from "durcno";
+
+const stats = await db.from(Orders).select(({ orders }) => ({
+  // SQL: count(id) FILTER (WHERE status = 'completed')
+  completedCount: count(orders.id).filter(eq(orders.status, "completed")),
+
+  // SQL: sum(amount) FILTER (WHERE amount > 100)
+  largeOrdersTotal: sum(orders.amount).filter(gt(orders.amount, 100)),
+
+  // SQL: json_agg(json_build_object('id', id, 'amount', amount) ORDER BY amount DESC)
+  sortedOrders: jsonAgg(
+    jsonBuildObject({
+      id: orders.id,
+      amount: orders.amount,
+    }),
+  ).orderBy(desc(orders.amount)),
+}));
 ```
 
 ---
@@ -397,16 +432,17 @@ const result = await db.from(Users).select(({ users }) => ({
 
 Conditional functions evaluate expressions based on conditions or nullability. Operands can be columns, SQL functions, raw `sql` expressions, prepared `Arg`s, primitive literals (`string`, `number`, `bigint`, `boolean`), or `null`.
 
-| Function             | SQL                 | Returns     | Description                                                                   |
-| -------------------- | ------------------- | ----------- | ----------------------------------------------------------------------------- |
-| `coalesce(...exprs)` | `coalesce(...)`     | Inferred    | Returns the first non-null argument; drops `null` if any argument is non-null |
-| `nullif(expr, val)`  | `nullif(expr, val)` | `T \| null` | Returns `null` if `expr = val`, otherwise returns `expr`                      |
-| `greatest(...exprs)` | `greatest(...)`     | Inferred    | Returns the largest value; skips nulls; drops `null` if any is non-null       |
-| `least(...exprs)`    | `least(...)`        | Inferred    | Returns the smallest value; skips nulls; drops `null` if any is non-null      |
+| Function              | SQL                     | Returns     | Description                                                                    |
+| --------------------- | ----------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `coalesce(...exprs)`  | `coalesce(...)`         | Inferred    | Returns the first non-null argument; drops `null` if any argument is non-null  |
+| `nullif(expr, val)`   | `nullif(expr, val)`     | `T \| null` | Returns `null` if `expr = val`, otherwise returns `expr`                       |
+| `greatest(...exprs)`  | `greatest(...)`         | Inferred    | Returns the largest value; skips nulls; drops `null` if any is non-null        |
+| `least(...exprs)`     | `least(...)`            | Inferred    | Returns the smallest value; skips nulls; drops `null` if any is non-null       |
+| `caseWhen(cond, res)` | `CASE WHEN ... THEN ..` | Inferred    | Builds a type-safe SQL CASE expression with `.when()`, `.else()`, and `.end()` |
 
 ### `coalesce`
 
-Returns the first non-null expression among its arguments. Durcno evaluates argument nullability from left to right: if any argument is guaranteed non-null, `null` is automatically excluded from the inferred return type.
+Returns the first non-null expression among its arguments. Durcno evaluates argument nullability from left to right: if any argument is guaranteed non-null, `null` is automatically excluded from the inferred return type. When used with arrays (such as `coalesce(jsonAgg(...), [])`), `coalesce` narrows the type to a guaranteed non-null array `T[]`.
 
 ```typescript
 import { coalesce } from "durcno";
@@ -420,6 +456,44 @@ const result = await db.from(Users).select(({ users }) => ({
     "no-reply@example.com",
   ),
 }));
+```
+
+### `caseWhen`
+
+Constructs a type-safe `CASE WHEN ... THEN ... ELSE ... END` expression. Durcno infers the exact **union (`|`)** type across all branch cases, preserving string and numeric literals without widening them to broad primitives.
+
+Both `.else(...)` and `.end()` are **optional**: in PostgreSQL, omitting the `ELSE` clause implicitly returns `NULL` when no conditions match, so Durcno infers `Branches | null`.
+
+```typescript
+import { caseWhen, eq, isNull, jsonBuildObject } from "durcno";
+
+// Inferred return type: "Administrator" | "Staff" | "Member"
+const usersWithRole = await db.from(Users).select(({ users }) => ({
+  username: users.username,
+  badge: caseWhen(eq(users.type, "admin"), "Administrator")
+    .when(eq(users.type, "moderator"), "Staff")
+    .else("Member"),
+}));
+
+// Direct caseWhen without .else() or .end() -> inferred as "Admin" | null
+const adminsOnly = await db.from(Users).select(({ users }) => ({
+  username: users.username,
+  role: caseWhen(eq(users.type, "admin"), "Admin"),
+}));
+
+// Returning null on unmatched LEFT JOIN -> inferred as null | { id: bigint; username: string }
+const postsWithAuthor = await db
+  .from(Posts)
+  .leftJoin(Users, ({ posts, users }) => eq(users.id, posts.userId))
+  .select(({ posts, users }) => ({
+    title: posts.title,
+    author: caseWhen(isNull(users.id), null).else(
+      jsonBuildObject({
+        id: users.id,
+        username: users.username,
+      }),
+    ),
+  }));
 ```
 
 ### `nullif`
@@ -445,6 +519,113 @@ import { greatest, least } from "durcno";
 const result = await db.from(Users).select(({ users }) => ({
   latestActivity: greatest(users.updatedAt, users.createdAt),
   minScore: least(users.examScore, users.quizScore, 0),
+}));
+```
+
+---
+
+## JSON & JSONB Functions
+
+Durcno provides full type inference and runtime safety for PostgreSQL JSON and JSONB constructors and aggregates:
+
+| Function           | SQL                               | Description                                             |
+| ------------------ | --------------------------------- | ------------------------------------------------------- |
+| `jsonBuildObject`  | `json_build_object(k1, v1, ...)`  | Builds a typed JSON object from key-value pairs         |
+| `jsonbBuildObject` | `jsonb_build_object(k1, v1, ...)` | Builds a typed JSONB object from key-value pairs        |
+| `jsonAgg`          | `json_agg(expr)`                  | Aggregates rows or objects into a typed JSON array      |
+| `jsonbAgg`         | `jsonb_agg(expr)`                 | Aggregates rows or objects into a typed JSONB array     |
+| `toJson`           | `to_json(tableOrExpr)`            | Converts a table view or expression into a JSON object  |
+| `toJsonb`          | `to_jsonb(tableOrExpr)`           | Converts a table view or expression into a JSONB object |
+| `jsonBuildArray`   | `json_build_array(e1, e2, ...)`   | Constructs a typed JSON array from expressions          |
+| `jsonbBuildArray`  | `jsonb_build_array(e1, e2, ...)`  | Constructs a typed JSONB array from expressions         |
+| `jsonStripNulls`   | `json_strip_nulls(jsonObj)`       | Strips null values from a JSON object                   |
+| `jsonbStripNulls`  | `jsonb_strip_nulls(jsonbObj)`     | Strips null values from a JSONB object                  |
+
+### `jsonBuildObject` / `jsonbBuildObject`
+
+Builds a typed JSON object by passing an object of fields. Fields can be columns, functions, literals, or nested `jsonBuildObject` calls:
+
+```typescript
+import { jsonBuildObject } from "durcno";
+
+const rows = await db.from(Users).select(({ users }) => ({
+  userCard: jsonBuildObject({
+    id: users.id,
+    username: users.username,
+    profile: jsonBuildObject({
+      bio: users.bio,
+    }),
+  }),
+}));
+// userCard is inferred as { id: bigint; username: string; profile: { bio: string | null } }
+```
+
+### `jsonAgg` / `jsonbAgg` with `coalesce`
+
+Aggregates multiple rows into a typed JSON array. Supports `.filter(condition)`, `.orderBy(...)`, and `.distinct()`:
+
+```typescript
+import { asc, coalesce, isNotNull, jsonAgg, jsonBuildObject } from "durcno";
+
+const postsWithComments = await db
+  .from(Posts)
+  .leftJoin(Comments, ({ posts, comments }) => eq(comments.postId, posts.id))
+  .select(({ posts, comments }) => ({
+    id: posts.id,
+    comments: coalesce(
+      jsonAgg(
+        jsonBuildObject({
+          id: comments.id,
+          body: comments.body,
+        }),
+      )
+        .orderBy(asc(comments.id))
+        .filter(isNotNull(comments.id)),
+      [],
+    ),
+  }));
+// comments is inferred as { id: bigint; body: string | null }[] (never null!)
+```
+
+### `toJson` / `toJsonb`
+
+Converts a table view or table definition into a JSON or JSONB representation:
+
+```typescript
+import { toJson, toJsonb } from "durcno";
+
+const rows = await db.from(Users).select(({ users }) => ({
+  userJson: toJson(users),
+  userJsonb: toJsonb(Users),
+}));
+```
+
+### `jsonBuildArray` / `jsonbBuildArray`
+
+Constructs an array from arguments:
+
+```typescript
+import { jsonBuildArray } from "durcno";
+
+const rows = await db.from(Users).select(({ users }) => ({
+  tags: jsonBuildArray(users.type, "verified", 1),
+}));
+```
+
+### `jsonStripNulls` / `jsonbStripNulls`
+
+Removes object fields that contain SQL `NULL`:
+
+```typescript
+import { jsonBuildObject, jsonStripNulls } from "durcno";
+
+const rows = await db.from(Users).select(({ users }) => ({
+  cleaned: jsonStripNulls(
+    jsonBuildObject({
+      username: users.username,
+      email: users.email,
+    }),
+  ),
 }));
 ```
 

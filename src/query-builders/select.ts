@@ -922,16 +922,42 @@ export class SelectQuery<
         ([, item]) => item instanceof SqlFn && item.isAggregate,
       );
       if (hasAggregate) {
-        const nonAggEntries = entries.filter(
-          ([, item]) =>
-            isTCol(item) || (item instanceof SqlFn && !item.isAggregate),
-        );
-        if (nonAggEntries.length > 0) {
+        const nonAggItems: Array<{ toQuery: (q: Query<unknown>) => void }> = [];
+        const seenCols = new Set<string>();
+
+        for (const [, item] of entries) {
+          if (isTCol(item)) {
+            const col = item as unknown as StdTableColumn;
+            if (!seenCols.has(col.fullName)) {
+              seenCols.add(col.fullName);
+              nonAggItems.push(col);
+            }
+          } else if (item instanceof SqlFn && !item.isAggregate) {
+            if (
+              "referencedColumns" in item &&
+              Array.isArray(item.referencedColumns) &&
+              item.referencedColumns.length > 0
+            ) {
+              for (const col of item.referencedColumns) {
+                if (isTCol(col)) {
+                  const tableCol = col;
+                  if (!seenCols.has(tableCol.fullName)) {
+                    seenCols.add(tableCol.fullName);
+                    nonAggItems.push(tableCol);
+                  }
+                }
+              }
+            } else {
+              nonAggItems.push(item);
+            }
+          }
+        }
+
+        if (nonAggItems.length > 0) {
           query.sql += " GROUP BY ";
-          for (let i = 0; i < nonAggEntries.length; i++) {
-            const [, item] = nonAggEntries[i];
-            (item as { toQuery: (q: Query<unknown>) => void }).toQuery(query);
-            if (i < nonAggEntries.length - 1) query.sql += ", ";
+          for (let i = 0; i < nonAggItems.length; i++) {
+            nonAggItems[i].toQuery(query);
+            if (i < nonAggItems.length - 1) query.sql += ", ";
           }
         }
       }

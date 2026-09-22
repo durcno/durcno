@@ -1,11 +1,13 @@
-import { is, isCol } from "../entity";
-import { type AnyArg, Arg, type IsArg } from "../query-builders/prepare";
+import { isCol } from "../entity";
+import type { AnyArg, IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
-import { Sql, toSqlValue } from "../sql";
+import { type Sql, toSqlValue } from "../sql";
 import type { AnyColumn } from "../table";
 import type { Or } from "../types";
 import {
   type AnySqlFn,
+  appendOperand,
+  detectJsonKind,
   type ExprColumns,
   type HasArg,
   type InferValueType,
@@ -14,7 +16,7 @@ import {
 
 /**
  * Union of every valid operand for `coalesce` and `nullif`:
- * columns, SqlFns, raw Sql instances, prepared arguments, primitive literals, and null.
+ * columns, SqlFns, raw Sql instances, prepared arguments, primitive literals, objects, arrays, and null.
  */
 export type CoalesceOperand =
   | AnyColumn
@@ -25,6 +27,9 @@ export type CoalesceOperand =
   | number
   | bigint
   | boolean
+  | Date
+  | readonly unknown[]
+  | Record<string, unknown>
   | null;
 
 /**
@@ -37,7 +42,11 @@ export type CoalesceReturn<TTuple extends readonly unknown[]> =
     ? Rest extends readonly []
       ? InferValueType<First>
       : null extends InferValueType<First>
-        ? NonNullable<InferValueType<First>> | CoalesceReturn<Rest>
+        ? NonNullable<InferValueType<First>> extends (infer TItem)[]
+          ? Rest extends readonly [readonly unknown[]]
+            ? TItem[]
+            : NonNullable<InferValueType<First>> | CoalesceReturn<Rest>
+          : NonNullable<InferValueType<First>> | CoalesceReturn<Rest>
         : InferValueType<First>
     : never;
 
@@ -46,24 +55,17 @@ export type HasArgInTuple<TTuple extends readonly unknown[]> =
     ? Or<Or<IsArg<Head>, HasArg<Head>>, HasArgInTuple<Tail>>
     : false;
 
-function appendCoalesceOperand(
-  query: Query,
-  expr: CoalesceOperand,
-  ctx?: QueryContext,
-): void {
-  if (expr === null) {
-    query.sql += "NULL";
-  } else if (is(expr, Arg)) {
-    query.addArg(expr);
-  } else if (isCol(expr)) {
-    expr.toQuery(query, ctx);
-  } else if (expr instanceof SqlFn) {
-    expr.toQuery(query, ctx);
-  } else if (expr instanceof Sql) {
-    expr.toQuery(query, ctx);
-  } else {
-    query.sql += toSqlValue(expr);
-  }
+export type IsAnyAggregateInTuple<TTuple extends readonly unknown[]> =
+  TTuple extends readonly [infer Head, ...infer Tail]
+    ? Head extends { isAggregate: true }
+      ? true
+      : Head extends { $FnType: "aggregate" }
+        ? true
+        : IsAnyAggregateInTuple<Tail>
+    : false;
+
+function isJsonbOperand(e: unknown): boolean {
+  return detectJsonKind(e) === "jsonb";
 }
 
 function deserializeOperandValue(
@@ -77,6 +79,19 @@ function deserializeOperandValue(
   if (typeof expr === "bigint") return BigInt(value as string | number);
   if (typeof expr === "boolean")
     return value === true || value === "t" || value === "true";
+  if (expr instanceof Date) {
+    return value instanceof Date ? value : new Date(value as string | number);
+  }
+  if (Array.isArray(expr) || (typeof expr === "object" && expr !== null)) {
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  }
   return value;
 }
 
@@ -88,15 +103,30 @@ export class CoalesceFn<
   TExprs extends readonly CoalesceOperand[],
   TTsType = CoalesceReturn<TExprs>,
   THasArg extends boolean = HasArgInTuple<TExprs>,
+  TFnType extends
+    | "aggregate"
+    | "scalar" = IsAnyAggregateInTuple<TExprs> extends true
+    ? "aggregate"
+    : "scalar",
 > extends SqlFn<
   ExprColumns<TExprs[number]>,
   THasArg,
-  "scalar",
+  TFnType,
   string,
   TTsType
 > {
+  override readonly isAggregate: boolean;
+
   constructor(private readonly exprs: TExprs) {
     super();
+    this.isAggregate = this.exprs.some(
+      (e) =>
+        (e instanceof SqlFn && e.isAggregate) ||
+        (typeof e === "object" &&
+          e !== null &&
+          "isAggregate" in e &&
+          e.isAggregate === true),
+    );
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -113,7 +143,8 @@ export class CoalesceFn<
         expr instanceof SqlFn ||
         typeof expr === "number" ||
         typeof expr === "bigint" ||
-        typeof expr === "boolean"
+        typeof expr === "boolean" ||
+        Array.isArray(expr)
       ) {
         return deserializeOperandValue(value, expr) as TTsType | null;
       }
@@ -123,8 +154,12 @@ export class CoalesceFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "coalesce(";
+    const preferJsonb = isJsonbOperand(this.exprs[0]);
     this.exprs.forEach((expr, i) => {
-      appendCoalesceOperand(query, expr, ctx);
+      appendOperand(query, expr, ctx, {
+        preferJsonb,
+        leadOperand: this.exprs[0],
+      });
       if (i < this.exprs.length - 1) query.sql += ", ";
     });
     query.sql += ")";
@@ -185,9 +220,9 @@ export class NullIfFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "nullif(";
-    appendCoalesceOperand(query, this.expr, ctx);
+    appendOperand(query, this.expr, ctx, { leadOperand: this.expr });
     query.sql += ", ";
-    appendCoalesceOperand(query, this.val, ctx);
+    appendOperand(query, this.val, ctx, { leadOperand: this.expr });
     query.sql += ")";
   }
 }
@@ -257,7 +292,7 @@ export class GreatestFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "greatest(";
     this.exprs.forEach((expr, i) => {
-      appendCoalesceOperand(query, expr, ctx);
+      appendOperand(query, expr, ctx, { leadOperand: this.exprs[0] });
       if (i < this.exprs.length - 1) query.sql += ", ";
     });
     query.sql += ")";
@@ -323,7 +358,7 @@ export class LeastFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "least(";
     this.exprs.forEach((expr, i) => {
-      appendCoalesceOperand(query, expr, ctx);
+      appendOperand(query, expr, ctx, { leadOperand: this.exprs[0] });
       if (i < this.exprs.length - 1) query.sql += ", ";
     });
     query.sql += ")";

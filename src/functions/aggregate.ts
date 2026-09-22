@@ -1,12 +1,130 @@
 import { isCol } from "../entity";
+import type { AnyFilterExpression, Filter } from "../filters";
+import type { AnyOrder } from "../query-builders/orderby-clause";
 import type { Query, QueryContext } from "../query-builders/query";
+import type { Sql } from "../sql";
 import type { AnyColumn } from "../table";
+import type { Or } from "../types";
 import {
   type AnyScalarSqlFn,
   type ExprColumns,
   type HasArg,
   SqlFn,
 } from "./index";
+
+/** Helper to extract column type from an order item or array/tuple of order items. */
+export type OrderColumns<T> = T extends readonly (infer U)[]
+  ? OrderColumns<U>
+  : T extends { readonly $Columns: infer C }
+    ? C extends AnyColumn
+      ? C
+      : never
+    : never;
+
+/** Helper to extract HasArg flag from an order item or array/tuple of order items. */
+export type OrderHasArg<T> = T extends readonly (infer U)[]
+  ? OrderHasArg<U>
+  : T extends { readonly $HasArg: true }
+    ? true
+    : false;
+
+/** Extracts union of referenced columns across a tuple of order items. */
+export type TupleOrderColumns<TTuple extends readonly unknown[]> =
+  TTuple extends readonly [infer Head, ...infer Tail]
+    ? OrderColumns<Head> | TupleOrderColumns<Tail>
+    : never;
+
+/** Extracts combined HasArg flag across a tuple of order items. */
+export type TupleOrderHasArg<TTuple extends readonly unknown[]> =
+  TTuple extends readonly [infer Head, ...infer Tail]
+    ? Or<OrderHasArg<Head>, TupleOrderHasArg<Tail>>
+    : false;
+
+/**
+ * Abstract base class for SQL aggregate functions.
+ * Supports `.filter(condition)` for PostgreSQL `FILTER (WHERE ...)` clauses
+ * and `.orderBy(...)` for ordering aggregated items.
+ *
+ * @template TColumn - The scoped table column(s) this aggregate references.
+ * @template THasArg - Whether any argument embeds an `Arg` placeholder.
+ * @template TPgType - The PostgreSQL type category of the result.
+ * @template TTsType - The TypeScript type this aggregate evaluates to.
+ */
+export abstract class AggregateSqlFn<
+  TColumn extends AnyColumn,
+  THasArg extends boolean = false,
+  TPgType extends string = string,
+  TTsType = any,
+> extends SqlFn<TColumn, THasArg, "aggregate", TPgType, TTsType> {
+  override readonly isAggregate = true;
+
+  protected $filter?: AnyFilterExpression;
+  protected $orderBy?: AnyOrder[];
+
+  /**
+   * Appends a `FILTER (WHERE condition)` clause to this aggregate function.
+   *
+   * @example
+   * count(orders.id).filter(eq(orders.status, "completed"))
+   * jsonAgg(posts.title).filter(isNotNull(posts.id))
+   */
+  filter<TFilterCol extends AnyColumn, TCondHasArg extends boolean = false>(
+    condition: Filter<TFilterCol, TCondHasArg> | Sql,
+  ): Omit<this, "$Columns" | "$HasArg"> & {
+    readonly $Columns: TColumn | TFilterCol;
+    readonly $HasArg: Or<THasArg, TCondHasArg>;
+  } {
+    const clone = Object.create(Object.getPrototypeOf(this));
+    Object.assign(clone, this);
+    clone.$filter = condition;
+    return clone as Omit<this, "$Columns" | "$HasArg"> & {
+      readonly $Columns: TColumn | TFilterCol;
+      readonly $HasArg: Or<THasArg, TCondHasArg>;
+    };
+  }
+
+  /**
+   * Appends an `ORDER BY` clause inside this aggregate function.
+   *
+   * @example
+   * jsonAgg(comments.content).orderBy(asc(comments.createdAt))
+   */
+  orderBy<TOrders extends readonly (AnyOrder | readonly AnyOrder[])[]>(
+    ...orders: TOrders
+  ): Omit<this, "$Columns" | "$HasArg"> & {
+    readonly $Columns: TColumn | TupleOrderColumns<TOrders>;
+    readonly $HasArg: Or<THasArg, TupleOrderHasArg<TOrders>>;
+  } {
+    const clone = Object.create(Object.getPrototypeOf(this));
+    Object.assign(clone, this);
+    const flat = (orders as unknown as (AnyOrder | AnyOrder[])[]).flat();
+    clone.$orderBy = clone.$orderBy ? [...clone.$orderBy, ...flat] : flat;
+    return clone as Omit<this, "$Columns" | "$HasArg"> & {
+      readonly $Columns: TColumn | TupleOrderColumns<TOrders>;
+      readonly $HasArg: Or<THasArg, TupleOrderHasArg<TOrders>>;
+    };
+  }
+
+  /** Appends `ORDER BY ...` before the closing parenthesis if present. */
+  protected appendOrderBy(query: Query, ctx?: QueryContext): void {
+    if (this.$orderBy && this.$orderBy.length > 0) {
+      query.sql += " ORDER BY ";
+      this.$orderBy.forEach((order, idx) => {
+        order.toQuery(query, ctx);
+        if (idx < this.$orderBy!.length - 1) query.sql += ", ";
+      });
+    }
+  }
+
+  /** Appends `FILTER (WHERE ...)` after the closing parenthesis if present. */
+  protected appendFilter(query: Query, ctx?: QueryContext): void {
+    if (this.$filter) {
+      query.sql += " FILTER (WHERE ";
+      this.$filter.toQuery(query, ctx);
+      query.sql += ")";
+    }
+  }
+}
 
 /**
  * Any expression that can be passed to an aggregate function.
@@ -39,15 +157,12 @@ type NumericAggregateInput =
  *
  * @template TExpr - The table column to count.
  */
-export class CountFn<TExpr extends AnyColumn> extends SqlFn<
+export class CountFn<TExpr extends AnyColumn> extends AggregateSqlFn<
   TExpr,
   false,
-  "aggregate",
   "numeric",
   number
 > {
-  override readonly isAggregate = true;
-
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -66,7 +181,9 @@ export class CountFn<TExpr extends AnyColumn> extends SqlFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "count(";
     this.expr.toQuery(query, ctx);
+    this.appendOrderBy(query, ctx);
     query.sql += ")";
+    this.appendFilter(query, ctx);
   }
 }
 
@@ -79,15 +196,12 @@ export class CountFn<TExpr extends AnyColumn> extends SqlFn<
  * - `.orderBy(asc(count("*")))` — order by row count
  * - `.where(gt(count("*"), 0))` — filter by row count
  */
-export class CountStarFn extends SqlFn<
+export class CountStarFn extends AggregateSqlFn<
   never,
   false,
-  "aggregate",
   "numeric",
   number
 > {
-  override readonly isAggregate = true;
-
   toDriverValue(value: number | null): unknown {
     return value;
   }
@@ -99,8 +213,9 @@ export class CountStarFn extends SqlFn<
   }
 
   /** Appends `count(*)` to the query SQL. */
-  toQuery(query: Query, _ctx?: QueryContext): void {
+  toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "count(*)";
+    this.appendFilter(query, ctx);
   }
 }
 
@@ -113,15 +228,12 @@ export class CountStarFn extends SqlFn<
  *
  * @template TExpr - The table column to count distinct values from.
  */
-export class CountDistinctFn<TExpr extends AnyColumn> extends SqlFn<
+export class CountDistinctFn<TExpr extends AnyColumn> extends AggregateSqlFn<
   TExpr,
   false,
-  "aggregate",
   "numeric",
   number
 > {
-  override readonly isAggregate = true;
-
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -140,7 +252,9 @@ export class CountDistinctFn<TExpr extends AnyColumn> extends SqlFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "count(DISTINCT ";
     this.expr.toQuery(query, ctx);
+    this.appendOrderBy(query, ctx);
     query.sql += ")";
+    this.appendFilter(query, ctx);
   }
 }
 
@@ -198,15 +312,12 @@ export function countDistinct<TExpr extends AnyColumn>(
  *
  * @template TExpr - The numeric column or scalar expression to sum.
  */
-export class SumFn<TExpr extends NumericAggregateInput> extends SqlFn<
+export class SumFn<TExpr extends NumericAggregateInput> extends AggregateSqlFn<
   ExprColumns<TExpr>,
   HasArg<TExpr>,
-  "aggregate",
   "numeric",
   TExpr["$"]["TsType"] | null
 > {
-  override readonly isAggregate = true;
-
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -227,7 +338,9 @@ export class SumFn<TExpr extends NumericAggregateInput> extends SqlFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "sum(";
     this.expr.toQuery(query, ctx);
+    this.appendOrderBy(query, ctx);
     query.sql += ")";
+    this.appendFilter(query, ctx);
   }
 }
 
@@ -262,15 +375,12 @@ export function sum<TExpr extends NumericAggregateInput>(
  *
  * @template TExpr - The numeric column or scalar expression to average.
  */
-export class AvgFn<TExpr extends NumericAggregateInput> extends SqlFn<
+export class AvgFn<TExpr extends NumericAggregateInput> extends AggregateSqlFn<
   ExprColumns<TExpr>,
   HasArg<TExpr>,
-  "aggregate",
   "numeric",
   TExpr["$"]["TsType"] | null
 > {
-  override readonly isAggregate = true;
-
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -293,7 +403,9 @@ export class AvgFn<TExpr extends NumericAggregateInput> extends SqlFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "avg(";
     this.expr.toQuery(query, ctx);
+    this.appendOrderBy(query, ctx);
     query.sql += ")";
+    this.appendFilter(query, ctx);
   }
 }
 
@@ -329,15 +441,12 @@ export function avg<TExpr extends NumericAggregateInput>(
  *
  * @template TExpr - The column or scalar expression to find the minimum of.
  */
-export class MinFn<TExpr extends AggregateInput> extends SqlFn<
+export class MinFn<TExpr extends AggregateInput> extends AggregateSqlFn<
   ExprColumns<TExpr>,
   HasArg<TExpr>,
-  "aggregate",
   string,
   TExpr["$"]["TsType"] | null
 > {
-  override readonly isAggregate = true;
-
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -364,7 +473,9 @@ export class MinFn<TExpr extends AggregateInput> extends SqlFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "min(";
     this.expr.toQuery(query, ctx);
+    this.appendOrderBy(query, ctx);
     query.sql += ")";
+    this.appendFilter(query, ctx);
   }
 }
 
@@ -398,15 +509,12 @@ export function min<TExpr extends AggregateInput>(expr: TExpr): MinFn<TExpr> {
  *
  * @template TExpr - The column or scalar expression to find the maximum of.
  */
-export class MaxFn<TExpr extends AggregateInput> extends SqlFn<
+export class MaxFn<TExpr extends AggregateInput> extends AggregateSqlFn<
   ExprColumns<TExpr>,
   HasArg<TExpr>,
-  "aggregate",
   string,
   TExpr["$"]["TsType"] | null
 > {
-  override readonly isAggregate = true;
-
   constructor(private readonly expr: TExpr) {
     super();
   }
@@ -433,7 +541,9 @@ export class MaxFn<TExpr extends AggregateInput> extends SqlFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "max(";
     this.expr.toQuery(query, ctx);
+    this.appendOrderBy(query, ctx);
     query.sql += ")";
+    this.appendFilter(query, ctx);
   }
 }
 

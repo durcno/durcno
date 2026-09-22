@@ -7,10 +7,15 @@ import type { Query, QueryContext } from "./query";
 
 export type OrderDirection = "ASC" | "DESC";
 
-class Order<
+export class Order<
   TTableColumn extends TableAnyColumn | string,
   TOrder extends "ASC" | "DESC",
 > {
+  /** Phantom field: the column(s) this order expression references — mirrors `Filter.$Columns`. */
+  readonly $Columns!: TTableColumn extends TableAnyColumn ? TTableColumn : never;
+  /** Phantom field: `true` when this order expression embeds an `Arg` placeholder. */
+  readonly $HasArg!: false;
+
   readonly field: TTableColumn;
   readonly dir: TOrder;
   constructor(field: TTableColumn, dir: TOrder) {
@@ -57,6 +62,7 @@ export class OrderSqlFn<TSqlFn extends AnyScalarSqlFn> {
 }
 
 export type StdOrderSqlFn = OrderSqlFn<AnyScalarSqlFn>;
+export type AnyOrder = Order<any, any> | OrderSqlFn<any>;
 
 /**
  * Valid orderBy item for a query.

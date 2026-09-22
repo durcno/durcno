@@ -25,8 +25,7 @@ export abstract class Filter<
 }
 
 /** Convenience alias for a `Filter` with all type parameters widened to `any`. */
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnyFilter = Filter<any, any>;
+export type AnyFilter = Filter<AnyColumn, boolean>;
 
 /**
  * Constrains a filter expression to columns allowed in the current query scope.
@@ -40,6 +39,8 @@ export type FilterExpression<
 > = Filter<TScopeColumns, TPrepare extends true ? boolean : false> | Sql;
 
 export type StdCondition = FilterExpression<AnyColumn>;
+
+export type AnyFilterExpression = FilterExpression<AnyColumn, boolean>;
 
 /**
  * A HAVING clause expression. Structurally identical to `FilterExpression` but

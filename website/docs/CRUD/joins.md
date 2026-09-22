@@ -78,7 +78,68 @@ const recentPosts = await db
   .orderBy(({ users }) => asc(users.username));
 ```
 
+## Aggregating 1-to-many joins into JSON
+
+When joining a 1-to-many relation, standard SQL joins duplicate the parent row for every matching child. You can use `jsonAgg` and `jsonBuildObject` to collapse children directly into a typed array on the parent row in a single query:
+
+```typescript
+import { asc, coalesce, eq, isNotNull, jsonAgg, jsonBuildObject } from "durcno";
+
+const postsWithComments = await db
+  .from(Posts)
+  .leftJoin(Comments, ({ posts, comments }) => eq(comments.postId, posts.id))
+  .select(({ posts, comments }) => ({
+    id: posts.id,
+    title: posts.title,
+    comments: coalesce(
+      jsonAgg(
+        jsonBuildObject({
+          id: comments.id,
+          body: comments.body,
+          createdAt: comments.createdAt,
+        }),
+      )
+        .orderBy(asc(comments.createdAt))
+        .filter(isNotNull(comments.id)),
+      [],
+    ),
+  }));
+```
+
+### Why this pattern works:
+
+- **`jsonBuildObject`**: Constructs a strongly-typed JSON object with exact field names and types inferred from your schema.
+- **`.filter(isNotNull(comments.id))`**: Translates to SQL `FILTER (WHERE comments.id IS NOT NULL)`, preventing `json_agg` from packing a `[{ id: null, ... }]` element when the post has zero comments.
+- **`coalesce(..., [])`**: PostgreSQL's `json_agg` returns SQL `NULL` when all rows are filtered out. Wrapping with `coalesce(..., [])` returns a guaranteed non-null `Comment[]` array (typed as `Comment[]`, never `null`).
+- **`.orderBy(...)`**: Aggregate functions support inline `.orderBy()` to sort items within the aggregated array.
+- **Automatic `GROUP BY`**: When non-aggregate and aggregate columns are mixed in `.select()`, Durcno automatically groups by the parent columns (`posts.id`, `posts.title`).
+
+## Nesting 1-to-1 joins into JSON objects
+
+For 1-to-1 or many-to-one relations, you can nest the joined record into an object using `jsonBuildObject`. When using `.leftJoin()`, use `caseWhen()` to return `null` instead of an object with null fields if no related record exists:
+
+```typescript
+import { caseWhen, eq, isNull, jsonBuildObject } from "durcno";
+
+const postsWithAuthor = await db
+  .from(Posts)
+  .leftJoin(Users, ({ posts, users }) => eq(users.id, posts.userId))
+  .select(({ posts, users }) => ({
+    id: posts.id,
+    title: posts.title,
+    author: caseWhen(isNull(users.id), null).else(
+      jsonBuildObject({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+      }),
+    ),
+  }));
+// author is inferred as { id: bigint; username: string; email: string | null } | null
+```
+
 ## Related
 
 - [Select](./select.md) — build SELECT queries and reuse joins in the fluent API
+- [Functions](../Expressions/functions.md) — JSON functions (`jsonAgg`, `jsonBuildObject`), CASE expressions, and aggregates
 - [Filters](../Expressions/filters.md) — operators for the join condition

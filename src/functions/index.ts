@@ -1,6 +1,7 @@
-import type { Arg } from "../query-builders/prepare";
+import { is, isCol } from "../entity";
+import { Arg } from "../query-builders/prepare";
 import { Query, type QueryContext } from "../query-builders/query";
-import { type Sql, sql } from "../sql";
+import { escLiteral, Sql, sql, toSqlValue } from "../sql";
 import type { AnyColumn, StdTableColumn } from "../table";
 
 export type SqlFnType = "aggregate" | "scalar";
@@ -95,6 +96,123 @@ export abstract class SqlFn<
   protected static _stringToSQL(value: string | null): string {
     if (value === null) return "NULL";
     return `'${value.replace(/'/g, "''")}'`;
+  }
+
+  /** Default implementation for json-returning functions. */
+  protected static _jsonFromDriver(value: unknown): unknown {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  }
+}
+
+export interface AppendOperandOptions {
+  /** If true, default JSON casts use `::jsonb` instead of `::json`. */
+  preferJsonb?: boolean;
+  /** If true, default JSON casts use `::json`. */
+  preferJson?: boolean;
+  /** The leading or reference operand (used to inherit dimensions or jsonb/json type). */
+  leadOperand?: unknown;
+}
+
+/**
+ * Detects whether an expression or column represents a JSON or JSONB value at runtime.
+ */
+export function detectJsonKind(e: unknown): "json" | "jsonb" | null {
+  if (!e || typeof e !== "object") return null;
+  if (isCol(e)) {
+    const cast = (e as any).sqlCastScalar || (e as any).sqlTypeScalar;
+    if (cast === "jsonb") return "jsonb";
+    if (cast === "json") return "json";
+    return null;
+  }
+  if (e instanceof SqlFn) {
+    const name = e.constructor.name.toLowerCase();
+    if (name.includes("jsonb")) return "jsonb";
+    if (name.includes("json")) return "json";
+    const pgType = (e as any).pgType;
+    if (pgType === "jsonb") return "jsonb";
+    if (pgType === "json") return "json";
+    return null;
+  }
+  const pgType = (e as any)?.$?.PgType;
+  if (pgType === "jsonb") return "jsonb";
+  if (pgType === "json") return "json";
+  return null;
+}
+
+/**
+ * Shared serialization helper for SQL function operands (CASE, COALESCE, JSON, etc.).
+ * Handles null, Arg placeholders, columns, SqlFns, raw Sql, arrays, primitives,
+ * and plain objects (serialized as JSON/JSONB literals).
+ */
+export function appendOperand(
+  query: Query,
+  expr: unknown,
+  ctx?: QueryContext,
+  options?: AppendOperandOptions,
+): void {
+  if (expr === null || expr === undefined) {
+    query.sql += "NULL";
+  } else if (is(expr, Arg)) {
+    query.addArg(expr);
+  } else if (isCol(expr)) {
+    expr.toQuery(query, ctx);
+  } else if (expr instanceof SqlFn) {
+    expr.toQuery(query, ctx);
+  } else if (expr instanceof Sql) {
+    expr.toQuery(query, ctx);
+  } else if (Array.isArray(expr)) {
+    const lead = options?.leadOperand;
+    if (lead && isCol(lead) && (lead as any).dimensions) {
+      query.sql += (lead as any).toSQL(expr);
+    } else {
+      const jsonKind =
+        (options?.preferJsonb ? "jsonb" : null) ??
+        detectJsonKind(lead) ??
+        (options?.preferJson ? "json" : null);
+
+      if (jsonKind === "jsonb") {
+        query.sql += `'${JSON.stringify(expr).replace(/'/g, "''")}'::jsonb`;
+      } else if (jsonKind === "json") {
+        query.sql += `'${JSON.stringify(expr).replace(/'/g, "''")}'::json`;
+      } else if (expr.length === 0) {
+        query.sql += "'{}'";
+      } else {
+        query.sql += `ARRAY[${expr.map((item) => toSqlValue(item as any)).join(", ")}]`;
+      }
+    }
+  } else if (typeof expr === "string") {
+    query.sql += `'${escLiteral(expr)}'`;
+  } else if (typeof expr === "number" || typeof expr === "bigint") {
+    query.sql += expr.toString();
+  } else if (typeof expr === "boolean") {
+    query.sql += expr ? "TRUE" : "FALSE";
+  } else if (expr instanceof Date) {
+    const lead = options?.leadOperand;
+    if (lead && isCol(lead)) {
+      query.sql += lead.toSQL(expr);
+    } else {
+      query.sql += Number.isNaN(expr.getTime())
+        ? "NULL"
+        : `'${expr.toISOString()}'`;
+    }
+  } else if (typeof expr === "object") {
+    const lead = options?.leadOperand;
+    const jsonKind =
+      (options?.preferJsonb ? "jsonb" : null) ??
+      detectJsonKind(lead) ??
+      (options?.preferJson ? "json" : null) ??
+      "json";
+    query.sql += `'${JSON.stringify(expr).replace(/'/g, "''")}'::${jsonKind}`;
+  } else {
+    query.sql += toSqlValue(expr as never);
   }
 }
 

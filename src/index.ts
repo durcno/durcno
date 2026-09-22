@@ -84,6 +84,7 @@ export {
   uuidv7,
 } from "./functions";
 export {
+  AggregateSqlFn,
   avg,
   count,
   countDistinct,
@@ -93,11 +94,27 @@ export {
 } from "./functions/aggregate";
 export { add, div, mul, sub } from "./functions/arithmetic";
 export {
+  caseWhen,
+  type InferCaseValue,
+} from "./functions/case";
+export {
   coalesce,
   greatest,
   least,
   nullif,
 } from "./functions/conditional";
+export {
+  jsonAgg,
+  jsonBuildArray,
+  jsonBuildObject,
+  jsonbAgg,
+  jsonbBuildArray,
+  jsonbBuildObject,
+  jsonbStripNulls,
+  jsonStripNulls,
+  toJson,
+  toJsonb,
+} from "./functions/json";
 export {
   abs,
   ceil,
