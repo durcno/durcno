@@ -576,6 +576,19 @@ export const Users = table("public", "users", {
 });
 ```
 
+#### `primaryKey`
+
+Marks the column as a single-column primary key.
+
+```typescript
+import { table, serial, primaryKey, varchar, notNull } from "durcno";
+
+export const Users = table("public", "users", {
+  id: serial({ primaryKey }),
+  name: varchar({ length: 255, notNull }),
+});
+```
+
 ### Chainable Modifiers
 
 Methods called on a column instance after construction. These can be chained together.
