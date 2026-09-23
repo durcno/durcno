@@ -423,4 +423,3 @@ Expect<
   >
 >();
 Expect<Equal<typeof validOrder.$HasArg, false>>();
-

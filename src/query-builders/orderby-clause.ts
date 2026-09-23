@@ -12,7 +12,9 @@ export class Order<
   TOrder extends "ASC" | "DESC",
 > {
   /** Phantom field: the column(s) this order expression references — mirrors `Filter.$Columns`. */
-  readonly $Columns!: TTableColumn extends TableAnyColumn ? TTableColumn : never;
+  readonly $Columns!: TTableColumn extends TableAnyColumn
+    ? TTableColumn
+    : never;
   /** Phantom field: `true` when this order expression embeds an `Arg` placeholder. */
   readonly $HasArg!: false;
 

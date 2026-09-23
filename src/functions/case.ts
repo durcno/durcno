@@ -164,9 +164,9 @@ export class CaseFn<
       return Boolean(value) as TResult;
     }
     if (sample instanceof Date) {
-      return (value instanceof Date
-        ? value
-        : new Date(value as string | number)) as TResult;
+      return (
+        value instanceof Date ? value : new Date(value as string | number)
+      ) as TResult;
     }
     if (Array.isArray(sample) || typeof sample === "object") {
       if (typeof value === "string") {
