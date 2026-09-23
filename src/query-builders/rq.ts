@@ -5,9 +5,9 @@ import type { FilterExpression } from "../filters/index";
 import { escIdentifier, escLiteral } from "../sql";
 import type {
   AnyColumn,
+  AnyMany,
   AnyRelation,
   Fk,
-  Many,
   Relations,
   StdRelations,
   StdTableWithColumns,
@@ -23,14 +23,16 @@ import { Arg } from "./prepare";
 import { Query, type QueryContext } from "./query";
 import { QueryPromise } from "./query-promise";
 
-type RelationReturnType<O, TRelation extends AnyRelation> =
-  TRelation extends Many<any, any, any, any>
-    ? O[]
-    : TRelation extends Fk<any, any, any, infer TCol>
-      ? TCol["isNotNull"] extends true
-        ? O
-        : O | null
-      : O | null;
+type RelationReturnType<
+  O,
+  TRelation extends AnyRelation,
+> = TRelation extends AnyMany
+  ? O[]
+  : TRelation extends Fk<any, any, any, infer TCol>
+    ? TCol["isNotNull"] extends true
+      ? O
+      : O | null
+    : O | null;
 
 type AllOtps = {
   where: true;

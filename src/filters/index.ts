@@ -12,7 +12,12 @@ import { type Sql, toSqlValue } from "../sql";
 import type { AnyColumn } from "../table";
 import type { BasicTypes, Or } from "../types";
 
-/** Abstract base class for SQL filter expressions used in `WHERE`/`ON`/`CHECK` clauses. */
+/**
+ * Abstract base class for SQL filter expressions to be used in
+ * `WHERE`/`HAVING`/`ON`/`CHECK` clauses.
+ *
+ * Analogous to `SqlFn` but for SQL filter expressions.
+ */
 export abstract class Filter<
   TColumns extends AnyColumn = AnyColumn,
   THasArg extends boolean = false,

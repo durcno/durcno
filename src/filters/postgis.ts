@@ -19,6 +19,7 @@ import type { Or } from "../types";
 import { Filter } from "./index";
 
 /** Constrains `TCol` to geography point columns only. */
+// biome-ignore lint/suspicious/noExplicitAny: <>
 export type GeographyPointCol = PointColumn<any>;
 
 /** Writes `ST_PointFromText(point)` into `query.sql`, supporting `Arg<string>` for point. */
@@ -43,11 +44,6 @@ export function pointToQuery(
 /**
  * Spatial filter: `ST_DWithin(col, ST_SetSRID(ST_MakePoint(lon, lat), srid), radius)`
  * Returns true if the geometry column is within `radius` meters of the given point.
- *
- * @template TCol - Geography point column type.
- * @template TPoint - Concrete type of the point argument (raw value or `Arg` placeholder).
- * @template TRadius - Concrete type of the radius argument (number or `Arg` placeholder).
- * @template TSrid - Concrete type of the srid argument (number or `Arg` placeholder).
  */
 export class StDWithinFilter<
   TCol extends GeographyPointCol,
@@ -109,10 +105,6 @@ export function stDWithin<
 /**
  * Spatial filter: `ST_Intersects(col, ST_SetSRID(ST_MakePoint(lon, lat), srid))`
  * Returns true if the geometry column intersects the given point.
- *
- * @template TCol - Geography point column type.
- * @template TPoint - Concrete type of the point argument (raw value or `Arg` placeholder).
- * @template TSrid - Concrete type of the srid argument (number or `Arg` placeholder).
  */
 export class StIntersectsFilter<
   TCol extends GeographyPointCol,
@@ -156,10 +148,6 @@ export function stIntersects<
 /**
  * Spatial filter: `ST_Contains(col, ST_SetSRID(ST_MakePoint(lon, lat), srid))`
  * Returns true if the geometry column contains the given point.
- *
- * @template TCol - Geography point column type.
- * @template TPoint - Concrete type of the point argument (raw value or `Arg` placeholder).
- * @template TSrid - Concrete type of the srid argument (number or `Arg` placeholder).
  */
 export class StContainsFilter<
   TCol extends GeographyPointCol,
@@ -203,10 +191,6 @@ export function stContains<
 /**
  * Spatial filter: `ST_Within(col, ST_SetSRID(ST_MakePoint(lon, lat), srid))`
  * Returns true if the geometry column is within the given point geometry.
- *
- * @template TCol - Geography point column type.
- * @template TPoint - Concrete type of the point argument (raw value or `Arg` placeholder).
- * @template TSrid - Concrete type of the srid argument (number or `Arg` placeholder).
  */
 export class StWithinFilter<
   TCol extends GeographyPointCol,

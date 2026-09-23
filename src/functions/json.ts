@@ -78,9 +78,9 @@ export class JsonBuildObjectFn<
       } else if (
         val instanceof SqlFn &&
         "referencedColumns" in val &&
-        Array.isArray((val as any).referencedColumns)
+        Array.isArray(val.referencedColumns)
       ) {
-        cols.push(...(val as any).referencedColumns);
+        cols.push(...val.referencedColumns);
       }
     }
     return cols;
@@ -149,9 +149,9 @@ export class JsonbBuildObjectFn<
       } else if (
         val instanceof SqlFn &&
         "referencedColumns" in val &&
-        Array.isArray((val as any).referencedColumns)
+        Array.isArray(val.referencedColumns)
       ) {
-        cols.push(...(val as any).referencedColumns);
+        cols.push(...val.referencedColumns);
       }
     }
     return cols;

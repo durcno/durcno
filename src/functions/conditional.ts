@@ -59,7 +59,7 @@ export type IsAnyAggregateInTuple<TTuple extends readonly unknown[]> =
   TTuple extends readonly [infer Head, ...infer Tail]
     ? Head extends { isAggregate: true }
       ? true
-      : Head extends { $FnType: "aggregate" }
+      : Head extends { $: { FnType: "aggregate" } }
         ? true
         : IsAnyAggregateInTuple<Tail>
     : false;

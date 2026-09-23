@@ -290,6 +290,13 @@ export class Many<
   }
 }
 
+export type AnyMany = Many<
+  string,
+  string,
+  Record<string, AnyColumn>,
+  TableColumn<string, string, string, AnyColumn>
+>;
+
 /**
  * Defines a one-to-many relation where the foreign key is on the **target** table.
  *

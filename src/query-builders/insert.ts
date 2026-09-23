@@ -1,7 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
-import type { FilterExpression } from "../filters/index";
+import type { AnyFilterExpression, FilterExpression } from "../filters/index";
 import { Sql } from "../sql";
 import {
   type AnyColumn,
@@ -28,7 +28,7 @@ type ConflictClause =
       action: "update";
       columns: AnyColumn[];
       setValues: Record<string, unknown>;
-      where?: FilterExpression<any, any>;
+      where?: AnyFilterExpression;
     };
 
 type ToExcludeColumn<T extends TableAnyColumn> =

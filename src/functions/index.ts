@@ -11,17 +11,6 @@ export type SqlFnType = "aggregate" | "scalar";
  *
  * Analogous to `Filter` but for expressions that produce a **value** rather
  * than a boolean predicate.
- *
- * @template TColumn - The scoped table column(s) this expression references.
- * @template THasArg - `true` when this expression embeds at least one `Arg` placeholder.
- *   Arg-bearing expressions are only accepted in prepared queries (`db.prepare()`).
- * @template TFnType - `"aggregate"` for aggregate functions (e.g. `count`, `sum`),
- *   `"scalar"` for scalar functions (e.g. `lower`, `abs`). Defaults to the union.
- * @template TPgType - The PostgreSQL type category this expression produces
- *   (e.g. `"string"`, `"numeric"`). Mirrors `Column.$["PgType"]` so that
- *   a `SqlFn` can be accepted wherever a column of the same category is expected,
- *   enabling type-safe nested function calls (e.g. `lower(trim(col))`).
- * @template TTsType - The TypeScript type this expression evaluates to.
  */
 export abstract class SqlFn<
   TColumn extends AnyColumn,
@@ -31,13 +20,15 @@ export abstract class SqlFn<
   TTsType = any,
 > {
   readonly $!: {
+    /** Discriminant id for this entity kind. */
     kind: "sqlFn";
+    /** The TypeScript type this expression evaluates to. */
     TsType: TTsType;
+    /** The PostgreSQL type category this expression produces (e.g. `"string"`, `"numeric"`). */
     PgType: TPgType;
+    /** The kind of this SQL expression (`"aggregate"` or `"scalar"`). */
+    FnType: TFnType;
   };
-
-  /** Phantom field carrying the kind of this SQL expression (`"aggregate"` or `"scalar"`). */
-  readonly $FnType!: TFnType;
 
   /** Phantom field used to enforce column scope — mirrors `Filter.$Columns`. */
   readonly $Columns!: TColumn;
@@ -127,7 +118,7 @@ export interface AppendOperandOptions {
 export function detectJsonKind(e: unknown): "json" | "jsonb" | null {
   if (!e || typeof e !== "object") return null;
   if (isCol(e)) {
-    const cast = (e as any).sqlCastScalar || (e as any).sqlTypeScalar;
+    const cast = e.sqlCastScalar || e.sqlTypeScalar;
     if (cast === "jsonb") return "jsonb";
     if (cast === "json") return "json";
     return null;
@@ -170,8 +161,8 @@ export function appendOperand(
     expr.toQuery(query, ctx);
   } else if (Array.isArray(expr)) {
     const lead = options?.leadOperand;
-    if (lead && isCol(lead) && (lead as any).dimensions) {
-      query.sql += (lead as any).toSQL(expr);
+    if (lead && isCol(lead) && lead.dimensions) {
+      query.sql += lead.toSQL(expr);
     } else {
       const jsonKind =
         (options?.preferJsonb ? "jsonb" : null) ??
@@ -185,7 +176,7 @@ export function appendOperand(
       } else if (expr.length === 0) {
         query.sql += "'{}'";
       } else {
-        query.sql += `ARRAY[${expr.map((item) => toSqlValue(item as any)).join(", ")}]`;
+        query.sql += `ARRAY[${expr.map((item) => toSqlValue(item)).join(", ")}]`;
       }
     }
   } else if (typeof expr === "string") {

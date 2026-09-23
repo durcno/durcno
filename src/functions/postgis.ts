@@ -17,10 +17,6 @@ import { SqlFn, type StrictFnReturn } from "./index";
  * - `.select({ distance: stDistance(col, point) })` → `{ distance: number }`
  * - `.orderBy(asc(stDistance(col, point)))` — order by proximity
  * - `.where(lt(stDistance(col, point), 5000))` — filter by distance
- *
- * @template TCol - Geography point column type.
- * @template TPoint - Concrete type of the point argument (raw value or `Arg` placeholder).
- * @template TSrid - Concrete type of the srid argument (number or `Arg` placeholder).
  */
 export class StDistanceFn<
   TCol extends GeographyPointCol,

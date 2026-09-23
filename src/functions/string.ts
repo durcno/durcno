@@ -1,5 +1,5 @@
 import { is } from "../entity";
-import { Arg, type IsArg } from "../query-builders/prepare";
+import { type AnyArg, Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import { Sql } from "../sql";
 import type { AnyScalarColumn } from "../table";
@@ -23,7 +23,7 @@ export type ConcatOperand =
   | AnyScalarColumn
   | AnySqlFn
   | Sql
-  | Arg<any>
+  | AnyArg
   | string
   | number
   | bigint
