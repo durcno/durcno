@@ -1,6 +1,9 @@
 import {
+  Arg,
   and,
+  caseWhen,
   eq,
+  exists,
   gt,
   gte,
   isIn,
@@ -9,7 +12,11 @@ import {
   lt,
   lte,
   ne,
+  notExists,
+  notIn,
   or,
+  prepare,
+  sql,
 } from "durcno";
 import { Comments, db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
@@ -339,6 +346,56 @@ const isInSubqueryQuery = db
   );
 type IsInSubqueryResult = Awaited<typeof isInSubqueryQuery>;
 Expect<Equal<IsInSubqueryResult, PostRows>>();
+
+// Type test: isIn in select projection
+const isInSelectQuery = db.from(Users).select(({ users }) => ({
+  id: users.id,
+  isAdmin: isIn(users.type, ["admin"]),
+}));
+type IsInSelectResult = Awaited<typeof isInSelectQuery>;
+Expect<Equal<IsInSelectResult, { id: bigint; isAdmin: boolean }[]>>();
+
+// Type test: isIn with array of Arg inside prepare
+const preparedIsInQuery = prepare(
+  { id1: Users.id.arg(), id2: Users.id.arg() },
+  (args) =>
+    db
+      .prepare()
+      .from(Users)
+      .select("*")
+      .where(({ users }) => isIn(users.id, [args.id1, args.id2])),
+);
+type PreparedIsInResult = Awaited<ReturnType<typeof preparedIsInQuery.run>>;
+Expect<Equal<PreparedIsInResult, UserRows>>();
+
+// Type test: notIn with array of strings
+const notInStringsQuery = db
+  .from(Users)
+  .select("*")
+  .where(({ users }) => notIn(users.username, ["alice", "bob"]));
+type NotInStringsResult = Awaited<typeof notInStringsQuery>;
+Expect<Equal<NotInStringsResult, UserRows>>();
+
+// Type test: notIn with subquery
+const notInSubqueryQuery = db
+  .from(Posts)
+  .select("*")
+  .where(({ posts }) =>
+    notIn(
+      posts.userId,
+      db.from(Users).select(({ users }) => ({ id: users.id })),
+    ),
+  );
+type NotInSubqueryResult = Awaited<typeof notInSubqueryQuery>;
+Expect<Equal<NotInSubqueryResult, PostRows>>();
+
+// Type test: notIn in select projection
+const notInSelectQuery = db.from(Users).select(({ users }) => ({
+  id: users.id,
+  notAdmin: notIn(users.type, ["admin"]),
+}));
+type NotInSelectResult = Awaited<typeof notInSelectQuery>;
+Expect<Equal<NotInSelectResult, { id: bigint; notAdmin: boolean }[]>>();
 
 // ============================================================================
 // and() - Logical AND Tests
@@ -784,6 +841,130 @@ type AsymmetricNestedResult = Awaited<typeof asymmetricNestedQuery>;
 Expect<Equal<AsymmetricNestedResult, UserRows>>();
 
 // ============================================================================
+// exists() & notExists() Tests
+// ============================================================================
+
+// Type test: exists in where clause with correlated subquery
+const existsWhereQuery = db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    exists(
+      db
+        .from(Posts)
+        .select("*")
+        .where(({ posts }) => eq(posts.userId, users.id)),
+    ),
+  );
+type ExistsWhereResult = Awaited<typeof existsWhereQuery>;
+Expect<Equal<ExistsWhereResult, UserRows>>();
+
+// Type test: notExists in where clause with correlated subquery
+const notExistsWhereQuery = db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    notExists(
+      db
+        .from(Posts)
+        .select("*")
+        .where(({ posts }) => eq(posts.userId, users.id)),
+    ),
+  );
+type NotExistsWhereResult = Awaited<typeof notExistsWhereQuery>;
+Expect<Equal<NotExistsWhereResult, UserRows>>();
+
+// Type test: exists in select projection
+const existsSelectQuery = db.from(Users).select(({ users }) => ({
+  id: users.id,
+  hasPosts: exists(
+    db
+      .from(Posts)
+      .select("*")
+      .where(({ posts }) => eq(posts.userId, users.id)),
+  ),
+}));
+type ExistsSelectResult = Awaited<typeof existsSelectQuery>;
+Expect<Equal<ExistsSelectResult, { id: bigint; hasPosts: boolean }[]>>();
+
+// Type test: notExists in select projection
+const notExistsSelectQuery = db.from(Users).select(({ users }) => ({
+  id: users.id,
+  noPosts: notExists(
+    db
+      .from(Posts)
+      .select("*")
+      .where(({ posts }) => eq(posts.userId, users.id)),
+  ),
+}));
+type NotExistsSelectResult = Awaited<typeof notExistsSelectQuery>;
+Expect<Equal<NotExistsSelectResult, { id: bigint; noPosts: boolean }[]>>();
+
+// Type test: exists combined with and()
+const existsAndQuery = db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    and(
+      eq(users.type, "admin"),
+      exists(
+        db
+          .from(Posts)
+          .select("*")
+          .where(({ posts }) => eq(posts.userId, users.id)),
+      ),
+    ),
+  );
+type ExistsAndResult = Awaited<typeof existsAndQuery>;
+Expect<Equal<ExistsAndResult, UserRows>>();
+
+// Type test: exists combined with or()
+const existsOrQuery = db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    or(
+      eq(users.type, "admin"),
+      notExists(
+        db
+          .from(Posts)
+          .select("*")
+          .where(({ posts }) => eq(posts.userId, users.id)),
+      ),
+    ),
+  );
+type ExistsOrResult = Awaited<typeof existsOrQuery>;
+Expect<Equal<ExistsOrResult, UserRows>>();
+
+// Type test: exists inside caseWhen
+const existsCaseWhenQuery = db.from(Users).select(({ users }) => ({
+  id: users.id,
+  status: caseWhen(
+    exists(
+      db
+        .from(Posts)
+        .select("*")
+        .where(({ posts }) => eq(posts.userId, users.id)),
+    ),
+    "active",
+  ).else("inactive"),
+}));
+type ExistsCaseWhenResult = Awaited<typeof existsCaseWhenQuery>;
+Expect<
+  Equal<ExistsCaseWhenResult, { id: bigint; status: "active" | "inactive" }[]>
+>();
+
+// Type test: exists with raw Sql snippet
+const existsRawSqlQuery = db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    exists(sql`SELECT 1 FROM posts WHERE posts.user_id = ${users.id}`),
+  );
+type ExistsRawSqlResult = Awaited<typeof existsRawSqlQuery>;
+Expect<Equal<ExistsRawSqlResult, UserRows>>();
+
+// ============================================================================
 // Negative type tests - these should cause compile errors
 // ============================================================================
 
@@ -834,6 +1015,11 @@ db.from(Users)
 
 db.from(Users)
   .select("*")
+  // @ts-expect-error - notIn with wrong type array should not compile
+  .where(({ users }) => notIn(users.id, ["a", "b", "c"]));
+
+db.from(Users)
+  .select("*")
   // @ts-expect-error - Column from wrong table in where should not compile
   .where(({ users }) => eq(Posts.userId, 1));
 
@@ -852,3 +1038,32 @@ db.from(Users)
     // @ts-expect-error - Non-existent field in where should not compile
     ({ users }) => eq(users.nonExistentField, "value"),
   );
+
+// Negative test: exists with invalid argument
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - exists expects a subquery or Sql, not a string
+  .where(() => exists("invalid"));
+
+// Negative test: notExists with invalid argument
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - notExists expects a subquery or Sql, not a number
+  .where(() => notExists(123));
+
+// Negative test: prepared subquery inside unprepared query
+const preparedSubqueryForTest = db
+  .prepare()
+  .from(Posts)
+  .select("*")
+  .where(({ posts }) => eq(posts.userId, Arg.bigint()));
+
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - Prepared subquery carrying Arg cannot be used in unprepared query
+  .where(() => exists(preparedSubqueryForTest));
+
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - isIn with array containing Arg cannot be used in unprepared query
+  .where(({ users }) => isIn(users.id, [Arg.bigint()]));

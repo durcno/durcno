@@ -60,13 +60,11 @@ export {
   Filter,
   gt,
   gte,
-  isIn,
   isNotNull,
   isNull,
   lt,
   lte,
   ne,
-  notIn,
   or,
 } from "./filters/index";
 export {
@@ -145,6 +143,12 @@ export {
   trim,
   upper,
 } from "./functions/string";
+export {
+  exists,
+  isIn,
+  notExists,
+  notIn,
+} from "./functions/subquery";
 export { index, uniqueIndex } from "./indexes";
 export { Migrations, pk } from "./models";
 export {

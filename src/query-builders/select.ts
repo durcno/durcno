@@ -8,6 +8,7 @@ import type {
   StdCondition,
 } from "../filters/index";
 import { type InferValueType, SqlFn } from "../functions/index";
+import { SubquerySqlFn } from "../functions/subquery";
 import { escIdentifier, Sql, toSqlValue } from "../sql";
 import type {
   AnyColumn,
@@ -857,12 +858,11 @@ export class SelectQuery<
   }
 
   toQuery(parentQuery?: AnyQuery): Query<TReturn> {
-    const isRoot = parentQuery === undefined;
     const query: Query<TReturn> = parentQuery
       ? (parentQuery as unknown as Query<TReturn>)
       : new Query<TReturn>("", this.handleRows.bind(this));
 
-    if (isRoot && this.#$ctes?.length) {
+    if (this.#$ctes?.length) {
       buildWithClause(this.#$ctes, query);
     }
 
@@ -947,7 +947,7 @@ export class SelectQuery<
                   }
                 }
               }
-            } else {
+            } else if (!(item instanceof SubquerySqlFn)) {
               nonAggItems.push(item);
             }
           }

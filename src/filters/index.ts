@@ -7,7 +7,6 @@ import {
 } from "../functions";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
-import type { SelectQuery } from "../query-builders/select";
 import { type Sql, toSqlValue } from "../sql";
 import type { AnyColumn } from "../table";
 import type { BasicTypes, Or } from "../types";
@@ -396,90 +395,6 @@ export class IsNotNullCondition<TCol extends AnyColumn> extends Filter<
 
 export function isNotNull<TCol extends AnyColumn>(field: TCol) {
   return new IsNotNullCondition(field);
-}
-
-type InSelectQuery<TArg extends boolean, TReturn> = SelectQuery<
-  any,
-  any,
-  any,
-  TArg,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  Record<string, TReturn>[]
->;
-
-export class InCondition<
-  TCol extends AnyColumn,
-  TArg extends boolean,
-> extends Filter<TCol, TArg> {
-  readonly field: TCol;
-  readonly values: TCol["ValType"][] | InSelectQuery<TArg, TCol["ValType"]>;
-  constructor(
-    field: TCol,
-    values: TCol["ValType"][] | InSelectQuery<TArg, TCol["ValType"]>,
-  ) {
-    super();
-    this.field = field;
-    this.values = values;
-  }
-  toQuery(query: Query, ctx?: QueryContext): void {
-    if (Array.isArray(this.values)) {
-      if (this.values.length === 0) {
-        query.sql += "FALSE";
-        return;
-      }
-      this.field.toQuery(query, ctx);
-      query.sql += " IN (";
-      query.sql += this.values.map((v) => this.field.toSQL(v)).join(", ");
-      query.sql += ")";
-    } else {
-      this.field.toQuery(query, ctx);
-      query.sql += " IN (";
-      this.values.toQuery(query);
-      query.sql += ")";
-    }
-  }
-}
-
-export function isIn<TCol extends AnyColumn>(
-  field: TCol,
-  values: TCol["ValType"][] | InSelectQuery<boolean, TCol["ValType"]>,
-) {
-  return new InCondition(field, values) as InCondition<TCol, false>;
-}
-
-export class NotInCondition<TCol extends AnyColumn> extends Filter<
-  TCol,
-  false
-> {
-  readonly field: TCol;
-  readonly values: TCol["ValType"][];
-  constructor(field: TCol, values: TCol["ValType"][]) {
-    super();
-    this.field = field;
-    this.values = values;
-  }
-  toQuery(query: Query, ctx?: QueryContext): void {
-    if (this.values.length === 0) {
-      query.sql += "TRUE";
-      return;
-    }
-    this.field.toQuery(query, ctx);
-    query.sql += " NOT IN (";
-    query.sql += this.values.map((v) => this.field.toSQL(v)).join(", ");
-    query.sql += ")";
-  }
-}
-
-export function notIn<TCol extends AnyColumn>(
-  field: TCol,
-  values: TCol["ValType"][],
-): NotInCondition<TCol> {
-  return new NotInCondition(field, values);
 }
 
 /** @internal Union of table columns from all Filter conditions in the array. */

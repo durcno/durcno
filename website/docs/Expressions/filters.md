@@ -20,6 +20,8 @@ Durcno provides a set of type-safe filter operators for building WHERE and CHECK
 | `isNotNull(col)`              | IS NOT NULL                                    | `isNotNull(Users.email)`                     |
 | `isIn(col, arrOrSubquery)`    | IN array or subquery                           | `isIn(Users.id, [1n, 2n, 3n])`               |
 | `notIn(col, values)`          | NOT IN array                                   | `notIn(Users.type, ["banned", "deleted"])`   |
+| `exists(subquery)`            | Subquery returns at least one row              | `exists(db.from(Posts)...)`                  |
+| `notExists(subquery)`         | Subquery returns no rows                       | `notExists(db.from(Posts)...)`               |
 | `startsWith(col, val)`        | Starts with (`starts_with()`, case-sensitive)  | `startsWith(Users.username, "admin")`        |
 | `endsWith(col, val)`          | Ends with (case-sensitive)                     | `endsWith(Users.email, "@test.com")`         |
 | `contains(col, val)`          | Contains (case-sensitive)                      | `contains(Users.bio, "typescript")`          |
@@ -191,9 +193,9 @@ await db
   .where(({ users }) => isIn(users.type, ["admin", "user"]));
 ```
 
-### NOT IN Array (`notIn`)
+### NOT IN Array or Subquery (`notIn`)
 
-Check if a column value is not in an array:
+Check if a column value is not in an array or subquery:
 
 ```typescript
 import { notIn } from "durcno";
@@ -203,7 +205,55 @@ await db
   .from(Users)
   .select("*")
   .where(({ users }) => notIn(users.type, ["banned", "deleted"]));
+
+// Exclude users who have orders (subquery)
+await db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    notIn(
+      users.id,
+      db.from(Orders).select(({ orders }) => ({ userId: orders.userId })),
+    ),
+  );
 ```
+
+### Subquery Existence (`exists`, `notExists`)
+
+Check whether a subquery returns any rows using PostgreSQL's `EXISTS` and `NOT EXISTS` expressions:
+
+```typescript
+import { eq, exists, notExists } from "durcno";
+
+// Find users who have at least one post (correlated subquery)
+const authors = await db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    exists(
+      db
+        .from(Posts)
+        .select("*")
+        .where(({ posts }) => eq(posts.userId, users.id)),
+    ),
+  );
+
+// Find users who have no posts
+const nonAuthors = await db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    notExists(
+      db
+        .from(Posts)
+        .select("*")
+        .where(({ posts }) => eq(posts.userId, users.id)),
+    ),
+  );
+```
+
+> [!NOTE]
+> `isIn`, `notIn`, `exists`, and `notExists` are PostgreSQL **Subquery Functions**. In addition to `.where()`, they can be used directly in `.select()` projections as boolean columns and inside `caseWhen(...)`. See [Subquery Functions](./functions#subquery-functions) for details.
 
 ### String Filters
 

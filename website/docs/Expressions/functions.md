@@ -524,6 +524,113 @@ const result = await db.from(Users).select(({ users }) => ({
 
 ---
 
+## Subquery Functions
+
+Subquery functions implement PostgreSQL's subquery expressions ([Section 9.24](https://www.postgresql.org/docs/current/functions-subquery.html)). They evaluate subquery returns or membership checks and yield a typed boolean value (`true` or `false`).
+
+All subquery functions can be used in:
+
+- `.select(...)` projections as boolean columns
+- `.where(...)` and `.having(...)` clauses to filter rows
+- `caseWhen(...)` conditions and branch results
+- Compound boolean logic with `and(...)` and `or(...)`
+
+| Function                       | SQL                | Returns   | Description                                                                  |
+| ------------------------------ | ------------------ | --------- | ---------------------------------------------------------------------------- |
+| `exists(subquery)`             | `EXISTS (...)`     | `boolean` | Returns `true` if subquery returns at least one row, else `false`            |
+| `notExists(subquery)`          | `NOT EXISTS (...)` | `boolean` | Returns `true` if subquery returns no rows, else `false`                     |
+| `isIn(col, valuesOrSubquery)`  | `col IN (...)`     | `boolean` | Returns `true` if column matches any value in list or subquery, else `false` |
+| `notIn(col, valuesOrSubquery)` | `col NOT IN (...)` | `boolean` | Returns `true` if column matches no value in list or subquery, else `false`  |
+
+### `exists` / `notExists`
+
+Evaluates whether a subquery returns any rows. Correlated subqueries can reference columns from the outer query scope:
+
+```typescript
+import { eq, exists, notExists } from "durcno";
+
+// Project existence as boolean columns in .select()
+const userProfiles = await db.from(Users).select(({ users }) => ({
+  id: users.id,
+  username: users.username,
+  hasPosts: exists(
+    db
+      .from(Posts)
+      .select("*")
+      .where(({ posts }) => eq(posts.userId, users.id)),
+  ),
+  isNewUser: notExists(
+    db
+      .from(Posts)
+      .select("*")
+      .where(({ posts }) => eq(posts.userId, users.id)),
+  ),
+}));
+
+// Use in WHERE clause (correlated subquery)
+const authors = await db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    exists(
+      db
+        .from(Posts)
+        .select("*")
+        .where(({ posts }) => eq(posts.userId, users.id)),
+    ),
+  );
+```
+
+### `isIn` / `notIn`
+
+Checks whether a column value matches any (or none) of the values in a literal array or subquery result. Unlike basic filters, `isIn` and `notIn` can also be projected directly in `.select()`:
+
+```typescript
+import { isIn, notIn } from "durcno";
+
+// Project membership check as boolean columns in .select()
+const usersWithFlags = await db.from(Users).select(({ users }) => ({
+  id: users.id,
+  isAdmin: isIn(users.type, ["admin", "superadmin"]),
+  isNotBanned: notIn(users.status, ["banned", "suspended"]),
+}));
+
+// In WHERE clause with value array
+const activeAdmins = await db
+  .from(Users)
+  .select("*")
+  .where(({ users }) => isIn(users.type, ["admin", "moderator"]));
+
+// In WHERE clause with subquery
+const usersWithRecentOrders = await db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    isIn(
+      users.id,
+      db.from(Orders).select(({ orders }) => ({ userId: orders.userId })),
+    ),
+  );
+
+// In WHERE clause with NOT IN subquery
+const usersWithoutOrders = await db
+  .from(Users)
+  .select("*")
+  .where(({ users }) =>
+    notIn(
+      users.id,
+      db.from(Orders).select(({ orders }) => ({ userId: orders.userId })),
+    ),
+  );
+```
+
+When an empty array is passed:
+
+- `isIn(col, [])` automatically evaluates to `FALSE` in SQL.
+- `notIn(col, [])` automatically evaluates to `TRUE` in SQL.
+
+---
+
 ## JSON & JSONB Functions
 
 Durcno provides full type inference and runtime safety for PostgreSQL JSON and JSONB constructors and aggregates:
