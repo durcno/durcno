@@ -98,14 +98,14 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
           createTestUser({ username: "alice", email: "alice@example.com" }),
         ]);
 
-      const [row] = await db.from(schema.Users).select(({ users }) => ({
+      const [row] = await db.from(schema.Users).select(() => ({
         userObj: jsonBuildObject({
-          id: users.id,
-          username: users.username,
-          email: users.email,
+          id: schema.Users.id,
+          username: schema.Users.username,
+          email: schema.Users.email,
         }),
         userObjB: jsonbBuildObject({
-          name: users.username,
+          name: schema.Users.username,
           staticKey: "durcno",
         }),
       }));
@@ -128,11 +128,11 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
           createTestUser({ username: "bob", email: "bob@example.com" }),
         ]);
 
-      const [row] = await db.from(schema.Users).select(({ users }) => ({
+      const [row] = await db.from(schema.Users).select(() => ({
         nested: jsonBuildObject({
-          id: users.id,
+          id: schema.Users.id,
           profile: jsonBuildObject({
-            name: users.username,
+            name: schema.Users.username,
             verified: true,
           }),
         }),
@@ -159,13 +159,13 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const rows = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          username: users.username,
-          label: caseWhen(eq(users.type, "admin"), "Administrator")
-            .when(eq(users.type, "user"), "Standard Member")
+        .select(() => ({
+          username: schema.Users.username,
+          label: caseWhen(eq(schema.Users.type, "admin"), "Administrator")
+            .when(eq(schema.Users.type, "user"), "Standard Member")
             .else("Unknown"),
         }))
-        .orderBy(({ users }) => asc(users.username));
+        .orderBy(() => asc(schema.Users.username));
 
       expect(rows).toHaveLength(2);
       expect(rows[0]).toEqual({
@@ -188,11 +188,11 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const rows = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          username: users.username,
-          adminOnly: caseWhen(eq(users.type, "admin"), "Admin"),
+        .select(() => ({
+          username: schema.Users.username,
+          adminOnly: caseWhen(eq(schema.Users.type, "admin"), "Admin"),
         }))
-        .orderBy(({ users }) => asc(users.username));
+        .orderBy(() => asc(schema.Users.username));
 
       expect(rows).toHaveLength(2);
       expect(rows[0]).toEqual({
@@ -218,11 +218,9 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       // Left join matching user
       const [postWithAuthor] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Users, ({ posts, users }) =>
-          eq(users.id, posts.userId),
-        )
-        .select(({ posts, users }) => ({
-          title: posts.title,
+        .leftJoin(schema.Users, () => eq(schema.Users.id, schema.Posts.userId))
+        .select(({ users }) => ({
+          title: schema.Posts.title,
           author: caseWhen(isNull(users.id), null).else(
             jsonBuildObject({
               id: users.id,
@@ -240,8 +238,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       const [postWithoutAuthor] = await db
         .from(schema.Posts)
         .leftJoin(schema.Users, () => eq(schema.Users.id, 999999n))
-        .select(({ posts, users }) => ({
-          title: posts.title,
+        .select(({ users }) => ({
+          title: schema.Posts.title,
           author: caseWhen(isNull(users.id), null).else(
             jsonBuildObject({
               id: users.id,
@@ -261,21 +259,22 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const [row] = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          meta: caseWhen(eq(users.id, user.id), {
+        .select(() => ({
+          meta: caseWhen(eq(schema.Users.id, user.id), {
             role: "admin",
             level: 1,
           }).else({
             role: "guest",
             level: 0,
           }),
-          bigintVal: caseWhen(eq(users.id, user.id), 9007199254740993n).else(
-            0n,
-          ),
-          boolVal: caseWhen(eq(users.id, user.id), true).else(false),
-          numVal: caseWhen(eq(users.id, user.id), 42).else(0),
+          bigintVal: caseWhen(
+            eq(schema.Users.id, user.id),
+            9007199254740993n,
+          ).else(0n),
+          boolVal: caseWhen(eq(schema.Users.id, user.id), true).else(false),
+          numVal: caseWhen(eq(schema.Users.id, user.id), 42).else(0),
         }))
-        .where(({ users }) => eq(users.id, user.id));
+        .where(() => eq(schema.Users.id, user.id));
 
       expect(row.meta).toEqual({ role: "admin", level: 1 });
       expect(row.bigintVal).toBe(9007199254740993n);
@@ -292,13 +291,13 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const [row] = await db
         .from(schema.Users)
-        .select(({ users }) => ({
+        .select(() => ({
           fallbackDate: coalesce(null, targetDate),
-          caseDate: caseWhen(eq(users.id, user.id), targetDate).else(
+          caseDate: caseWhen(eq(schema.Users.id, user.id), targetDate).else(
             new Date("2020-01-01T00:00:00.000Z"),
           ),
         }))
-        .where(({ users }) => eq(users.id, user.id));
+        .where(() => eq(schema.Users.id, user.id));
 
       expect(new Date(row.fallbackDate as any).toISOString()).toBe(
         targetDate.toISOString(),
@@ -316,13 +315,13 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const [row] = await db
         .from(schema.Users)
-        .select(({ users }) => ({
+        .select(() => ({
           result: caseWhen(
-            eq(users.id, user.id),
+            eq(schema.Users.id, user.id),
             jsonbBuildObject({ active: true }),
           ).else({ active: false }),
         }))
-        .where(({ users }) => eq(users.id, user.id));
+        .where(() => eq(schema.Users.id, user.id));
 
       expect(row.result).toEqual({ active: true });
     });
@@ -337,13 +336,13 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
           createTestUser({ username: "bob" }),
         ]);
 
-      const [row] = await db.from(schema.Users).select(({ users }) => ({
+      const [row] = await db.from(schema.Users).select(() => ({
         allUsers: jsonAgg(
           jsonBuildObject({
-            id: users.id,
-            username: users.username,
+            id: schema.Users.id,
+            username: schema.Users.username,
           }),
-        ).orderBy(asc(users.username)),
+        ).orderBy(asc(schema.Users.username)),
       }));
 
       expect(row.allUsers).toHaveLength(2);
@@ -360,8 +359,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
           createTestUser({ username: "carol", type: "admin" }),
         ]);
 
-      const [row] = await db.from(schema.Users).select(({ users }) => ({
-        types: jsonbAgg(users.type).distinct(),
+      const [row] = await db.from(schema.Users).select(() => ({
+        types: jsonbAgg(schema.Users.type).distinct(),
       }));
 
       expect(row.types?.sort()).toEqual(["admin", "user"]);
@@ -382,11 +381,11 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const [result] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Comments, ({ posts, comments }) =>
-          eq(comments.postId, posts.id),
+        .leftJoin(schema.Comments, () =>
+          eq(schema.Comments.postId, schema.Posts.id),
         )
-        .select(({ posts, comments }) => ({
-          postId: posts.id,
+        .select(({ comments }) => ({
+          postId: schema.Posts.id,
           comments: coalesce(
             jsonAgg(
               jsonBuildObject({
@@ -397,8 +396,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
             [],
           ),
         }))
-        .where(({ posts }) => eq(posts.id, post.id))
-        .groupBy(({ posts }) => [posts.id]);
+        .where(() => eq(schema.Posts.id, post.id))
+        .groupBy(() => [schema.Posts.id]);
 
       expect(result.comments).toEqual([]);
     });
@@ -425,11 +424,11 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const [result] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Comments, ({ posts, comments }) =>
-          eq(comments.postId, posts.id),
+        .leftJoin(schema.Comments, () =>
+          eq(schema.Comments.postId, schema.Posts.id),
         )
-        .select(({ posts, comments }) => ({
-          postId: posts.id,
+        .select(({ comments }) => ({
+          postId: schema.Posts.id,
           comments: coalesce(
             jsonAgg(
               jsonBuildObject({
@@ -442,8 +441,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
             [],
           ),
         }))
-        .where(({ posts }) => eq(posts.id, post.id))
-        .groupBy(({ posts }) => [posts.id]);
+        .where(() => eq(schema.Posts.id, post.id))
+        .groupBy(() => [schema.Posts.id]);
 
       expect(result.comments).toHaveLength(2);
       expect(result.comments[0].body).toBe("First comment");
@@ -461,9 +460,13 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
           createTestUser({ username: "user1", type: "user", score: 25 }),
         ]);
 
-      const [stats] = await db.from(schema.Users).select(({ users }) => ({
-        adminCount: count(users.id).filter(eq(users.type, "admin")),
-        adminScoreSum: sum(users.score).filter(eq(users.type, "admin")),
+      const [stats] = await db.from(schema.Users).select(() => ({
+        adminCount: count(schema.Users.id).filter(
+          eq(schema.Users.type, "admin"),
+        ),
+        adminScoreSum: sum(schema.Users.score).filter(
+          eq(schema.Users.type, "admin"),
+        ),
         totalCount: count("*"),
       }));
 
@@ -482,8 +485,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
         )
         .returning({ id: true });
 
-      const [row] = await db.from(schema.Users).select(({ users }) => ({
-        fullUser: toJson(users),
+      const [row] = await db.from(schema.Users).select(() => ({
+        fullUser: toJson(schema.Users),
       }));
 
       expect(row.fullUser).toMatchObject({
@@ -498,8 +501,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
         .insertInto(schema.Users)
         .values([createTestUser({ username: "coords_user" })]);
 
-      const [row] = await db.from(schema.Users).select(({ users }) => ({
-        pair: jsonBuildArray(users.id, users.username),
+      const [row] = await db.from(schema.Users).select(() => ({
+        pair: jsonBuildArray(schema.Users.id, schema.Users.username),
       }));
 
       expect(row.pair).toEqual([expect.any(Number), "coords_user"]);
@@ -510,12 +513,12 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
         .insertInto(schema.Users)
         .values([createTestUser({ username: "null_email_user", email: null })]);
 
-      const [row] = await db.from(schema.Users).select(({ users }) => ({
+      const [row] = await db.from(schema.Users).select(() => ({
         cleaned: jsonStripNulls(
           jsonBuildObject({
-            id: users.id,
-            username: users.username,
-            email: users.email,
+            id: schema.Users.id,
+            username: schema.Users.username,
+            email: schema.Users.email,
           }),
         ),
       }));
@@ -542,7 +545,7 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
           asJson: toJson(schema.Users),
           asJsonb: toJsonb(schema.Users),
         }))
-        .where(({ users }) => eq(users.id, user.id));
+        .where(() => eq(schema.Users.id, user.id));
 
       expect(row.asJson).toMatchObject({
         username: "table_ref_user",
@@ -562,10 +565,10 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const [row] = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          arr: jsonBuildArray({ key: "val" }, users.username),
+        .select(() => ({
+          arr: jsonBuildArray({ key: "val" }, schema.Users.username),
         }))
-        .where(({ users }) => eq(users.id, user.id));
+        .where(() => eq(schema.Users.id, user.id));
 
       expect(row.arr).toEqual([{ key: "val" }, "obj_arr_user"]);
     });
@@ -590,14 +593,12 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       // Query without explicit .groupBy()
       const [row] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Users, ({ posts, users }) =>
-          eq(users.id, posts.userId),
+        .leftJoin(schema.Users, () => eq(schema.Users.id, schema.Posts.userId))
+        .leftJoin(schema.Comments, () =>
+          eq(schema.Comments.postId, schema.Posts.id),
         )
-        .leftJoin(schema.Comments, ({ posts, comments }) =>
-          eq(comments.postId, posts.id),
-        )
-        .select(({ posts, users, comments }) => ({
-          postId: posts.id,
+        .select(({ users, comments }) => ({
+          postId: schema.Posts.id,
           author: jsonBuildObject({
             id: users.id,
             username: users.username,

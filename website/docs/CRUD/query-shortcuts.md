@@ -284,7 +284,7 @@ const user = await db.$first(Users, eq(Users.id, 1n));
 const [user] = await db
   .from(Users)
   .select("*")
-  .where(({ users }) => eq(users.id, 1n))
+  .where(() => eq(Users.id, 1n))
   .limit(1);
 ```
 

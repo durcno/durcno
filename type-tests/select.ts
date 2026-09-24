@@ -1,5 +1,12 @@
 import { and, asc, count, desc, eq, gt, gte, lower, sql, sum } from "durcno";
-import { Comments, db, Posts, UserProfiles, Users } from "./schema";
+import {
+  Comments,
+  db,
+  NetworkDevices,
+  Posts,
+  UserProfiles,
+  Users,
+} from "./schema";
 import { type Equal, Expect } from "./utils";
 
 // Type test: select all columns
@@ -23,14 +30,14 @@ Expect<
 // Type test: select specific columns
 const usernameOnlyQuery = db
   .from(Users)
-  .select(({ users }) => ({ username: users.username }));
+  .select(() => ({ username: Users.username }));
 type UsernameOnly = Awaited<typeof usernameOnlyQuery>;
 Expect<Equal<UsernameOnly, { username: string }[]>>();
 
 // Type test: select multiple columns
 const userIdAndEmailQuery = db
   .from(Users)
-  .select(({ users }) => ({ id: users.id, email: users.email }));
+  .select(() => ({ id: Users.id, email: Users.email }));
 type UserIdAndEmail = Awaited<typeof userIdAndEmailQuery>;
 Expect<Equal<UserIdAndEmail, { id: bigint; email: string | null }[]>>();
 
@@ -60,31 +67,31 @@ Expect<
 // Type test: select array column from Posts (nullable)
 const tagsQuery = db
   .from(Posts)
-  .select(({ posts }) => ({ id: posts.id, tags: posts.tags }));
+  .select(() => ({ id: Posts.id, tags: Posts.tags }));
 type TagsResult = Awaited<typeof tagsQuery>;
 Expect<Equal<TagsResult, { id: bigint; tags: string[] | null }[]>>();
 
 // Type test: select on Comments, only body
 const commentBodyQuery = db
   .from(Comments)
-  .select(({ comments }) => ({ body: comments.body }));
+  .select(() => ({ body: Comments.body }));
 type CommentBody = Awaited<typeof commentBodyQuery>;
 Expect<Equal<CommentBody, { body: string | null }[]>>();
 
 // Type test: select with where
 const whereQuery = db
   .from(Users)
-  .select(({ users }) => ({ email: users.email }))
-  .where(({ users }) => eq(users.username, "ghost"));
+  .select(() => ({ email: Users.email }))
+  .where(() => eq(Users.username, "ghost"));
 type Where = Awaited<typeof whereQuery>;
 Expect<Equal<Where, { email: string | null }[]>>();
 
 // Type test: select with where and and
 const whereAndQuery = db
   .from(Users)
-  .select(({ users }) => ({ username: users.username }))
-  .where(({ users }) =>
-    and(eq(users.username, "ghost"), eq(users.email, "email@example.com")),
+  .select(() => ({ username: Users.username }))
+  .where(() =>
+    and(eq(Users.username, "ghost"), eq(Users.email, "email@example.com")),
   );
 type WhereAnd = Awaited<typeof whereAndQuery>;
 Expect<Equal<WhereAnd, { username: string }[]>>();
@@ -92,26 +99,26 @@ Expect<Equal<WhereAnd, { username: string }[]>>();
 // Type test: select with orderBy
 const orderByQuery = db
   .from(Users)
-  .select(({ users }) => ({ username: users.username }))
-  .orderBy(({ users }) => asc(users.username));
+  .select(() => ({ username: Users.username }))
+  .orderBy(() => asc(Users.username));
 type OrderBy = Awaited<typeof orderByQuery>;
 Expect<Equal<OrderBy, { username: string }[]>>();
 
 // Type test: select with multi-column orderBy (array syntax)
 const multiOrderByQuery = db
   .from(Users)
-  .select(({ users }) => ({
-    username: users.username,
-    createdAt: users.createdAt,
+  .select(() => ({
+    username: Users.username,
+    createdAt: Users.createdAt,
   }))
-  .orderBy(({ users }) => [asc(users.username), desc(users.createdAt)]);
+  .orderBy(() => [asc(Users.username), desc(Users.createdAt)]);
 type MultiOrderBy = Awaited<typeof multiOrderByQuery>;
 Expect<Equal<MultiOrderBy, { username: string; createdAt: Date }[]>>();
 
 // Type test: select with limit
 const limitQuery = db
   .from(Users)
-  .select(({ users }) => ({ username: users.username }))
+  .select(() => ({ username: Users.username }))
   .limit(10);
 type Limit = Awaited<typeof limitQuery>;
 Expect<Equal<Limit, { username: string }[]>>();
@@ -119,7 +126,7 @@ Expect<Equal<Limit, { username: string }[]>>();
 // Type test: select with offset
 const offsetQuery = db
   .from(Users)
-  .select(({ users }) => ({ username: users.username }))
+  .select(() => ({ username: Users.username }))
   .limit(10)
   .offset(10);
 type Offset = Awaited<typeof offsetQuery>;
@@ -138,49 +145,47 @@ db.from(Users).select(
 db.from(Users)
   .select("*")
   // @ts-expect-error - Wrong type in where condition should not compile
-  .where(({ users }) => eq(users.id, "string_instead_of_number"));
+  .where(() => eq(Users.id, "string_instead_of_number"));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Wrong enum value in where should not compile
-  .where(({ users }) => eq(users.type, "invalid_type"));
+  .where(() => eq(Users.type, "invalid_type"));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Comparing incompatible types should not compile
-  .where(({ users }) => eq(users.username, 123));
+  .where(() => eq(Users.username, 123));
 
 // Cannot use string where Buffer is expected for bytea
 db.from(UserProfiles)
   .select("*")
   // @ts-expect-error - string not assignable to ByteaValType
-  .where(({ userProfiles }) => eq(userProfiles.avatarData, "not-a-buffer"));
+  .where(() => eq(UserProfiles.avatarData, "not-a-buffer"));
 
 db.from(UserProfiles)
   .select("*")
   // @ts-expect-error - Cannot use number where Buffer is expected for bytea
-  .where(({ userProfiles }) => eq(userProfiles.avatarData, 123));
+  .where(() => eq(UserProfiles.avatarData, 123));
 
 // ============================================================================
 // Negative type tests for network columns
 // ============================================================================
 
-import { NetworkDevices } from "./schema";
-
 db.from(NetworkDevices)
   .select("*")
   // @ts-expect-error - Cannot use number for INET column (expects string)
-  .where(({ network_devices }) => eq(network_devices.ipAddress, 123));
+  .where(() => eq(NetworkDevices.ipAddress, 123));
 
 db.from(NetworkDevices)
   .select("*")
   // @ts-expect-error - Cannot use number for CIDR column (expects string)
-  .where(({ network_devices }) => eq(network_devices.networkRange, 456));
+  .where(() => eq(NetworkDevices.networkRange, 456));
 
 db.from(NetworkDevices)
   .select("*")
   // @ts-expect-error - Cannot use number for MACADDR column (expects string)
-  .where(({ network_devices }) => eq(network_devices.macAddress, 789));
+  .where(() => eq(NetworkDevices.macAddress, 789));
 
 // ============================================================================
 // DISTINCT ON type tests
@@ -189,7 +194,7 @@ db.from(NetworkDevices)
 // Type test: distinctOn with a single column preserves return type
 const distinctOnSingleQuery = db
   .from(Users)
-  .distinctOn(({ users }) => users.username)
+  .distinctOn(() => Users.username)
   .select("*");
 type DistinctOnSingle = Awaited<typeof distinctOnSingleQuery>;
 Expect<
@@ -210,8 +215,8 @@ Expect<
 // Type test: distinctOn with an array of columns
 const distinctOnMultiQuery = db
   .from(Users)
-  .distinctOn(({ users }) => [users.type, users.username])
-  .select(({ users }) => ({ username: users.username, type: users.type }));
+  .distinctOn(() => [Users.type, Users.username])
+  .select(() => ({ username: Users.username, type: Users.type }));
 type DistinctOnMulti = Awaited<typeof distinctOnMultiQuery>;
 Expect<
   Equal<DistinctOnMulti, { username: string; type: "admin" | "user" }[]>
@@ -220,28 +225,22 @@ Expect<
 // Type test: distinctOn chained with where and orderBy
 const distinctOnChainedQuery = db
   .from(Users)
-  .distinctOn(({ users }) => users.type)
-  .select(({ users }) => ({ username: users.username }))
-  .where(({ users }) => eq(users.type, "admin"))
-  .orderBy(({ users }) => asc(users.type));
+  .distinctOn(() => Users.type)
+  .select(() => ({ username: Users.username }))
+  .where(() => eq(Users.type, "admin"))
+  .orderBy(() => asc(Users.type));
 type DistinctOnChained = Awaited<typeof distinctOnChainedQuery>;
 Expect<Equal<DistinctOnChained, { username: string }[]>>();
 
 // Type test: distinctOn cannot be called twice (Omit removes it)
-const _distinctOnOnce = db
-  .from(Users)
-  .distinctOn(({ users }) => users.username);
+const _distinctOnOnce = db.from(Users).distinctOn(() => Users.username);
 // @ts-expect-error - distinctOn should not be callable after already calling it
-_distinctOnOnce.distinctOn(({ users }) => users.email);
+_distinctOnOnce.distinctOn(() => Users.email);
 
 // Type test: innerJoin cannot be called after distinctOn (Omit removes it)
-const _distinctOnNoJoin = db
-  .from(Users)
-  .distinctOn(({ users }) => users.username);
+const _distinctOnNoJoin = db.from(Users).distinctOn(() => Users.username);
 // @ts-expect-error - innerJoin should not be callable after distinctOn
-_distinctOnNoJoin.innerJoin(Posts, ({ users, posts }) =>
-  eq(users.id, posts.userId),
-);
+_distinctOnNoJoin.innerJoin(Posts, () => eq(Users.id, Posts.userId));
 
 // ============================================================================
 // Negative DISTINCT ON type tests
@@ -259,24 +258,24 @@ db.from(Users)
 // Type test: aggregate + plain column infers correct shape
 const mixedColAggQuery = db
   .from(Users)
-  .select(({ users }) => ({ type: users.type, total: count("*") }));
+  .select(() => ({ type: Users.type, total: count("*") }));
 type MixedColAgg = Awaited<typeof mixedColAggQuery>;
 Expect<Equal<MixedColAgg, { type: "admin" | "user"; total: number }[]>>();
 
 // Type test: aggregate + scalar fn infers correct shape
-const mixedFnAggQuery = db.from(Users).select(({ users }) => ({
-  lowerEmail: lower(users.email),
+const mixedFnAggQuery = db.from(Users).select(() => ({
+  lowerEmail: lower(Users.email),
   total: count("*"),
 }));
 type MixedFnAgg = Awaited<typeof mixedFnAggQuery>;
 Expect<Equal<MixedFnAgg, { lowerEmail: string | null; total: number }[]>>();
 
 // Type test: multiple aggregates + multiple plain columns
-const multiMixedQuery = db.from(Users).select(({ users }) => ({
-  type: users.type,
-  username: users.username,
+const multiMixedQuery = db.from(Users).select(() => ({
+  type: Users.type,
+  username: Users.username,
   total: count("*"),
-  totalIds: sum(users.id),
+  totalIds: sum(Users.id),
 }));
 type MultiMixed = Awaited<typeof multiMixedQuery>;
 Expect<
@@ -292,17 +291,17 @@ Expect<
 >();
 
 // Type test: pure aggregates only — no GROUP BY needed, shape is correct
-const pureAggQuery = db.from(Users).select(({ users }) => ({
+const pureAggQuery = db.from(Users).select(() => ({
   total: count("*"),
-  distinctUsers: count(users.id),
+  distinctUsers: count(Users.id),
 }));
 type PureAgg = Awaited<typeof pureAggQuery>;
 Expect<Equal<PureAgg, { total: number; distinctUsers: number }[]>>();
 
 // Type test: pure columns + scalars only — no GROUP BY, shape is correct
-const pureScalarQuery = db.from(Users).select(({ users }) => ({
-  username: users.username,
-  lowerEmail: lower(users.email),
+const pureScalarQuery = db.from(Users).select(() => ({
+  username: Users.username,
+  lowerEmail: lower(Users.email),
 }));
 type PureScalar = Awaited<typeof pureScalarQuery>;
 Expect<Equal<PureScalar, { username: string; lowerEmail: string | null }[]>>();
@@ -316,65 +315,65 @@ Expect<Equal<PureScalar, { username: string; lowerEmail: string | null }[]>>();
 // single column
 const _gbSingleCol = db
   .from(Users)
-  .select(({ users }) => ({ type: users.type, total: count("*") }))
-  .groupBy(({ users }) => users.type);
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type);
 
 // array of columns
 const _gbArrayCols = db
   .from(Users)
-  .select(({ users }) => ({
-    type: users.type,
-    username: users.username,
+  .select(() => ({
+    type: Users.type,
+    username: Users.username,
     total: count("*"),
   }))
-  .groupBy(({ users }) => [users.type, users.username]);
+  .groupBy(() => [Users.type, Users.username]);
 
 // scalar SqlFn expression
 const _gbScalarFn = db
   .from(Users)
-  .select(({ users }) => ({
-    lname: lower(users.username),
+  .select(() => ({
+    lname: lower(Users.username),
     total: count("*"),
   }))
-  .groupBy(({ users }) => lower(users.username));
+  .groupBy(() => lower(Users.username));
 
 // having — aggregate vs literal
 const _havingLiteral = db
   .from(Users)
-  .select(({ users }) => ({ type: users.type, total: count("*") }))
-  .groupBy(({ users }) => users.type)
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type)
   .having(() => gte(count("*"), 5));
 
 // having — aggregate vs aggregate
 const _havingAgg = db
   .from(Users)
-  .select(({ users }) => ({
-    type: users.type,
+  .select(() => ({
+    type: Users.type,
     total: count("*"),
-    sumId: sum(users.id),
+    sumId: sum(Users.id),
   }))
-  .groupBy(({ users }) => users.type)
+  .groupBy(() => Users.type)
   .having(() => gt(sum(Users.id), count("*")));
 
 // chained groupBy + having
 const _gbAndHaving = db
   .from(Users)
-  .select(({ users }) => ({ type: users.type, total: count("*") }))
-  .groupBy(({ users }) => users.type)
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type)
   .having(() => gte(count("*"), 2));
 
 // callback with select aliases
 const _gbCallbackSingle = db
   .from(Users)
-  .select(({ users }) => ({ lname: lower(users.username) }))
+  .select(() => ({ lname: lower(Users.username) }))
   .groupBy((_view, { lname }) => [lname]);
 
 // multiple aliases
 const _gbCallbackMulti = db
   .from(Users)
-  .select(({ users }) => ({
-    lname: lower(users.username),
-    type: users.type,
+  .select(() => ({
+    lname: lower(Users.username),
+    type: Users.type,
     total: count("*"),
   }))
   .groupBy((_view, { lname, type }) => [lname, type]);
@@ -382,34 +381,34 @@ const _gbCallbackMulti = db
 // mixed alias + direct column
 const _gbCallbackMixed = db
   .from(Users)
-  .select(({ users }) => ({
-    lname: lower(users.username),
+  .select(() => ({
+    lname: lower(Users.username),
     total: count("*"),
   }))
-  .groupBy(({ users }, { lname }) => [lname, users.type]);
+  .groupBy((_view, { lname }) => [lname, Users.type]);
 
 // --- Negative tests ---
 
 // .groupBy() called twice should error (removed from type)
 const _gbOnce = db
   .from(Users)
-  .select(({ users }) => ({ type: users.type, total: count("*") }))
-  .groupBy(({ users }) => users.type);
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type);
 // @ts-expect-error - groupBy is removed after first call
-_gbOnce.groupBy(({ users }) => users.type);
+_gbOnce.groupBy(() => Users.type);
 
 // .having() called twice should error (removed from type)
 const _havingOnce = db
   .from(Users)
-  .select(({ users }) => ({ type: users.type, total: count("*") }))
-  .groupBy(({ users }) => users.type)
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type)
   .having(() => gte(count("*"), 1));
 // @ts-expect-error - having is removed after first call
 _havingOnce.having(() => gte(count("*"), 1));
 
 // aggregate SqlFn as direct groupBy expression — @ts-expect-error (only scalar allowed)
 db.from(Users)
-  .select(({ users }) => ({ type: users.type, total: count("*") }))
+  .select(() => ({ type: Users.type, total: count("*") }))
   // @ts-expect-error - aggregate function not allowed in groupBy (only scalar)
   .groupBy(() => count("*"));
 
@@ -423,15 +422,15 @@ db.from(Users)
 // Null and literal projection type tests
 // ============================================================================
 
-const nullAndLiteralSelectQuery = db.from(Users).select(({ users }) => ({
+const nullAndLiteralSelectQuery = db.from(Users).select(() => ({
   directNull: null,
   sqlNull: sql.null,
   rawStr: "hello",
   rawNum: 100,
   rawBool: true,
   lowerNull: lower(null),
-  lowerUsername: lower(users.username),
-  lowerEmail: lower(users.email),
+  lowerUsername: lower(Users.username),
+  lowerEmail: lower(Users.email),
 }));
 type NullAndLiteralSelect = Awaited<typeof nullAndLiteralSelectQuery>;
 Expect<

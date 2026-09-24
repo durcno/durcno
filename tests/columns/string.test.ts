@@ -40,7 +40,7 @@ describe("String Column Types", () => {
       const [row] = await db
         .from(schema.VarcharTests)
         .select("*")
-        .where(({ varcharTests }) => eq(varcharTests.id, insertedId));
+        .where(() => eq(schema.VarcharTests.id, insertedId));
       expect(row.name).toBe("alice");
       expect(row.nameWithDefault).toBe("default_value");
     });
@@ -54,7 +54,7 @@ describe("String Column Types", () => {
       const [row] = await db
         .from(schema.VarcharTests)
         .select("*")
-        .where(({ varcharTests }) => eq(varcharTests.id, insertedId));
+        .where(() => eq(schema.VarcharTests.id, insertedId));
       expect(row.name).toBe("bob");
     });
   });
@@ -87,7 +87,7 @@ describe("String Column Types", () => {
       const [row] = await db
         .from(schema.TextTests)
         .select("*")
-        .where(({ textTests }) => eq(textTests.id, insertedId));
+        .where(() => eq(schema.TextTests.id, insertedId));
       expect(row.content).toBe("hello world");
       expect(row.contentWithDefault).toBe("default text");
     });
@@ -101,7 +101,7 @@ describe("String Column Types", () => {
       const [row] = await db
         .from(schema.TextTests)
         .select("*")
-        .where(({ textTests }) => eq(textTests.id, insertedId));
+        .where(() => eq(schema.TextTests.id, insertedId));
       expect(row.content).toBe("updated content");
     });
   });
@@ -134,7 +134,7 @@ describe("String Column Types", () => {
       const [row] = await db
         .from(schema.CharTests)
         .select("*")
-        .where(({ charTests }) => eq(charTests.id, insertedId));
+        .where(() => eq(schema.CharTests.id, insertedId));
       expect(row.code).toBe("HELLO");
       expect(row.codeWithDefault).toBe("XX");
     });
@@ -148,7 +148,7 @@ describe("String Column Types", () => {
       const [row] = await db
         .from(schema.CharTests)
         .select("*")
-        .where(({ charTests }) => eq(charTests.id, insertedId));
+        .where(() => eq(schema.CharTests.id, insertedId));
       expect(row.code).toBe("WORLD");
     });
   });

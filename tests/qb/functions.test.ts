@@ -112,16 +112,16 @@ describe("String and Numeric Functions", () => {
 
     const result = await db
       .from(schema.Users)
-      .select(({ users }) => ({
-        len: length(users.email),
-        low: lower(users.email),
-        up: upper(users.email),
-        trimmed: trim(users.username),
-        l: left(users.email, 4),
-        r: right(users.email, 4),
-        pos: position(users.email, "@"),
+      .select(() => ({
+        len: length(schema.Users.email),
+        low: lower(schema.Users.email),
+        up: upper(schema.Users.email),
+        trimmed: trim(schema.Users.username),
+        l: left(schema.Users.email, 4),
+        r: right(schema.Users.email, 4),
+        pos: position(schema.Users.email, "@"),
       }))
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(result[0].len).toBe(16);
     expect(result[0].low).toBe("test@example.com");
@@ -147,16 +147,16 @@ describe("String and Numeric Functions", () => {
 
     const result = await db
       .from(schema.Users)
-      .select(({ users }) => ({
-        a: abs(users.age),
-        m: mod(users.age, 2),
-        r: round(users.age),
-        c: ceil(users.age),
-        f: floor(users.age),
-        t: trunc(users.age),
-        p: power(users.age, 2),
+      .select(() => ({
+        a: abs(schema.Users.age),
+        m: mod(schema.Users.age, 2),
+        r: round(schema.Users.age),
+        c: ceil(schema.Users.age),
+        f: floor(schema.Users.age),
+        t: trunc(schema.Users.age),
+        p: power(schema.Users.age, 2),
       }))
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(Number(result[0].a)).toBe(age);
     expect(Number(result[0].m)).toBe(age % 2);
@@ -181,14 +181,14 @@ describe("String and Numeric Functions", () => {
 
     const result = await db
       .from(schema.Users)
-      .select(({ users }) => ({
-        added: add(users.age, 5),
-        subtracted: sub(users.age, 3),
-        multiplied: mul(users.age, 2),
-        divided: div(users.age, 2),
-        nested: add(mul(users.age, 2), sub(5, 1)), // (age * 2) + (5 - 1)
+      .select(() => ({
+        added: add(schema.Users.age, 5),
+        subtracted: sub(schema.Users.age, 3),
+        multiplied: mul(schema.Users.age, 2),
+        divided: div(schema.Users.age, 2),
+        nested: add(mul(schema.Users.age, 2), sub(5, 1)), // (age * 2) + (5 - 1)
       }))
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(Number(result[0].added)).toBe(baseValue + 5); // 15
     expect(Number(result[0].subtracted)).toBe(baseValue - 3); // 7
@@ -212,7 +212,7 @@ describe("String and Numeric Functions", () => {
 
     const result = await db
       .from(schema.Users)
-      .select(({ users }) => ({
+      .select(() => ({
         directNull: null,
         sqlNull: sql.null,
         rawStr: "hello",
@@ -223,10 +223,10 @@ describe("String and Numeric Functions", () => {
         lenNull: length(null),
         absNull: abs(null),
         addNull: add(5, null),
-        lowEmail: lower(users.email),
-        absAge: abs(users.age),
+        lowEmail: lower(schema.Users.email),
+        absAge: abs(schema.Users.age),
       }))
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(result[0].directNull).toBeNull();
     expect(result[0].sqlNull).toBeNull();
@@ -256,24 +256,24 @@ describe("String and Numeric Functions", () => {
 
     const result = await db
       .from(schema.Users)
-      .select(({ users }) => ({
-        coalEmail: coalesce(users.email, "default@test.com"),
-        coalNull: coalesce(users.email, null),
-        coalId: coalesce(users.id, 0n),
-        nullIfMatch: nullif(users.age, 25),
-        nullIfDiff: nullif(users.age, 30),
-        concatenated: concat(users.username, "!", 42),
-        concatColumn: concat(users.username, "#", users.id),
-        greatestAge: greatest(users.age, 30),
-        leastAge: least(users.age, 20),
-        separated: concatWs(" - ", users.username, "active"),
-        nullSep: concatWs(null, users.username),
+      .select(() => ({
+        coalEmail: coalesce(schema.Users.email, "default@test.com"),
+        coalNull: coalesce(schema.Users.email, null),
+        coalId: coalesce(schema.Users.id, 0n),
+        nullIfMatch: nullif(schema.Users.age, 25),
+        nullIfDiff: nullif(schema.Users.age, 30),
+        concatenated: concat(schema.Users.username, "!", 42),
+        concatColumn: concat(schema.Users.username, "#", schema.Users.id),
+        greatestAge: greatest(schema.Users.age, 30),
+        leastAge: least(schema.Users.age, 20),
+        separated: concatWs(" - ", schema.Users.username, "active"),
+        nullSep: concatWs(null, schema.Users.username),
         directBigInt: 100n,
         directBoolTrue: true,
         directBoolFalse: false,
-        addBigInt: add(users.id, 10n),
+        addBigInt: add(schema.Users.id, 10n),
       }))
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(result[0].coalEmail).toBe("default@test.com");
     expect(result[0].coalNull).toBeNull();

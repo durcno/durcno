@@ -227,25 +227,25 @@ export class InFn<
  * const usersWithOrders = await db
  *   .from(Users)
  *   .select("*")
- *   .where(({ users }) =>
+ *   .where(() =>
  *     exists(
  *       db
  *         .from(Orders)
  *         .select("*")
- *         .where(({ orders }) => eq(orders.userId, users.id))
+ *         .where(() => eq(Orders.userId, Users.id))
  *     )
  *   );
  *
  * // In SELECT projection
  * const usersWithFlag = await db
  *   .from(Users)
- *   .select(({ users }) => ({
- *     id: users.id,
+ *   .select(() => ({
+ *     id: Users.id,
  *     hasOrders: exists(
  *       db
  *         .from(Orders)
  *         .select("*")
- *         .where(({ orders }) => eq(orders.userId, users.id))
+ *         .where(() => eq(Orders.userId, Users.id))
  *     ),
  *   }));
  * ```
@@ -268,12 +268,12 @@ export function exists<TSubquery extends SubqueryInput>(
  * const usersWithoutOrders = await db
  *   .from(Users)
  *   .select("*")
- *   .where(({ users }) =>
+ *   .where(() =>
  *     notExists(
  *       db
  *         .from(Orders)
  *         .select("*")
- *         .where(({ orders }) => eq(orders.userId, users.id))
+ *         .where(() => eq(Orders.userId, Users.id))
  *     )
  *   );
  * ```
@@ -294,17 +294,17 @@ export function notExists<TSubquery extends SubqueryInput>(
  * @example
  * ```ts
  * // With value array in WHERE
- * db.from(Users).select("*").where(({ users }) => isIn(users.id, [1n, 2n, 3n]));
+ * db.from(Users).select("*").where(() => isIn(Users.id, [1n, 2n, 3n]));
  *
  * // With subquery in WHERE
- * db.from(Users).select("*").where(({ users }) =>
- *   isIn(users.id, db.from(Orders).select(({ orders }) => ({ userId: orders.userId })))
+ * db.from(Users).select("*").where(() =>
+ *   isIn(Users.id, db.from(Orders).select(() => ({ userId: Orders.userId })))
  * );
  *
  * // In SELECT projection
- * db.from(Users).select(({ users }) => ({
- *   id: users.id,
- *   isAdmin: isIn(users.type, ["admin", "superadmin"]),
+ * db.from(Users).select(() => ({
+ *   id: Users.id,
+ *   isAdmin: isIn(Users.type, ["admin", "superadmin"]),
  * }));
  * ```
  */
@@ -341,17 +341,17 @@ export function isIn<TCol extends AnyColumn>(
  * @example
  * ```ts
  * // With value array in WHERE
- * db.from(Users).select("*").where(({ users }) => notIn(users.type, ["banned", "deleted"]));
+ * db.from(Users).select("*").where(() => notIn(Users.type, ["banned", "deleted"]));
  *
  * // With subquery in WHERE
- * db.from(Users).select("*").where(({ users }) =>
- *   notIn(users.id, db.from(BannedUsers).select(({ banned }) => ({ userId: banned.userId })))
+ * db.from(Users).select("*").where(() =>
+ *   notIn(Users.id, db.from(BannedUsers).select(() => ({ userId: BannedUsers.userId })))
  * );
  *
  * // In SELECT projection
- * db.from(Users).select(({ users }) => ({
- *   id: users.id,
- *   isActive: notIn(users.type, ["banned", "deleted"]),
+ * db.from(Users).select(() => ({
+ *   id: Users.id,
+ *   isActive: notIn(Users.type, ["banned", "deleted"]),
  * }));
  * ```
  */

@@ -112,7 +112,7 @@ describe("pgvector", () => {
       const [row] = await db
         .from(schema.Items)
         .select("*")
-        .where(({ items }) => eq(items.id, insertedId));
+        .where(() => eq(schema.Items.id, insertedId));
       expect(row.vec).toEqual([1, 2, 3]);
     });
 
@@ -124,7 +124,7 @@ describe("pgvector", () => {
       const [row] = await db
         .from(schema.Items)
         .select("*")
-        .where(({ items }) => eq(items.id, insertedId));
+        .where(() => eq(schema.Items.id, insertedId));
       expect(row.vec).toEqual([4, 5, 6]);
     });
   });
@@ -154,7 +154,7 @@ describe("pgvector", () => {
       const [row] = await db
         .from(schema.Items)
         .select("*")
-        .where(({ items }) => eq(items.id, insertedId));
+        .where(() => eq(schema.Items.id, insertedId));
       expect(row.hvec).toEqual([1.5, 2.5, 3.5]);
     });
   });
@@ -184,7 +184,7 @@ describe("pgvector", () => {
       const [row] = await db
         .from(schema.Items)
         .select("*")
-        .where(({ items }) => eq(items.id, insertedId));
+        .where(() => eq(schema.Items.id, insertedId));
       expect(row.svec).toEqual("{1:1,3:2}/3");
     });
   });
@@ -209,7 +209,7 @@ describe("pgvector", () => {
       const [row] = await db
         .from(schema.Items)
         .select("*")
-        .where(({ items }) => eq(items.id, insertedId));
+        .where(() => eq(schema.Items.id, insertedId));
       expect(row.b).toEqual("101");
     });
   });
@@ -232,8 +232,8 @@ describe("pgvector", () => {
 
       const rows = await db
         .from(schema.Items)
-        .select(({ items }) => ({ id: items.id }))
-        .orderBy(({ items }) => asc(l2Distance(items.vec, [1, 1, 1])));
+        .select(() => ({ id: schema.Items.id }))
+        .orderBy(() => asc(l2Distance(schema.Items.vec, [1, 1, 1])));
 
       expect(rows[0].id).toBe(1n);
       expect(rows[1].id).toBe(2n);
@@ -248,8 +248,8 @@ describe("pgvector", () => {
 
       const rows = await db
         .from(schema.Items)
-        .select(({ items }) => ({ dist: l2Distance(items.vec, [1, 1, 1]) }))
-        .where(({ items }) => lt(l2Distance(items.vec, [1, 1, 1]), 1.0));
+        .select(() => ({ dist: l2Distance(schema.Items.vec, [1, 1, 1]) }))
+        .where(() => lt(l2Distance(schema.Items.vec, [1, 1, 1]), 1.0));
 
       expect(rows).toHaveLength(1);
       expect(rows[0].dist).toBe(0);
@@ -265,11 +265,11 @@ describe("pgvector", () => {
       // "111" vs "101" = 1 bit diff, "111" vs "111" = 0, "111" vs "000" = 3
       const rows = await db
         .from(schema.Items)
-        .select(({ items }) => ({
-          id: items.id,
-          dist: hammingDistance(items.b, "111"),
+        .select(() => ({
+          id: schema.Items.id,
+          dist: hammingDistance(schema.Items.b, "111"),
         }))
-        .orderBy(({ items }) => asc(hammingDistance(items.b, "111")));
+        .orderBy(() => asc(hammingDistance(schema.Items.b, "111")));
 
       expect(rows[0].id).toBe(2n); // "111" dist 0
       expect(rows[1].id).toBe(1n); // "101" dist 1

@@ -14,7 +14,7 @@ const _basicSelectQuery = prepare(
       .prepare()
       .from(Users)
       .select("*")
-      .where(({ users }) => eq(users.username, args.username));
+      .where(() => eq(Users.username, args.username));
   },
 );
 const _basicSelectResult = _basicSelectQuery.run(db, { username: "john" });
@@ -46,11 +46,11 @@ const _multiArgSelectQuery = prepare(
       .prepare()
       .from(Users)
       .select("*")
-      .where(({ users }) =>
+      .where(() =>
         and(
-          eq(users.username, args.username),
-          eq(users.email, args.email),
-          eq(users.type, args.type),
+          eq(Users.username, args.username),
+          eq(Users.email, args.email),
+          eq(Users.type, args.type),
         ),
       );
   },
@@ -81,8 +81,8 @@ const _selectiveSelectQuery = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select(({ users }) => ({ username: users.username, email: users.email }))
-    .where(({ users }) => eq(users.id, args.id));
+    .select(() => ({ username: Users.username, email: Users.email }))
+    .where(() => eq(Users.id, args.id));
 });
 const _selectiveSelectResult = _selectiveSelectQuery.run(db, { id: 1n });
 type SelectiveSelectResult = Awaited<typeof _selectiveSelectResult>;
@@ -96,7 +96,7 @@ const _numericSelectQuery = prepare({ userId: Users.id.arg() }, (args) => {
     .prepare()
     .from(Posts)
     .select("*")
-    .where(({ posts }) => eq(posts.userId, args.userId));
+    .where(() => eq(Posts.userId, args.userId));
 });
 const _numericSelectResult = _numericSelectQuery.run(db, { userId: 1n });
 type NumericSelectResult = Awaited<typeof _numericSelectResult>;
@@ -122,11 +122,11 @@ const _orSelectQuery = prepare(
     return db
       .prepare()
       .from(Users)
-      .select(({ users }) => ({ id: users.id, username: users.username }))
-      .where(({ users }) =>
+      .select(() => ({ id: Users.id, username: Users.username }))
+      .where(() =>
         or(
-          eq(users.username, args.username1),
-          eq(users.username, args.username2),
+          eq(Users.username, args.username1),
+          eq(Users.username, args.username2),
         ),
       );
   },
@@ -143,8 +143,8 @@ const _enumSelectQuery = prepare({ userType: Users.type.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select(({ users }) => ({ id: users.id, type: users.type }))
-    .where(({ users }) => eq(users.type, args.userType));
+    .select(() => ({ id: Users.id, type: Users.type }))
+    .where(() => eq(Users.type, args.userType));
 });
 const _enumSelectResult = _enumSelectQuery.run(db, { userType: "admin" });
 type EnumSelectResult = Awaited<typeof _enumSelectResult>;
@@ -156,7 +156,7 @@ const _nullableSelectQuery = prepare({ email: Users.email.arg() }, (args) => {
     .prepare()
     .from(Users)
     .select("*")
-    .where(({ users }) => eq(users.email, args.email));
+    .where(() => eq(Users.email, args.email));
 });
 const _nullableSelectResult = _nullableSelectQuery.run(db, {
   email: "test@example.com",
@@ -188,11 +188,11 @@ const _complexSelectQuery = prepare(
     return db
       .prepare()
       .from(Users)
-      .select(({ users }) => ({ username: users.username, type: users.type }))
-      .where(({ users }) =>
+      .select(() => ({ username: Users.username, type: Users.type }))
+      .where(() =>
         and(
-          eq(users.username, args.username),
-          or(eq(users.type, args.type1), eq(users.type, args.type2)),
+          eq(Users.username, args.username),
+          or(eq(Users.type, args.type1), eq(Users.type, args.type2)),
         ),
       );
   },
@@ -214,9 +214,9 @@ const _postsSelectQuery = prepare(
     return db
       .prepare()
       .from(Posts)
-      .select(({ posts }) => ({ title: posts.title, content: posts.content }))
-      .where(({ posts }) =>
-        and(eq(posts.id, args.postId), eq(posts.userId, args.userId)),
+      .select(() => ({ title: Posts.title, content: Posts.content }))
+      .where(() =>
+        and(eq(Posts.id, args.postId), eq(Posts.userId, args.userId)),
       );
   },
 );
@@ -240,8 +240,8 @@ const _commentsSelectQuery = prepare(
       .prepare()
       .from(Comments)
       .select("*")
-      .where(({ comments }) =>
-        and(eq(comments.postId, args.postId), eq(comments.userId, args.userId)),
+      .where(() =>
+        and(eq(Comments.postId, args.postId), eq(Comments.userId, args.userId)),
       );
   },
 );
@@ -268,8 +268,8 @@ const _singleColumnSelectQuery = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select(({ users }) => ({ username: users.username }))
-    .where(({ users }) => eq(users.id, args.id));
+    .select(() => ({ username: Users.username }))
+    .where(() => eq(Users.id, args.id));
 });
 const _singleColumnSelectResult = _singleColumnSelectQuery.run(db, {
   id: 1n,
@@ -284,8 +284,8 @@ const _timestampSelectQuery = prepare(
     return db
       .prepare()
       .from(Users)
-      .select(({ users }) => ({ id: users.id, createdAt: users.createdAt }))
-      .where(({ users }) => eq(users.createdAt, args.createdAt));
+      .select(() => ({ id: Users.id, createdAt: Users.createdAt }))
+      .where(() => eq(Users.createdAt, args.createdAt));
   },
 );
 const _timestampSelectResult = _timestampSelectQuery.run(db, {
@@ -299,13 +299,13 @@ const _sqlFnSelectQuery = prepare({ userType: Users.type.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select(({ users }) => ({
+    .select(() => ({
       total: count("*"),
-      uname: lower(users.username),
+      uname: lower(Users.username),
     }))
-    .where(({ users }) => eq(users.type, args.userType))
-    .groupBy(({ users }) => lower(users.username))
-    .orderBy(({ users }) => asc(lower(users.username)));
+    .where(() => eq(Users.type, args.userType))
+    .groupBy(() => lower(Users.username))
+    .orderBy(() => asc(lower(Users.username)));
 });
 const _sqlFnSelectResult = _sqlFnSelectQuery.run(db, { userType: "admin" });
 type SqlFnSelectResult = Awaited<typeof _sqlFnSelectResult>;
@@ -580,7 +580,7 @@ const _wrongArgTypeQuery = prepare({ id: Users.id.arg() }, (args) =>
     .prepare()
     .from(Users)
     .select("*")
-    .where(({ users }) => eq(users.id, args.id)),
+    .where(() => eq(Users.id, args.id)),
 );
 // @ts-expect-error - Wrong argument type at runtime should not compile
 _wrongArgTypeQuery.run(db, { id: "string_instead_of_number" });
@@ -593,8 +593,8 @@ const _missingArgQuery = prepare(
       .prepare()
       .from(Users)
       .select("*")
-      .where(({ users }) =>
-        and(eq(users.username, args.username), eq(users.type, args.type)),
+      .where(() =>
+        and(eq(Users.username, args.username), eq(Users.type, args.type)),
       ),
 );
 // @ts-expect-error - Missing required argument should not compile
@@ -606,7 +606,7 @@ const _enumArgQuery = prepare({ type: Users.type.arg() }, (args) =>
     .prepare()
     .from(Users)
     .select("*")
-    .where(({ users }) => eq(users.type, args.type)),
+    .where(() => eq(Users.type, args.type)),
 );
 // @ts-expect-error - Invalid enum value at runtime should not compile
 _enumArgQuery.run(db, { type: "invalid_type" });
@@ -617,7 +617,7 @@ const _bigintArgQuery = prepare({ userId: Posts.userId.arg() }, (args) =>
     .prepare()
     .from(Posts)
     .select("*")
-    .where(({ posts }) => eq(posts.userId, args.userId)),
+    .where(() => eq(Posts.userId, args.userId)),
 );
 // @ts-expect-error - Wrong type for bigint argument should not compile
 _bigintArgQuery.run(db, { userId: "not_a_number" });
@@ -628,7 +628,7 @@ const _extraArgQuery = prepare({ id: Users.id.arg() }, (args) =>
     .prepare()
     .from(Users)
     .select("*")
-    .where(({ users }) => eq(users.id, args.id)),
+    .where(() => eq(Users.id, args.id)),
 );
 // @ts-expect-error - Extra argument should not compile
 _extraArgQuery.run(db, { id: 1n, extra: "unused" });

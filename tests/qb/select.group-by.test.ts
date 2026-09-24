@@ -95,9 +95,9 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const results = await db
         .from(schema.Users)
-        .select(({ users }) => ({ type: users.type, total: count("*") }))
-        .groupBy(({ users }) => users.type)
-        .orderBy(({ users }) => asc(users.type));
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
+        .groupBy(() => schema.Users.type)
+        .orderBy(() => asc(schema.Users.type));
 
       expect(results).toHaveLength(2);
       expect(results[0]).toEqual({ type: "admin", total: 2 });
@@ -116,13 +116,13 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const results = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          type: users.type,
-          status: users.status,
+        .select(() => ({
+          type: schema.Users.type,
+          status: schema.Users.status,
           total: count("*"),
         }))
-        .groupBy(({ users }) => [users.type, users.status])
-        .orderBy(({ users }) => [asc(users.type), asc(users.status)]);
+        .groupBy(() => [schema.Users.type, schema.Users.status])
+        .orderBy(() => [asc(schema.Users.type), asc(schema.Users.status)]);
 
       expect(results).toHaveLength(3);
       expect(results[0]).toEqual({ type: "admin", status: "active", total: 1 });
@@ -146,8 +146,8 @@ describe("SELECT .groupBy() and .having()", () => {
       // Only group by `status`, even though `type` is in select too
       const query = db
         .from(schema.Users)
-        .select(({ users }) => ({ status: users.status, total: count("*") }))
-        .groupBy(({ users }) => users.status);
+        .select(() => ({ status: schema.Users.status, total: count("*") }))
+        .groupBy(() => schema.Users.status);
 
       const sql = query.toQuery().sql;
       expect(sql).toContain("GROUP BY");
@@ -167,12 +167,12 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const results = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          lname: lower(users.username),
+        .select(() => ({
+          lname: lower(schema.Users.username),
           total: count("*"),
         }))
-        .groupBy(({ users }) => lower(users.username))
-        .orderBy(({ users }) => asc(lower(users.username)));
+        .groupBy(() => lower(schema.Users.username))
+        .orderBy(() => asc(lower(schema.Users.username)));
       // "Alice" and "alice2" group under different lower() values
       expect(results.length).toBeGreaterThanOrEqual(2);
     });
@@ -194,8 +194,8 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const query = db
         .from(schema.Users)
-        .select(({ users }) => ({
-          lname: lower(users.username),
+        .select(() => ({
+          lname: lower(schema.Users.username),
           total: count("*"),
         }))
         .groupBy((_view, { lname }) => [lname]);
@@ -222,9 +222,9 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const query = db
         .from(schema.Users)
-        .select(({ users }) => ({
-          lname: lower(users.username),
-          type: users.type,
+        .select(() => ({
+          lname: lower(schema.Users.username),
+          type: schema.Users.type,
           total: count("*"),
         }))
         .groupBy((_view, { lname, type }) => [lname, type]);
@@ -244,11 +244,11 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const query = db
         .from(schema.Users)
-        .select(({ users }) => ({
-          lname: lower(users.username),
+        .select(() => ({
+          lname: lower(schema.Users.username),
           total: count("*"),
         }))
-        .groupBy(({ users }, { lname }) => [lname, users.type]);
+        .groupBy((_, { lname }) => [lname, schema.Users.type]);
 
       const sql = query.toQuery().sql;
       expect(sql).toContain('"lname"');
@@ -272,8 +272,8 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const results = await db
         .from(schema.Users)
-        .select(({ users }) => ({ type: users.type, total: count("*") }))
-        .groupBy(({ users }) => users.type)
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
+        .groupBy(() => schema.Users.type)
         .having(() => gte(count("*"), 2));
 
       // Only the "admin" group has >= 2 rows
@@ -295,13 +295,13 @@ describe("SELECT .groupBy() and .having()", () => {
       // sum(score) > count(*) — both aggregate groups satisfy this
       const results = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          type: users.type,
+        .select(() => ({
+          type: schema.Users.type,
           total: count("*"),
-          scoreSum: sum(users.score),
+          scoreSum: sum(schema.Users.score),
         }))
-        .groupBy(({ users }) => users.type)
-        .having(({ users }) => gt(sum(users.score), count("*")));
+        .groupBy(() => schema.Users.type)
+        .having(() => gt(sum(schema.Users.score), count("*")));
 
       expect(results.length).toBeGreaterThanOrEqual(1);
       results.forEach((r) => {
@@ -320,7 +320,7 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const query = db
         .from(schema.Users)
-        .select(({ users }) => ({ type: users.type, total: count("*") }))
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
         .having(() => gte(count("*"), 2));
 
       const sql = query.toQuery().sql;
@@ -346,11 +346,11 @@ describe("SELECT .groupBy() and .having()", () => {
 
       const query = db
         .from(schema.Users)
-        .select(({ users }) => ({ type: users.type, total: count("*") }))
-        .where(({ users }) => eq(users.status, "active"))
-        .groupBy(({ users }) => users.type)
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
+        .where(() => eq(schema.Users.status, "active"))
+        .groupBy(() => schema.Users.type)
         .having(() => gte(count("*"), 2))
-        .orderBy(({ users }) => asc(users.type));
+        .orderBy(() => asc(schema.Users.type));
 
       const sql = query.toQuery().sql;
       const wherePos = sql.indexOf("WHERE");

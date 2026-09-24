@@ -35,7 +35,7 @@ describe("JSON/JSONB Column Types", () => {
       const [row] = await db
         .from(schema.JsonTests)
         .select("*")
-        .where(({ jsonTests }) => eq(jsonTests.id, insertedId));
+        .where(() => eq(schema.JsonTests.id, insertedId));
       expect(row.data).toEqual({ key: "value", count: 1 });
       expect(row.dataWithDefault).toEqual({ status: "default" });
     });
@@ -49,7 +49,7 @@ describe("JSON/JSONB Column Types", () => {
       const [row] = await db
         .from(schema.JsonTests)
         .select("*")
-        .where(({ jsonTests }) => eq(jsonTests.id, insertedId));
+        .where(() => eq(schema.JsonTests.id, insertedId));
       expect(row.data).toEqual({ key: "updated" });
     });
   });
@@ -77,7 +77,7 @@ describe("JSON/JSONB Column Types", () => {
       const [row] = await db
         .from(schema.JsonbTests)
         .select("*")
-        .where(({ jsonbTests }) => eq(jsonbTests.id, insertedId));
+        .where(() => eq(schema.JsonbTests.id, insertedId));
       expect(row.data).toEqual({ key: "value", count: 1 });
       expect(row.dataWithDefault).toEqual({ status: "default" });
     });
@@ -91,7 +91,7 @@ describe("JSON/JSONB Column Types", () => {
       const [row] = await db
         .from(schema.JsonbTests)
         .select("*")
-        .where(({ jsonbTests }) => eq(jsonbTests.id, insertedId));
+        .where(() => eq(schema.JsonbTests.id, insertedId));
       expect(row.data).toEqual({ key: "updated" });
     });
   });

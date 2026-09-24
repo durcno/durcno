@@ -101,9 +101,10 @@ describe("SELECT queries", () => {
       role: "admin",
     });
 
-    const result = await db
-      .from(schema.Users)
-      .select(({ users }) => ({ username: users.username, type: users.type }));
+    const result = await db.from(schema.Users).select(() => ({
+      username: schema.Users.username,
+      type: schema.Users.type,
+    }));
 
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
@@ -125,8 +126,8 @@ describe("SELECT queries", () => {
 
     const admins = await db
       .from(schema.Users)
-      .select(({ users }) => ({ username: users.username }))
-      .where(({ users }) => eq(users.type, "admin"));
+      .select(() => ({ username: schema.Users.username }))
+      .where(() => eq(schema.Users.type, "admin"));
 
     expect(admins).toHaveLength(1);
     expect(admins[0].username).toBe("alice");
@@ -144,7 +145,7 @@ describe("SELECT queries", () => {
 
     const limited = await db
       .from(schema.Users)
-      .select(({ users }) => ({ username: users.username }))
+      .select(() => ({ username: schema.Users.username }))
       .limit(2);
 
     expect(limited).toHaveLength(2);
@@ -161,7 +162,7 @@ describe("SELECT queries", () => {
 
     const offset = await db
       .from(schema.Users)
-      .select(({ users }) => ({ username: users.username }))
+      .select(() => ({ username: schema.Users.username }))
       .limit(2)
       .offset(1);
 
@@ -179,8 +180,8 @@ describe("SELECT queries", () => {
 
     const ordered = await db
       .from(schema.Users)
-      .select(({ users }) => ({ username: users.username }))
-      .orderBy(({ users }) => asc(users.username));
+      .select(() => ({ username: schema.Users.username }))
+      .orderBy(() => asc(schema.Users.username));
 
     expect(ordered.map((u) => u.username)).toEqual(["alice", "bob", "charlie"]);
   });
@@ -196,8 +197,8 @@ describe("SELECT queries", () => {
 
     const ordered = await db
       .from(schema.Users)
-      .select(({ users }) => ({ username: users.username }))
-      .orderBy(({ users }) => desc(users.username));
+      .select(() => ({ username: schema.Users.username }))
+      .orderBy(() => desc(schema.Users.username));
 
     expect(ordered.map((u) => u.username)).toEqual(["charlie", "bob", "alice"]);
   });
@@ -215,8 +216,11 @@ describe("SELECT queries", () => {
     // Order by type ASC, then username ASC
     const ordered = await db
       .from(schema.Users)
-      .select(({ users }) => ({ username: users.username, type: users.type }))
-      .orderBy(({ users }) => [asc(users.type), asc(users.username)]);
+      .select(() => ({
+        username: schema.Users.username,
+        type: schema.Users.type,
+      }))
+      .orderBy(() => [asc(schema.Users.type), asc(schema.Users.username)]);
 
     expect(ordered.map((u) => u.username)).toEqual([
       "bob",
@@ -239,8 +243,11 @@ describe("SELECT queries", () => {
     // Order by type ASC, then username DESC
     const ordered = await db
       .from(schema.Users)
-      .select(({ users }) => ({ username: users.username, type: users.type }))
-      .orderBy(({ users }) => [asc(users.type), desc(users.username)]);
+      .select(() => ({
+        username: schema.Users.username,
+        type: schema.Users.type,
+      }))
+      .orderBy(() => [asc(schema.Users.type), desc(schema.Users.username)]);
 
     expect(ordered.map((u) => u.username)).toEqual([
       "diana",
@@ -254,7 +261,7 @@ describe("SELECT queries", () => {
     const result = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.username, "nonexistent"));
+      .where(() => eq(schema.Users.username, "nonexistent"));
 
     expect(result).toEqual([]);
   });
@@ -270,8 +277,8 @@ describe("SELECT queries", () => {
 
     const result = await db
       .from(schema.Users)
-      .select(({ users }) => ({ email: users.email }))
-      .where(({ users }) => eq(users.username, "nulltest"));
+      .select(() => ({ email: schema.Users.email }))
+      .where(() => eq(schema.Users.username, "nulltest"));
 
     expect(result).toHaveLength(1);
     expect(result[0].email).toBeNull();
@@ -315,9 +322,12 @@ describe("SELECT queries", () => {
 
       const result = await db
         .from(schema.Users)
-        .distinctOn(({ users }) => users.type)
-        .select(({ users }) => ({ type: users.type, username: users.username }))
-        .orderBy(({ users }) => [asc(users.type), asc(users.username)]);
+        .distinctOn(() => schema.Users.type)
+        .select(() => ({
+          type: schema.Users.type,
+          username: schema.Users.username,
+        }))
+        .orderBy(() => [asc(schema.Users.type), asc(schema.Users.username)]);
 
       // DISTINCT ON (type) should return one row per type
       expect(result).toHaveLength(2);
@@ -339,16 +349,16 @@ describe("SELECT queries", () => {
 
       const result = await db
         .from(schema.Users)
-        .distinctOn(({ users }) => [users.type, users.status])
-        .select(({ users }) => ({
-          type: users.type,
-          status: users.status,
-          username: users.username,
+        .distinctOn(() => [schema.Users.type, schema.Users.status])
+        .select(() => ({
+          type: schema.Users.type,
+          status: schema.Users.status,
+          username: schema.Users.username,
         }))
-        .orderBy(({ users }) => [
-          asc(users.type),
-          asc(users.status),
-          asc(users.username),
+        .orderBy(() => [
+          asc(schema.Users.type),
+          asc(schema.Users.status),
+          asc(schema.Users.username),
         ]);
 
       // DISTINCT ON (type, status) should return one row per (type, status) combo
@@ -366,10 +376,13 @@ describe("SELECT queries", () => {
 
       const result = await db
         .from(schema.Users)
-        .distinctOn(({ users }) => users.type)
-        .select(({ users }) => ({ type: users.type, username: users.username }))
-        .where(({ users }) => eq(users.type, "admin"))
-        .orderBy(({ users }) => asc(users.type));
+        .distinctOn(() => schema.Users.type)
+        .select(() => ({
+          type: schema.Users.type,
+          username: schema.Users.username,
+        }))
+        .where(() => eq(schema.Users.type, "admin"))
+        .orderBy(() => asc(schema.Users.type));
 
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe("admin");
@@ -378,9 +391,9 @@ describe("SELECT queries", () => {
     it("should return empty array when no rows match", async () => {
       const result = await db
         .from(schema.Users)
-        .distinctOn(({ users }) => users.type)
+        .distinctOn(() => schema.Users.type)
         .select("*")
-        .orderBy(({ users }) => asc(users.type));
+        .orderBy(() => asc(schema.Users.type));
 
       expect(result).toEqual([]);
     });

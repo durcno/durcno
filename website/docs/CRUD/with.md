@@ -20,8 +20,8 @@ import { Users } from "./db/schema.ts";
 const activeUsers = db.with("activeUsers").as(
   db
     .from(Users)
-    .select(({ users }) => ({ id: users.id, username: users.username }))
-    .where(({ users }) => eq(users.status, "active")),
+    .select(() => ({ id: Users.id, username: Users.username }))
+    .where(() => eq(Users.status, "active")),
 );
 ```
 
@@ -51,8 +51,8 @@ You can declare one CTE in terms of another by nesting `db.with(...)` calls.
 const activeUsers = db.with("activeUsers").as(
   db
     .from(Users)
-    .select(({ users }) => ({ id: users.id, username: users.username }))
-    .where(({ users }) => eq(users.status, "active")),
+    .select(() => ({ id: Users.id, username: Users.username }))
+    .where(() => eq(Users.status, "active")),
 );
 
 const activeNames = db.with("activeNames").as(
@@ -79,8 +79,8 @@ import { Users } from "./db/schema.ts";
 const inactiveUsers = db.with("inactiveUsers").as(
   db
     .from(Users)
-    .select(({ users }) => ({ id: users.id }))
-    .where(({ users }) => eq(users.status, "inactive")),
+    .select(() => ({ id: Users.id }))
+    .where(() => eq(Users.status, "inactive")),
 );
 
 const updatedUsers = db.with("reactivatedUsers").as(

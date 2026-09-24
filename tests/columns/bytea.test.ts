@@ -38,7 +38,7 @@ describe("Bytea Column Type", () => {
       const [row] = await db
         .from(schema.ByteaTests)
         .select("*")
-        .where(({ byteaTests }) => eq(byteaTests.id, insertedId));
+        .where(() => eq(schema.ByteaTests.id, insertedId));
       expect(Buffer.isBuffer(row.data)).toBe(true);
       expect((row.data as Buffer).equals(initialData)).toBe(true);
     });
@@ -52,7 +52,7 @@ describe("Bytea Column Type", () => {
       const [row] = await db
         .from(schema.ByteaTests)
         .select("*")
-        .where(({ byteaTests }) => eq(byteaTests.id, insertedId));
+        .where(() => eq(schema.ByteaTests.id, insertedId));
       expect((row.data as Buffer).equals(updatedData)).toBe(true);
     });
   });

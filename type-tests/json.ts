@@ -23,11 +23,11 @@ import { type Equal, Expect } from "./utils";
 // jsonBuildObject & jsonbBuildObject
 // ============================================================================
 
-const objQuery = db.from(Users).select(({ users }) => ({
+const objQuery = db.from(Users).select(() => ({
   userObj: jsonBuildObject({
-    id: users.id,
-    username: users.username,
-    email: users.email,
+    id: Users.id,
+    username: Users.username,
+    email: Users.email,
   }),
 }));
 type UserObjType = Awaited<typeof objQuery>;
@@ -45,10 +45,10 @@ Expect<
 >();
 
 // Nested jsonBuildObject
-const nestedObjQuery = db.from(Posts).select(({ posts }) => ({
+const nestedObjQuery = db.from(Posts).select(() => ({
   postWithMeta: jsonBuildObject({
-    id: posts.id,
-    title: posts.title,
+    id: Posts.id,
+    title: Posts.title,
     extra: jsonBuildObject({
       views: 100,
       active: true,
@@ -76,9 +76,9 @@ Expect<
 // jsonAgg & jsonbAgg
 // ============================================================================
 
-const aggQuery = db.from(Users).select(({ users }) => ({
-  usernames: jsonAgg(users.username),
-  ids: jsonbAgg(users.id),
+const aggQuery = db.from(Users).select(() => ({
+  usernames: jsonAgg(Users.username),
+  ids: jsonbAgg(Users.id),
 }));
 type AggType = Awaited<typeof aggQuery>;
 Expect<
@@ -92,10 +92,10 @@ Expect<
 >();
 
 // jsonAgg with .orderBy() and .filter()
-const filteredAggQuery = db.from(Posts).select(({ posts }) => ({
-  recentTitles: jsonAgg(posts.title)
-    .orderBy(desc(posts.createdAt))
-    .filter(isNotNull(posts.title)),
+const filteredAggQuery = db.from(Posts).select(() => ({
+  recentTitles: jsonAgg(Posts.title)
+    .orderBy(desc(Posts.createdAt))
+    .filter(isNotNull(Posts.title)),
 }));
 type FilteredAggType = Awaited<typeof filteredAggQuery>;
 Expect<
@@ -111,9 +111,9 @@ Expect<
 // coalesce with jsonAgg -> guaranteed T[]
 // ============================================================================
 
-const coalescedQuery = db.from(Users).select(({ users }) => ({
+const coalescedQuery = db.from(Users).select(() => ({
   names: coalesce(
-    jsonAgg(users.username).filter(isNotNull(users.username)),
+    jsonAgg(Users.username).filter(isNotNull(Users.username)),
     [],
   ),
 }));
@@ -131,9 +131,9 @@ Expect<
 // caseWhen builder
 // ============================================================================
 
-const caseQuery = db.from(Users).select(({ users }) => ({
-  roleLabel: caseWhen(eq(users.type, "admin"), "Admin User")
-    .when(eq(users.type, "user"), "Regular User")
+const caseQuery = db.from(Users).select(() => ({
+  roleLabel: caseWhen(eq(Users.type, "admin"), "Admin User")
+    .when(eq(Users.type, "user"), "Regular User")
     .else("Guest"),
 }));
 type CaseType = Awaited<typeof caseQuery>;
@@ -147,8 +147,8 @@ Expect<
 >();
 
 // Direct caseWhen without .else() or .end() -> returns T | null
-const caseDirectQuery = db.from(Users).select(({ users }) => ({
-  directBadge: caseWhen(eq(users.type, "admin"), "Administrator"),
+const caseDirectQuery = db.from(Users).select(() => ({
+  directBadge: caseWhen(eq(Users.type, "admin"), "Administrator"),
 }));
 type CaseDirectType = Awaited<typeof caseDirectQuery>;
 Expect<
@@ -161,9 +161,9 @@ Expect<
 >();
 
 // Direct multi-branch caseWhen without .else() or .end() -> returns (T1 | T2) | null
-const caseDirectMultiQuery = db.from(Users).select(({ users }) => ({
-  multiBadge: caseWhen(eq(users.type, "admin"), "Admin User").when(
-    eq(users.type, "user"),
+const caseDirectMultiQuery = db.from(Users).select(() => ({
+  multiBadge: caseWhen(eq(Users.type, "admin"), "Admin User").when(
+    eq(Users.type, "user"),
     "Regular User",
   ),
 }));
@@ -178,8 +178,8 @@ Expect<
 >();
 
 // Mixed column and literal branches -> string
-const caseMixedQuery = db.from(Users).select(({ users }) => ({
-  mixedLabel: caseWhen(eq(users.type, "admin"), users.username).else(
+const caseMixedQuery = db.from(Users).select(() => ({
+  mixedLabel: caseWhen(eq(Users.type, "admin"), Users.username).else(
     "Anonymous",
   ),
 }));
@@ -194,8 +194,8 @@ Expect<
 >();
 
 // CASE ending with explicit .end() -> returns T | null
-const caseNullQuery = db.from(Users).select(({ users }) => ({
-  maybeLabel: caseWhen(eq(users.type, "admin"), "Administrator").end(),
+const caseNullQuery = db.from(Users).select(() => ({
+  maybeLabel: caseWhen(eq(Users.type, "admin"), "Administrator").end(),
 }));
 type CaseNullType = Awaited<typeof caseNullQuery>;
 Expect<
@@ -208,9 +208,9 @@ Expect<
 >();
 
 // caseWhen with multiple numeric branches
-const caseNumbersQuery = db.from(Users).select(({ users }) => ({
-  score: caseWhen(eq(users.type, "admin"), 10)
-    .when(eq(users.type, "user"), 1)
+const caseNumbersQuery = db.from(Users).select(() => ({
+  score: caseWhen(eq(Users.type, "admin"), 10)
+    .when(eq(Users.type, "user"), 1)
     .else(0),
 }));
 type CaseNumbersType = Awaited<typeof caseNumbersQuery>;
@@ -229,11 +229,11 @@ Expect<
 
 const fullJoinQuery = db
   .from(Posts)
-  .leftJoin(Users, ({ posts, users }) => eq(users.id, posts.userId))
-  .leftJoin(Comments, ({ posts, comments }) => eq(comments.postId, posts.id))
-  .select(({ posts, users, comments }) => ({
-    id: posts.id,
-    title: posts.title,
+  .leftJoin(Users, () => eq(Users.id, Posts.userId))
+  .leftJoin(Comments, () => eq(Comments.postId, Posts.id))
+  .select(({ users, comments }) => ({
+    id: Posts.id,
+    title: Posts.title,
     author: caseWhen(isNull(users.id), null).else(
       jsonBuildObject({
         id: users.id,
@@ -276,9 +276,9 @@ Expect<
 // toJson & toJsonb
 // ============================================================================
 
-const toJsonQuery = db.from(Users).select(({ users }) => ({
-  userJson: toJson(users),
-  userJsonb: toJsonb(users),
+const toJsonQuery = db.from(Users).select(() => ({
+  userJson: toJson(Users),
+  userJsonb: toJsonb(Users),
 }));
 type ToJsonType = Awaited<typeof toJsonQuery>;
 Expect<
@@ -311,10 +311,10 @@ Expect<
 // jsonBuildArray & jsonStripNulls
 // ============================================================================
 
-const arrQuery = db.from(Users).select(({ users }) => ({
-  tuple: jsonBuildArray(users.id, users.username),
+const arrQuery = db.from(Users).select(() => ({
+  tuple: jsonBuildArray(Users.id, Users.username),
   stripped: jsonStripNulls(
-    jsonBuildObject({ id: users.id, email: users.email }),
+    jsonBuildObject({ id: Users.id, email: Users.email }),
   ),
 }));
 type ArrType = Awaited<typeof arrQuery>;
@@ -337,16 +337,16 @@ Expect<
 
 db.from(Users)
   // @ts-expect-error: Comments is not joined in query
-  .select(({ users }) => ({
+  .select(() => ({
     invalidObj: jsonBuildObject({
       commentId: Comments.id,
-      username: users.username,
+      username: Users.username,
     }),
   }));
 
 db.from(Users)
   // @ts-expect-error: Comments is not joined in query
-  .select(({ users }) => ({
+  .select(() => ({
     invalidAgg: jsonAgg(Comments.id),
   }));
 
@@ -411,8 +411,8 @@ Expect<Equal<CoalesceDateType, Date | null>>();
 // AggregateSqlFn.orderBy() scope enforcement
 db.from(Users)
   // @ts-expect-error: Comments is not joined in query
-  .select(({ users }) => ({
-    invalidOrder: jsonAgg(users.username).orderBy(asc(Comments.id)),
+  .select(() => ({
+    invalidOrder: jsonAgg(Users.username).orderBy(asc(Comments.id)),
   }));
 
 const validOrder = jsonAgg(Users.username).orderBy(asc(Users.createdAt));

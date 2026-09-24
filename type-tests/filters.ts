@@ -67,7 +67,7 @@ type CommentRows = CommentRow[];
 const eqValueQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => eq(users.id, 1n));
+  .where(() => eq(Users.id, 1n));
 type EqValueResult = Awaited<typeof eqValueQuery>;
 Expect<Equal<EqValueResult, UserRows>>();
 
@@ -75,7 +75,7 @@ Expect<Equal<EqValueResult, UserRows>>();
 const eqStringQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => eq(users.username, "john"));
+  .where(() => eq(Users.username, "john"));
 type EqStringResult = Awaited<typeof eqStringQuery>;
 Expect<Equal<EqStringResult, UserRows>>();
 
@@ -83,7 +83,7 @@ Expect<Equal<EqStringResult, UserRows>>();
 const eqNullableQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => eq(users.email, "test@example.com"));
+  .where(() => eq(Users.email, "test@example.com"));
 type EqNullableResult = Awaited<typeof eqNullableQuery>;
 Expect<Equal<EqNullableResult, UserRows>>();
 
@@ -91,14 +91,14 @@ Expect<Equal<EqNullableResult, UserRows>>();
 const eqEnumQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => eq(users.type, "admin"));
+  .where(() => eq(Users.type, "admin"));
 type EqEnumResult = Awaited<typeof eqEnumQuery>;
 Expect<Equal<EqEnumResult, UserRows>>();
 // Type test: eq with Date column
 const eqDateQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => eq(users.createdAt, new Date("2024-01-01")));
+  .where(() => eq(Users.createdAt, new Date("2024-01-01")));
 type EqDateResult = Awaited<typeof eqDateQuery>;
 Expect<Equal<EqDateResult, UserRows>>();
 
@@ -110,7 +110,7 @@ Expect<Equal<EqDateResult, UserRows>>();
 const neValueQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => ne(users.id, 1n));
+  .where(() => ne(Users.id, 1n));
 type NeValueResult = Awaited<typeof neValueQuery>;
 Expect<Equal<NeValueResult, UserRows>>();
 
@@ -118,7 +118,7 @@ Expect<Equal<NeValueResult, UserRows>>();
 const neStringQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => ne(users.username, "admin"));
+  .where(() => ne(Users.username, "admin"));
 type NeStringResult = Awaited<typeof neStringQuery>;
 Expect<Equal<NeStringResult, UserRows>>();
 
@@ -126,7 +126,7 @@ Expect<Equal<NeStringResult, UserRows>>();
 const neEnumQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => ne(users.type, "admin"));
+  .where(() => ne(Users.type, "admin"));
 type NeEnumResult = Awaited<typeof neEnumQuery>;
 Expect<Equal<NeEnumResult, UserRows>>();
 
@@ -138,7 +138,7 @@ Expect<Equal<NeEnumResult, UserRows>>();
 const gteNumberQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => gte(users.id, 10n));
+  .where(() => gte(Users.id, 10n));
 type GteNumberResult = Awaited<typeof gteNumberQuery>;
 Expect<Equal<GteNumberResult, UserRows>>();
 
@@ -146,7 +146,7 @@ Expect<Equal<GteNumberResult, UserRows>>();
 const gteDateQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => gte(users.createdAt, new Date("2024-01-01")));
+  .where(() => gte(Users.createdAt, new Date("2024-01-01")));
 type GteDateResult = Awaited<typeof gteDateQuery>;
 Expect<Equal<GteDateResult, UserRows>>();
 
@@ -154,7 +154,7 @@ Expect<Equal<GteDateResult, UserRows>>();
 const gteBigIntQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => gte(posts.userId, 100n));
+  .where(() => gte(Posts.userId, 100n));
 type GteBigIntResult = Awaited<typeof gteBigIntQuery>;
 Expect<Equal<GteBigIntResult, PostRows>>();
 
@@ -166,7 +166,7 @@ Expect<Equal<GteBigIntResult, PostRows>>();
 const lteNumberQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => lte(users.id, 100n));
+  .where(() => lte(Users.id, 100n));
 type LteNumberResult = Awaited<typeof lteNumberQuery>;
 Expect<Equal<LteNumberResult, UserRows>>();
 
@@ -174,7 +174,7 @@ Expect<Equal<LteNumberResult, UserRows>>();
 const lteDateQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => lte(users.createdAt, new Date("2024-12-31")));
+  .where(() => lte(Users.createdAt, new Date("2024-12-31")));
 type LteDateResult = Awaited<typeof lteDateQuery>;
 Expect<Equal<LteDateResult, UserRows>>();
 
@@ -182,7 +182,7 @@ Expect<Equal<LteDateResult, UserRows>>();
 const lteBigIntQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => lte(posts.userId, 1000n));
+  .where(() => lte(Posts.userId, 1000n));
 type LteBigIntResult = Awaited<typeof lteBigIntQuery>;
 Expect<Equal<LteBigIntResult, PostRows>>();
 
@@ -194,7 +194,7 @@ Expect<Equal<LteBigIntResult, PostRows>>();
 const gtNumberQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => gt(users.id, 10n));
+  .where(() => gt(Users.id, 10n));
 type GtNumberResult = Awaited<typeof gtNumberQuery>;
 Expect<Equal<GtNumberResult, UserRows>>();
 
@@ -202,7 +202,7 @@ Expect<Equal<GtNumberResult, UserRows>>();
 const gtDateQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => gt(users.createdAt, new Date("2024-01-01")));
+  .where(() => gt(Users.createdAt, new Date("2024-01-01")));
 type GtDateResult = Awaited<typeof gtDateQuery>;
 Expect<Equal<GtDateResult, UserRows>>();
 
@@ -210,7 +210,7 @@ Expect<Equal<GtDateResult, UserRows>>();
 const gtBigIntQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => gt(posts.userId, 100n));
+  .where(() => gt(Posts.userId, 100n));
 type GtBigIntResult = Awaited<typeof gtBigIntQuery>;
 Expect<Equal<GtBigIntResult, PostRows>>();
 
@@ -222,7 +222,7 @@ Expect<Equal<GtBigIntResult, PostRows>>();
 const ltNumberQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => lt(users.id, 100n));
+  .where(() => lt(Users.id, 100n));
 type LtNumberResult = Awaited<typeof ltNumberQuery>;
 Expect<Equal<LtNumberResult, UserRows>>();
 
@@ -230,7 +230,7 @@ Expect<Equal<LtNumberResult, UserRows>>();
 const ltDateQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => lt(users.createdAt, new Date("2024-12-31")));
+  .where(() => lt(Users.createdAt, new Date("2024-12-31")));
 type LtDateResult = Awaited<typeof ltDateQuery>;
 Expect<Equal<LtDateResult, UserRows>>();
 
@@ -238,7 +238,7 @@ Expect<Equal<LtDateResult, UserRows>>();
 const ltBigIntQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => lt(posts.userId, 1000n));
+  .where(() => lt(Posts.userId, 1000n));
 type LtBigIntResult = Awaited<typeof ltBigIntQuery>;
 Expect<Equal<LtBigIntResult, PostRows>>();
 
@@ -250,7 +250,7 @@ Expect<Equal<LtBigIntResult, PostRows>>();
 const isNullQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => isNull(users.email));
+  .where(() => isNull(Users.email));
 type IsNullResult = Awaited<typeof isNullQuery>;
 Expect<Equal<IsNullResult, UserRows>>();
 
@@ -258,7 +258,7 @@ Expect<Equal<IsNullResult, UserRows>>();
 const isNullPostsTitleQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => isNull(posts.title));
+  .where(() => isNull(Posts.title));
 type IsNullPostsTitleResult = Awaited<typeof isNullPostsTitleQuery>;
 Expect<Equal<IsNullPostsTitleResult, PostRows>>();
 
@@ -266,7 +266,7 @@ Expect<Equal<IsNullPostsTitleResult, PostRows>>();
 const isNullContentQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => isNull(posts.content));
+  .where(() => isNull(Posts.content));
 type IsNullContentResult = Awaited<typeof isNullContentQuery>;
 Expect<Equal<IsNullContentResult, PostRows>>();
 
@@ -278,7 +278,7 @@ Expect<Equal<IsNullContentResult, PostRows>>();
 const isNotNullQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => isNotNull(users.email));
+  .where(() => isNotNull(Users.email));
 type IsNotNullResult = Awaited<typeof isNotNullQuery>;
 Expect<Equal<IsNotNullResult, UserRows>>();
 
@@ -286,7 +286,7 @@ Expect<Equal<IsNotNullResult, UserRows>>();
 const isNotNullPostsTitleQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => isNotNull(posts.title));
+  .where(() => isNotNull(Posts.title));
 type IsNotNullPostsTitleResult = Awaited<typeof isNotNullPostsTitleQuery>;
 Expect<Equal<IsNotNullPostsTitleResult, PostRows>>();
 
@@ -294,7 +294,7 @@ Expect<Equal<IsNotNullPostsTitleResult, PostRows>>();
 const isNotNullContentQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => isNotNull(posts.content));
+  .where(() => isNotNull(Posts.content));
 type IsNotNullContentResult = Awaited<typeof isNotNullContentQuery>;
 Expect<Equal<IsNotNullContentResult, PostRows>>();
 
@@ -306,7 +306,7 @@ Expect<Equal<IsNotNullContentResult, PostRows>>();
 const isInNumbersQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => isIn(users.id, [1n, 2n, 3n, 4n, 5n]));
+  .where(() => isIn(Users.id, [1n, 2n, 3n, 4n, 5n]));
 type IsInNumbersResult = Awaited<typeof isInNumbersQuery>;
 Expect<Equal<IsInNumbersResult, UserRows>>();
 
@@ -314,7 +314,7 @@ Expect<Equal<IsInNumbersResult, UserRows>>();
 const isInStringsQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => isIn(users.username, ["alice", "bob", "charlie"]));
+  .where(() => isIn(Users.username, ["alice", "bob", "charlie"]));
 type IsInStringsResult = Awaited<typeof isInStringsQuery>;
 Expect<Equal<IsInStringsResult, UserRows>>();
 
@@ -322,7 +322,7 @@ Expect<Equal<IsInStringsResult, UserRows>>();
 const isInEnumQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => isIn(users.type, ["admin", "user"]));
+  .where(() => isIn(Users.type, ["admin", "user"]));
 type IsInEnumResult = Awaited<typeof isInEnumQuery>;
 Expect<Equal<IsInEnumResult, UserRows>>();
 
@@ -330,7 +330,7 @@ Expect<Equal<IsInEnumResult, UserRows>>();
 const isInEmptyQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => isIn(users.id, []));
+  .where(() => isIn(Users.id, []));
 type IsInEmptyResult = Awaited<typeof isInEmptyQuery>;
 Expect<Equal<IsInEmptyResult, UserRows>>();
 
@@ -338,19 +338,19 @@ Expect<Equal<IsInEmptyResult, UserRows>>();
 const isInSubqueryQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) =>
+  .where(() =>
     isIn(
-      posts.userId,
-      db.from(Users).select(({ users }) => ({ id: users.id })),
+      Posts.userId,
+      db.from(Users).select(() => ({ id: Users.id })),
     ),
   );
 type IsInSubqueryResult = Awaited<typeof isInSubqueryQuery>;
 Expect<Equal<IsInSubqueryResult, PostRows>>();
 
 // Type test: isIn in select projection
-const isInSelectQuery = db.from(Users).select(({ users }) => ({
-  id: users.id,
-  isAdmin: isIn(users.type, ["admin"]),
+const isInSelectQuery = db.from(Users).select(() => ({
+  id: Users.id,
+  isAdmin: isIn(Users.type, ["admin"]),
 }));
 type IsInSelectResult = Awaited<typeof isInSelectQuery>;
 Expect<Equal<IsInSelectResult, { id: bigint; isAdmin: boolean }[]>>();
@@ -363,7 +363,7 @@ const preparedIsInQuery = prepare(
       .prepare()
       .from(Users)
       .select("*")
-      .where(({ users }) => isIn(users.id, [args.id1, args.id2])),
+      .where(() => isIn(Users.id, [args.id1, args.id2])),
 );
 type PreparedIsInResult = Awaited<ReturnType<typeof preparedIsInQuery.run>>;
 Expect<Equal<PreparedIsInResult, UserRows>>();
@@ -372,7 +372,7 @@ Expect<Equal<PreparedIsInResult, UserRows>>();
 const notInStringsQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => notIn(users.username, ["alice", "bob"]));
+  .where(() => notIn(Users.username, ["alice", "bob"]));
 type NotInStringsResult = Awaited<typeof notInStringsQuery>;
 Expect<Equal<NotInStringsResult, UserRows>>();
 
@@ -380,19 +380,19 @@ Expect<Equal<NotInStringsResult, UserRows>>();
 const notInSubqueryQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) =>
+  .where(() =>
     notIn(
-      posts.userId,
-      db.from(Users).select(({ users }) => ({ id: users.id })),
+      Posts.userId,
+      db.from(Users).select(() => ({ id: Users.id })),
     ),
   );
 type NotInSubqueryResult = Awaited<typeof notInSubqueryQuery>;
 Expect<Equal<NotInSubqueryResult, PostRows>>();
 
 // Type test: notIn in select projection
-const notInSelectQuery = db.from(Users).select(({ users }) => ({
-  id: users.id,
-  notAdmin: notIn(users.type, ["admin"]),
+const notInSelectQuery = db.from(Users).select(() => ({
+  id: Users.id,
+  notAdmin: notIn(Users.type, ["admin"]),
 }));
 type NotInSelectResult = Awaited<typeof notInSelectQuery>;
 Expect<Equal<NotInSelectResult, { id: bigint; notAdmin: boolean }[]>>();
@@ -405,7 +405,7 @@ Expect<Equal<NotInSelectResult, { id: bigint; notAdmin: boolean }[]>>();
 const andTwoQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => and(eq(users.type, "admin"), gte(users.id, 10n)));
+  .where(() => and(eq(Users.type, "admin"), gte(Users.id, 10n)));
 type AndTwoResult = Awaited<typeof andTwoQuery>;
 Expect<Equal<AndTwoResult, UserRows>>();
 
@@ -413,8 +413,8 @@ Expect<Equal<AndTwoResult, UserRows>>();
 const andThreeQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    and(eq(users.type, "user"), gte(users.id, 1n), lte(users.id, 100n)),
+  .where(() =>
+    and(eq(Users.type, "user"), gte(Users.id, 1n), lte(Users.id, 100n)),
   );
 type AndThreeResult = Awaited<typeof andThreeQuery>;
 Expect<Equal<AndThreeResult, UserRows>>();
@@ -423,9 +423,7 @@ Expect<Equal<AndThreeResult, UserRows>>();
 const andMixedQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    and(eq(users.type, "admin"), eq(users.username, "admin")),
-  );
+  .where(() => and(eq(Users.type, "admin"), eq(Users.username, "admin")));
 type AndMixedResult = Awaited<typeof andMixedQuery>;
 Expect<Equal<AndMixedResult, UserRows>>();
 
@@ -433,9 +431,7 @@ Expect<Equal<AndMixedResult, UserRows>>();
 const andIsInQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    and(isIn(users.id, [1n, 2n, 3n]), eq(users.type, "admin")),
-  );
+  .where(() => and(isIn(Users.id, [1n, 2n, 3n]), eq(Users.type, "admin")));
 type AndIsInResult = Awaited<typeof andIsInQuery>;
 Expect<Equal<AndIsInResult, UserRows>>();
 
@@ -443,10 +439,10 @@ Expect<Equal<AndIsInResult, UserRows>>();
 const andDateQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     and(
-      gte(users.createdAt, new Date("2024-01-01")),
-      lte(users.createdAt, new Date("2024-12-31")),
+      gte(Users.createdAt, new Date("2024-01-01")),
+      lte(Users.createdAt, new Date("2024-12-31")),
     ),
   );
 type AndDateResult = Awaited<typeof andDateQuery>;
@@ -460,7 +456,7 @@ Expect<Equal<AndDateResult, UserRows>>();
 const orTwoQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => or(eq(users.type, "admin"), eq(users.type, "user")));
+  .where(() => or(eq(Users.type, "admin"), eq(Users.type, "user")));
 type OrTwoResult = Awaited<typeof orTwoQuery>;
 Expect<Equal<OrTwoResult, UserRows>>();
 
@@ -468,9 +464,7 @@ Expect<Equal<OrTwoResult, UserRows>>();
 const orThreeQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    or(eq(users.id, 1n), eq(users.id, 2n), eq(users.id, 3n)),
-  );
+  .where(() => or(eq(Users.id, 1n), eq(Users.id, 2n), eq(Users.id, 3n)));
 type OrThreeResult = Awaited<typeof orThreeQuery>;
 Expect<Equal<OrThreeResult, UserRows>>();
 
@@ -478,8 +472,8 @@ Expect<Equal<OrThreeResult, UserRows>>();
 const orMixedQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    or(eq(users.type, "admin"), isNull(users.email), lte(users.id, 5n)),
+  .where(() =>
+    or(eq(Users.type, "admin"), isNull(Users.email), lte(Users.id, 5n)),
   );
 type OrMixedResult = Awaited<typeof orMixedQuery>;
 Expect<Equal<OrMixedResult, UserRows>>();
@@ -488,7 +482,7 @@ Expect<Equal<OrMixedResult, UserRows>>();
 const orRangeQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => or(lte(users.id, 10n), gte(users.id, 100n)));
+  .where(() => or(lte(Users.id, 10n), gte(Users.id, 100n)));
 type OrRangeResult = Awaited<typeof orRangeQuery>;
 Expect<Equal<OrRangeResult, UserRows>>();
 
@@ -496,9 +490,7 @@ Expect<Equal<OrRangeResult, UserRows>>();
 const orIsInQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    or(isIn(users.id, [1n, 2n, 3n]), eq(users.type, "admin")),
-  );
+  .where(() => or(isIn(Users.id, [1n, 2n, 3n]), eq(Users.type, "admin")));
 type OrIsInResult = Awaited<typeof orIsInQuery>;
 Expect<Equal<OrIsInResult, UserRows>>();
 
@@ -510,9 +502,7 @@ Expect<Equal<OrIsInResult, UserRows>>();
 const andMultipleEqQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    and(eq(users.type, "admin"), eq(users.username, "admin")),
-  );
+  .where(() => and(eq(Users.type, "admin"), eq(Users.username, "admin")));
 type AndMultipleEqResult = Awaited<typeof andMultipleEqQuery>;
 Expect<Equal<AndMultipleEqResult, UserRows>>();
 
@@ -520,7 +510,7 @@ Expect<Equal<AndMultipleEqResult, UserRows>>();
 const orEqNeQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => or(eq(users.type, "admin"), eq(users.id, 1n)));
+  .where(() => or(eq(Users.type, "admin"), eq(Users.id, 1n)));
 type OrEqNeResult = Awaited<typeof orEqNeQuery>;
 Expect<Equal<OrEqNeResult, UserRows>>();
 
@@ -528,7 +518,7 @@ Expect<Equal<OrEqNeResult, UserRows>>();
 const andRangeQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => and(gte(posts.userId, 1n), lte(posts.userId, 100n)));
+  .where(() => and(gte(Posts.userId, 1n), lte(Posts.userId, 100n)));
 type AndRangeResult = Awaited<typeof andRangeQuery>;
 Expect<Equal<AndRangeResult, PostRows>>();
 
@@ -536,7 +526,7 @@ Expect<Equal<AndRangeResult, PostRows>>();
 const orComparisonsQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => or(lte(users.id, 10n), gte(users.id, 100n)));
+  .where(() => or(lte(Users.id, 10n), gte(Users.id, 100n)));
 type OrComparisonsResult = Awaited<typeof orComparisonsQuery>;
 Expect<Equal<OrComparisonsResult, UserRows>>();
 
@@ -548,7 +538,7 @@ Expect<Equal<OrComparisonsResult, UserRows>>();
 const postsWhereQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => eq(posts.userId, 1n));
+  .where(() => eq(Posts.userId, 1n));
 type PostsWhereResult = Awaited<typeof postsWhereQuery>;
 Expect<Equal<PostsWhereResult, PostRows>>();
 
@@ -577,16 +567,16 @@ Expect<Equal<CommentsMultiWhereResult, CommentRows>>();
 // Type test: where with select specific columns
 const selectWithWhereQuery = db
   .from(Users)
-  .select(({ users }) => ({ id: users.id, username: users.username }))
-  .where(({ users }) => eq(users.type, "admin"));
+  .select(() => ({ id: Users.id, username: Users.username }))
+  .where(() => eq(Users.type, "admin"));
 type SelectWithWhereResult = Awaited<typeof selectWithWhereQuery>;
 Expect<Equal<SelectWithWhereResult, { id: bigint; username: string }[]>>();
 
 // Type test: where with select and range conditions
 const selectComplexWhereQuery = db
   .from(Users)
-  .select(({ users }) => ({ id: users.id, email: users.email }))
-  .where(({ users }) => and(gte(users.id, 10n), lte(users.id, 100n)));
+  .select(() => ({ id: Users.id, email: Users.email }))
+  .where(() => and(gte(Users.id, 10n), lte(Users.id, 100n)));
 type SelectComplexWhereResult = Awaited<typeof selectComplexWhereQuery>;
 Expect<
   Equal<SelectComplexWhereResult, { id: bigint; email: string | null }[]>
@@ -595,8 +585,8 @@ Expect<
 // Type test: where with select single column
 const selectSingleWhereQuery = db
   .from(Users)
-  .select(({ users }) => ({ username: users.username }))
-  .where(({ users }) => eq(users.type, "user"));
+  .select(() => ({ username: Users.username }))
+  .where(() => eq(Users.type, "user"));
 type SelectSingleWhereResult = Awaited<typeof selectSingleWhereQuery>;
 Expect<Equal<SelectSingleWhereResult, { username: string }[]>>();
 
@@ -608,9 +598,7 @@ Expect<Equal<SelectSingleWhereResult, { username: string }[]>>();
 const whereEqIsInQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    and(eq(users.type, "admin"), eq(users.username, "admin")),
-  );
+  .where(() => and(eq(Users.type, "admin"), eq(Users.username, "admin")));
 type WhereEqIsInResult = Awaited<typeof whereEqIsInQuery>;
 Expect<Equal<WhereEqIsInResult, UserRows>>();
 
@@ -618,9 +606,7 @@ Expect<Equal<WhereEqIsInResult, UserRows>>();
 const whereMultipleOrQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) =>
-    or(eq(posts.id, 1n), eq(posts.id, 2n), eq(posts.id, 3n)),
-  );
+  .where(() => or(eq(Posts.id, 1n), eq(Posts.id, 2n), eq(Posts.id, 3n)));
 type WhereMultipleOrResult = Awaited<typeof whereMultipleOrQuery>;
 Expect<Equal<WhereMultipleOrResult, PostRows>>();
 
@@ -628,8 +614,8 @@ Expect<Equal<WhereMultipleOrResult, PostRows>>();
 const whereOnlyOrQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    or(eq(users.id, 1n), eq(users.id, 2n), eq(users.id, 3n), eq(users.id, 4n)),
+  .where(() =>
+    or(eq(Users.id, 1n), eq(Users.id, 2n), eq(Users.id, 3n), eq(Users.id, 4n)),
   );
 type WhereOnlyOrResult = Awaited<typeof whereOnlyOrQuery>;
 Expect<Equal<WhereOnlyOrResult, UserRows>>();
@@ -638,7 +624,7 @@ Expect<Equal<WhereOnlyOrResult, UserRows>>();
 const whereAndRangeQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) => and(gte(users.id, 1n), lte(users.id, 100n)));
+  .where(() => and(gte(Users.id, 1n), lte(Users.id, 100n)));
 type WhereAndRangeResult = Awaited<typeof whereAndRangeQuery>;
 Expect<Equal<WhereAndRangeResult, UserRows>>();
 
@@ -646,7 +632,7 @@ Expect<Equal<WhereAndRangeResult, UserRows>>();
 const isNullWithWhereQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => isNull(posts.title));
+  .where(() => isNull(Posts.title));
 type IsNullWithWhereResult = Awaited<typeof isNullWithWhereQuery>;
 Expect<Equal<IsNullWithWhereResult, PostRows>>();
 
@@ -654,7 +640,7 @@ Expect<Equal<IsNullWithWhereResult, PostRows>>();
 const isNotNullWithWhereQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) => isNotNull(posts.content));
+  .where(() => isNotNull(Posts.content));
 type IsNotNullWithWhereResult = Awaited<typeof isNotNullWithWhereQuery>;
 Expect<Equal<IsNotNullWithWhereResult, PostRows>>();
 
@@ -666,10 +652,10 @@ Expect<Equal<IsNotNullWithWhereResult, PostRows>>();
 const nestedAndWithOrQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     and(
-      or(eq(users.type, "admin"), eq(users.type, "user")),
-      gte(users.id, 10n),
+      or(eq(Users.type, "admin"), eq(Users.type, "user")),
+      gte(Users.id, 10n),
     ),
   );
 type NestedAndWithOrResult = Awaited<typeof nestedAndWithOrQuery>;
@@ -679,10 +665,10 @@ Expect<Equal<NestedAndWithOrResult, UserRows>>();
 const nestedOrWithAndQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     or(
-      and(eq(users.type, "admin"), gte(users.id, 100n)),
-      and(eq(users.type, "user"), lte(users.id, 10n)),
+      and(eq(Users.type, "admin"), gte(Users.id, 100n)),
+      and(eq(Users.type, "user"), lte(Users.id, 10n)),
     ),
   );
 type NestedOrWithAndResult = Awaited<typeof nestedOrWithAndQuery>;
@@ -692,10 +678,10 @@ Expect<Equal<NestedOrWithAndResult, UserRows>>();
 const complexNestedQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     and(
-      or(eq(users.type, "admin"), eq(users.type, "user")),
-      or(gte(users.id, 50n), lte(users.id, 10n)),
+      or(eq(Users.type, "admin"), eq(Users.type, "user")),
+      or(gte(Users.id, 50n), lte(Users.id, 10n)),
     ),
   );
 type ComplexNestedResult = Awaited<typeof complexNestedQuery>;
@@ -705,13 +691,13 @@ Expect<Equal<ComplexNestedResult, UserRows>>();
 const tripleNestedQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) =>
+  .where(() =>
     and(
       or(
-        and(gte(posts.userId, 1n), lte(posts.userId, 10n)),
-        and(gte(posts.userId, 100n), lte(posts.userId, 200n)),
+        and(gte(Posts.userId, 1n), lte(Posts.userId, 10n)),
+        and(gte(Posts.userId, 100n), lte(Posts.userId, 200n)),
       ),
-      gte(posts.id, 1n),
+      gte(Posts.id, 1n),
     ),
   );
 type TripleNestedResult = Awaited<typeof tripleNestedQuery>;
@@ -721,8 +707,8 @@ Expect<Equal<TripleNestedResult, PostRows>>();
 const nestedMultipleAndQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    and(or(eq(users.type, "admin"), eq(users.id, 1n)), lte(users.id, 1000n)),
+  .where(() =>
+    and(or(eq(Users.type, "admin"), eq(Users.id, 1n)), lte(Users.id, 1000n)),
   );
 type NestedMultipleAndResult = Awaited<typeof nestedMultipleAndQuery>;
 Expect<Equal<NestedMultipleAndResult, UserRows>>();
@@ -731,11 +717,11 @@ Expect<Equal<NestedMultipleAndResult, UserRows>>();
 const nestedMultipleOrQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     or(
-      and(eq(users.type, "admin"), gte(users.id, 100n)),
-      eq(users.id, 1n),
-      eq(users.id, 2n),
+      and(eq(Users.type, "admin"), gte(Users.id, 100n)),
+      eq(Users.id, 1n),
+      eq(Users.id, 2n),
     ),
   );
 type NestedMultipleOrResult = Awaited<typeof nestedMultipleOrQuery>;
@@ -745,16 +731,16 @@ Expect<Equal<NestedMultipleOrResult, UserRows>>();
 const deeplyNestedQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) =>
+  .where(() =>
     or(
       and(
         or(
-          and(gte(posts.userId, 1n), lte(posts.userId, 10n)),
-          and(gte(posts.userId, 100n), lte(posts.userId, 200n)),
+          and(gte(Posts.userId, 1n), lte(Posts.userId, 10n)),
+          and(gte(Posts.userId, 100n), lte(Posts.userId, 200n)),
         ),
-        gte(posts.id, 1n),
+        gte(Posts.id, 1n),
       ),
-      eq(posts.id, 999n),
+      eq(Posts.id, 999n),
     ),
   );
 type DeeplyNestedResult = Awaited<typeof deeplyNestedQuery>;
@@ -764,10 +750,10 @@ Expect<Equal<DeeplyNestedResult, PostRows>>();
 const nestedWithIsInQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     and(
-      or(eq(users.type, "admin"), eq(users.type, "user")),
-      isIn(users.id, [1n, 2n, 3n, 4n, 5n]),
+      or(eq(Users.type, "admin"), eq(Users.type, "user")),
+      isIn(Users.id, [1n, 2n, 3n, 4n, 5n]),
     ),
   );
 type NestedWithIsInResult = Awaited<typeof nestedWithIsInQuery>;
@@ -776,9 +762,9 @@ Expect<Equal<NestedWithIsInResult, UserRows>>();
 // Type test: nested with select specific columns
 const nestedWithSelectQuery = db
   .from(Users)
-  .select(({ users }) => ({ id: users.id, type: users.type }))
-  .where(({ users }) =>
-    and(or(gte(users.id, 1n), lte(users.id, 100n)), eq(users.type, "admin")),
+  .select(() => ({ id: Users.id, type: Users.type }))
+  .where(() =>
+    and(or(gte(Users.id, 1n), lte(Users.id, 100n)), eq(Users.type, "admin")),
   );
 type NestedWithSelectResult = Awaited<typeof nestedWithSelectQuery>;
 Expect<
@@ -802,13 +788,13 @@ Expect<Equal<NestedCommentsResult, CommentRows>>();
 const nestedWithDatesQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     and(
       or(
-        gte(users.createdAt, new Date("2024-01-01")),
-        lte(users.createdAt, new Date("2023-01-01")),
+        gte(Users.createdAt, new Date("2024-01-01")),
+        lte(Users.createdAt, new Date("2023-01-01")),
       ),
-      eq(users.type, "admin"),
+      eq(Users.type, "admin"),
     ),
   );
 type NestedWithDatesResult = Awaited<typeof nestedWithDatesQuery>;
@@ -818,10 +804,10 @@ Expect<Equal<NestedWithDatesResult, UserRows>>();
 const symmetricNestedQuery = db
   .from(Posts)
   .select("*")
-  .where(({ posts }) =>
+  .where(() =>
     and(
-      or(eq(posts.userId, 1n), eq(posts.userId, 2n)),
-      or(gte(posts.id, 10n), lte(posts.id, 5n)),
+      or(eq(Posts.userId, 1n), eq(Posts.userId, 2n)),
+      or(gte(Posts.id, 10n), lte(Posts.id, 5n)),
     ),
   );
 type SymmetricNestedResult = Awaited<typeof symmetricNestedQuery>;
@@ -831,10 +817,10 @@ Expect<Equal<SymmetricNestedResult, PostRows>>();
 const asymmetricNestedQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     or(
-      and(eq(users.type, "admin"), gte(users.id, 10n)),
-      eq(users.username, "superuser"),
+      and(eq(Users.type, "admin"), gte(Users.id, 10n)),
+      eq(Users.username, "superuser"),
     ),
   );
 type AsymmetricNestedResult = Awaited<typeof asymmetricNestedQuery>;
@@ -848,12 +834,12 @@ Expect<Equal<AsymmetricNestedResult, UserRows>>();
 const existsWhereQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     exists(
       db
         .from(Posts)
         .select("*")
-        .where(({ posts }) => eq(posts.userId, users.id)),
+        .where(() => eq(Posts.userId, Users.id)),
     ),
   );
 type ExistsWhereResult = Awaited<typeof existsWhereQuery>;
@@ -863,38 +849,38 @@ Expect<Equal<ExistsWhereResult, UserRows>>();
 const notExistsWhereQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     notExists(
       db
         .from(Posts)
         .select("*")
-        .where(({ posts }) => eq(posts.userId, users.id)),
+        .where(() => eq(Posts.userId, Users.id)),
     ),
   );
 type NotExistsWhereResult = Awaited<typeof notExistsWhereQuery>;
 Expect<Equal<NotExistsWhereResult, UserRows>>();
 
 // Type test: exists in select projection
-const existsSelectQuery = db.from(Users).select(({ users }) => ({
-  id: users.id,
+const existsSelectQuery = db.from(Users).select(() => ({
+  id: Users.id,
   hasPosts: exists(
     db
       .from(Posts)
       .select("*")
-      .where(({ posts }) => eq(posts.userId, users.id)),
+      .where(() => eq(Posts.userId, Users.id)),
   ),
 }));
 type ExistsSelectResult = Awaited<typeof existsSelectQuery>;
 Expect<Equal<ExistsSelectResult, { id: bigint; hasPosts: boolean }[]>>();
 
 // Type test: notExists in select projection
-const notExistsSelectQuery = db.from(Users).select(({ users }) => ({
-  id: users.id,
+const notExistsSelectQuery = db.from(Users).select(() => ({
+  id: Users.id,
   noPosts: notExists(
     db
       .from(Posts)
       .select("*")
-      .where(({ posts }) => eq(posts.userId, users.id)),
+      .where(() => eq(Posts.userId, Users.id)),
   ),
 }));
 type NotExistsSelectResult = Awaited<typeof notExistsSelectQuery>;
@@ -904,14 +890,14 @@ Expect<Equal<NotExistsSelectResult, { id: bigint; noPosts: boolean }[]>>();
 const existsAndQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     and(
-      eq(users.type, "admin"),
+      eq(Users.type, "admin"),
       exists(
         db
           .from(Posts)
           .select("*")
-          .where(({ posts }) => eq(posts.userId, users.id)),
+          .where(() => eq(Posts.userId, Users.id)),
       ),
     ),
   );
@@ -922,14 +908,14 @@ Expect<Equal<ExistsAndResult, UserRows>>();
 const existsOrQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     or(
-      eq(users.type, "admin"),
+      eq(Users.type, "admin"),
       notExists(
         db
           .from(Posts)
           .select("*")
-          .where(({ posts }) => eq(posts.userId, users.id)),
+          .where(() => eq(Posts.userId, Users.id)),
       ),
     ),
   );
@@ -937,14 +923,14 @@ type ExistsOrResult = Awaited<typeof existsOrQuery>;
 Expect<Equal<ExistsOrResult, UserRows>>();
 
 // Type test: exists inside caseWhen
-const existsCaseWhenQuery = db.from(Users).select(({ users }) => ({
-  id: users.id,
+const existsCaseWhenQuery = db.from(Users).select(() => ({
+  id: Users.id,
   status: caseWhen(
     exists(
       db
         .from(Posts)
         .select("*")
-        .where(({ posts }) => eq(posts.userId, users.id)),
+        .where(() => eq(Posts.userId, Users.id)),
     ),
     "active",
   ).else("inactive"),
@@ -958,8 +944,8 @@ Expect<
 const existsRawSqlQuery = db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
-    exists(sql`SELECT 1 FROM posts WHERE posts.user_id = ${users.id}`),
+  .where(() =>
+    exists(sql`SELECT 1 FROM posts WHERE Posts.user_id = ${Users.id}`),
   );
 type ExistsRawSqlResult = Awaited<typeof existsRawSqlQuery>;
 Expect<Equal<ExistsRawSqlResult, UserRows>>();
@@ -971,72 +957,72 @@ Expect<Equal<ExistsRawSqlResult, UserRows>>();
 db.from(Users)
   .select("*")
   // @ts-expect-error - Wrong type for eq comparison should not compile
-  .where(({ users }) => eq(users.id, "string_instead_of_number"));
+  .where(() => eq(Users.id, "string_instead_of_number"));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Invalid enum value in eq should not compile
-  .where(({ users }) => eq(users.type, "invalid_type"));
+  .where(() => eq(Users.type, "invalid_type"));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Comparing incompatible types should not compile
-  .where(({ users }) => eq(users.username, 123));
+  .where(() => eq(Users.username, 123));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Wrong type for gte comparison should not compile
-  .where(({ users }) => gte(users.id, "not_a_number"));
+  .where(() => gte(Users.id, "not_a_number"));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Wrong type for gt comparison should not compile
-  .where(({ users }) => gt(users.id, "not_a_number"));
+  .where(() => gt(Users.id, "not_a_number"));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Wrong type for lte comparison should not compile
-  .where(({ users }) => lte(users.createdAt, "not_a_date"));
+  .where(() => lte(Users.createdAt, "not_a_date"));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Wrong type for lt comparison should not compile
-  .where(({ users }) => lt(users.createdAt, "not_a_date"));
+  .where(() => lt(Users.createdAt, "not_a_date"));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - isIn with wrong type array should not compile
-  .where(({ users }) => isIn(users.id, ["a", "b", "c"]));
+  .where(() => isIn(Users.id, ["a", "b", "c"]));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - isIn with invalid enum values should not compile
-  .where(({ users }) => isIn(users.type, ["admin", "invalid"]));
+  .where(() => isIn(Users.type, ["admin", "invalid"]));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - notIn with wrong type array should not compile
-  .where(({ users }) => notIn(users.id, ["a", "b", "c"]));
+  .where(() => notIn(Users.id, ["a", "b", "c"]));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - Column from wrong table in where should not compile
-  .where(({ users }) => eq(Posts.userId, 1));
+  .where(() => eq(Posts.userId, 1));
 
 db.from(Users)
   .select("*")
   // @ts-expect-error - ne with wrong type should not compile
-  .where(({ users }) => ne(users.id, "not_a_number"));
+  .where(() => ne(Users.id, "not_a_number"));
 
 db.from(Users)
   .select("*")
-  .where(({ users }) => eq(users.id, users.username));
+  .where(() => eq(Users.id, Users.username));
 
 db.from(Users)
   .select("*")
   .where(
     // @ts-expect-error - Non-existent field in where should not compile
-    ({ users }) => eq(users.nonExistentField, "value"),
+    () => eq(Users.nonExistentField, "value"),
   );
 
 // Negative test: exists with invalid argument
@@ -1056,7 +1042,7 @@ const preparedSubqueryForTest = db
   .prepare()
   .from(Posts)
   .select("*")
-  .where(({ posts }) => eq(posts.userId, Arg.bigint()));
+  .where(() => eq(Posts.userId, Arg.bigint()));
 
 db.from(Users)
   .select("*")
@@ -1066,4 +1052,4 @@ db.from(Users)
 db.from(Users)
   .select("*")
   // @ts-expect-error - isIn with array containing Arg cannot be used in unprepared query
-  .where(({ users }) => isIn(users.id, [Arg.bigint()]));
+  .where(() => isIn(Users.id, [Arg.bigint()]));

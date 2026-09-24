@@ -40,7 +40,7 @@ describe("Network Column Types", () => {
       const [row] = await db
         .from(schema.InetTests)
         .select("*")
-        .where(({ inetTests }) => eq(inetTests.id, insertedId));
+        .where(() => eq(schema.InetTests.id, insertedId));
       expect(row.ip).toBe("192.168.1.1");
       expect(row.ipWithDefault).toBe("127.0.0.1");
     });
@@ -54,7 +54,7 @@ describe("Network Column Types", () => {
       const [row] = await db
         .from(schema.InetTests)
         .select("*")
-        .where(({ inetTests }) => eq(inetTests.id, insertedId));
+        .where(() => eq(schema.InetTests.id, insertedId));
       expect(row.ip).toBe("10.0.0.1");
     });
   });
@@ -87,7 +87,7 @@ describe("Network Column Types", () => {
       const [row] = await db
         .from(schema.CidrTests)
         .select("*")
-        .where(({ cidrTests }) => eq(cidrTests.id, insertedId));
+        .where(() => eq(schema.CidrTests.id, insertedId));
       expect(row.network).toBe("10.0.0.0/8");
       expect(row.networkWithDefault).toBe("0.0.0.0/0");
     });
@@ -101,7 +101,7 @@ describe("Network Column Types", () => {
       const [row] = await db
         .from(schema.CidrTests)
         .select("*")
-        .where(({ cidrTests }) => eq(cidrTests.id, insertedId));
+        .where(() => eq(schema.CidrTests.id, insertedId));
       expect(row.network).toBe("192.168.0.0/16");
     });
   });
@@ -134,7 +134,7 @@ describe("Network Column Types", () => {
       const [row] = await db
         .from(schema.MacaddrTests)
         .select("*")
-        .where(({ macaddrTests }) => eq(macaddrTests.id, insertedId));
+        .where(() => eq(schema.MacaddrTests.id, insertedId));
       expect(row.mac).toBe("00:11:22:33:44:55");
       expect(row.macWithDefault).toBe("00:00:00:00:00:00");
     });
@@ -148,7 +148,7 @@ describe("Network Column Types", () => {
       const [row] = await db
         .from(schema.MacaddrTests)
         .select("*")
-        .where(({ macaddrTests }) => eq(macaddrTests.id, insertedId));
+        .where(() => eq(schema.MacaddrTests.id, insertedId));
       expect(row.mac).toBe("aa:bb:cc:dd:ee:ff");
     });
   });

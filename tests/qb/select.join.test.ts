@@ -84,10 +84,10 @@ describe("SELECT with INNER JOIN", () => {
     // Select with inner join
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select(({ users, posts }) => ({
-        username: users.username,
-        postTitle: posts.title,
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .select(() => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
       }));
 
     expect(result).toHaveLength(1);
@@ -111,10 +111,10 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select(({ users, posts }) => ({
-        username: users.username,
-        postTitle: posts.title,
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .select(() => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
       }));
 
     expect(result).toHaveLength(3);
@@ -139,9 +139,9 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select(({ users, posts }) => ({
-        username: users.username,
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .select(() => ({
+        username: schema.Users.username,
       }));
 
     expect(result).toHaveLength(1);
@@ -168,12 +168,12 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select(({ users, posts }) => ({
-        username: users.username,
-        postTitle: posts.title,
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .select(() => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
       }))
-      .where(({ users, posts }) => eq(users.type, "admin"));
+      .where(() => eq(schema.Users.type, "admin"));
 
     expect(result).toHaveLength(1);
     expect(result[0].username).toBe("user_active");
@@ -194,12 +194,12 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select(({ users, posts }) => ({
-        username: users.username,
-        email: users.email,
-        postTitle: posts.title,
-        viewCount: posts.viewCount,
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .select(() => ({
+        username: schema.Users.username,
+        email: schema.Users.email,
+        postTitle: schema.Posts.title,
+        viewCount: schema.Posts.viewCount,
       }));
 
     expect(result).toHaveLength(1);
@@ -225,12 +225,12 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Posts)
-      .innerJoin(schema.Comments, ({ posts, comments }) =>
-        eq(comments.postId, posts.id),
+      .innerJoin(schema.Comments, () =>
+        eq(schema.Comments.postId, schema.Posts.id),
       )
-      .select(({ posts, comments }) => ({
-        postTitle: posts.title,
-        commentBody: comments.body,
+      .select(() => ({
+        postTitle: schema.Posts.title,
+        commentBody: schema.Comments.body,
       }));
 
     expect(result).toHaveLength(1);
@@ -246,7 +246,7 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
       .select("*");
 
     expect(result).toEqual([]);
@@ -270,14 +270,14 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .innerJoin(schema.Comments, ({ posts, comments }) =>
-        eq(comments.postId, posts.id),
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Comments, () =>
+        eq(schema.Comments.postId, schema.Posts.id),
       )
-      .select(({ users, posts, comments }) => ({
-        username: users.username,
-        postTitle: posts.title,
-        commentBody: comments.body,
+      .select(() => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
+        commentBody: schema.Comments.body,
       }));
 
     expect(result).toHaveLength(1);
@@ -307,14 +307,14 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .innerJoin(schema.Comments, ({ posts, comments }) =>
-        eq(comments.postId, posts.id),
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Comments, () =>
+        eq(schema.Comments.postId, schema.Posts.id),
       )
-      .select(({ users, posts, comments }) => ({
-        username: users.username,
-        postTitle: posts.title,
-        commentBody: comments.body,
+      .select(() => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
+        commentBody: schema.Comments.body,
       }));
 
     expect(result).toHaveLength(3);
@@ -352,16 +352,16 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .innerJoin(schema.Comments, ({ posts, comments }) =>
-        eq(comments.postId, posts.id),
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Comments, () =>
+        eq(schema.Comments.postId, schema.Posts.id),
       )
-      .select(({ users, posts, comments }) => ({
-        username: users.username,
-        postTitle: posts.title,
-        commentBody: comments.body,
+      .select(() => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
+        commentBody: schema.Comments.body,
       }))
-      .where(({ users, posts, comments }) => eq(users.type, "admin"));
+      .where(() => eq(schema.Users.type, "admin"));
 
     expect(result).toHaveLength(1);
     expect(result[0].username).toBe("admin_poster");
@@ -402,13 +402,13 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .innerJoin(schema.Comments, ({ posts, comments }) =>
-        eq(comments.postId, posts.id),
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Comments, () =>
+        eq(schema.Comments.postId, schema.Posts.id),
       )
-      .select(({ users, posts, comments }) => ({
-        username: users.username,
-        postTitle: posts.title,
+      .select(() => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
       }));
 
     expect(result).toHaveLength(1);
@@ -434,12 +434,12 @@ describe("SELECT with INNER JOIN", () => {
       const result = await db
         .from(schema.Users)
         .innerJoin(schema.Posts, ({ users, posts }) =>
-          eq(posts.userId, users.id),
+          eq(schema.Posts.userId, schema.Users.id),
         )
-        .select(({ users, posts }) => ({
-          postTitle: posts.title,
+        .select(() => ({
+          postTitle: schema.Posts.title,
         }))
-        .orderBy(({ users, posts }) => asc(posts.title));
+        .orderBy(() => asc(schema.Posts.title));
 
       expect(result.map((r) => r.postTitle)).toEqual([
         "Alpha Post",
@@ -465,12 +465,12 @@ describe("SELECT with INNER JOIN", () => {
       const result = await db
         .from(schema.Users)
         .innerJoin(schema.Posts, ({ users, posts }) =>
-          eq(posts.userId, users.id),
+          eq(schema.Posts.userId, schema.Users.id),
         )
-        .select(({ users, posts }) => ({
-          postTitle: posts.title,
+        .select(() => ({
+          postTitle: schema.Posts.title,
         }))
-        .orderBy(({ users, posts }) => desc(posts.title));
+        .orderBy(() => desc(schema.Posts.title));
 
       expect(result.map((r) => r.postTitle)).toEqual([
         "Charlie Post",
@@ -488,9 +488,9 @@ describe("SELECT with INNER JOIN", () => {
           createTestUser({ username: "mmm_user" }),
         ]);
 
-      const users = await db.from(schema.Users).select(({ users }) => ({
-        id: users.id,
-        username: users.username,
+      const users = await db.from(schema.Users).select(() => ({
+        id: schema.Users.id,
+        username: schema.Users.username,
       }));
 
       for (const u of users) {
@@ -502,13 +502,13 @@ describe("SELECT with INNER JOIN", () => {
       const result = await db
         .from(schema.Users)
         .innerJoin(schema.Posts, ({ users, posts }) =>
-          eq(posts.userId, users.id),
+          eq(schema.Posts.userId, schema.Users.id),
         )
-        .select(({ users, posts }) => ({
-          username: users.username,
-          postTitle: posts.title,
+        .select(() => ({
+          username: schema.Users.username,
+          postTitle: schema.Posts.title,
         }))
-        .orderBy(({ users, posts }) => asc(users.username));
+        .orderBy(() => asc(schema.Users.username));
 
       const usernames = result.map((r) => r.username);
       expect(usernames).toEqual([...usernames].sort());
@@ -536,15 +536,15 @@ describe("SELECT with INNER JOIN", () => {
       const result = await db
         .from(schema.Users)
         .innerJoin(schema.Posts, ({ users, posts }) =>
-          eq(posts.userId, users.id),
+          eq(schema.Posts.userId, schema.Users.id),
         )
-        .innerJoin(schema.Comments, ({ posts, comments }) =>
-          eq(comments.postId, posts.id),
+        .innerJoin(schema.Comments, () =>
+          eq(schema.Comments.postId, schema.Posts.id),
         )
-        .select(({ users, posts, comments }) => ({
-          commentBody: comments.body,
+        .select(() => ({
+          commentBody: schema.Comments.body,
         }))
-        .orderBy(({ users, posts, comments }) => asc(comments.body));
+        .orderBy(() => asc(schema.Comments.body));
 
       expect(result.map((r) => r.commentBody)).toEqual([
         "a-comment",
@@ -627,12 +627,12 @@ describe("SELECT with LEFT JOIN", () => {
     // Select with left join
     const result = await db
       .from(schema.Users)
-      .leftJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select(({ users, posts }) => ({
-        username: users.username,
+      .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .select(({ posts }) => ({
+        username: schema.Users.username,
         postTitle: posts.title,
       }))
-      .orderBy(({ users, posts }) => asc(users.username));
+      .orderBy(() => asc(schema.Users.username));
 
     expect(result).toHaveLength(2);
     expect(result[0].username).toBe("author_with_post");
@@ -649,7 +649,7 @@ describe("SELECT with LEFT JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .leftJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
+      .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
       .select("*");
 
     expect(result).toHaveLength(1);
@@ -678,12 +678,12 @@ describe("SELECT with LEFT JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .leftJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .select(({ users, posts }) => ({
-        username: users.username,
+      .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .select(({ posts }) => ({
+        username: schema.Users.username,
         lowerPostTitle: lower(posts.title),
       }))
-      .orderBy(({ users, posts }) => asc(users.username));
+      .orderBy(() => asc(schema.Users.username));
 
     expect(result).toHaveLength(2);
     expect(result[0].username).toBe("AUTHOR_1");
@@ -718,16 +718,16 @@ describe("SELECT with LEFT JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, ({ users, posts }) => eq(posts.userId, users.id))
-      .leftJoin(schema.Comments, ({ posts, comments }) =>
-        eq(comments.postId, posts.id),
+      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .leftJoin(schema.Comments, () =>
+        eq(schema.Comments.postId, schema.Posts.id),
       )
-      .select(({ users, posts, comments }) => ({
-        username: users.username,
-        postTitle: posts.title,
+      .select(({ comments }) => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
         commentBody: comments.body,
       }))
-      .orderBy(({ users, posts, comments }) => asc(posts.title));
+      .orderBy(() => asc(schema.Posts.title));
 
     expect(result).toHaveLength(2);
 
@@ -752,9 +752,9 @@ describe("SELECT with LEFT JOIN", () => {
 
     const result = await db
       .from(schema.Posts)
-      .leftJoin(schema.Users, ({ posts, users }) => eq(users.id, posts.userId))
-      .select(({ posts, users }) => ({
-        postTitle: posts.title,
+      .leftJoin(schema.Users, () => eq(schema.Users.id, schema.Posts.userId))
+      .select(({ users }) => ({
+        postTitle: schema.Posts.title,
         userType: users.type,
         userStatus: users.status,
       }));

@@ -110,8 +110,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => eq(upper(users.username), "HELLO"));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => eq(upper(schema.Users.username), "HELLO"));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("hello");
@@ -129,8 +129,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => eq(trim(users.username), "padded"));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => eq(trim(schema.Users.username), "padded"));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("  padded  ");
@@ -148,8 +148,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => eq(length(users.username), 3));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => eq(length(schema.Users.username), 3));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("abc");
@@ -167,7 +167,7 @@ describe("Filters with Functions", () => {
       const result = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => gte(length(users.username), 3));
+        .where(() => gte(length(schema.Users.username), 3));
 
       expect(result).toHaveLength(2);
     });
@@ -184,7 +184,7 @@ describe("Filters with Functions", () => {
       const result = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => lte(length(users.username), 3));
+        .where(() => lte(length(schema.Users.username), 3));
 
       expect(result).toHaveLength(2);
     });
@@ -199,8 +199,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => ne(length(users.username), 3));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => ne(length(schema.Users.username), 3));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("abcde");
@@ -218,8 +218,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => eq(left(users.username, 3), "foo"));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => eq(left(schema.Users.username, 3), "foo"));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("foobar");
@@ -237,8 +237,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => eq(right(users.username, 3), "bar"));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => eq(right(schema.Users.username, 3), "bar"));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("foobar");
@@ -257,8 +257,8 @@ describe("Filters with Functions", () => {
       // position returns 0 when not found; > 0 means found
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ email: users.email }))
-        .where(({ users }) => gt(position(users.email, "@"), 0));
+        .select(() => ({ email: schema.Users.email }))
+        .where(() => gt(position(schema.Users.email, "@"), 0));
 
       expect(result).toHaveLength(1);
       expect(result[0].email).toBe("hello@world.com");
@@ -274,8 +274,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ email: users.email }))
-        .where(({ users }) => eq(position(users.email, "@"), 2));
+        .select(() => ({ email: schema.Users.email }))
+        .where(() => eq(position(schema.Users.email, "@"), 2));
 
       expect(result).toHaveLength(1);
       expect(result[0].email).toBe("a@example.com");
@@ -294,8 +294,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ age: users.age }))
-        .where(({ users }) => eq(abs(users.age), 30));
+        .select(() => ({ age: schema.Users.age }))
+        .where(() => eq(abs(schema.Users.age), 30));
 
       expect(result).toHaveLength(1);
       expect(result[0].age).toBe(30);
@@ -313,7 +313,7 @@ describe("Filters with Functions", () => {
       const result = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => gt(abs(users.age), 10));
+        .where(() => gt(abs(schema.Users.age), 10));
 
       expect(result).toHaveLength(2);
     });
@@ -327,8 +327,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ score: users.score }))
-        .where(({ users }) => eq(ceil(users.score), 10));
+        .select(() => ({ score: schema.Users.score }))
+        .where(() => eq(ceil(schema.Users.score), 10));
 
       expect(result).toHaveLength(1);
       expect(result[0].score).toBe(10);
@@ -346,7 +346,7 @@ describe("Filters with Functions", () => {
       const result = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => lte(ceil(users.score), 30));
+        .where(() => lte(ceil(schema.Users.score), 30));
 
       expect(result).toHaveLength(2);
     });
@@ -360,8 +360,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ score: users.score }))
-        .where(({ users }) => eq(floor(users.score), 20));
+        .select(() => ({ score: schema.Users.score }))
+        .where(() => eq(floor(schema.Users.score), 20));
 
       expect(result).toHaveLength(1);
       expect(result[0].score).toBe(20);
@@ -379,7 +379,7 @@ describe("Filters with Functions", () => {
       const result = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => gte(floor(users.score), 30));
+        .where(() => gte(floor(schema.Users.score), 30));
 
       expect(result).toHaveLength(2);
     });
@@ -393,8 +393,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ age: users.age }))
-        .where(({ users }) => eq(round(users.age), 25));
+        .select(() => ({ age: schema.Users.age }))
+        .where(() => eq(round(schema.Users.age), 25));
 
       expect(result).toHaveLength(1);
       expect(result[0].age).toBe(25);
@@ -414,7 +414,7 @@ describe("Filters with Functions", () => {
       const result = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => eq(mod(users.age, 2), 0));
+        .where(() => eq(mod(schema.Users.age, 2), 0));
 
       expect(result).toHaveLength(2);
       for (const r of result) {
@@ -439,9 +439,12 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) =>
-          eq(length(lower(users.username)), length(lower(users.email))),
+        .select(() => ({ username: schema.Users.username }))
+        .where(() =>
+          eq(
+            length(lower(schema.Users.username)),
+            length(lower(schema.Users.email)),
+          ),
         );
 
       // Both rows have username length 5 ("match"/"nope") and email is
@@ -461,8 +464,10 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => gt(length(users.email), length(users.username)));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() =>
+          gt(length(schema.Users.email), length(schema.Users.username)),
+        );
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("ab");
@@ -478,8 +483,10 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => lt(length(users.username), length(users.email)));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() =>
+          lt(length(schema.Users.username), length(schema.Users.email)),
+        );
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("hi");
@@ -501,8 +508,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => eq(length(lower(users.username)), 3));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => eq(length(lower(schema.Users.username)), 3));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("ABC");
@@ -518,8 +525,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => eq(length(trim(users.username)), 2));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => eq(length(trim(schema.Users.username)), 2));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("  hi  ");
@@ -535,8 +542,8 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) => eq(upper(lower(users.username)), "MIXEDCASE"));
+        .select(() => ({ username: schema.Users.username }))
+        .where(() => eq(upper(lower(schema.Users.username)), "MIXEDCASE"));
 
       expect(result).toHaveLength(1);
       expect(result[0].username).toBe("mixedCase");
@@ -566,11 +573,11 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) =>
+        .select(() => ({ username: schema.Users.username }))
+        .where(() =>
           and(
-            eq(lower(users.email), "target@example.com"),
-            gt(length(users.username), 5),
+            eq(lower(schema.Users.email), "target@example.com"),
+            gt(length(schema.Users.username), 5),
           ),
         );
 
@@ -593,11 +600,11 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) =>
+        .select(() => ({ username: schema.Users.username }))
+        .where(() =>
           or(
-            eq(lower(users.email), "match@example.com"),
-            lt(length(users.username), 4),
+            eq(lower(schema.Users.email), "match@example.com"),
+            lt(length(schema.Users.username), 4),
           ),
         );
 
@@ -617,11 +624,11 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) =>
+        .select(() => ({ username: schema.Users.username }))
+        .where(() =>
           and(
-            startsWith(users.username, "pre_"),
-            gt(length(users.username), 9),
+            startsWith(schema.Users.username, "pre_"),
+            gt(length(schema.Users.username), 9),
           ),
         );
 
@@ -640,11 +647,11 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) =>
+        .select(() => ({ username: schema.Users.username }))
+        .where(() =>
           and(
-            contains(users.username, "hello"),
-            lt(length(users.username), 10),
+            contains(schema.Users.username, "hello"),
+            lt(length(schema.Users.username), 10),
           ),
         );
 
@@ -663,9 +670,12 @@ describe("Filters with Functions", () => {
 
       const result = await db
         .from(schema.Users)
-        .select(({ users }) => ({ username: users.username }))
-        .where(({ users }) =>
-          or(endsWith(users.username, "Suffix"), gt(abs(users.score), 100)),
+        .select(() => ({ username: schema.Users.username }))
+        .where(() =>
+          or(
+            endsWith(schema.Users.username, "Suffix"),
+            gt(abs(schema.Users.score), 100),
+          ),
         );
 
       expect(result).toHaveLength(2);
@@ -685,8 +695,11 @@ describe("Filters with Functions", () => {
       const result = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) =>
-          and(gte(ceil(users.score), 10), lte(floor(users.score), 20)),
+        .where(() =>
+          and(
+            gte(ceil(schema.Users.score), 10),
+            lte(floor(schema.Users.score), 20),
+          ),
         );
 
       expect(result).toHaveLength(2);

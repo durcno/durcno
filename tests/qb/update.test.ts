@@ -82,7 +82,7 @@ describe("UPDATE queries", () => {
     const updated = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(updated[0].username).toBe("newname");
   });
@@ -105,7 +105,7 @@ describe("UPDATE queries", () => {
     const updated = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(updated[0]).toMatchObject({
       username: "updated",
@@ -131,7 +131,7 @@ describe("UPDATE queries", () => {
     const users = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.type, "user"));
+      .where(() => eq(schema.Users.type, "user"));
 
     expect(users).toHaveLength(2);
     expect(users.every((u) => u.score === 50)).toBe(true);
@@ -139,7 +139,7 @@ describe("UPDATE queries", () => {
     const admins = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.type, "admin"));
+      .where(() => eq(schema.Users.type, "admin"));
 
     expect(admins[0].score).toBe(0);
   });
@@ -174,8 +174,8 @@ describe("UPDATE queries", () => {
 
     const updated = await db
       .from(schema.Users)
-      .select(({ users }) => ({ email: users.email }))
-      .where(({ users }) => eq(users.id, user.id));
+      .select(() => ({ email: schema.Users.email }))
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(updated[0].email).toBeNull();
   });
@@ -194,7 +194,7 @@ describe("UPDATE queries", () => {
     const updated = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(updated[0].isActive).toBe(true);
     expect(updated[0].isVerified).toBe(true);
@@ -214,7 +214,7 @@ describe("UPDATE queries", () => {
     const updated = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(updated[0].status).toBe("inactive");
   });
@@ -233,7 +233,7 @@ describe("UPDATE queries", () => {
     const updated = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(updated[0].age).toBe(30);
     expect(updated[0].score).toBe(100);
@@ -252,7 +252,7 @@ describe("UPDATE queries", () => {
     const users = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.username, "test"));
+      .where(() => eq(schema.Users.username, "test"));
 
     expect(users[0].username).toBe("test");
   });
@@ -379,7 +379,7 @@ describe("UPDATE queries", () => {
     const updated = await db
       .from(schema.Users)
       .select("*")
-      .where(({ users }) => eq(users.id, user.id));
+      .where(() => eq(schema.Users.id, user.id));
 
     expect(updated[0].username).toBe("mixedcase");
   });

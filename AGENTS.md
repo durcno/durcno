@@ -99,9 +99,9 @@ const users = await db.from(Users).select("*");
 // Select specific columns with filter and ordering
 const activeUsers = await db
   .from(Users)
-  .select(({ users }) => ({ id: users.id, name: users.name }))
-  .where(({ users }) => eq(users.type, "user"))
-  .orderBy(({ users }) => asc(users.name));
+  .select(() => ({ id: Users.id, name: Users.name }))
+  .where(() => eq(Users.type, "user"))
+  .orderBy(() => asc(Users.name));
 
 // Insert a new user
 await db.insertInto(Users).values({
@@ -135,11 +135,11 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
 
 **Fluent API**: Chainable methods provide an intuitive query-building experience:
 
-- `.select()` - Define columns to return (e.g. `select("*")` for all columns, or `select(({ users }) => ({ ... }))` for specific columns)
-- `.where()` - Add filtering conditions via callback (`({ users }) => ...`)
-- `.orderBy()` - Sort results via callback (`({ users }) => ...` or `({ users }, { alias }) => ...`)
-- `.groupBy()` - Group results via callback (`({ users }) => [...]` or `({ users }, { alias }) => [...]`)
-- `.having()` - Filter grouped results via callback (`({ users }) => ...`)
+- `.select()` - Define columns to return (e.g. `select("*")` for all columns, or `select(() => ({ id: Users.id }))` for specific columns; use callback view `({ posts }) => ...` only for left-joined tables)
+- `.where()` - Add filtering conditions via callback (`() => eq(Users.type, "user")`)
+- `.orderBy()` - Sort results via callback (`() => asc(Users.name)` or `(_, { alias }) => asc(alias)`)
+- `.groupBy()` - Group results via callback (`() => [Users.type]` or `(_, { alias }) => [alias]`)
+- `.having()` - Filter grouped results via callback (`() => ...`)
 - `.limit()` > `.offset()` - Paginate results
 
 **Query Builders**: Separate classes in `src/query-builders/` handle different query types (SELECT, INSERT, UPDATE, DELETE, ...) with consistent patterns and full type safety.

@@ -738,8 +738,8 @@ export class SelectQuery<
    * Adds an explicit GROUP BY clause. Overrides auto GROUP BY detection when set.
    *
    * ```ts
-   * db.from(Users).select(({ users }) => ({ type: users.type, total: count('*') }))
-   *   .groupBy(({ users }, { type }) => [type])
+   * db.from(Users).select(() => ({ type: Users.type, total: count('*') }))
+   *   .groupBy((_, { type }) => [type])
    * ```
    */
   groupBy<
@@ -782,8 +782,8 @@ export class SelectQuery<
    * Adds a HAVING clause to filter grouped results.
    *
    * ```typescript
-   * db.from(Users).select(({ users }) => ({ type: users.type, total: count('*') }))
-   *   .groupBy(({ users }) => [users.type])
+   * db.from(Users).select(() => ({ type: Users.type, total: count('*') }))
+   *   .groupBy(() => [Users.type])
    *   .having(() => gte(count('*'), 2))
    * ```
    */

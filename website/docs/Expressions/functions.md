@@ -37,7 +37,7 @@ const [{ total }] = await db.from(Users).select(() => ({ total: count("*") }));
 // Count non-null values in a specific column
 const [{ emailCount }] = await db
   .from(Users)
-  .select(({ users }) => ({ emailCount: count(users.email) }));
+  .select(() => ({ emailCount: count(Users.email) }));
 ```
 
 ### `countDistinct`
@@ -49,7 +49,7 @@ import { countDistinct } from "durcno";
 
 const [{ uniqueTypes }] = await db
   .from(Users)
-  .select(({ users }) => ({ uniqueTypes: countDistinct(users.type) }));
+  .select(() => ({ uniqueTypes: countDistinct(Users.type) }));
 ```
 
 ### `sum`
@@ -61,7 +61,7 @@ import { sum } from "durcno";
 
 const [{ total }] = await db
   .from(Orders)
-  .select(({ orders }) => ({ total: sum(orders.amount) }));
+  .select(() => ({ total: sum(Orders.amount) }));
 ```
 
 ### `avg`
@@ -73,7 +73,7 @@ import { avg } from "durcno";
 
 const [{ average }] = await db
   .from(Orders)
-  .select(({ orders }) => ({ average: avg(orders.amount) }));
+  .select(() => ({ average: avg(Orders.amount) }));
 // average is `number | null`
 ```
 
@@ -84,9 +84,9 @@ Returns the minimum or maximum value. The return type matches the column's value
 ```typescript
 import { min, max } from "durcno";
 
-const [row] = await db.from(Orders).select(({ orders }) => ({
-  earliest: min(orders.createdAt),
-  latest: max(orders.createdAt),
+const [row] = await db.from(Orders).select(() => ({
+  earliest: min(Orders.createdAt),
+  latest: max(Orders.createdAt),
 }));
 // earliest and latest are `Date | null`
 ```
@@ -98,10 +98,10 @@ When mixing aggregate and non-aggregate columns in a single `.select()`, Durcno 
 ```typescript
 import { count, sum } from "durcno";
 
-const stats = await db.from(Orders).select(({ orders }) => ({
-  status: orders.status,
+const stats = await db.from(Orders).select(() => ({
+  status: Orders.status,
   total: count("*"),
-  revenue: sum(orders.amount),
+  revenue: sum(Orders.amount),
 }));
 // Equivalent to: SELECT status, count(*), sum(amount) FROM orders GROUP BY status
 ```
@@ -116,13 +116,13 @@ import { count, sum, gt, desc } from "durcno";
 // Order by aggregate alias
 await db
   .from(Orders)
-  .select(({ orders }) => ({ status: orders.status, total: count("*") }))
-  .orderBy(({ orders }, { total }) => desc(total));
+  .select(() => ({ status: Orders.status, total: count("*") }))
+  .orderBy((_, { total }) => desc(total));
 
 // Filter by aggregate in HAVING
 await db
   .from(Orders)
-  .select(({ orders }) => ({ status: orders.status, total: count("*") }))
+  .select(() => ({ status: Orders.status, total: count("*") }))
   .having(() => gt(count("*"), 5));
 ```
 
@@ -142,20 +142,20 @@ import {
   sum,
 } from "durcno";
 
-const stats = await db.from(Orders).select(({ orders }) => ({
+const stats = await db.from(Orders).select(() => ({
   // SQL: count(id) FILTER (WHERE status = 'completed')
-  completedCount: count(orders.id).filter(eq(orders.status, "completed")),
+  completedCount: count(Orders.id).filter(eq(Orders.status, "completed")),
 
   // SQL: sum(amount) FILTER (WHERE amount > 100)
-  largeOrdersTotal: sum(orders.amount).filter(gt(orders.amount, 100)),
+  largeOrdersTotal: sum(Orders.amount).filter(gt(Orders.amount, 100)),
 
   // SQL: json_agg(json_build_object('id', id, 'amount', amount) ORDER BY amount DESC)
   sortedOrders: jsonAgg(
     jsonBuildObject({
-      id: orders.id,
-      amount: orders.amount,
+      id: Orders.id,
+      amount: Orders.amount,
     }),
-  ).orderBy(desc(orders.amount)),
+  ).orderBy(desc(Orders.amount)),
 }));
 ```
 
@@ -184,9 +184,9 @@ Convert a string expression to lowercase or uppercase.
 ```typescript
 import { lower, upper } from "durcno";
 
-const result = await db.from(Users).select(({ users }) => ({
-  emailLower: lower(users.email),
-  nameUpper: upper(users.name),
+const result = await db.from(Users).select(() => ({
+  emailLower: lower(Users.email),
+  nameUpper: upper(Users.name),
 }));
 ```
 
@@ -197,8 +197,8 @@ Removes leading and trailing whitespace.
 ```typescript
 import { trim } from "durcno";
 
-const result = await db.from(Users).select(({ users }) => ({
-  cleanName: trim(users.name),
+const result = await db.from(Users).select(() => ({
+  cleanName: trim(Users.name),
 }));
 ```
 
@@ -212,13 +212,13 @@ import { length, gt } from "durcno";
 // Select the length
 const result = await db
   .from(Users)
-  .select(({ users }) => ({ nameLength: length(users.name) }));
+  .select(() => ({ nameLength: length(Users.name) }));
 
 // Filter by length
 await db
   .from(Users)
   .select("*")
-  .where(({ users }) => gt(length(users.name), 5));
+  .where(() => gt(length(Users.name), 5));
 ```
 
 ### `left` / `right`
@@ -228,9 +228,9 @@ Return the first or last `n` characters of a string.
 ```typescript
 import { left, right } from "durcno";
 
-const result = await db.from(Users).select(({ users }) => ({
-  prefix: left(users.postalCode, 3),
-  suffix: right(users.postalCode, 3),
+const result = await db.from(Users).select(() => ({
+  prefix: left(Users.postalCode, 3),
+  suffix: right(Users.postalCode, 3),
 }));
 ```
 
@@ -242,15 +242,15 @@ Returns the 1-based position of a substring within a string expression. Returns 
 import { position, gt } from "durcno";
 
 // Get position of '@' in email
-const result = await db.from(Users).select(({ users }) => ({
-  atPos: position(users.email, "@"),
+const result = await db.from(Users).select(() => ({
+  atPos: position(Users.email, "@"),
 }));
 
 // Filter emails where '@' appears after position 5
 await db
   .from(Users)
   .select("*")
-  .where(({ users }) => gt(position(users.email, "@"), 5));
+  .where(() => gt(position(Users.email, "@"), 5));
 ```
 
 ### `concat`
@@ -260,9 +260,9 @@ Concatenates the text representations of all arguments into a single string. `nu
 ```typescript
 import { concat } from "durcno";
 
-const result = await db.from(Users).select(({ users }) => ({
-  fullName: concat(users.firstName, " ", users.lastName),
-  identifier: concat(users.username, "#", users.id),
+const result = await db.from(Users).select(() => ({
+  fullName: concat(Users.firstName, " ", Users.lastName),
+  identifier: concat(Users.username, "#", Users.id),
 }));
 ```
 
@@ -273,8 +273,8 @@ Concatenates arguments with a separator string (`concat_ws`). If the separator i
 ```typescript
 import { concatWs } from "durcno";
 
-const result = await db.from(Users).select(({ users }) => ({
-  address: concatWs(", ", users.city, users.state, users.country),
+const result = await db.from(Users).select(() => ({
+  address: concatWs(", ", Users.city, Users.state, Users.country),
 }));
 ```
 
@@ -289,7 +289,7 @@ import { lower, trim, startsWith } from "durcno";
 await db
   .from(Users)
   .select("*")
-  .where(({ users }) => startsWith(lower(trim(users.email)), "admin"));
+  .where(() => startsWith(lower(trim(Users.email)), "admin"));
 ```
 
 ---
@@ -317,8 +317,8 @@ Returns the absolute value of a numeric expression.
 ```typescript
 import { abs } from "durcno";
 
-const result = await db.from(Accounts).select(({ accounts }) => ({
-  absBalance: abs(accounts.balance),
+const result = await db.from(Accounts).select(() => ({
+  absBalance: abs(Accounts.balance),
 }));
 ```
 
@@ -333,7 +333,7 @@ import { mod, eq } from "durcno";
 await db
   .from(Users)
   .select("*")
-  .where(({ users }) => eq(mod(users.id, 2), 0));
+  .where(() => eq(mod(Users.id, 2), 0));
 ```
 
 ### `round`
@@ -343,9 +343,9 @@ Rounds a numeric expression. Omit `decimals` to round to the nearest integer, or
 ```typescript
 import { round } from "durcno";
 
-const result = await db.from(Products).select(({ products }) => ({
-  roundedPrice: round(products.price),
-  twoDecimals: round(products.price, 2),
+const result = await db.from(Products).select(() => ({
+  roundedPrice: round(Products.price),
+  twoDecimals: round(Products.price, 2),
 }));
 ```
 
@@ -356,9 +356,9 @@ Round up or down to the nearest integer.
 ```typescript
 import { ceil, floor } from "durcno";
 
-const result = await db.from(Products).select(({ products }) => ({
-  ceiling: ceil(products.price),
-  floored: floor(products.price),
+const result = await db.from(Products).select(() => ({
+  ceiling: ceil(Products.price),
+  floored: floor(Products.price),
 }));
 ```
 
@@ -369,9 +369,9 @@ Truncates a numeric expression towards zero. Omit `decimals` to truncate to the 
 ```typescript
 import { trunc } from "durcno";
 
-const result = await db.from(Products).select(({ products }) => ({
-  truncatedPrice: trunc(products.price),
-  twoDecimals: trunc(products.price, 2),
+const result = await db.from(Products).select(() => ({
+  truncatedPrice: trunc(Products.price),
+  twoDecimals: trunc(Products.price, 2),
 }));
 ```
 
@@ -382,8 +382,8 @@ Returns a numeric expression raised to the power of `exponent`.
 ```typescript
 import { power } from "durcno";
 
-const result = await db.from(Products).select(({ products }) => ({
-  squared: power(products.price, 2),
+const result = await db.from(Products).select(() => ({
+  squared: power(Products.price, 2),
 }));
 ```
 
@@ -405,11 +405,11 @@ Arithmetic operators combine two numeric expressions using standard math operato
 ```typescript
 import { add, sub, mul, div } from "durcno";
 
-const result = await db.from(Orders).select(({ orders }) => ({
-  grossTotal: add(orders.subtotal, orders.tax),
-  discount: sub(orders.price, orders.discountAmount),
-  doubled: mul(orders.quantity, 2),
-  half: div(orders.amount, 2),
+const result = await db.from(Orders).select(() => ({
+  grossTotal: add(Orders.subtotal, Orders.tax),
+  discount: sub(Orders.price, Orders.discountAmount),
+  doubled: mul(Orders.quantity, 2),
+  half: div(Orders.amount, 2),
 }));
 ```
 
@@ -421,8 +421,8 @@ Arithmetic results are wrapped in parentheses, so they compose safely:
 import { add, mul, sub } from "durcno";
 
 // (age * 2) + (5 - 1)
-const result = await db.from(Users).select(({ users }) => ({
-  derived: add(mul(users.age, 2), sub(5, 1)),
+const result = await db.from(Users).select(() => ({
+  derived: add(mul(Users.age, 2), sub(5, 1)),
 }));
 ```
 
@@ -448,11 +448,11 @@ Returns the first non-null expression among its arguments. Durcno evaluates argu
 import { coalesce } from "durcno";
 
 // If fallback is non-null, result type is guaranteed non-null string
-const result = await db.from(Users).select(({ users }) => ({
-  displayName: coalesce(users.nickname, users.username),
+const result = await db.from(Users).select(() => ({
+  displayName: coalesce(Users.nickname, Users.username),
   contactEmail: coalesce(
-    users.alternateEmail,
-    users.email,
+    Users.alternateEmail,
+    Users.email,
     "no-reply@example.com",
   ),
 }));
@@ -468,25 +468,25 @@ Both `.else(...)` and `.end()` are **optional**: in PostgreSQL, omitting the `EL
 import { caseWhen, eq, isNull, jsonBuildObject } from "durcno";
 
 // Inferred return type: "Administrator" | "Staff" | "Member"
-const usersWithRole = await db.from(Users).select(({ users }) => ({
-  username: users.username,
-  badge: caseWhen(eq(users.type, "admin"), "Administrator")
-    .when(eq(users.type, "moderator"), "Staff")
+const usersWithRole = await db.from(Users).select(() => ({
+  username: Users.username,
+  badge: caseWhen(eq(Users.type, "admin"), "Administrator")
+    .when(eq(Users.type, "moderator"), "Staff")
     .else("Member"),
 }));
 
 // Direct caseWhen without .else() or .end() -> inferred as "Admin" | null
-const adminsOnly = await db.from(Users).select(({ users }) => ({
-  username: users.username,
-  role: caseWhen(eq(users.type, "admin"), "Admin"),
+const adminsOnly = await db.from(Users).select(() => ({
+  username: Users.username,
+  role: caseWhen(eq(Users.type, "admin"), "Admin"),
 }));
 
 // Returning null on unmatched LEFT JOIN -> inferred as null | { id: bigint; username: string }
 const postsWithAuthor = await db
   .from(Posts)
-  .leftJoin(Users, ({ posts, users }) => eq(users.id, posts.userId))
-  .select(({ posts, users }) => ({
-    title: posts.title,
+  .leftJoin(Users, () => eq(Users.id, Posts.userId))
+  .select(({ users }) => ({
+    title: Posts.title,
     author: caseWhen(isNull(users.id), null).else(
       jsonBuildObject({
         id: users.id,
@@ -503,8 +503,8 @@ Returns `null` if `expr` equals `val`, otherwise returns `expr`. Useful for conv
 ```typescript
 import { nullif } from "durcno";
 
-const result = await db.from(Users).select(({ users }) => ({
-  status: nullif(users.status, "unknown"),
+const result = await db.from(Users).select(() => ({
+  status: nullif(Users.status, "unknown"),
 }));
 // status is string | null
 ```
@@ -516,9 +516,9 @@ Returns the largest or smallest value among its arguments, skipping `null` value
 ```typescript
 import { greatest, least } from "durcno";
 
-const result = await db.from(Users).select(({ users }) => ({
-  latestActivity: greatest(users.updatedAt, users.createdAt),
-  minScore: least(users.examScore, users.quizScore, 0),
+const result = await db.from(Users).select(() => ({
+  latestActivity: greatest(Users.updatedAt, Users.createdAt),
+  minScore: least(Users.examScore, Users.quizScore, 0),
 }));
 ```
 
@@ -550,20 +550,20 @@ Evaluates whether a subquery returns any rows. Correlated subqueries can referen
 import { eq, exists, notExists } from "durcno";
 
 // Project existence as boolean columns in .select()
-const userProfiles = await db.from(Users).select(({ users }) => ({
-  id: users.id,
-  username: users.username,
+const userProfiles = await db.from(Users).select(() => ({
+  id: Users.id,
+  username: Users.username,
   hasPosts: exists(
     db
       .from(Posts)
       .select("*")
-      .where(({ posts }) => eq(posts.userId, users.id)),
+      .where(() => eq(Posts.userId, Users.id)),
   ),
   isNewUser: notExists(
     db
       .from(Posts)
       .select("*")
-      .where(({ posts }) => eq(posts.userId, users.id)),
+      .where(() => eq(Posts.userId, Users.id)),
   ),
 }));
 
@@ -571,12 +571,12 @@ const userProfiles = await db.from(Users).select(({ users }) => ({
 const authors = await db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     exists(
       db
         .from(Posts)
         .select("*")
-        .where(({ posts }) => eq(posts.userId, users.id)),
+        .where(() => eq(Posts.userId, Users.id)),
     ),
   );
 ```
@@ -589,26 +589,26 @@ Checks whether a column value matches any (or none) of the values in a literal a
 import { isIn, notIn } from "durcno";
 
 // Project membership check as boolean columns in .select()
-const usersWithFlags = await db.from(Users).select(({ users }) => ({
-  id: users.id,
-  isAdmin: isIn(users.type, ["admin", "superadmin"]),
-  isNotBanned: notIn(users.status, ["banned", "suspended"]),
+const usersWithFlags = await db.from(Users).select(() => ({
+  id: Users.id,
+  isAdmin: isIn(Users.type, ["admin", "superadmin"]),
+  isNotBanned: notIn(Users.status, ["banned", "suspended"]),
 }));
 
 // In WHERE clause with value array
 const activeAdmins = await db
   .from(Users)
   .select("*")
-  .where(({ users }) => isIn(users.type, ["admin", "moderator"]));
+  .where(() => isIn(Users.type, ["admin", "moderator"]));
 
 // In WHERE clause with subquery
 const usersWithRecentOrders = await db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     isIn(
-      users.id,
-      db.from(Orders).select(({ orders }) => ({ userId: orders.userId })),
+      Users.id,
+      db.from(Orders).select(() => ({ userId: Orders.userId })),
     ),
   );
 
@@ -616,10 +616,10 @@ const usersWithRecentOrders = await db
 const usersWithoutOrders = await db
   .from(Users)
   .select("*")
-  .where(({ users }) =>
+  .where(() =>
     notIn(
-      users.id,
-      db.from(Orders).select(({ orders }) => ({ userId: orders.userId })),
+      Users.id,
+      db.from(Orders).select(() => ({ userId: Orders.userId })),
     ),
   );
 ```
@@ -655,12 +655,12 @@ Builds a typed JSON object by passing an object of fields. Fields can be columns
 ```typescript
 import { jsonBuildObject } from "durcno";
 
-const rows = await db.from(Users).select(({ users }) => ({
+const rows = await db.from(Users).select(() => ({
   userCard: jsonBuildObject({
-    id: users.id,
-    username: users.username,
+    id: Users.id,
+    username: Users.username,
     profile: jsonBuildObject({
-      bio: users.bio,
+      bio: Users.bio,
     }),
   }),
 }));
@@ -676,9 +676,9 @@ import { asc, coalesce, isNotNull, jsonAgg, jsonBuildObject } from "durcno";
 
 const postsWithComments = await db
   .from(Posts)
-  .leftJoin(Comments, ({ posts, comments }) => eq(comments.postId, posts.id))
-  .select(({ posts, comments }) => ({
-    id: posts.id,
+  .leftJoin(Comments, () => eq(Comments.postId, Posts.id))
+  .select(({ comments }) => ({
+    id: Posts.id,
     comments: coalesce(
       jsonAgg(
         jsonBuildObject({
@@ -701,8 +701,8 @@ Converts a table view or table definition into a JSON or JSONB representation:
 ```typescript
 import { toJson, toJsonb } from "durcno";
 
-const rows = await db.from(Users).select(({ users }) => ({
-  userJson: toJson(users),
+const rows = await db.from(Users).select(() => ({
+  userJson: toJson(Users),
   userJsonb: toJsonb(Users),
 }));
 ```
@@ -714,8 +714,8 @@ Constructs an array from arguments:
 ```typescript
 import { jsonBuildArray } from "durcno";
 
-const rows = await db.from(Users).select(({ users }) => ({
-  tags: jsonBuildArray(users.type, "verified", 1),
+const rows = await db.from(Users).select(() => ({
+  tags: jsonBuildArray(Users.type, "verified", 1),
 }));
 ```
 
@@ -726,11 +726,11 @@ Removes object fields that contain SQL `NULL`:
 ```typescript
 import { jsonBuildObject, jsonStripNulls } from "durcno";
 
-const rows = await db.from(Users).select(({ users }) => ({
+const rows = await db.from(Users).select(() => ({
   cleaned: jsonStripNulls(
     jsonBuildObject({
-      username: users.username,
-      email: users.email,
+      username: Users.username,
+      email: Users.email,
     }),
   ),
 }));
@@ -759,11 +759,11 @@ import { lower, length, asc, desc } from "durcno";
 await db
   .from(Users)
   .select("*")
-  .orderBy(({ users }) => asc(lower(users.name)));
+  .orderBy(() => asc(lower(Users.name)));
 
 // Order by name length descending
 await db
   .from(Users)
   .select("*")
-  .orderBy(({ users }) => desc(length(users.name)));
+  .orderBy(() => desc(length(Users.name)));
 ```

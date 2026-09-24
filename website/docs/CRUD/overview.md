@@ -81,8 +81,8 @@ const users = await db.from(Users).select("*");
 // Type: { id: bigint; username: string; email: string | null; ... }[]
 
 // Only valid columns are allowed
-const result = await db.from(Users).select(({ users }) => ({
-  username: users.username,
+const result = await db.from(Users).select(() => ({
+  username: Users.username,
 }));
 // Type: { username: string }[]
 ```

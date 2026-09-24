@@ -6,9 +6,7 @@ import { type Equal, Expect } from "./utils";
 const projectedUsers = db
   .with("projectedUsers")
   .as(
-    db
-      .from(Users)
-      .select(({ users }) => ({ id: users.id, username: users.username })),
+    db.from(Users).select(() => ({ id: Users.id, username: Users.username })),
   );
 const projectedUsersQuery = db
   .with(projectedUsers)
@@ -16,7 +14,7 @@ const projectedUsersQuery = db
   .select("*");
 const projectedUsersSource = db
   .from(Users)
-  .select(({ users }) => ({ id: users.id, username: users.username }));
+  .select(() => ({ id: Users.id, username: Users.username }));
 
 type ProjectedRows = Awaited<typeof projectedUsersQuery>;
 Expect<Equal<ProjectedRows, { id: bigint; username: string }[]>>();
@@ -62,13 +60,13 @@ Expect<Equal<keyof CTEMap, "projectedUsers">>();
 
 const activeUserIds = db
   .with("activeUserIds")
-  .as(db.from(Users).select(({ users }) => ({ id: users.id })));
+  .as(db.from(Users).select(() => ({ id: Users.id })));
 
 db.from(Posts)
   .select("*")
-  .where(({ posts }) =>
+  .where(() =>
     isIn(
-      posts.userId,
+      Posts.userId,
       db.from(activeUserIds).select(({ activeUserIds }) => ({
         id: activeUserIds.id,
       })),
@@ -78,15 +76,13 @@ db.from(Posts)
 const mixedCte = db
   .with("mixed")
   .as(
-    db
-      .from(Users)
-      .select(({ users }) => ({ id: users.id, username: users.username })),
+    db.from(Users).select(() => ({ id: Users.id, username: Users.username })),
   );
 db.from(Posts)
   .select("*")
-  .where(({ posts }) =>
+  .where(() =>
     isIn(
-      posts.userId,
+      Posts.userId,
       // @ts-expect-error: subquery column type (string) does not match Posts.userId (bigint)
       db.from(mixedCte).select(({ mixed }) => ({ id: mixed.username })),
     ),
@@ -107,7 +103,7 @@ db.with(projectedUsers).deleteFrom(projectedUsers);
 // lower() CTE: virtual column should be string
 const lowerSource = db
   .from(Users)
-  .select(({ users }) => ({ lname: lower(users.username) }));
+  .select(() => ({ lname: lower(Users.username) }));
 type LowerColumns = InferQueryColumns<"lowerCte", typeof lowerSource>;
 Expect<Equal<keyof LowerColumns, "lname">>();
 const lowerCte = db.with("lowerCte").as(lowerSource);
@@ -119,9 +115,7 @@ type LowerRows = Awaited<typeof lowerQuery>;
 Expect<Equal<LowerRows, { lname: string }[]>>();
 
 // count() CTE: virtual column should be number
-const countSource = db
-  .from(Users)
-  .select(({ users }) => ({ total: count(users.id) }));
+const countSource = db.from(Users).select(() => ({ total: count(Users.id) }));
 type CountColumns = InferQueryColumns<"countCte", typeof countSource>;
 Expect<Equal<keyof CountColumns, "total">>();
 const countCte = db.with("countCte").as(countSource);
@@ -136,32 +130,29 @@ Expect<Equal<CountRows, { total: number }[]>>();
 const activeUsersForJoin = db.with("activeUsers").as(
   db
     .from(Users)
-    .select(({ users }) => ({
-      username: users.username,
+    .select(() => ({
+      username: Users.username,
     }))
-    .where(({ users }) => eq(users.username, "active")),
+    .where(() => eq(Users.username, "active")),
 );
 
 const testQuery = db
   .with(activeUsersForJoin)
   .from(Users)
-  .leftJoin(activeUsersForJoin, ({ users, activeUsers }) => {
-    Expect<Equal<typeof users.username, typeof Users.username>>();
+  .leftJoin(activeUsersForJoin, ({ activeUsers }) => {
     Expect<
       Equal<typeof activeUsers.username, typeof activeUsersForJoin.username>
     >();
-    return eq(users.username, activeUsers.username);
+    return eq(Users.username, activeUsers.username);
   })
-  .select(({ users, activeUsers }) => {
-    Expect<Equal<typeof users.username, typeof Users.username>>();
+  .select(({ activeUsers }) => {
     return {
-      username: users.username,
+      username: Users.username,
       activeUser: activeUsers.username,
     };
   })
-  .orderBy(({ users }) => {
-    Expect<Equal<typeof users.username, typeof Users.username>>();
-    return asc(users.username);
+  .orderBy(() => {
+    return asc(Users.username);
   });
 
 const directCteQuery = db
@@ -186,8 +177,8 @@ const directCteQuery = db
 // Literal, Sql, and null projection CTEs: InferQueryColumns preserves types
 // -------------------------------------------------------------------------
 
-const literalCteSource = db.from(Users).select(({ users }) => ({
-  userId: users.id,
+const literalCteSource = db.from(Users).select(() => ({
+  userId: Users.id,
   rawStr: "literal_string",
   rawNum: 42,
   rawBigInt: 100n,
@@ -263,9 +254,9 @@ Expect<
 // SqlFn in CTE: InferQueryColumns preserves non-nullability
 // -------------------------------------------------------------------------
 
-const fnCteSource = db.from(Users).select(({ users }) => ({
+const fnCteSource = db.from(Users).select(() => ({
   userCount: count("*"),
-  fullName: concat(users.username, " user"),
+  fullName: concat(Users.username, " user"),
 }));
 
 const fnCte = db.with("fnCte").as(fnCteSource);

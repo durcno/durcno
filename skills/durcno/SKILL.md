@@ -103,6 +103,14 @@ export const db = database(schema, config);
 const users = await db.from(Users).select("*");
 // Type: { id: bigint; name: string; email: string; type: "admin" | "user" }[]
 
+// Select specific columns with filter and ordering (use direct table references for non-left-joined tables)
+const activeUsers = await db
+  .from(Users)
+  .select(() => ({ id: Users.id, name: Users.name }))
+  .where(() => eq(Users.type, "user"))
+  .orderBy(() => asc(Users.name));
+// Note: Use callback parameter ({ posts }) => ... only for left-joined tables to infer nullable columns
+
 // Relational query
 const usersWithPosts = await db.query(Users).findMany({
   with: {

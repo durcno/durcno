@@ -23,7 +23,7 @@ const findUserByUsername = prepare(
       .prepare()
       .from(Users)
       .select("*")
-      .where(({ users }) => eq(users.username, args.username));
+      .where(() => eq(Users.username, args.username));
   },
 );
 ```
@@ -69,11 +69,11 @@ const findUser = prepare(
       .prepare()
       .from(Users)
       .select("*")
-      .where(({ users }) =>
+      .where(() =>
         and(
-          eq(users.username, args.username),
-          eq(users.email, args.email),
-          eq(users.type, args.type),
+          eq(Users.username, args.username),
+          eq(Users.email, args.email),
+          eq(Users.type, args.type),
         ),
       );
   },
@@ -118,8 +118,8 @@ const findUserInfo = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select(({ users }) => ({ username: users.username, email: users.email }))
-    .where(({ users }) => eq(users.id, args.id));
+    .select(() => ({ username: Users.username, email: Users.email }))
+    .where(() => eq(Users.id, args.id));
 });
 
 const result = await findUserInfo.run(db, { id: 1n });
@@ -142,11 +142,11 @@ const findByEitherUsername = prepare(
     return db
       .prepare()
       .from(Users)
-      .select(({ users }) => ({ id: users.id, username: users.username }))
-      .where(({ users }) =>
+      .select(() => ({ id: Users.id, username: Users.username }))
+      .where(() =>
         or(
-          eq(users.username, args.username1),
-          eq(users.username, args.username2),
+          eq(Users.username, args.username1),
+          eq(Users.username, args.username2),
         ),
       );
   },
@@ -174,11 +174,11 @@ const complexQuery = prepare(
     return db
       .prepare()
       .from(Users)
-      .select(({ users }) => ({ username: users.username, type: users.type }))
-      .where(({ users }) =>
+      .select(() => ({ username: Users.username, type: Users.type }))
+      .where(() =>
         and(
-          eq(users.username, args.username),
-          or(eq(users.type, args.type1), eq(users.type, args.type2)),
+          eq(Users.username, args.username),
+          or(eq(Users.type, args.type1), eq(Users.type, args.type2)),
         ),
       );
   },
@@ -205,7 +205,7 @@ const findPostsByUser = prepare({ userId: Posts.userId.arg() }, (args) => {
     .prepare()
     .from(Posts)
     .select("*")
-    .where(({ posts }) => eq(posts.userId, args.userId));
+    .where(() => eq(Posts.userId, args.userId));
 });
 
 const posts = await findPostsByUser.run(db, { userId: 1n });
@@ -218,8 +218,8 @@ const findByUserType = prepare({ userType: Users.type.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select(({ users }) => ({ id: users.id, type: users.type }))
-    .where(({ users }) => eq(users.type, args.userType));
+    .select(() => ({ id: Users.id, type: Users.type }))
+    .where(() => eq(Users.type, args.userType));
 });
 
 // TypeScript ensures only valid enum values can be passed
@@ -236,8 +236,8 @@ const findUsersByDate = prepare(
     return db
       .prepare()
       .from(Users)
-      .select(({ users }) => ({ id: users.id, createdAt: users.createdAt }))
-      .where(({ users }) => eq(users.createdAt, args.createdAt));
+      .select(() => ({ id: Users.id, createdAt: Users.createdAt }))
+      .where(() => eq(Users.createdAt, args.createdAt));
   },
 );
 
@@ -258,8 +258,8 @@ const findUser = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select(({ users }) => ({ username: users.username }))
-    .where(({ users }) => eq(users.id, args.id));
+    .select(() => ({ username: Users.username }))
+    .where(() => eq(Users.id, args.id));
 });
 
 // ✅ Correct: id is a bigint

@@ -36,7 +36,7 @@ describe("Enum Column Type", () => {
       const [row] = await db
         .from(schema.EnumTests)
         .select("*")
-        .where(({ enumTests }) => eq(enumTests.id, insertedId));
+        .where(() => eq(schema.EnumTests.id, insertedId));
       expect(row.status).toBe("active");
       expect(row.statusWithDefault).toBe("medium");
     });
@@ -50,7 +50,7 @@ describe("Enum Column Type", () => {
       const [row] = await db
         .from(schema.EnumTests)
         .select("*")
-        .where(({ enumTests }) => eq(enumTests.id, insertedId));
+        .where(() => eq(schema.EnumTests.id, insertedId));
       expect(row.status).toBe("inactive");
     });
   });

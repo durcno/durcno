@@ -109,12 +109,12 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const usersWithPosts = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) =>
+        .where(() =>
           exists(
             db
               .from(schema.Posts)
               .select("*")
-              .where(({ posts }) => eq(posts.userId, users.id)),
+              .where(() => eq(schema.Posts.userId, schema.Users.id)),
           ),
         );
 
@@ -140,12 +140,12 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const usersWithoutPosts = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) =>
+        .where(() =>
           notExists(
             db
               .from(schema.Posts)
               .select("*")
-              .where(({ posts }) => eq(posts.userId, users.id)),
+              .where(() => eq(schema.Posts.userId, schema.Users.id)),
           ),
         );
 
@@ -170,22 +170,22 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
 
       const results = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          username: users.username,
+        .select(() => ({
+          username: schema.Users.username,
           hasPosts: exists(
             db
               .from(schema.Posts)
               .select("*")
-              .where(({ posts }) => eq(posts.userId, users.id)),
+              .where(() => eq(schema.Posts.userId, schema.Users.id)),
           ),
           noPosts: notExists(
             db
               .from(schema.Posts)
               .select("*")
-              .where(({ posts }) => eq(posts.userId, users.id)),
+              .where(() => eq(schema.Posts.userId, schema.Users.id)),
           ),
         }))
-        .orderBy(({ users }) => asc(users.username));
+        .orderBy(() => asc(schema.Users.username));
 
       expect(results).toHaveLength(2);
       expect(results[0].username).toBe("alice");
@@ -214,19 +214,19 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
 
       const results = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          username: users.username,
+        .select(() => ({
+          username: schema.Users.username,
           postStatus: caseWhen(
             exists(
               db
                 .from(schema.Posts)
                 .select("*")
-                .where(({ posts }) => eq(posts.userId, users.id)),
+                .where(() => eq(schema.Posts.userId, schema.Users.id)),
             ),
             "author",
           ).else("reader"),
         }))
-        .orderBy(({ users }) => asc(users.username));
+        .orderBy(() => asc(schema.Users.username));
 
       expect(results).toHaveLength(2);
       expect(results[0].postStatus).toBe("author");
@@ -250,8 +250,8 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const matchedUsers = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => isIn(users.username, ["alice", "bob"]))
-        .orderBy(({ users }) => asc(users.username));
+        .where(() => isIn(schema.Users.username, ["alice", "bob"]))
+        .orderBy(() => asc(schema.Users.username));
 
       expect(matchedUsers).toHaveLength(2);
       expect(matchedUsers.map((u) => u.username)).toEqual(["alice", "bob"]);
@@ -269,7 +269,7 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const notAliceBob = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => notIn(users.username, ["alice", "bob"]));
+        .where(() => notIn(schema.Users.username, ["alice", "bob"]));
 
       expect(notAliceBob).toHaveLength(1);
       expect(notAliceBob[0].username).toBe("charlie");
@@ -285,12 +285,12 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
 
       const results = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          username: users.username,
-          isAdmin: isIn(users.type, ["admin"]),
-          isNotAdmin: notIn(users.type, ["admin"]),
+        .select(() => ({
+          username: schema.Users.username,
+          isAdmin: isIn(schema.Users.type, ["admin"]),
+          isNotAdmin: notIn(schema.Users.type, ["admin"]),
         }))
-        .orderBy(({ users }) => asc(users.username));
+        .orderBy(() => asc(schema.Users.username));
 
       expect(results).toHaveLength(2);
       expect(results[0].username).toBe("alice");
@@ -320,12 +320,12 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const usersWithPosts = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) =>
+        .where(() =>
           isIn(
-            users.id,
+            schema.Users.id,
             db
               .from(schema.Posts)
-              .select(({ posts }) => ({ userId: posts.userId })),
+              .select(() => ({ userId: schema.Posts.userId })),
           ),
         );
 
@@ -351,12 +351,12 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const usersWithoutPosts = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) =>
+        .where(() =>
           notIn(
-            users.id,
+            schema.Users.id,
             db
               .from(schema.Posts)
-              .select(({ posts }) => ({ userId: posts.userId })),
+              .select(() => ({ userId: schema.Posts.userId })),
           ),
         );
 
@@ -376,14 +376,14 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const inEmpty = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => isIn(users.id, []));
+        .where(() => isIn(schema.Users.id, []));
       expect(inEmpty).toHaveLength(0);
 
       // notIn with empty array produces TRUE -> all rows
       const notInEmpty = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => notIn(users.id, []));
+        .where(() => notIn(schema.Users.id, []));
       expect(notInEmpty).toHaveLength(2);
     });
 
@@ -412,14 +412,14 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const adminWithPosts = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) =>
+        .where(() =>
           and(
-            isIn(users.type, ["admin"]),
+            isIn(schema.Users.type, ["admin"]),
             exists(
               db
                 .from(schema.Posts)
                 .select("*")
-                .where(({ posts }) => eq(posts.userId, users.id)),
+                .where(() => eq(schema.Posts.userId, schema.Users.id)),
             ),
           ),
         );
@@ -443,7 +443,7 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const users = await db
         .from(schema.Users)
         .select("*")
-        .where(({ users }) => isIn(users.id, sql`SELECT user_id FROM posts`));
+        .where(() => isIn(schema.Users.id, sql`SELECT user_id FROM posts`));
 
       expect(users).toHaveLength(1);
       expect(users[0].username).toBe("alice");
@@ -462,12 +462,12 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
 
       const rows = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          status: users.status,
-          isInList: isIn(users.status, ["active", "pending"]),
+        .select(() => ({
+          status: schema.Users.status,
+          isInList: isIn(schema.Users.status, ["active", "pending"]),
           userCount: count("*"),
         }))
-        .orderBy(({ users }) => asc(users.status));
+        .orderBy(() => asc(schema.Users.status));
 
       expect(rows).toEqual([
         { status: "active", isInList: true, userCount: 2 },
@@ -492,17 +492,17 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
 
       const rows = await db
         .from(schema.Users)
-        .select(({ users }) => ({
-          userId: users.id,
+        .select(() => ({
+          userId: schema.Users.id,
           hasPosts: exists(
             db
               .from(schema.Posts)
               .select("*")
-              .where(({ posts }) => eq(posts.userId, users.id)),
+              .where(() => eq(schema.Posts.userId, schema.Users.id)),
           ),
           total: count("*"),
         }))
-        .orderBy(({ users }) => asc(users.id));
+        .orderBy(() => asc(schema.Users.id));
 
       expect(rows).toEqual([
         { userId: alice.id, hasPosts: true, total: 1 },
@@ -527,20 +527,20 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const activeUserCte = db.with("activeUserCte").as(
         db
           .from(schema.Users)
-          .select(({ users }) => ({ id: users.id }))
-          .where(({ users }) => eq(users.status, "active")),
+          .select(() => ({ id: schema.Users.id }))
+          .where(() => eq(schema.Users.status, "active")),
       );
 
       const postsOfActiveUsers = await db
         .from(schema.Posts)
-        .select(({ posts }) => ({ title: posts.title }))
-        .where(({ posts }) =>
+        .select(() => ({ title: schema.Posts.title }))
+        .where(() =>
           exists(
             db
               .with(activeUserCte)
               .from(activeUserCte)
               .select("*")
-              .where(({ activeUserCte }) => eq(activeUserCte.id, posts.userId)),
+              .where(() => eq(activeUserCte.id, schema.Posts.userId)),
           ),
         );
 
@@ -565,20 +565,20 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const activeUserCte = db.with("activeUserCte").as(
         db
           .from(schema.Users)
-          .select(({ users }) => ({ id: users.id }))
-          .where(({ users }) => eq(users.status, "active")),
+          .select(() => ({ id: schema.Users.id }))
+          .where(() => eq(schema.Users.status, "active")),
       );
 
       const postsOfActiveUsers = await db
         .from(schema.Posts)
-        .select(({ posts }) => ({ title: posts.title }))
-        .where(({ posts }) =>
+        .select(() => ({ title: schema.Posts.title }))
+        .where(() =>
           isIn(
-            posts.userId,
+            schema.Posts.userId,
             db
               .with(activeUserCte)
               .from(activeUserCte)
-              .select(({ activeUserCte }) => ({ id: activeUserCte.id })),
+              .select(() => ({ id: activeUserCte.id })),
           ),
         );
 
@@ -602,9 +602,12 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
           db
             .prepare()
             .from(schema.Users)
-            .select(({ users }) => ({ id: users.id, username: users.username }))
-            .where(({ users }) => isIn(users.id, [args.id1, args.id2]))
-            .orderBy(({ users }) => asc(users.id)),
+            .select(() => ({
+              id: schema.Users.id,
+              username: schema.Users.username,
+            }))
+            .where(() => isIn(schema.Users.id, [args.id1, args.id2]))
+            .orderBy(() => asc(schema.Users.id)),
       );
 
       const rows = await selectPre.run(db, { id1: u1.id, id2: u3.id });

@@ -43,7 +43,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.TimestampTests)
         .select("*")
-        .where(({ timestampTests }) => eq(timestampTests.id, insertedId));
+        .where(() => eq(schema.TimestampTests.id, insertedId));
       const localTime = new Date("2024-06-15T10:30:45.000Z");
       // Since it's a timestamp without tz, the exact roundtrip depends on Node vs DB timezone.
       // We just verify it returns a valid date.
@@ -61,7 +61,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.TimestampTests)
         .select("*")
-        .where(({ timestampTests }) => eq(timestampTests.id, insertedId));
+        .where(() => eq(schema.TimestampTests.id, insertedId));
       expect(row.at).toBeInstanceOf(Date);
     });
   });
@@ -94,7 +94,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.DateTests)
         .select("*")
-        .where(({ dateTests }) => eq(dateTests.id, insertedId));
+        .where(() => eq(schema.DateTests.id, insertedId));
       expect(row.date?.getUTCFullYear()).toBe(2024);
       expect(row.date?.getUTCMonth()).toBe(5); // June (0-indexed)
       expect(row.date?.getUTCDate()).toBe(15);
@@ -110,7 +110,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.DateTests)
         .select("*")
-        .where(({ dateTests }) => eq(dateTests.id, insertedId));
+        .where(() => eq(schema.DateTests.id, insertedId));
       expect(row.date?.getUTCFullYear()).toBe(2025);
       expect(row.date?.getUTCMonth()).toBe(11); // December (0-indexed)
       expect(row.date?.getUTCDate()).toBe(25);
@@ -145,7 +145,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.TimeTests)
         .select("*")
-        .where(({ timeTests }) => eq(timeTests.id, insertedId));
+        .where(() => eq(schema.TimeTests.id, insertedId));
       expect(row.time).toBe("10:30:00");
       expect(row.timeWithDefault).toBe("00:00:00");
     });
@@ -159,7 +159,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.TimeTests)
         .select("*")
-        .where(({ timeTests }) => eq(timeTests.id, insertedId));
+        .where(() => eq(schema.TimeTests.id, insertedId));
       expect(row.time).toBe("14:00:00");
     });
   });
@@ -195,7 +195,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.TimestamptzTests)
         .select("*")
-        .where(({ timestamptzTests }) => eq(timestamptzTests.id, insertedId));
+        .where(() => eq(schema.TimestamptzTests.id, insertedId));
       expect(row.at?.getTime()).toBe(
         new Date("2024-06-15T10:30:45.000Z").getTime(),
       );
@@ -211,7 +211,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.TimestamptzTests)
         .select("*")
-        .where(({ timestamptzTests }) => eq(timestamptzTests.id, insertedId));
+        .where(() => eq(schema.TimestamptzTests.id, insertedId));
       expect(row.at?.getTime()).toBe(
         new Date("2025-01-01T00:00:00.000Z").getTime(),
       );
@@ -248,7 +248,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.TimetzTests)
         .select("*")
-        .where(({ timetzTests }) => eq(timetzTests.id, insertedId));
+        .where(() => eq(schema.TimetzTests.id, insertedId));
       expect(row.time).toContain("10:30:00");
       expect(row.timeWithDefault).toBeDefined();
     });
@@ -262,7 +262,7 @@ describe("Date/Time Column Types", () => {
       const [row] = await db
         .from(schema.TimetzTests)
         .select("*")
-        .where(({ timetzTests }) => eq(timetzTests.id, insertedId));
+        .where(() => eq(schema.TimetzTests.id, insertedId));
       expect(row.time).toContain("14:00:00");
     });
   });

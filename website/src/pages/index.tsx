@@ -35,13 +35,13 @@ import { Users } from "./db/schema.ts";
 // Fully typed result inferred from schema
 const admins = await db
   .from(Users)
-  .select(({ users }) => ({
-    id: users.id,
-    name: users.name,
-    email: users.email,
+  .select(() => ({
+    id: Users.id,
+    name: Users.name,
+    email: Users.email,
   }))
-  .where(({ users }) => eq(users.type, "admin"))
-  .orderBy(({ users }) => asc(users.name))
+  .where(() => eq(Users.type, "admin"))
+  .orderBy(() => asc(Users.name))
   .limit(10);
 
 // admins: { id: bigint; name: string; email: string }[]

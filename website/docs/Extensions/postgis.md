@@ -263,11 +263,11 @@ const Properties = table("public", "properties", {
 const nearby = await db
   .from(Properties)
   .select("*")
-  .where(({ properties }) =>
+  .where(() =>
     and(
-      stDWithin(properties.location, [centerLon, centerLat], input.radius),
-      eq(properties.type, input.type),
-      lte(properties.availableFrom, new Date(input.date)),
+      stDWithin(Properties.location, [centerLon, centerLat], input.radius),
+      eq(Properties.type, input.type),
+      lte(Properties.availableFrom, new Date(input.date)),
     ),
   );
 ```
@@ -278,9 +278,9 @@ const nearby = await db
 
 ```typescript
 // 1. In select — adds a computed numeric column to the result
-const rows = await db.from(Properties).select(({ properties }) => ({
-  id: properties.id,
-  distance: stDistance(properties.location, [centerLon, centerLat]),
+const rows = await db.from(Properties).select(() => ({
+  id: Properties.id,
+  distance: stDistance(Properties.location, [centerLon, centerLat]),
 }));
 // rows[0].distance → number (metres)
 
@@ -288,16 +288,14 @@ const rows = await db.from(Properties).select(({ properties }) => ({
 const byProximity = await db
   .from(Properties)
   .select("*")
-  .orderBy(({ properties }) =>
-    asc(stDistance(properties.location, [centerLon, centerLat])),
-  );
+  .orderBy(() => asc(stDistance(Properties.location, [centerLon, centerLat])));
 
 // 3. In where via comparison operators
 const withinRange = await db
   .from(Properties)
   .select("*")
-  .where(({ properties }) =>
-    lt(stDistance(properties.location, [centerLon, centerLat]), 5000),
+  .where(() =>
+    lt(stDistance(Properties.location, [centerLon, centerLat]), 5000),
   ); // closer than 5 km
 ```
 
@@ -306,16 +304,16 @@ All three can be combined:
 ```typescript
 const results = await db
   .from(Properties)
-  .select(({ properties }) => ({
-    id: properties.id,
-    type: properties.type,
-    distance: stDistance(properties.location, [centerLon, centerLat]),
+  .select(() => ({
+    id: Properties.id,
+    type: Properties.type,
+    distance: stDistance(Properties.location, [centerLon, centerLat]),
   }))
-  .orderBy(({ properties }, { distance }) => asc(distance))
-  .where(({ properties }) =>
+  .orderBy((_, { distance }) => asc(distance))
+  .where(() =>
     and(
-      lt(stDistance(properties.location, [centerLon, centerLat]), input.radius),
-      eq(properties.type, input.type),
+      lt(stDistance(Properties.location, [centerLon, centerLat]), input.radius),
+      eq(Properties.type, input.type),
     ),
   );
 // results[0] → { id: bigint; type: string; distance: number }

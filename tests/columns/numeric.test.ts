@@ -39,7 +39,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.IntegerTests)
         .select("*")
-        .where(({ integerTests }) => eq(integerTests.id, insertedId));
+        .where(() => eq(schema.IntegerTests.id, insertedId));
       expect(row.count).toBe(42);
       expect(row.countWithDefault).toBe(0);
     });
@@ -53,7 +53,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.IntegerTests)
         .select("*")
-        .where(({ integerTests }) => eq(integerTests.id, insertedId));
+        .where(() => eq(schema.IntegerTests.id, insertedId));
       expect(row.count).toBe(99);
     });
   });
@@ -85,7 +85,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.SmallintTests)
         .select("*")
-        .where(({ smallintTests }) => eq(smallintTests.id, insertedId));
+        .where(() => eq(schema.SmallintTests.id, insertedId));
       expect(row.value).toBe(100);
       expect(row.valueWithDefault).toBe(10);
     });
@@ -99,7 +99,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.SmallintTests)
         .select("*")
-        .where(({ smallintTests }) => eq(smallintTests.id, insertedId));
+        .where(() => eq(schema.SmallintTests.id, insertedId));
       expect(row.value).toBe(200);
     });
   });
@@ -132,7 +132,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.BigintTests)
         .select("*")
-        .where(({ bigintTests }) => eq(bigintTests.id, insertedId));
+        .where(() => eq(schema.BigintTests.id, insertedId));
       expect(row.amount).toBe(1000000000n);
       expect(row.amountWithDefault).toBe(1000n);
     });
@@ -146,7 +146,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.BigintTests)
         .select("*")
-        .where(({ bigintTests }) => eq(bigintTests.id, insertedId));
+        .where(() => eq(schema.BigintTests.id, insertedId));
       expect(row.amount).toBe(2000000000n);
     });
   });
@@ -179,7 +179,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.SerialTests)
         .select("*")
-        .where(({ serialTests }) => eq(serialTests.id, insertedId));
+        .where(() => eq(schema.SerialTests.id, insertedId));
       expect(row.name).toBe("test");
     });
 
@@ -192,7 +192,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.SerialTests)
         .select("*")
-        .where(({ serialTests }) => eq(serialTests.id, insertedId));
+        .where(() => eq(schema.SerialTests.id, insertedId));
       expect(row.name).toBe("updated");
     });
   });
@@ -225,7 +225,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.SmallserialTests)
         .select("*")
-        .where(({ smallserialTests }) => eq(smallserialTests.id, insertedId));
+        .where(() => eq(schema.SmallserialTests.id, insertedId));
       expect(row.name).toBe("test");
     });
 
@@ -238,7 +238,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.SmallserialTests)
         .select("*")
-        .where(({ smallserialTests }) => eq(smallserialTests.id, insertedId));
+        .where(() => eq(schema.SmallserialTests.id, insertedId));
       expect(row.name).toBe("updated");
     });
   });
@@ -271,7 +271,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.BigserialTests)
         .select("*")
-        .where(({ bigserialTests }) => eq(bigserialTests.id, insertedId));
+        .where(() => eq(schema.BigserialTests.id, insertedId));
       expect(row.name).toBe("test");
     });
 
@@ -284,7 +284,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.BigserialTests)
         .select("*")
-        .where(({ bigserialTests }) => eq(bigserialTests.id, insertedId));
+        .where(() => eq(schema.BigserialTests.id, insertedId));
       expect(row.name).toBe("updated");
     });
   });
@@ -317,7 +317,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.NumericTests)
         .select("*")
-        .where(({ numericTests }) => eq(numericTests.id, insertedId));
+        .where(() => eq(schema.NumericTests.id, insertedId));
       expect(row.value).toBe("3.14");
       expect(row.valueWithDefault).toBe("0");
     });
@@ -331,7 +331,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.NumericTests)
         .select("*")
-        .where(({ numericTests }) => eq(numericTests.id, insertedId));
+        .where(() => eq(schema.NumericTests.id, insertedId));
       expect(row.value).toBe("999.99");
     });
   });
@@ -364,7 +364,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.RealTests)
         .select("*")
-        .where(({ realTests }) => eq(realTests.id, insertedId));
+        .where(() => eq(schema.RealTests.id, insertedId));
       expect(row.value).toBeCloseTo(3.14, 2);
       expect(row.valueWithDefault).toBe(0);
     });
@@ -378,7 +378,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.RealTests)
         .select("*")
-        .where(({ realTests }) => eq(realTests.id, insertedId));
+        .where(() => eq(schema.RealTests.id, insertedId));
       expect(row.value).toBeCloseTo(9.99, 2);
     });
   });
@@ -416,9 +416,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.DoublePrecisionTests)
         .select("*")
-        .where(({ doublePrecisionTests }) =>
-          eq(doublePrecisionTests.id, insertedId),
-        );
+        .where(() => eq(schema.DoublePrecisionTests.id, insertedId));
       expect(row.value).toBeCloseTo(Math.PI, 10);
       expect(row.valueWithDefault).toBe(0);
     });
@@ -432,9 +430,7 @@ describe("Numeric Column Types", () => {
       const [row] = await db
         .from(schema.DoublePrecisionTests)
         .select("*")
-        .where(({ doublePrecisionTests }) =>
-          eq(doublePrecisionTests.id, insertedId),
-        );
+        .where(() => eq(schema.DoublePrecisionTests.id, insertedId));
       expect(row.value).toBeCloseTo(9.9999999999, 10);
     });
   });

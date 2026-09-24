@@ -42,8 +42,8 @@ import { sql } from "durcno";
 const score = sql<number>`${Users.points} * 1.5`;
 const formattedDate = sql<string>`to_char(${Users.createdAt}, 'YYYY-MM-DD')`;
 
-const results = await db.from(Users).select(({ users }) => ({
-  username: users.username,
+const results = await db.from(Users).select(() => ({
+  username: Users.username,
   score, // Inferred as number
   formattedDate, // Inferred as string
 }));
