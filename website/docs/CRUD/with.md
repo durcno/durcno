@@ -29,19 +29,18 @@ Durcno infers the CTE column types from the query you pass to `.as()`, so the re
 
 ## Query the CTE
 
-Attach the CTE to an outer query with `db.with(cte)` and choose the CTE source using the callback form of `.from()`:
+Attach the CTE to an outer query with `db.with(cte)` and pass the CTE directly to `.from()`, just like a normal table.
+Reference its columns directly from the CTE variable:
 
 ```typescript
 const rows = await db
   .with(activeUsers)
-  .from((ctes) => ctes.activeUsers)
+  .from(activeUsers)
   .select("*")
-  .orderBy(({ activeUsers }) => asc(activeUsers.username));
+  .orderBy(() => asc(activeUsers.username));
 
 // Type: { id: bigint; username: string }[]
 ```
-
-When you pass a callback to `.from()`, Durcno builds a typed object mapping CTE names to their virtual table definitions.
 
 ## Chain multiple CTEs
 
@@ -58,13 +57,13 @@ const activeUsers = db.with("activeUsers").as(
 const activeNames = db.with("activeNames").as(
   db
     .with(activeUsers)
-    .from((ctes) => ctes.activeUsers)
-    .select(({ activeUsers }) => ({ username: activeUsers.username })),
+    .from(activeUsers)
+    .select(() => ({ username: activeUsers.username })),
 );
 
 const rows = await db
   .with(activeUsers, activeNames)
-  .from((ctes) => ctes.activeNames)
+  .from(activeNames)
   .select("*");
 ```
 
@@ -90,9 +89,7 @@ const updatedUsers = db.with("reactivatedUsers").as(
     .where(
       isIn(
         Users.id,
-        db
-          .from(inactiveUsers)
-          .select(({ inactiveUsers }) => ({ id: inactiveUsers.id })),
+        db.from(inactiveUsers).select(() => ({ id: inactiveUsers.id })),
       ),
     )
     .returning({ id: true, username: true, status: true }),
@@ -100,7 +97,7 @@ const updatedUsers = db.with("reactivatedUsers").as(
 
 const rows = await db
   .with(inactiveUsers, updatedUsers)
-  .from((ctes) => ctes.reactivatedUsers)
+  .from(updatedUsers)
   .select("*");
 ```
 
@@ -120,13 +117,25 @@ const insertedUsers = db
       .returning({ id: true, username: true }),
   );
 
-const rows = await db
-  .with(insertedUsers)
-  .from((ctes) => ctes.insertedUsers)
-  .select("*");
+const rows = await db.with(insertedUsers).from(insertedUsers).select("*");
 ```
 
 These DML CTEs are useful when you need the inserted/updated/deleted rows available to the same statement.
+
+## CTEs in joins
+
+When a CTE is used in `.leftJoin()` (or `.innerJoin()`), access its columns from the callback view parameter — the joined table's columns are namespaced by CTE name (and nullable for left joins), just like normal tables:
+
+```typescript
+const rows = await db
+  .with(activeUsers)
+  .from(Users)
+  .leftJoin(activeUsers, () => eq(Users.username, activeUsers.username))
+  .select(({ activeUsers }) => ({
+    username: Users.username,
+    activeUser: activeUsers.username,
+  }));
+```
 
 ## CTE usage rules
 
@@ -138,11 +147,8 @@ These DML CTEs are useful when you need the inserted/updated/deleted rows availa
 ## Examples
 
 ```typescript
-// Valid: SELECT from a CTE
-await db
-  .with(activeUsers)
-  .from((ctes) => ctes.activeUsers)
-  .select("*");
+// Valid: SELECT from a CTE (like a normal table)
+await db.with(activeUsers).from(activeUsers).select("*");
 
 // Invalid: Cannot write into a CTE
 // db.with(activeUsers).insertInto(activeUsers);

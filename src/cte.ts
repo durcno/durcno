@@ -16,10 +16,3 @@ export type CteWithColumns<
 
 // biome-ignore lint/suspicious/noExplicitAny: widened alias for constraint purposes
 export type AnyCteWithColumns = CteWithColumns<any, Record<any, any>>;
-
-/** Maps a tuple of `CteWithColumns` to an object keyed by CTE name. */
-export type CtesByName<TCtes extends AnyCteWithColumns[]> = {
-  [K in TCtes[number] as K extends { $cteName: infer TName extends string }
-    ? TName
-    : never]: K;
-};

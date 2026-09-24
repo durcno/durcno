@@ -1,4 +1,4 @@
-import type { CtesByName, InferQueryColumns } from "durcno";
+import type { InferQueryColumns } from "durcno";
 import { add, asc, concat, count, eq, isIn, lower, now, sql } from "durcno";
 import { db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
@@ -10,7 +10,7 @@ const projectedUsers = db
   );
 const projectedUsersQuery = db
   .with(projectedUsers)
-  .from((ctes) => ctes.projectedUsers)
+  .from(projectedUsers)
   .select("*");
 const projectedUsersSource = db
   .from(Users)
@@ -43,7 +43,7 @@ Expect<Equal<keyof InsertedSourceColumns, "id" | "username">>();
 const insertedUsers = db.with("insertedUsers").as(insertedUsersSource);
 const insertedUsersQuery = db
   .with(insertedUsers)
-  .from((ctes) => ctes.insertedUsers)
+  .from(insertedUsers)
   .select("*");
 
 type InsertedRow = Awaited<typeof insertedUsersQuery>[number];
@@ -54,9 +54,7 @@ Expect<Equal<InsertedRow["username"], string>>();
 // @ts-expect-error: only typed query builders can be turned into CTEs
 db.with("bad").as(Users);
 
-// CtesByName maps CTE tuple to name-keyed object
-type CTEMap = CtesByName<[typeof projectedUsers]>;
-Expect<Equal<keyof CTEMap, "projectedUsers">>();
+// CTEs are used like normal tables — pass the CTE instance to `.from()` directly.
 
 const activeUserIds = db
   .with("activeUserIds")
@@ -67,7 +65,7 @@ db.from(Posts)
   .where(() =>
     isIn(
       Posts.userId,
-      db.from(activeUserIds).select(({ activeUserIds }) => ({
+      db.from(activeUserIds).select(() => ({
         id: activeUserIds.id,
       })),
     ),
@@ -84,7 +82,7 @@ db.from(Posts)
     isIn(
       Posts.userId,
       // @ts-expect-error: subquery column type (string) does not match Posts.userId (bigint)
-      db.from(mixedCte).select(({ mixed }) => ({ id: mixed.username })),
+      db.from(mixedCte).select(() => ({ id: mixedCte.username })),
     ),
   );
 
@@ -107,10 +105,7 @@ const lowerSource = db
 type LowerColumns = InferQueryColumns<"lowerCte", typeof lowerSource>;
 Expect<Equal<keyof LowerColumns, "lname">>();
 const lowerCte = db.with("lowerCte").as(lowerSource);
-const lowerQuery = db
-  .with(lowerCte)
-  .from((ctes) => ctes.lowerCte)
-  .select("*");
+const lowerQuery = db.with(lowerCte).from(lowerCte).select("*");
 type LowerRows = Awaited<typeof lowerQuery>;
 Expect<Equal<LowerRows, { lname: string }[]>>();
 
@@ -119,10 +114,7 @@ const countSource = db.from(Users).select(() => ({ total: count(Users.id) }));
 type CountColumns = InferQueryColumns<"countCte", typeof countSource>;
 Expect<Equal<keyof CountColumns, "total">>();
 const countCte = db.with("countCte").as(countSource);
-const countQuery = db
-  .with(countCte)
-  .from((ctes) => ctes.countCte)
-  .select("*");
+const countQuery = db.with(countCte).from(countCte).select("*");
 type CountRows = Awaited<typeof countQuery>;
 Expect<Equal<CountRows, { total: number }[]>>();
 
@@ -157,20 +149,26 @@ const testQuery = db
 
 const directCteQuery = db
   .with(activeUsersForJoin)
-  .from((ctes) => ctes.activeUsers)
-  .select(({ activeUsers }) => {
+  .from(activeUsersForJoin)
+  .select(() => {
     Expect<
-      Equal<typeof activeUsers.username, typeof activeUsersForJoin.username>
+      Equal<
+        typeof activeUsersForJoin.username,
+        typeof activeUsersForJoin.username
+      >
     >();
     return {
-      username: activeUsers.username,
+      username: activeUsersForJoin.username,
     };
   })
-  .orderBy(({ activeUsers }) => {
+  .orderBy(() => {
     Expect<
-      Equal<typeof activeUsers.username, typeof activeUsersForJoin.username>
+      Equal<
+        typeof activeUsersForJoin.username,
+        typeof activeUsersForJoin.username
+      >
     >();
-    return asc(activeUsers.username);
+    return asc(activeUsersForJoin.username);
   });
 
 // -------------------------------------------------------------------------
@@ -207,10 +205,7 @@ Expect<
 >();
 
 const literalCte = db.with("literalCte").as(literalCteSource);
-const literalCteQuery = db
-  .with(literalCte)
-  .from((ctes) => ctes.literalCte)
-  .select("*");
+const literalCteQuery = db.with(literalCte).from(literalCte).select("*");
 
 type LiteralCteRows = Awaited<typeof literalCteQuery>;
 Expect<
@@ -231,8 +226,8 @@ Expect<
 
 const cteFnQuery = db
   .with(literalCte)
-  .from((ctes) => ctes.literalCte)
-  .select(({ literalCte }) => ({
+  .from(literalCte)
+  .select(() => ({
     lowered: lower(literalCte.rawStr),
     incremented: add(literalCte.rawBigInt, 1),
     created: now(),
@@ -262,8 +257,8 @@ const fnCteSource = db.from(Users).select(() => ({
 const fnCte = db.with("fnCte").as(fnCteSource);
 const fnCteQuery = db
   .with(fnCte)
-  .from((ctes) => ctes.fnCte)
-  .select(({ fnCte }) => ({
+  .from(fnCte)
+  .select(() => ({
     total: fnCte.userCount,
     name: fnCte.fullName,
   }));

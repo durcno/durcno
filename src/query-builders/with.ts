@@ -1,5 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { AnyCteWithColumns, CtesByName } from "../cte";
+import type { AnyCteWithColumns } from "../cte";
 import type {
   AnyColumn,
   AnyTableWithColumns,
@@ -30,8 +30,10 @@ export class WithStatement<
   }
 
   /**
-   * SELECT from a real table with the declared CTEs in scope.
-   * @param table The table to query.
+   * SELECT from a real table or a CTE with the declared CTEs in scope.
+   * CTEs are used like normal tables — pass the CTE instance directly
+   * and reference its columns directly (e.g. `activeUsers.username`).
+   * @param table The table or CTE to query.
    */
   from<
     UTSchema extends string,
@@ -39,41 +41,9 @@ export class WithStatement<
     UTColumns extends Record<string, AnyColumn>,
   >(
     table: TableWithColumns<UTSchema, UTName, UTColumns>,
-  ): SelectBuilder<UTSchema, UTName, UTColumns, TPrepare, null>;
-  /**
-   * Build the CTE name→instance map and call the callback to pick the FROM target.
-   * @param cb Callback receiving the typed CTE map; return the CTE to query from.
-   */
-  from<TChosenCte extends AnyCteWithColumns>(
-    cb: (ctes: CtesByName<TCtes>) => TChosenCte,
-  ): SelectBuilder<
-    "",
-    TChosenCte["_"]["name"],
-    TChosenCte["$"]["columns"],
-    TPrepare,
-    null
-  >;
-  from(
-    tableOrCb:
-      | TableWithColumns<string, string, Record<string, AnyColumn>>
-      | ((ctes: CtesByName<TCtes>) => AnyCteWithColumns),
-  ) {
-    if (typeof tableOrCb === "function") {
-      const cteMap = Object.fromEntries(
-        this.#ctes.map((c) => [c._.name, c]),
-      ) as CtesByName<TCtes>;
-      const table = tableOrCb(cteMap);
-      return new SelectBuilder(
-        table,
-        null,
-        undefined,
-        this.#executor,
-        this.#prepare,
-        this.#ctes,
-      );
-    }
+  ): SelectBuilder<UTSchema, UTName, UTColumns, TPrepare, null> {
     return new SelectBuilder(
-      tableOrCb,
+      table,
       null,
       undefined,
       this.#executor,

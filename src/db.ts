@@ -471,7 +471,7 @@ class Base<
    * @returns A `WithStatement` to build the SELECT/INSERT/UPDATE/DELETE against
    *
    * @example
-   * const rows = await db.with(activeCte).from(ctes => ctes.activeUsers).select("*");
+   * const rows = await db.with(activeCte).from(activeCte).select("*");
    */
   with<TCtes extends [AnyCteWithColumns, ...AnyCteWithColumns[]]>(
     ...ctes: TCtes

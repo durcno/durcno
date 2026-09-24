@@ -254,9 +254,9 @@ const activeUsers = db.with("activeUsers").as(
 
 const rows = await db
   .with(activeUsers)
-  .from((ctes) => ctes.activeUsers)
+  .from(activeUsers)
   .select("*")
-  .orderBy(({ activeUsers }) => asc(activeUsers.username));
+  .orderBy(() => asc(activeUsers.username));
 
 // Type: { id: bigint; username: string }[]
 ```
