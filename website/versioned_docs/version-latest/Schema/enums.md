@@ -130,12 +130,12 @@ export const Users = table("public", "users", {
 });
 
 // ✅ Valid - "admin" is in the enum values
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   role: "admin",
 });
 
 // ❌ Type Error - "superadmin" is not in the enum values
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   role: "superadmin", // TypeScript error!
 });
 ```
@@ -143,7 +143,7 @@ await db.insert(Users).values({
 ### Select Type Safety
 
 ```typescript
-const users = await db.from(Users).select();
+const users = await db.from(Users).select("*");
 // users[0].role has type: "admin" | "moderator" | "user"
 ```
 

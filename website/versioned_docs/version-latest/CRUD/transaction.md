@@ -16,12 +16,12 @@ import { Posts, Users } from "./db/schema.ts";
 const result = await db.transaction(async (tx) => {
   // Create a new user
   const [user] = await tx
-    .insert(Users)
+    .insertInto(Users)
     .values({ username: "john", type: "user" })
     .returning({ id: true });
 
   // Create a post for the user
-  await tx.insert(Posts).values({
+  await tx.insertInto(Posts).values({
     userId: user.id,
     title: "My First Post",
   });
@@ -37,13 +37,13 @@ console.log(result); // { id: 1 }
 
 The transaction callback receives a `tx` object that provides the same methods as `db`:
 
-| Method             | Description              |
-| ------------------ | ------------------------ |
-| `tx.from(table)`   | Start a SELECT query     |
-| `tx.insert(table)` | Start an INSERT query    |
-| `tx.update(table)` | Start an UPDATE query    |
-| `tx.delete(table)` | Start a DELETE query     |
-| `tx.query(table)`  | Relational Query Builder |
+| Method                 | Description              |
+| ---------------------- | ------------------------ |
+| `tx.from(table)`       | Start a SELECT query     |
+| `tx.insertInto(table)` | Start an INSERT query    |
+| `tx.update(table)`     | Start an UPDATE query    |
+| `tx.deleteFrom(table)` | Start a DELETE query     |
+| `tx.query(table)`      | Relational Query Builder |
 
 :::warning
 Always use `tx` (the transaction context) inside the callback, not `db`. Using `db` will execute queries outside the transaction.
@@ -57,13 +57,13 @@ If any error occurs inside the transaction, all changes are automatically rolled
 try {
   await db.transaction(async (tx) => {
     // This insert succeeds
-    await tx.insert(Users).values({ username: "john", type: "user" });
+    await tx.insertInto(Users).values({ username: "john", type: "user" });
 
     // This throws an error
     throw new Error("Something went wrong!");
 
     // This insert is never executed
-    await tx.insert(Users).values({ username: "jane", type: "admin" });
+    await tx.insertInto(Users).values({ username: "jane", type: "admin" });
   });
 } catch (error) {
   // The first insert is rolled back
@@ -79,7 +79,7 @@ The transaction returns whatever you return from the callback:
 // Return a single value
 const userId = await db.transaction(async (tx) => {
   const [user] = await tx
-    .insert(Users)
+    .insertInto(Users)
     .values({ username: "john", type: "user" })
     .returning({ id: true });
   return user.id;
@@ -89,11 +89,14 @@ const userId = await db.transaction(async (tx) => {
 // Return an object
 const result = await db.transaction(async (tx) => {
   const [user] = await tx
-    .insert(Users)
+    .insertInto(Users)
     .values({ username: "john", type: "user" })
     .returning({ id: true, username: true });
 
-  const posts = await tx.from(Posts).select().where(eq(Posts.userId, user.id));
+  const posts = await tx
+    .from(Posts)
+    .select("*")
+    .where(() => eq(Posts.userId, user.id));
 
   return { user, posts };
 });
@@ -131,18 +134,18 @@ Create related records atomically:
 const user = await db.transaction(async (tx) => {
   // Create user
   const [newUser] = await tx
-    .insert(Users)
+    .insertInto(Users)
     .values({ username: "john", type: "user" })
     .returning({ id: true, username: true });
 
   // Create user profile
-  await tx.insert(UserProfiles).values({
+  await tx.insertInto(UserProfiles).values({
     userId: newUser.id,
     bio: "Hello, world!",
   });
 
   // Create initial settings
-  await tx.insert(UserSettings).values({
+  await tx.insertInto(UserSettings).values({
     userId: newUser.id,
     theme: "dark",
     notifications: true,
@@ -161,15 +164,15 @@ await db.transaction(async (tx) => {
   // Check current state
   const [user] = await tx
     .from(Users)
-    .select({ type: Users.type })
-    .where(eq(Users.id, userId));
+    .select(() => ({ type: Users.type }))
+    .where(() => eq(Users.id, userId));
 
   if (user.type === "user") {
     // Promote to admin
     await tx.update(Users).set({ type: "admin" }).where(eq(Users.id, userId));
 
     // Log the promotion
-    await tx.insert(AuditLog).values({
+    await tx.insertInto(AuditLog).values({
       action: "promote_to_admin",
       userId: userId,
     });
@@ -190,8 +193,8 @@ Each transaction acquires a dedicated client from the connection pool:
 // Transaction acquires a client from the pool
 await db.transaction(async (tx) => {
   // All queries here use the same pooled connection
-  await tx.insert(Users).values({ ... });
-  await tx.from(Users).select();
+  await tx.insertInto(Users).values({ ... });
+  await tx.from(Users).select("*");
 });
 // Client is released back to the pool
 ```
@@ -203,7 +206,7 @@ Handle transaction errors appropriately:
 ```typescript
 try {
   await db.transaction(async (tx) => {
-    await tx.insert(Users).values({ username: "john", type: "user" });
+    await tx.insertInto(Users).values({ username: "john", type: "user" });
     // ... more operations
   });
   console.log("Transaction successful");

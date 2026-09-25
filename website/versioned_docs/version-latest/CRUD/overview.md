@@ -24,9 +24,9 @@ The `db` instance provides methods for all database operations:
 | Method                     | Description                            |
 | -------------------------- | -------------------------------------- |
 | `db.from(table)`           | Start a SELECT query                   |
-| `db.insert(table)`         | Start an INSERT query                  |
+| `db.insertInto(table)`     | Start an INSERT query                  |
 | `db.update(table)`         | Start an UPDATE query                  |
-| `db.delete(table)`         | Start a DELETE query                   |
+| `db.deleteFrom(table)`     | Start a DELETE query                   |
 | `db.query(table)`          | Relational Query Builder (RQB)         |
 | `db.transaction(callback)` | Execute queries in a transaction       |
 | `db.raw(sql, args)`        | Execute raw SQL queries                |
@@ -61,11 +61,11 @@ All query builders return a `QueryPromise` object that implements the Promise in
 
 ```typescript
 // Using await
-const users = await db.from(Users).select();
+const users = await db.from(Users).select("*");
 
 // Using .then()
 db.from(Users)
-  .select()
+  .select("*")
   .then((users) => {
     console.log(users);
   });
@@ -77,13 +77,13 @@ Durcno infers types from your schema, ensuring type-safe operations:
 
 ```typescript
 // Return type is automatically inferred
-const users = await db.from(Users).select();
+const users = await db.from(Users).select("*");
 // Type: { id: bigint; username: string; email: string | null; ... }[]
 
 // Only valid columns are allowed
-const result = await db.from(Users).select({
+const result = await db.from(Users).select(() => ({
   username: Users.username,
-});
+}));
 // Type: { username: string }[]
 ```
 
@@ -106,9 +106,9 @@ See [Raw SQL](./raw-sql) for comprehensive documentation on raw queries.
 
 - [Select](./select) - Learn about SELECT queries with `db.from()`
 - [WITH](./with) - Learn about Common Table Expressions and reusable subqueries
-- [Insert](./insert) - Learn about INSERT operations with `db.insert()`
+- [Insert](./insert) - Learn about INSERT operations with `db.insertInto()`
 - [Update](./update) - Learn about UPDATE operations with `db.update()`
-- [Delete](./delete) - Learn about DELETE operations with `db.delete()`
+- [Delete](./delete) - Learn about DELETE operations with `db.deleteFrom()`
 - [Filters](../Expressions/filters.md) - Learn about WHERE conditions and operators
 - [Relational Queries](./relational-query) - Learn about the Relational Query Builder
 - [Query Shortcuts](./query-shortcuts) - Learn about `$`-prefixed utility functions

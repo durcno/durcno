@@ -22,8 +22,8 @@ const findUserByUsername = prepare(
     return db
       .prepare()
       .from(Users)
-      .select()
-      .where(eq(Users.username, args.username));
+      .select("*")
+      .where(() => eq(Users.username, args.username));
   },
 );
 ```
@@ -68,13 +68,13 @@ const findUser = prepare(
     return db
       .prepare()
       .from(Users)
-      .select()
-      .where(
+      .select("*")
+      .where(() =>
         and(
           eq(Users.username, args.username),
           eq(Users.email, args.email),
           eq(Users.type, args.type),
-        ),
+        )
       );
   },
 );
@@ -95,7 +95,7 @@ Prepared arguments can also be used inside `insert().values(...)` when you want 
 const createUser = prepare({ username: Users.username.arg() }, (args) => {
   return db
     .prepare()
-    .insert(Users)
+    .insertInto(Users)
     .values({
       username: args.username,
       email: "prepare@example.com",
@@ -118,8 +118,8 @@ const findUserInfo = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select({ username: Users.username, email: Users.email })
-    .where(eq(Users.id, args.id));
+    .select(() => ({ username: Users.username, email: Users.email }))
+    .where(() => eq(Users.id, args.id));
 });
 
 const result = await findUserInfo.run(db, { id: 1n });
@@ -142,12 +142,12 @@ const findByEitherUsername = prepare(
     return db
       .prepare()
       .from(Users)
-      .select({ id: Users.id, username: Users.username })
-      .where(
+      .select(() => ({ id: Users.id, username: Users.username }))
+      .where(() =>
         or(
           eq(Users.username, args.username1),
           eq(Users.username, args.username2),
-        ),
+        )
       );
   },
 );
@@ -174,12 +174,12 @@ const complexQuery = prepare(
     return db
       .prepare()
       .from(Users)
-      .select({ username: Users.username, type: Users.type })
-      .where(
+      .select(() => ({ username: Users.username, type: Users.type }))
+      .where(() =>
         and(
           eq(Users.username, args.username),
           or(eq(Users.type, args.type1), eq(Users.type, args.type2)),
-        ),
+        )
       );
   },
 );
@@ -201,7 +201,11 @@ import { eq, prepare } from "durcno";
 import { Posts } from "./db/schema.ts";
 
 const findPostsByUser = prepare({ userId: Posts.userId.arg() }, (args) => {
-  return db.prepare().from(Posts).select().where(eq(Posts.userId, args.userId));
+  return db
+    .prepare()
+    .from(Posts)
+    .select("*")
+    .where(() => eq(Posts.userId, args.userId));
 });
 
 const posts = await findPostsByUser.run(db, { userId: 1n });
@@ -214,8 +218,8 @@ const findByUserType = prepare({ userType: Users.type.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select({ id: Users.id, type: Users.type })
-    .where(eq(Users.type, args.userType));
+    .select(() => ({ id: Users.id, type: Users.type }))
+    .where(() => eq(Users.type, args.userType));
 });
 
 // TypeScript ensures only valid enum values can be passed
@@ -232,8 +236,8 @@ const findUsersByDate = prepare(
     return db
       .prepare()
       .from(Users)
-      .select({ id: Users.id, createdAt: Users.createdAt })
-      .where(eq(Users.createdAt, args.createdAt));
+      .select(() => ({ id: Users.id, createdAt: Users.createdAt }))
+      .where(() => eq(Users.createdAt, args.createdAt));
   },
 );
 
@@ -254,8 +258,8 @@ const findUser = prepare({ id: Users.id.arg() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select({ username: Users.username })
-    .where(eq(Users.id, args.id));
+    .select(() => ({ username: Users.username }))
+    .where(() => eq(Users.id, args.id));
 });
 
 // ✅ Correct: id is a bigint
@@ -280,7 +284,12 @@ const paginatedUsers = prepare(
     off: Arg.number(),
   },
   (args) => {
-    return db.prepare().from(Users).select().limit(args.lim).offset(args.off);
+    return db
+      .prepare()
+      .from(Users)
+      .select("*")
+      .limit(args.lim)
+      .offset(args.off);
   },
 );
 
@@ -298,7 +307,12 @@ const paginatedUsers = prepare(
     off: Arg.bigint(),
   },
   (args) => {
-    return db.prepare().from(Users).select().limit(args.lim).offset(args.off);
+    return db
+      .prepare()
+      .from(Users)
+      .select("*")
+      .limit(args.lim)
+      .offset(args.off);
   },
 );
 
@@ -316,8 +330,8 @@ const findUsersByAge = prepare({ age: Arg.number() }, (args) => {
   return db
     .prepare()
     .from(Users)
-    .select()
-    .where(sql`age = ${args.age}`);
+    .select("*")
+    .where(() => sql`age = ${args.age}`);
 });
 
 const users = await findUsersByAge.run(db, { age: 30 });

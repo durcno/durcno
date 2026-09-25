@@ -302,12 +302,12 @@ Relations enable type-safe joins and nested queries:
 // Query posts with author information
 const postsWithAuthors = await db
   .from(Posts)
-  .innerJoin(Users, eq(Posts.userId, Users.id))
-  .select({
+  .innerJoin(Users, () => eq(Posts.userId, Users.id))
+  .select(() => ({
     postId: Posts.id,
     title: Posts.title,
     authorName: Users.username,
-  });
+  }));
 ```
 
 ### Nested Queries (Future Feature)
@@ -321,7 +321,7 @@ const usersWithPosts = await db
   .with({
     posts: PostsRelations,
   })
-  .select();
+  .select("*");
 ```
 
 ## Common Relationship Patterns
@@ -548,12 +548,12 @@ Durcno provides full type inference for relations:
 // TypeScript knows the shape of related data
 const posts = await db
   .from(Posts)
-  .innerJoin(Users, eq(Posts.userId, Users.id))
-  .select({
+  .innerJoin(Users, () => eq(Posts.userId, Users.id))
+  .select(() => ({
     postId: Posts.id, // bigint
     title: Posts.title, // string | null
     authorName: Users.username, // string
-  });
+  }));
 
 // Type: { postId: bigint; title: string | null; authorName: string }[]
 ```

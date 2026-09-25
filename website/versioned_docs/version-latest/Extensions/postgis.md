@@ -49,13 +49,13 @@ export const Locations = table("public", "locations", {
 });
 
 // Insert a point
-await db.insert(Locations).values({
+await db.insertInto(Locations).values({
   name: "Eiffel Tower",
   coordinates: [2.2945, 48.8584], // [longitude, latitude]
 });
 
 // Select returns the same tuple format
-const locations = await db.from(Locations).select();
+const locations = await db.from(Locations).select("*");
 // locations[0].coordinates → [2.2945, 48.8584]
 ```
 
@@ -72,7 +72,7 @@ export const Routes = table("public", "routes", {
   waypoints: geography.multipoint({ notNull }),
 });
 
-await db.insert(Routes).values({
+await db.insertInto(Routes).values({
   waypoints: [
     [2.2945, 48.8584],
     [2.3522, 48.8566],
@@ -95,7 +95,7 @@ export const Trails = table("public", "trails", {
   path: geography.linestring({ notNull }),
 });
 
-await db.insert(Trails).values({
+await db.insertInto(Trails).values({
   name: "River Walk",
   path: [
     [-73.9857, 40.7484],
@@ -119,7 +119,7 @@ export const TransitRoutes = table("public", "transitRoutes", {
   lines: geography.multilinestring({ notNull }),
 });
 
-await db.insert(TransitRoutes).values({
+await db.insertInto(TransitRoutes).values({
   name: "Bus Route 42",
   lines: [
     // First line segment
@@ -150,7 +150,7 @@ export const Zones = table("public", "zones", {
   boundary: geography.polygon({ notNull }),
 });
 
-await db.insert(Zones).values({
+await db.insertInto(Zones).values({
   name: "Central Park",
   boundary: [
     // Exterior ring (must be closed — first and last points match)
@@ -179,7 +179,7 @@ export const Districts = table("public", "districts", {
   areas: geography.multipolygon({ notNull }),
 });
 
-await db.insert(Districts).values({
+await db.insertInto(Districts).values({
   name: "Borough Parks",
   areas: [
     // First polygon
@@ -262,13 +262,13 @@ const Properties = table("public", "properties", {
 // Find properties near a given location
 const nearby = await db
   .from(Properties)
-  .select()
-  .where(
+  .select("*")
+  .where(() =>
     and(
       stDWithin(Properties.location, [centerLon, centerLat], input.radius),
       eq(Properties.type, input.type),
       lte(Properties.availableFrom, new Date(input.date)),
-    ),
+    )
   );
 ```
 
@@ -277,31 +277,45 @@ const nearby = await db
 `stDistance` is a **typed SQL value expression** (not a filter) that computes the distance in metres between a geography column and a given point. It can be used in three contexts:
 
 ```typescript
-const dist = stDistance(Properties.location, [centerLon, centerLat]);
-
 // 1. In select — adds a computed numeric column to the result
-const rows = await db
-  .from(Properties)
-  .select({ id: Properties.id, distance: dist });
+const rows = await db.from(Properties).select(() => ({
+  id: Properties.id,
+  distance: stDistance(Properties.location, [centerLon, centerLat]),
+}));
 // rows[0].distance → number (metres)
 
 // 2. In orderBy — order results by proximity
-const byProximity = await db.from(Properties).select().orderBy(asc(dist));
+const byProximity = await db
+  .from(Properties)
+  .select("*")
+  .orderBy(() => asc(stDistance(Properties.location, [centerLon, centerLat])));
 
 // 3. In where via comparison operators
-const withinRange = await db.from(Properties).select().where(lt(dist, 5000)); // closer than 5 km
+const withinRange = await db
+  .from(Properties)
+  .select("*")
+  .where(() =>
+    lt(stDistance(Properties.location, [centerLon, centerLat]), 5000)
+  ); // closer than 5 km
 ```
 
 All three can be combined:
 
 ```typescript
-const dist = stDistance(Properties.location, [centerLon, centerLat]);
-
 const results = await db
   .from(Properties)
-  .select({ id: Properties.id, type: Properties.type, distance: dist })
-  .orderBy(asc(dist))
-  .where(and(lt(dist, input.radius), eq(Properties.type, input.type)));
+  .select(() => ({
+    id: Properties.id,
+    type: Properties.type,
+    distance: stDistance(Properties.location, [centerLon, centerLat]),
+  }))
+  .orderBy((_, { distance }) => asc(distance))
+  .where(() =>
+    and(
+      lt(stDistance(Properties.location, [centerLon, centerLat]), input.radius),
+      eq(Properties.type, input.type),
+    )
+  );
 // results[0] → { id: bigint; type: string; distance: number }
 ```
 

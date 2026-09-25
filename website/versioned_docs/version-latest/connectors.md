@@ -280,7 +280,7 @@ import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
 // Execute queries
-const users = await db.from(Users).select();
+const users = await db.from(Users).select("*");
 ```
 
 ## Choosing a Connector

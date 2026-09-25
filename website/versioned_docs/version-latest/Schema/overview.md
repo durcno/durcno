@@ -259,7 +259,7 @@ import * as schema from "./schema.ts";
 
 const db = database(schema, config);
 
-const users = await db.from(schema.Users).select();
+const users = await db.from(schema.Users).select("*");
 // Type: { id: bigint; username: string }[]
 ```
 
@@ -276,7 +276,7 @@ export const Users = table("public", "users", {
 });
 
 // TypeScript infers the types:
-const users = await db.from(Users).select();
+const users = await db.from(Users).select("*");
 // Type: {
 //   id: bigint;
 //   username: string;
@@ -310,7 +310,7 @@ export const Users = table("public", "users", {
 });
 
 // TypeScript only allows valid values
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   status: "active", // ✅ Valid
   status: "pending", // ❌ Type error
 });

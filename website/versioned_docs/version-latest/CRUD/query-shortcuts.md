@@ -139,7 +139,7 @@ SELECT EXISTS(SELECT 1 FROM "public"."users" WHERE "type" = 'admin');
 ```typescript
 // Only proceed if users exist
 if (await db.$exists(Users)) {
-  const users = await db.from(Users).select();
+  const users = await db.from(Users).select("*");
   // Process users...
 }
 ```
@@ -281,7 +281,11 @@ console.log(user.username);
 const user = await db.$first(Users, eq(Users.id, 1n));
 
 // Equivalent using select
-const [user] = await db.from(Users).select().where(eq(Users.id, 1n)).limit(1);
+const [user] = await db
+  .from(Users)
+  .select("*")
+  .where(() => eq(Users.id, 1n))
+  .limit(1);
 ```
 
 Key differences:

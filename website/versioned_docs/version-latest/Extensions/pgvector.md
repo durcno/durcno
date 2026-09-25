@@ -56,13 +56,13 @@ export const Embeddings = table("public", "embeddings", {
 });
 
 // Insert a vector
-await db.insert(Embeddings).values({
+await db.insertInto(Embeddings).values({
   text: "The quick brown fox",
   embedding: [0.1, 0.2, 0.3, ..., 0.5], // 1536 dimensions
 });
 
 // Select returns the same array format
-const rows = await db.from(Embeddings).select();
+const rows = await db.from(Embeddings).select("*");
 // rows[0].embedding → [0.1, 0.2, 0.3, ..., 0.5]
 ```
 
@@ -81,7 +81,7 @@ export const Embeddings = table("public", "embeddings", {
 });
 
 // Same usage as vector but with half-precision storage
-await db.insert(Embeddings).values({
+await db.insertInto(Embeddings).values({
   text: "Sample text",
   embedding: [0.1, 0.2, 0.3, ..., 0.5], // 768 dimensions
 });
@@ -101,11 +101,11 @@ export const SparseEmbeddings = table("public", "sparseEmbeddings", {
 });
 
 // Sparse vectors use a compact format
-await db.insert(SparseEmbeddings).values({
+await db.insertInto(SparseEmbeddings).values({
   sparse: "{10:0.5,42:0.3,100:0.2}/1000",
 });
 
-const rows = await db.from(SparseEmbeddings).select();
+const rows = await db.from(SparseEmbeddings).select("*");
 // rows[0].sparse → "{10:0.5,42:0.3,100:0.2}/1000"
 ```
 
@@ -122,11 +122,11 @@ export const BinaryEmbeddings = table("public", "binaryEmbeddings", {
   bits: pgvector.bit({ length: 1024, notNull }),
 });
 
-await db.insert(BinaryEmbeddings).values({
+await db.insertInto(BinaryEmbeddings).values({
   bits: "1010101010...", // 1024 bits
 });
 
-const rows = await db.from(BinaryEmbeddings).select();
+const rows = await db.from(BinaryEmbeddings).select("*");
 // rows[0].bits → "1010101010..."
 ```
 
@@ -150,6 +150,7 @@ import {
   cosineDistance,
   hammingDistance,
   innerProduct,
+  jaccardDistance,
   l1Distance,
   l2Distance,
 } from "durcno";
@@ -164,6 +165,7 @@ import {
 | `innerProduct(col, vector)`    | `col <#> vector` | Inner product (negative)           |
 | `l1Distance(col, vector)`      | `col <+> vector` | Manhattan/Taxicab distance         |
 | `hammingDistance(col, vector)` | `col <~> vector` | Hamming distance (for bit columns) |
+| `jaccardDistance(col, vector)` | `col <%> vector` | Jaccard distance (for bit columns) |
 
 Each function accepts:
 
@@ -185,11 +187,11 @@ const queryVector = [0.1, 0.2, 0.3, ..., 0.5]; // 1536 dimensions
 
 const rows = await db
   .from(Embeddings)
-  .select({
+  .select(() => ({
     id: Embeddings.id,
     text: Embeddings.text,
     distance: l2Distance(Embeddings.embedding, queryVector),
-  });
+  }));
 
 // rows[0].distance → 0.123 (numeric distance)
 ```
@@ -203,8 +205,8 @@ const queryVector = [0.1, 0.2, 0.3, ..., 0.5];
 
 const nearest = await db
   .from(Embeddings)
-  .select()
-  .orderBy(asc(l2Distance(Embeddings.embedding, queryVector)))
+  .select("*")
+  .orderBy(() => asc(l2Distance(Embeddings.embedding, queryVector)))
   .limit(10);
 
 // Returns the 10 closest vectors
@@ -219,8 +221,8 @@ const queryVector = [0.1, 0.2, 0.3, ..., 0.5];
 
 const similar = await db
   .from(Embeddings)
-  .select()
-  .where(lt(l2Distance(Embeddings.embedding, queryVector), 0.5));
+  .select("*")
+  .where(() => lt(l2Distance(Embeddings.embedding, queryVector), 0.5));
 
 // Returns all embeddings within 0.5 distance
 ```
@@ -239,11 +241,11 @@ const queryBits = "1010101010..."; // 1024 bits
 
 const results = await db
   .from(BinaryEmbeddings)
-  .select({
+  .select(() => ({
     id: BinaryEmbeddings.id,
     distance: hammingDistance(BinaryEmbeddings.bits, queryBits),
-  })
-  .orderBy(asc(hammingDistance(BinaryEmbeddings.bits, queryBits)))
+  }))
+  .orderBy(() => asc(hammingDistance(BinaryEmbeddings.bits, queryBits)))
   .limit(5);
 
 // results[0].distance → number of bit differences
@@ -361,20 +363,20 @@ const db = database({ Documents }, config);
 async function searchSimilar(queryEmbedding: number[]) {
   const results = await db
     .from(Documents)
-    .select({
+    .select(() => ({
       id: Documents.id,
       content: Documents.content,
       distance: l2Distance(Documents.embedding, queryEmbedding),
-    })
-    .where(lt(l2Distance(Documents.embedding, queryEmbedding), 1.0)) // threshold
-    .orderBy(asc(l2Distance(Documents.embedding, queryEmbedding)))
+    }))
+    .where(() => lt(l2Distance(Documents.embedding, queryEmbedding), 1.0)) // threshold
+    .orderBy(() => asc(l2Distance(Documents.embedding, queryEmbedding)))
     .limit(10);
 
   return results;
 }
 
 // Insert a document with embedding
-await db.insert(Documents).values({
+await db.insertInto(Documents).values({
   content: "PostgreSQL is a powerful database",
   embedding: [0.1, 0.2, 0.3, ..., 0.5], // e.g., from OpenAI API
 });

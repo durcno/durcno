@@ -63,7 +63,7 @@ const result = insertSchema.safeParse({
 });
 
 if (result.success) {
-  await db.insert(Users).values(result.data);
+  await db.insertInto(Users).values(result.data);
 } else {
   console.error(result.error.issues);
 }
@@ -167,7 +167,7 @@ type UpdateUser = z.infer<typeof updateSchema>;
 
 // Use the inferred types
 function createUser(data: InsertUser) {
-  return db.insert(Users).values(data);
+  return db.insertInto(Users).values(data);
 }
 
 function updateUser(id: bigint, data: UpdateUser) {
@@ -248,7 +248,7 @@ async function handleCreateUser(input: unknown) {
     throw new Error(`Validation failed: ${result.error.message}`);
   }
 
-  return db.insert(Users).values(result.data);
+  return db.insertInto(Users).values(result.data);
 }
 ```
 

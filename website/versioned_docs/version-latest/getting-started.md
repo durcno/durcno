@@ -176,14 +176,14 @@ import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
 // Insert a single user
-await db.insert(Users).values({
+await db.insertInto(Users).values({
   username: "johndoe",
   email: "john@example.com",
   password: "password",
 });
 
 // Insert multiple users
-await db.insert(Users).values([
+await db.insertInto(Users).values([
   {
     username: "alice",
     email: "alice@example.com",
@@ -201,18 +201,21 @@ await db.insert(Users).values([
 
 ```typescript
 // Select all users
-const allUsers = await db.from(Users).select();
+const allUsers = await db.from(Users).select("*");
 
 // Select specific columns
-const userNames = await db.from(Users).select({
+const userNames = await db.from(Users).select(() => ({
   id: Users.id,
   username: Users.username,
-});
+}));
 
 // With conditions
 import { eq } from "durcno";
 
-const users = await db.from(Users).select().where(eq(Users.id, 1n));
+const users = await db
+  .from(Users)
+  .select("*")
+  .where(() => eq(Users.id, 1n));
 ```
 
 ### Update Queries
@@ -233,7 +236,7 @@ await db
 import { eq } from "durcno";
 
 // Delete user
-await db.delete(Users).where(eq(Users.username, "johndoe"));
+await db.deleteFrom(Users).where(eq(Users.username, "johndoe"));
 ```
 
 ## Working with Relations
