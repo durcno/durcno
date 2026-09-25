@@ -57,7 +57,7 @@ export default defineConfig({
       filesAfter.forEach((file) => {
         files.add(file);
       });
-      return files.values() as unknown as DirtyFileAbsPath[];
+      return [...files] as DirtyFileAbsPath[];
     },
   ],
   formatters: [
