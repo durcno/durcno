@@ -5,6 +5,7 @@ import {
   type $Client,
   and,
   asc,
+  count,
   database,
   defineConfig,
   desc,
@@ -483,6 +484,267 @@ describe("Relational queries", () => {
 
       expect(admin).toBeDefined();
       expect(admin?.type).toBe("admin");
+    });
+  });
+
+  describe("select", () => {
+    it("should select top-level columns with aliases", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "testuser" }));
+
+      const users = await db.query(schema.Users).findMany({
+        select: {
+          userId: schema.Users.id,
+          name: schema.Users.username,
+        },
+      });
+
+      expect(users).toHaveLength(1);
+      expect(users[0]).toHaveProperty("userId");
+      expect(users[0]).toHaveProperty("name");
+      expect(users[0]).not.toHaveProperty("id");
+      expect(users[0]).not.toHaveProperty("username");
+      expect(users[0]).not.toHaveProperty("email");
+      expect(typeof users[0].userId).toBe("bigint");
+      expect(users[0].name).toBe("testuser");
+    });
+
+    it("should convert driver values for aliased columns", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "testuser" }));
+
+      const users = await db.query(schema.Users).findMany({
+        select: {
+          userId: schema.Users.id,
+          registeredAt: schema.Users.createdAt,
+        },
+      });
+
+      expect(users).toHaveLength(1);
+      expect(typeof users[0].userId).toBe("bigint");
+      expect(users[0].registeredAt).toBeInstanceOf(Date);
+    });
+
+    it("should select scalar SqlFn expressions with aliases", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "TestUser" }));
+
+      const users = await db.query(schema.Users).findMany({
+        select: {
+          userId: schema.Users.id,
+          lowered: lower(schema.Users.username),
+        },
+      });
+
+      expect(users).toHaveLength(1);
+      expect(users[0].lowered).toBe("testuser");
+    });
+
+    it("should combine select with filtering, ordering, and pagination", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "charlie" }),
+          createTestUser({ username: "alice" }),
+          createTestUser({ username: "bob" }),
+        ]);
+
+      const users = await db.query(schema.Users).findMany({
+        select: {
+          name: schema.Users.username,
+        },
+        orderBy: asc(schema.Users.username),
+        limit: 2,
+        offset: 1,
+      });
+
+      expect(users.map((u) => u.name)).toEqual(["bob", "charlie"]);
+    });
+
+    it("should select nested relation columns with aliases", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insertInto(schema.Posts)
+        .values(createTestPost(user.id, { title: "Hello" }))
+        .returning({ id: true });
+
+      await db
+        .insertInto(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "Comment 1" }),
+          createTestComment(post.id, user.id, { body: "Comment 2" }),
+        ]);
+
+      const posts = await db.query(schema.Posts).findMany({
+        select: {
+          postId: schema.Posts.id,
+          heading: schema.Posts.title,
+        },
+        with: {
+          comments: {
+            select: {
+              commentId: schema.Comments.id,
+              text: schema.Comments.body,
+            },
+          },
+        },
+      });
+
+      expect(posts).toHaveLength(1);
+      expect(posts[0].postId).toBe(post.id);
+      expect(posts[0].heading).toBe("Hello");
+      expect(posts[0]).not.toHaveProperty("id");
+      expect(posts[0].comments).toHaveLength(2);
+      expect(posts[0].comments[0]).toHaveProperty("commentId");
+      expect(posts[0].comments[0]).toHaveProperty("text");
+      expect(posts[0].comments[0]).not.toHaveProperty("id");
+      expect(typeof posts[0].comments[0].commentId).toBe("bigint");
+    });
+
+    it("should select fk relation columns with aliases", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "author1" }))
+        .returning({ id: true });
+
+      await db.insertInto(schema.Posts).values(createTestPost(user.id));
+
+      const posts = await db.query(schema.Posts).findMany({
+        select: {
+          heading: schema.Posts.title,
+        },
+        with: {
+          author: {
+            select: {
+              name: schema.Users.username,
+            },
+          },
+        },
+      });
+
+      expect(posts).toHaveLength(1);
+      expect(posts[0].author.name).toBe("author1");
+    });
+
+    it("should return empty arrays for nested many relations with select", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      await db.insertInto(schema.Posts).values(createTestPost(user.id));
+
+      const posts = await db.query(schema.Posts).findMany({
+        select: {
+          postId: schema.Posts.id,
+        },
+        with: {
+          comments: {
+            select: {
+              text: schema.Comments.body,
+            },
+          },
+        },
+      });
+
+      expect(posts).toHaveLength(1);
+      expect(posts[0].comments).toEqual([]);
+    });
+
+    it("should support select in findFirst", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "testuser" }));
+
+      const user = await db.query(schema.Users).findFirst({
+        select: {
+          name: schema.Users.username,
+        },
+      });
+
+      expect(user).toBeDefined();
+      expect(user?.name).toBe("testuser");
+      expect(user).not.toHaveProperty("username");
+    });
+
+    it("should return null from findFirst with select when no records found", async () => {
+      const user = await db.query(schema.Users).findFirst({
+        select: {
+          name: schema.Users.username,
+        },
+      });
+
+      expect(user).toBeNull();
+    });
+
+    it("should treat empty select as all columns", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "testuser" }));
+
+      const users = await db.query(schema.Users).findMany({
+        select: {},
+      });
+
+      expect(users).toHaveLength(1);
+      expect(users[0]).toHaveProperty("id");
+      expect(users[0]).toHaveProperty("username");
+      expect(users[0]).toHaveProperty("email");
+    });
+
+    it("should reject combining columns and select", async () => {
+      await expect(async () => {
+        await db.query(schema.Users).findMany({
+          columns: { id: true },
+          select: { userId: schema.Users.id },
+        } as never);
+      }).rejects.toThrow(/mutually exclusive/);
+    });
+
+    it("should reject combining columns and select in nested relations", async () => {
+      await expect(async () => {
+        await db.query(schema.Posts).findMany({
+          select: { postId: schema.Posts.id },
+          with: {
+            comments: {
+              columns: { id: true },
+              select: { text: schema.Comments.body },
+            } as never,
+          },
+        });
+      }).rejects.toThrow(/mutually exclusive/);
+    });
+
+    it("should reject aggregate functions in select", async () => {
+      await expect(async () => {
+        await db.query(schema.Users).findMany({
+          select: { total: count("*") as never },
+        });
+      }).rejects.toThrow(/Aggregate/);
+    });
+
+    it("should reject columns from another table in select", async () => {
+      await expect(async () => {
+        await db.query(schema.Users).findMany({
+          select: { heading: schema.Posts.title as never },
+        });
+      }).rejects.toThrow(/another table/);
+    });
+
+    it("should reject aliases colliding with relation keys", async () => {
+      await expect(async () => {
+        await db.query(schema.Users).findMany({
+          select: { posts: schema.Users.id as never },
+          with: { posts: {} },
+        });
+      }).rejects.toThrow(/collides/);
     });
   });
 

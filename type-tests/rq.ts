@@ -1,5 +1,5 @@
-import { asc, desc, eq } from "durcno";
-import { Articles, db, Posts, Users } from "./schema";
+import { asc, desc, eq, lower } from "durcno";
+import { Articles, Comments, db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
 // ============================================================================
@@ -796,6 +796,161 @@ db.query(Posts).findMany({
     author: {
       // @ts-expect-error - limit is not allowed on a nested Fk relation
       limit: 10,
+    },
+  },
+});
+
+// ============================================================================
+// Section 7: Alias-Based Selection (select: { alias: column | SqlFn })
+// ============================================================================
+
+// Select top-level columns with plain column references
+const _findManySelectQuery = db.query(Users).findMany({
+  select: {
+    userId: Users.id,
+    name: Users.username,
+  },
+});
+type FindManySelect = Awaited<typeof _findManySelectQuery>;
+Expect<
+  Equal<
+    FindManySelect,
+    {
+      userId: bigint;
+      name: string;
+    }[]
+  >
+>();
+
+// Select mixing plain columns and scalar SqlFns
+const _findManySelectFnQuery = db.query(Users).findMany({
+  select: {
+    userId: Users.id,
+    lowered: lower(Users.username),
+  },
+});
+type FindManySelectFn = Awaited<typeof _findManySelectFnQuery>;
+Expect<
+  Equal<
+    FindManySelectFn,
+    {
+      userId: bigint;
+      lowered: string;
+    }[]
+  >
+>();
+
+// Select in nested relations
+const _postsSelectNestedQuery = db.query(Posts).findMany({
+  select: {
+    postId: Posts.id,
+    heading: Posts.title,
+  },
+  with: {
+    comments: {
+      select: {
+        commentId: Comments.id,
+        text: Comments.body,
+      },
+    },
+  },
+});
+type PostsSelectNested = Awaited<typeof _postsSelectNestedQuery>;
+Expect<
+  Equal<
+    PostsSelectNested,
+    {
+      postId: bigint;
+      heading: string | null;
+      comments: {
+        commentId: bigint;
+        text: string | null;
+      }[];
+    }[]
+  >
+>();
+
+// Select combined with filtering, ordering, and pagination
+const _selectWithOptionsQuery = db.query(Users).findMany({
+  select: {
+    userId: Users.id,
+    name: Users.username,
+  },
+  where: eq(Users.type, "user"),
+  orderBy: asc(Users.username),
+  limit: 10,
+});
+type SelectWithOptions = Awaited<typeof _selectWithOptionsQuery>;
+Expect<
+  Equal<
+    SelectWithOptions,
+    {
+      userId: bigint;
+      name: string;
+    }[]
+  >
+>();
+
+// findFirst with select returns T | null
+const _firstSelectQuery = db.query(Users).findFirst({
+  select: {
+    userId: Users.id,
+    name: Users.username,
+  },
+});
+type FirstSelect = Awaited<typeof _firstSelectQuery>;
+Expect<
+  Equal<
+    FirstSelect,
+    {
+      userId: bigint;
+      name: string;
+    } | null
+  >
+>();
+
+// ============================================================================
+// Section 8: Select Mode Negative Type Safety Tests
+// ============================================================================
+
+// @ts-expect-error - select and columns are mutually exclusive
+db.query(Users).findMany({
+  columns: { id: true },
+  select: { userId: Users.id },
+});
+
+// @ts-expect-error - select value must be a column of the queried table
+db.query(Users).findMany({
+  select: { postTitle: Posts.title },
+});
+
+// @ts-expect-error - select value must be a column or SqlFn
+db.query(Users).findMany({
+  select: { whatever: 123 },
+});
+
+// @ts-expect-error - select values cannot be booleans (use columns instead)
+db.query(Users).findMany({
+  select: { id: true },
+});
+
+// @ts-expect-error - cannot mix true and false in columns
+db.query(Users).findMany({
+  columns: { id: true, username: false },
+});
+
+db.query(Posts).findMany({
+  select: { postId: Posts.id },
+  // @ts-expect-error - nested select value must be a column of the related table
+  with: { comments: { select: { bad: Posts.title } } },
+});
+
+db.query(Posts).findMany({
+  with: {
+    comments: {
+      columns: { id: true },
+      // @ts-expect-error - select and columns are mutually exclusive in nested relations
+      select: { text: Comments.body },
     },
   },
 });

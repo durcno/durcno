@@ -415,6 +415,10 @@ class Base<
    * - **Include mode** — `columns: { id: true, name: true }` returns only these columns.
    * - **Exclude mode** — `columns: { password: false }` returns all columns except these.
    *
+   * Alias-based selection is available via `select: { userId: Users.id }`,
+   * mirroring `.select()` projections (columns or scalar `SqlFn`s keyed by
+   * output alias). `select` and `columns` are mutually exclusive at each level.
+   *
    * Use the `with` option to include related rows from other tables.
    * You can nest `with` to load deeply related data.
    *

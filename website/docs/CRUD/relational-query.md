@@ -92,6 +92,46 @@ const users = await db.query(Users).findMany({
 // Type: { id: bigint; username: string; type: "admin" | "user"; createdAt: Date }[]
 ```
 
+### Alias Selections
+
+Use `select` to rename output keys and project computed expressions, mirroring `.select()` projections. Keys are output aliases; values are columns of the queried table or scalar `SqlFn`s (e.g. `lower(...)`):
+
+```typescript
+import { lower } from "durcno";
+
+const users = await db.query(Users).findMany({
+  select: {
+    userId: Users.id,
+    name: Users.username,
+    lowered: lower(Users.username),
+  },
+});
+// Type: { userId: bigint; name: string; lowered: string }[]
+```
+
+`select` works in nested `with` relations too (each level selects from its own table):
+
+```typescript
+const posts = await db.query(Posts).findMany({
+  select: {
+    postId: Posts.id,
+    heading: Posts.title,
+  },
+  with: {
+    comments: {
+      select: {
+        commentId: Comments.id,
+        text: Comments.body,
+      },
+    },
+  },
+});
+```
+
+:::note
+`select` and `columns` are mutually exclusive at each level (including inside `with`). The TypeScript compiler rejects combining them, and a runtime error is thrown otherwise. Aggregate functions (e.g. `count()`) are not supported in `select` — use scalar columns or scalar `SqlFn`s.
+:::
+
 ## Loading Relations
 
 Use `with` to include related records:
@@ -308,20 +348,22 @@ const users = await db.query(Users).findMany({
 
 ### Top-level options (`findMany` / `findFirst`)
 
-| Option    | Description                                                     |
-| --------- | --------------------------------------------------------------- |
-| `columns` | Select or exclude columns (`{ col: true }` or `{ col: false }`) |
-| `where`   | Filter condition                                                |
-| `orderBy` | Sort order (`asc(col)` or `desc(col)`)                          |
-| `limit`   | Maximum number of results (`number` or `bigint`)                |
-| `offset`  | Number of results to skip (`number` or `bigint`)                |
-| `with`    | Related records to include                                      |
+| Option    | Description                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `columns` | Select or exclude columns (`{ col: true }` or `{ col: false }`)                              |
+| `select`  | Alias selections (`{ alias: column }` or `{ alias: scalarFn(...) }`, exclusive w/ `columns`) |
+| `where`   | Filter condition                                                                             |
+| `orderBy` | Sort order (`asc(col)` or `desc(col)`)                                                       |
+| `limit`   | Maximum number of results (`number` or `bigint`)                                             |
+| `offset`  | Number of results to skip (`number` or `bigint`)                                             |
+| `with`    | Related records to include                                                                   |
 
 ### Nested relation options (inside `with`)
 
 | Option    | `many` (one-to-many) | `fk` / `one` (many-to-one / one-to-one) |
 | --------- | :------------------: | :-------------------------------------: |
 | `columns` |          ✓           |                    ✓                    |
+| `select`  |          ✓           |                    ✓                    |
 | `with`    |          ✓           |                    ✓                    |
 | `where`   |          ✓           |             ✗ (type error)              |
 | `orderBy` |          ✓           |             ✗ (type error)              |

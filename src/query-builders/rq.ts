@@ -1,7 +1,8 @@
 import type { QueryExecutor } from "../connectors/common";
 import { fk } from "../constraints/foreign-key";
-import { is } from "../entity";
+import { is, isTCol } from "../entity";
 import type { FilterExpression } from "../filters/index";
+import { type InferValueType, SqlFn } from "../functions/index";
 import { escIdentifier, escLiteral } from "../sql";
 import type {
   AnyColumn,
@@ -48,6 +49,23 @@ type NoOtps = {
   orderBy: false;
 };
 
+/**
+ * A single aliased projection value in alias-based column selection.
+ * Either a column of the queried table or a `SqlFn` scoped to that
+ * table's columns (mirrors `.select()` projection values).
+ */
+type AliasedSelectItem<
+  TTSchema extends string,
+  TTName extends string,
+  TTColumns extends Record<string, AnyColumn>,
+  TPrepare extends boolean,
+> =
+  | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
+  | SqlFn<
+      Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>,
+      TPrepare extends true ? boolean : false
+    >;
+
 type Options<
   TTSchema extends string,
   TTName extends string,
@@ -69,6 +87,15 @@ type Options<
   columns?:
     | Partial<Record<keyof TTColumns, true>>
     | Partial<Record<keyof TTColumns, false>>;
+  /**
+   * Alias-based selection: `{ alias: column | SqlFn }`, mirroring
+   * `.select()` projections. Mutually exclusive with `columns`
+   * (enforced by `findMany`/`findFirst` overloads and at runtime).
+   */
+  select?: Record<
+    string,
+    AliasedSelectItem<TTSchema, TTName, TTColumns, TPrepare>
+  >;
   where?: TOpts["where"] extends true
     ? FilterExpression<
         Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>,
@@ -95,7 +122,7 @@ type Options<
   with?: keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"] extends never
     ? never
     : {
-        [TRelationName in keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"]]?: Options<
+        [TRelationName in keyof TAllRelations[`"${TTSchema}"."${TTName}"`]["map"]]?: NestedOptions<
           TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["schema"],
           TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["_"]["name"],
           TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TRelationName]["table"]["$"]["columns"],
@@ -108,6 +135,30 @@ type Options<
       };
 };
 
+/**
+ * Nested relation options enforcing mutual exclusivity between `columns`
+ * and `select` at compile time.
+ */
+type NestedOptions<
+  TTSchema extends string,
+  TTName extends string,
+  TTColumns extends Record<string, AnyColumn>,
+  TAllRelations extends Record<string, StdRelations>,
+  TOpts extends {
+    where: boolean;
+    orderBy: boolean;
+    limit: boolean;
+    offset: boolean;
+  },
+  TPrepare extends boolean = boolean,
+> =
+  | (Options<TTSchema, TTName, TTColumns, TAllRelations, TOpts, TPrepare> & {
+      select?: never;
+    })
+  | (Options<TTSchema, TTName, TTColumns, TAllRelations, TOpts, TPrepare> & {
+      columns?: never;
+    });
+
 type StdOptions = Options<
   string,
   string,
@@ -115,6 +166,37 @@ type StdOptions = Options<
   Record<string, StdRelations>,
   any
 >;
+
+/**
+ * Resolves the row shape for the boolean `columns` selection mode.
+ * Handles include (`true`), exclude (`false`), and absent/empty (all) maps.
+ * Membership guards keep indexing valid without altering the original
+ * include/exclude semantics for keys missing from the map.
+ */
+type ColumnsRow<
+  TTSchema extends string,
+  TTName extends string,
+  TTColumns extends Record<string, AnyColumn>,
+  TColumnsOpt = unknown,
+> = keyof TColumnsOpt extends never
+  ? TableWithColumns<TTSchema, TTName, TTColumns>["$"]["inferSelect"]
+  : TColumnsOpt extends Record<string, true>
+    ? {
+        [ColName in keyof TTColumns as ColName extends keyof NonNullable<TColumnsOpt>
+          ? NonNullable<TColumnsOpt>[ColName] extends true
+            ? ColName
+            : never
+          : never]: TTColumns[ColName]["ValTypeSelect"];
+      }
+    : TColumnsOpt extends Record<string, false>
+      ? {
+          [ColName in keyof TTColumns as ColName extends keyof NonNullable<TColumnsOpt>
+            ? NonNullable<TColumnsOpt>[ColName] extends false
+              ? never
+              : ColName
+            : ColName]: TTColumns[ColName]["ValTypeSelect"];
+        }
+      : TableWithColumns<TTSchema, TTName, TTColumns>["$"]["inferSelect"];
 
 type Row<
   TTSchema extends string,
@@ -124,41 +206,22 @@ type Row<
     string,
     Relations<any, any, Record<any, any>, Record<any, AnyRelation>>
   >,
-  TOptions extends Options<
-    TTSchema,
-    TTName,
-    TTColumns,
-    TAllRelations,
-    any,
-    any
-  >,
-> = (keyof TOptions["columns"] extends never
-  ? TableWithColumns<TTSchema, TTName, TTColumns>["$"]["inferSelect"]
-  : TOptions["columns"] extends Record<string, true>
-    ? {
-        [ColName in keyof TTColumns as TOptions["columns"][ColName] extends true
-          ? ColName
-          : never]: TTColumns[ColName]["ValTypeSelect"];
-      }
-    : TOptions["columns"] extends Record<string, false>
-      ? {
-          [ColName in keyof TTColumns as TOptions["columns"][ColName] extends false
-            ? never
-            : ColName]: TTColumns[ColName]["ValTypeSelect"];
+  // biome-ignore lint/suspicious/noExplicitAny: allows both top-level Options and NestedOptions unions
+  TOptions extends Record<string, any> = any,
+> = (TOptions extends { select?: infer S }
+  ? [S] extends [null | undefined]
+    ? ColumnsRow<TTSchema, TTName, TTColumns, TOptions["columns"]>
+    : [keyof S] extends [never]
+      ? ColumnsRow<TTSchema, TTName, TTColumns, TOptions["columns"]>
+      : {
+          [Alias in keyof S]: InferValueType<S[Alias]>;
         }
-      : TableWithColumns<TTSchema, TTName, TTColumns>["$"]["inferSelect"]) &
+  : ColumnsRow<TTSchema, TTName, TTColumns, TOptions["columns"]>) &
   (keyof TOptions["with"] extends never
     ? Record<never, never>
     : {
         [TWith in keyof TOptions["with"]]: TOptions["with"][TWith] extends infer TNestedOptions
-          ? TNestedOptions extends Options<
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["schema"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["_"]["name"],
-              TAllRelations[`"${TTSchema}"."${TTName}"`]["map"][TWith]["table"]["$"]["columns"],
-              TAllRelations,
-              any,
-              any
-            >
+          ? TNestedOptions extends Record<string, any>
             ? RelationReturnType<
                 {
                   [K in keyof Row<
@@ -221,8 +284,46 @@ export class RelationQueryBuilder<
       TAllRelations,
       AllOtps,
       TPrepare
+    > & { select?: never },
+  >(
+    options: TOptions,
+  ): RelationQuery<
+    TTSchema,
+    TTName,
+    TTColumns,
+    TTRelations,
+    TAllRelations,
+    TOptions
+  >;
+  findMany<
+    TOptions extends Options<
+      TTSchema,
+      TTName,
+      TTColumns,
+      TAllRelations,
+      AllOtps,
+      TPrepare
+    > & { columns?: never },
+  >(
+    options: TOptions,
+  ): RelationQuery<
+    TTSchema,
+    TTName,
+    TTColumns,
+    TTRelations,
+    TAllRelations,
+    TOptions
+  >;
+  findMany(
+    options: Options<
+      TTSchema,
+      TTName,
+      TTColumns,
+      TAllRelations,
+      AllOtps,
+      TPrepare
     >,
-  >(options: TOptions) {
+  ) {
     return new RelationQuery(
       this.#table,
       this.#relations,
@@ -243,7 +344,7 @@ export class RelationQueryBuilder<
         orderBy: true;
       },
       TPrepare
-    >,
+    > & { select?: never },
   >(
     options: TOptions,
   ): Promise<
@@ -255,6 +356,59 @@ export class RelationQueryBuilder<
           TTRelations,
           TAllRelations,
           TOptions
+        >
+      >[number]
+    | null
+  >;
+  async findFirst<
+    TOptions extends Options<
+      TTSchema,
+      TTName,
+      TTColumns,
+      TAllRelations,
+      Omit<NoOtps, "where" | "orderBy"> & {
+        where: true;
+        orderBy: true;
+      },
+      TPrepare
+    > & { columns?: never },
+  >(
+    options: TOptions,
+  ): Promise<
+    | Awaited<
+        RelationQuery<
+          TTSchema,
+          TTName,
+          TTColumns,
+          TTRelations,
+          TAllRelations,
+          TOptions
+        >
+      >[number]
+    | null
+  >;
+  async findFirst(
+    options: Options<
+      TTSchema,
+      TTName,
+      TTColumns,
+      TAllRelations,
+      Omit<NoOtps, "where" | "orderBy"> & {
+        where: true;
+        orderBy: true;
+      },
+      TPrepare
+    >,
+  ): Promise<
+    | Awaited<
+        RelationQuery<
+          TTSchema,
+          TTName,
+          TTColumns,
+          TTRelations,
+          TAllRelations,
+          // biome-ignore lint/suspicious/noExplicitAny: implementation signature
+          any
         >
       >[number]
     | null
@@ -327,11 +481,28 @@ class RelationQuery<
     const query = new Query("SELECT ", this.handleRows.bind(this));
 
     const selects: string[] = [];
-    for (const [colName, column] of getSelectedColumns(
-      options.columns,
-      this.#table._.columns,
-    )) {
-      selects.push(`${column.fullName} AS "${escIdentifier(colName)}"`);
+    const selectEntries = getSelectEntries(options);
+    if (selectEntries) {
+      validateAliasKeys(
+        options.select as Record<string, unknown>,
+        options.with as Record<string, unknown> | undefined,
+      );
+      for (const [alias, expr] of selectEntries) {
+        validateAliasExpr(
+          expr,
+          this.#table as unknown as StdTableWithColumns,
+          alias,
+        );
+        const fragment = renderAliasedExpr(query, expr);
+        selects.push(`${fragment} AS "${escIdentifier(alias)}"`);
+      }
+    } else {
+      for (const [colName, column] of getSelectedColumns(
+        options.columns,
+        this.#table._.columns,
+      )) {
+        selects.push(`${column.fullName} AS "${escIdentifier(colName)}"`);
+      }
     }
     const relations = this.#allRelations[this.#table._.fullName];
     if (relations) {
@@ -409,14 +580,28 @@ class RelationQuery<
     return this.handleRows(rows);
   }
 
+  #convertCtx?: ConvertContext;
+
+  #getConvertCtx(): ConvertContext {
+    if (!this.#convertCtx) {
+      this.#convertCtx = buildConvertContext(
+        this.#options as unknown as OptionsView,
+      );
+    }
+    return this.#convertCtx;
+  }
+
   handleRows(rows: Record<string, unknown>[]): TReturn {
-    rows.forEach((row) => {
+    if (rows.length === 0) return rows as TReturn;
+    const ctx = this.#getConvertCtx();
+    for (let i = 0; i < rows.length; i++) {
       convert(
-        row,
+        rows[i],
         this.#table as unknown as StdTableWithColumns,
         this.#allRelations,
+        ctx,
       );
-    });
+    }
     return rows as TReturn;
   }
 }
@@ -438,14 +623,116 @@ function getSelectedColumns(
   return entries.filter(([colName]) => !(colName in columns));
 }
 
+/** Structural view of relational options used by runtime helpers. */
+type OptionsView = {
+  select?: Record<string, unknown> | undefined;
+  columns?: Record<string, unknown> | undefined;
+  with?: Record<string, OptionsView | undefined> | undefined;
+};
+
+/**
+ * Returns validated [alias, expr] entries when `select` is present and
+ * non-empty, otherwise null (fall back to `columns`).
+ * @throws If both `select` and `columns` select entries at the same level.
+ */
+function getSelectEntries(options: OptionsView): [string, unknown][] | null {
+  const select = options.select as Record<string, unknown> | undefined;
+  if (select === undefined || Object.keys(select).length === 0) {
+    return null;
+  }
+  const columns = options.columns as Record<string, unknown> | undefined;
+  if (columns !== undefined && Object.keys(columns).length > 0) {
+    throw new Error(
+      "Relational `select` and `columns` are mutually exclusive. Use one or the other at each level (including inside `with`).",
+    );
+  }
+  return Object.entries(select);
+}
+
+/** Rejects empty aliases and aliases colliding with sibling relation keys. */
+function validateAliasKeys(
+  select: Record<string, unknown>,
+  withOptions: Record<string, unknown> | undefined,
+): void {
+  for (const alias of Object.keys(select)) {
+    if (alias.length === 0) {
+      throw new Error("Relational `select` alias names must be non-empty.");
+    }
+    if (withOptions && alias in withOptions) {
+      throw new Error(
+        `Relational \`select\` alias "${alias}" collides with a \`with\` relation key at the same level. Rename the alias.`,
+      );
+    }
+  }
+}
+
+/** Validates a single `select` value belongs to the queried table. */
+function validateAliasExpr(
+  expr: unknown,
+  table: StdTableWithColumns,
+  alias: string,
+): void {
+  if (isTCol(expr)) {
+    const exprTable = (
+      expr as unknown as { table?: { _: { schema: string; name: string } } }
+    ).table;
+    if (
+      exprTable &&
+      (exprTable._.schema !== table._.schema ||
+        exprTable._.name !== table._.name)
+    ) {
+      throw new Error(
+        `Relational \`select\` alias "${alias}" references a column from another table. Only columns of the queried table are allowed.`,
+      );
+    }
+    return;
+  }
+  if (expr instanceof SqlFn) {
+    if (expr.isAggregate) {
+      throw new Error(
+        "Aggregate functions are not supported in relational `select`. Use scalar columns or scalar SqlFns (e.g. `lower(...)`).",
+      );
+    }
+    return;
+  }
+  throw new Error(
+    `Relational \`select\` alias "${alias}" must be a table column or SqlFn.`,
+  );
+}
+
+/**
+ * Renders a column/`SqlFn` expression to a SQL fragment, preserving
+ * `query.arguments` placeholder indices by slicing the appended SQL.
+ */
+function renderAliasedExpr(
+  query: Query,
+  expr: unknown,
+  ctx?: QueryContext,
+): string {
+  const marker = query.sql.length;
+  if (isTCol(expr)) {
+    (expr as { toQuery: (q: Query, c?: QueryContext) => void }).toQuery(
+      query,
+      ctx,
+    );
+  } else {
+    (expr as SqlFn<AnyColumn, boolean>).toQuery(query, ctx);
+  }
+  const fragment = query.sql.slice(marker);
+  query.sql = query.sql.slice(0, marker);
+  return fragment;
+}
+
 /**
  * Build the json_build_object selects for a relation, including nested relations.
+ * @param query - The query object (used to render alias-mode expressions with correct arg indices)
  * @param alias - The alias used for the inner subquery (e.g., "posts", "posts__comments")
  * @param options - The options for this relation
  * @param table - The table being selected from
  * @param allRelations - All relations in the schema
  */
 function getJsonBuildObjectSelects(
+  query: Query,
   alias: string,
   options: StdOptions,
   table: StdTableWithColumns,
@@ -454,13 +741,29 @@ function getJsonBuildObjectSelects(
   const selects: string[] = [];
 
   // Add column selects
-  for (const [colName, column] of getSelectedColumns(
-    options.columns,
-    table._.columns,
-  )) {
-    selects.push(
-      `'${escLiteral(colName)}', "${escIdentifier(alias)}"."${escIdentifier(column.nameSql ?? "")}"`,
+  const selectEntries = getSelectEntries(options);
+  if (selectEntries) {
+    validateAliasKeys(
+      options.select as Record<string, unknown>,
+      options.with as Record<string, unknown> | undefined,
     );
+    const ctx: QueryContext = {
+      tableAliases: new Map([[`${table._.schema}.${table._.name}`, alias]]),
+    };
+    for (const [outKey, expr] of selectEntries) {
+      validateAliasExpr(expr, table, outKey);
+      const fragment = renderAliasedExpr(query, expr, ctx);
+      selects.push(`'${escLiteral(outKey)}', ${fragment}`);
+    }
+  } else {
+    for (const [colName, column] of getSelectedColumns(
+      options.columns,
+      table._.columns,
+    )) {
+      selects.push(
+        `'${escLiteral(colName)}', "${escIdentifier(alias)}"."${escIdentifier(column.nameSql ?? "")}"`,
+      );
+    }
   }
 
   // Add nested relation selects
@@ -507,6 +810,7 @@ function buildRelationSubquery(
   query.sql += " LEFT JOIN LATERAL (";
 
   const jsonSelects = getJsonBuildObjectSelects(
+    query,
     aliasPath,
     options,
     relation.table,
@@ -656,12 +960,49 @@ function orderByToQuery(
   }
 }
 
+/** Precomputed conversion context for a level in the relation tree. */
+type ConvertContext = {
+  aliasMap: Map<string, unknown> | null;
+  with?: Record<string, ConvertContext> | undefined;
+};
+
+/**
+ * Builds the conversion context tree once for the given options,
+ * avoiding per-row Map allocations and validations during row conversion.
+ */
+function buildConvertContext(options?: OptionsView): ConvertContext {
+  const selectEntries = options ? getSelectEntries(options) : null;
+  const aliasMap = selectEntries ? new Map(selectEntries) : null;
+  let nestedWith: Record<string, ConvertContext> | undefined;
+  if (options?.with) {
+    for (const key of Object.keys(options.with)) {
+      const nestedOpts = options.with[key];
+      if (nestedOpts) {
+        if (!nestedWith) nestedWith = {};
+        nestedWith[key] = buildConvertContext(nestedOpts);
+      }
+    }
+  }
+  return { aliasMap, with: nestedWith };
+}
+
 function convert(
   object: Record<string, any>,
   table: StdTableWithColumns,
   allRelations: Record<string, StdRelations>,
+  ctx?: ConvertContext,
 ) {
+  const aliasMap = ctx?.aliasMap;
   for (const key of Object.keys(object)) {
+    const aliased = aliasMap?.get(key);
+    if (aliased !== undefined) {
+      if (isTCol(aliased)) {
+        object[key] = aliased.fromDriver(object[key]);
+      } else if (aliased instanceof SqlFn) {
+        object[key] = aliased.fromDriverValue(object[key]);
+      }
+      continue;
+    }
     const column = table._.columns[key];
     if (column) {
       object[key] = column.fromDriver(object[key]);
@@ -670,13 +1011,14 @@ function convert(
       if (relations) {
         const relation = relations.map[key];
         if (relation) {
+          const nestedCtx = ctx?.with?.[key];
           if (relation.t === "Many") {
             for (let i = 0; i < object[key].length; i++) {
-              convert(object[key][i], relation.table, allRelations);
+              convert(object[key][i], relation.table, allRelations, nestedCtx);
             }
           } else if (relation.t === "One" || relation.t === "Fk") {
             if (object[key] !== null) {
-              convert(object[key], relation.table, allRelations);
+              convert(object[key], relation.table, allRelations, nestedCtx);
             }
           }
         }
