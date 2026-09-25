@@ -15,4 +15,4 @@ export type CteWithColumns<
 > = Cte<TName, TColumns> & TColumns;
 
 // biome-ignore lint/suspicious/noExplicitAny: widened alias for constraint purposes
-export type AnyCteWithColumns = CteWithColumns<any, Record<any, any>>;
+export type AnyCteWithColumns = CteWithColumns<any, any>;

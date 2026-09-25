@@ -6,9 +6,7 @@ import { type InferValueType, SqlFn } from "../functions/index";
 import { escIdentifier, escLiteral } from "../sql";
 import type {
   AnyColumn,
-  AnyMany,
   AnyRelation,
-  Fk,
   Relations,
   StdRelations,
   StdTableWithColumns,
@@ -27,10 +25,10 @@ import { QueryPromise } from "./query-promise";
 type RelationReturnType<
   O,
   TRelation extends AnyRelation,
-> = TRelation extends AnyMany
+> = TRelation["t"] extends "Many"
   ? O[]
-  : TRelation extends Fk<any, any, any, infer TCol>
-    ? TCol["isNotNull"] extends true
+  : TRelation extends { t: "Fk"; col: infer TCol }
+    ? TCol extends { isNotNull: true }
       ? O
       : O | null
     : O | null;

@@ -273,3 +273,14 @@ Expect<
     }[]
   >
 >();
+
+// -------------------------------------------------------------------------
+// Multiple CTEs in db.with(cte1, cte2)
+// -------------------------------------------------------------------------
+
+const multipleCtesQuery = db
+  .with(lowerCte, countCte)
+  .from(lowerCte)
+  .select("*");
+type MultipleCtesRows = Awaited<typeof multipleCtesQuery>;
+Expect<Equal<MultipleCtesRows, { lname: string }[]>>();
