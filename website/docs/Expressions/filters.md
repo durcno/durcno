@@ -214,7 +214,7 @@ await db
     notIn(
       Users.id,
       db.from(Orders).select(() => ({ userId: Orders.userId })),
-    ),
+    )
   );
 ```
 
@@ -235,7 +235,7 @@ const authors = await db
         .from(Posts)
         .select("*")
         .where(() => eq(Posts.userId, Users.id)),
-    ),
+    )
   );
 
 // Find users who have no posts
@@ -248,7 +248,7 @@ const nonAuthors = await db
         .from(Posts)
         .select("*")
         .where(() => eq(Posts.userId, Users.id)),
-    ),
+    )
   );
 ```
 
@@ -264,7 +264,7 @@ Durcno provides case-sensitive text search operators:
 - `contains` uses `LIKE('%' || val || '%')`
 
 ```typescript
-import { startsWith, endsWith, contains } from "durcno";
+import { contains, endsWith, startsWith } from "durcno";
 
 // startsWith: Match records starting with a prefix (case-sensitive)
 await db
@@ -339,7 +339,7 @@ await db
   .from(Users)
   .select("*")
   .where(() =>
-    and(eq(Users.type, "admin"), gte(Users.createdAt, new Date("2024-01-01"))),
+    and(eq(Users.type, "admin"), gte(Users.createdAt, new Date("2024-01-01")))
   );
 
 // Combine more than two conditions
@@ -347,7 +347,7 @@ await db
   .from(Users)
   .select("*")
   .where(() =>
-    and(eq(Users.type, "admin"), gte(Users.id, 10n), isNotNull(Users.email)),
+    and(eq(Users.type, "admin"), gte(Users.id, 10n), isNotNull(Users.email))
   );
 ```
 
@@ -356,7 +356,7 @@ await db
 Combine multiple conditions with OR logic:
 
 ```typescript
-import { or, eq } from "durcno";
+import { eq, or } from "durcno";
 
 // Either condition can be true
 await db
@@ -370,7 +370,7 @@ await db
 Nest `and()` and `or()` for complex conditions:
 
 ```typescript
-import { and, or, eq, gte, isNotNull } from "durcno";
+import { and, eq, gte, isNotNull, or } from "durcno";
 
 // (type = 'admin' OR type = 'moderator') AND createdAt >= date
 await db
@@ -380,7 +380,7 @@ await db
     and(
       or(eq(Users.type, "admin"), eq(Users.type, "moderator")),
       gte(Users.createdAt, new Date("2024-01-01")),
-    ),
+    )
   );
 ```
 

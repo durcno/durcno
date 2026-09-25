@@ -190,7 +190,7 @@ Durcno provides case-sensitive text search operators:
 - `contains` uses `LIKE('%' || val || '%')`
 
 ```typescript
-import { startsWith, endsWith, contains } from "durcno";
+import { contains, endsWith, startsWith } from "durcno";
 
 // startsWith: Match records starting with a prefix (case-sensitive)
 await db.from(Users).select().where(startsWith(Users.username, "admin"));
@@ -264,7 +264,7 @@ await db
 Combine multiple conditions with OR logic:
 
 ```typescript
-import { or, eq } from "durcno";
+import { eq, or } from "durcno";
 
 // Either condition can be true
 await db
@@ -278,7 +278,7 @@ await db
 Nest `and()` and `or()` for complex conditions:
 
 ```typescript
-import { and, or, eq, gte, isNotNull } from "durcno";
+import { and, eq, gte, isNotNull, or } from "durcno";
 
 // (type = 'admin' OR type = 'moderator') AND createdAt >= date
 await db

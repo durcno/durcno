@@ -13,8 +13,8 @@ After defining your schema and configuration, create a database instance:
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema.ts";
 import config from "./durcno.config.ts";
+import * as schema from "./schema.ts";
 
 export const db = database(schema, config);
 ```
@@ -93,7 +93,7 @@ For cases where you need to execute raw SQL:
 
 ```typescript
 // Execute raw query with parameterized values
-const result = await db.raw<{ count: string }[]>(
+const result = await db.raw<{ count: string; }[]>(
   "SELECT COUNT(*) as count FROM users WHERE type = $1",
   ["admin"],
   (rows) => rows,

@@ -82,7 +82,7 @@ const users = await db.from(Users).select({
 Use `.where()` to filter results. See [Filters](../Expressions/filters.md) for all available operators.
 
 ```typescript
-import { eq, and, gte } from "durcno";
+import { and, eq, gte } from "durcno";
 
 // Simple equality filter
 const admins = await db.from(Users).select().where(eq(Users.type, "admin"));
@@ -136,8 +136,8 @@ const mixedSort = await db
 When using joins, you can sort by columns from any joined table:
 
 ```typescript
-import { eq, asc, desc } from "durcno";
-import { Users, Posts } from "./db/schema.ts";
+import { asc, desc, eq } from "durcno";
+import { Posts, Users } from "./db/schema.ts";
 
 // Sort by username (Users), then by post creation date (Posts)
 const usersWithPosts = await db
@@ -171,7 +171,7 @@ Use joins to combine rows from related tables. See the dedicated [Joins](./joins
 
 ```typescript
 import { eq } from "durcno";
-import { Users, Posts } from "./db/schema.ts";
+import { Posts, Users } from "./db/schema.ts";
 
 // Join Users with Posts
 const usersWithPosts = await db
@@ -223,7 +223,7 @@ Use `.groupBy()` to explicitly set the GROUP BY clause. Explicit GROUP BY **full
 **Single column:**
 
 ```typescript
-import { count, asc } from "durcno";
+import { asc, count } from "durcno";
 
 const byType = await db
   .from(Users)
@@ -245,7 +245,7 @@ const byTypeAndStatus = await db
 **Scalar expression:**
 
 ```typescript
-import { lower, count } from "durcno";
+import { count, lower } from "durcno";
 
 const byLowerUsername = await db
   .from(Users)
@@ -258,7 +258,7 @@ const byLowerUsername = await db
 When `.select({ ... })` is called with a named map, `.groupBy()` also accepts a **callback** that receives the select aliases as `GroupByAlias` values. This avoids repeating expressions:
 
 ```typescript
-import { lower, count } from "durcno";
+import { count, lower } from "durcno";
 
 const results = await db
   .from(Users)
@@ -301,7 +301,7 @@ const busyTypes = await db
 **Aggregate-to-aggregate:**
 
 ```typescript
-import { count, sum, gt } from "durcno";
+import { count, gt, sum } from "durcno";
 
 const results = await db
   .from(Users)
@@ -319,7 +319,7 @@ const results = await db
 ### Full Chain
 
 ```typescript
-import { eq, count, gte, asc } from "durcno";
+import { asc, count, eq, gte } from "durcno";
 
 const results = await db
   .from(Users)
@@ -373,7 +373,7 @@ const onePerTypeAndStatus = await db
 Combine `.distinctOn()` with `.select()`, `.where()`, and `.orderBy()` as usual:
 
 ```typescript
-import { eq, asc } from "durcno";
+import { asc, eq } from "durcno";
 
 const latestAdminPerType = await db
   .from(Users)

@@ -47,16 +47,16 @@ export default defineConfig({
 ```typescript
 // db/schema.ts
 import {
-  table,
-  pk,
-  varchar,
   bigint,
   enumtype,
-  notNull,
-  unique,
-  relations,
-  many,
   fk,
+  many,
+  notNull,
+  pk,
+  relations,
+  table,
+  unique,
+  varchar,
 } from "durcno";
 
 export { Migrations } from "durcno"; // Required for migration tracking
@@ -90,8 +90,8 @@ export const PostsRelations = relations(Posts, () => ({
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema.ts";
 import config from "../durcno.config.ts";
+import * as schema from "./schema.ts";
 
 export const db = database(schema, config);
 ```

@@ -21,20 +21,20 @@ Here's a complete schema example showing all components:
 
 ```typescript
 import {
-  table,
-  pk,
-  varchar,
   bigint,
-  timestamptz,
   enumtype,
-  relations,
-  many,
-  one,
   index,
-  uniqueIndex,
+  many,
   notNull,
-  unique,
   now,
+  one,
+  pk,
+  relations,
+  table,
+  timestamptz,
+  unique,
+  uniqueIndex,
+  varchar,
 } from "durcno";
 
 // Define an enum
@@ -172,7 +172,7 @@ export const Users = table("public", "users", {
 Enum types define a set of allowed values for a column, providing compile-time validation.
 
 ```typescript
-import { enumtype, table, pk, notNull } from "durcno";
+import { enumtype, notNull, pk, table } from "durcno";
 
 export const UserRole = enumtype("public", "userRole", ["admin", "user"]);
 export const Status = enumtype("public", "status", [
@@ -215,7 +215,7 @@ Create your schema definitions in TypeScript:
 
 ```typescript
 // db/schema.ts
-import { table, pk, varchar, notNull } from "durcno";
+import { notNull, pk, table, varchar } from "durcno";
 
 export const Users = table("public", "users", {
   id: pk(),
@@ -254,8 +254,8 @@ Query your database with full type safety:
 
 ```typescript
 import { database } from "durcno";
-import * as schema from "./schema.ts";
 import config from "../durcno.config.ts";
+import * as schema from "./schema.ts";
 
 const db = database(schema, config);
 

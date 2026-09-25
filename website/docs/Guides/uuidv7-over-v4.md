@@ -29,7 +29,7 @@ Keep `pk()` (auto-incrementing bigint) as your primary key and use UUID columns 
 Use `pk()` for your primary key and add a UUID column as a public-facing identifier. The `uuid()` column defaults to v7 Zod validation. Pair it with `uuidv7()` for server-side generation or `.$insertFn()` for application-side generation:
 
 ```typescript
-import { table, pk, uuid, varchar, notNull, uuidv7 } from "durcno";
+import { notNull, pk, table, uuid, uuidv7, varchar } from "durcno";
 
 export const Orders = table("public", "orders", {
   id: pk(),
@@ -42,7 +42,7 @@ export const Orders = table("public", "orders", {
 Or generate in the application:
 
 ```typescript
-import { table, pk, uuid, varchar, notNull } from "durcno";
+import { notNull, pk, table, uuid, varchar } from "durcno";
 
 export const Orders = table("public", "orders", {
   id: pk(),
@@ -59,7 +59,7 @@ Expose `publicId` in APIs and URLs instead of the internal integer `id`.
 When you specifically need UUIDv4, set the `version` option and use the `uuidv4()` server function:
 
 ```typescript
-import { table, pk, uuid, notNull, uuidv4 } from "durcno";
+import { notNull, pk, table, uuid, uuidv4 } from "durcno";
 
 export const ApiKeys = table("public", "apiKeys", {
   id: pk(),
@@ -71,7 +71,7 @@ export const ApiKeys = table("public", "apiKeys", {
 ### Mixing both in one table
 
 ```typescript
-import { table, pk, uuid, varchar, notNull, uuidv4, uuidv7 } from "durcno";
+import { notNull, pk, table, uuid, uuidv4, uuidv7, varchar } from "durcno";
 
 export const Sessions = table("public", "sessions", {
   id: pk(),

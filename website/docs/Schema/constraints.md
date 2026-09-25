@@ -124,9 +124,9 @@ For expressions not covered by the filter functions, pass a `sql` tagged templat
 ```typescript
 import { sql } from "durcno";
 
-checkConstraints: (t, check) => [
+checkConstraints: ((t, check) => [
   check("check_orders_status_allowed", sql`"status" IN ('active','inactive')`),
-];
+]);
 ```
 
 ### Using `isIn` and `notIn`
@@ -161,7 +161,7 @@ Unique constraints prevent duplicate values across two or more columns. They are
 For a single column, use the column-level `unique` flag:
 
 ```typescript
-import { table, pk, varchar, notNull, unique } from "durcno";
+import { notNull, pk, table, unique, varchar } from "durcno";
 
 export const Tags = table("public", "tags", {
   id: pk(),
@@ -174,7 +174,7 @@ export const Tags = table("public", "tags", {
 Composite unique constraints ensure that the _combination_ of values across multiple columns is unique:
 
 ```typescript
-import { table, bigint, varchar, notNull } from "durcno";
+import { bigint, notNull, table, varchar } from "durcno";
 
 export const UserProfiles = table(
   "public",
@@ -231,7 +231,7 @@ For tables with a **composite primary key** (two or more columns), use the `prim
 ### Composite Primary Key
 
 ```typescript
-import { table, bigint, integer, timestamp, notNull, now } from "durcno";
+import { bigint, integer, notNull, now, table, timestamp } from "durcno";
 
 export const UserRoles = table(
   "public",
@@ -310,7 +310,7 @@ Foreign key constraints enforce referential integrity between tables at the data
 For a foreign key to another table, use the `.references()` chainable modifier directly on the column definition. See the [Columns](./columns.md#referencesref) page for full details.
 
 ```typescript
-import { table, pk, bigint, notNull } from "durcno";
+import { bigint, notNull, pk, table } from "durcno";
 
 export const Users = table("public", "users", { id: pk() });
 
@@ -333,7 +333,7 @@ Use the `foreignKeys` callback in the fourth argument to `table()` when a column
 Because the table object is fully constructed before the callback is invoked, column references are available directly without lazy arrow-function wrappers.
 
 ```typescript
-import { table, pk, bigint, varchar, notNull } from "durcno";
+import { bigint, notNull, pk, table, varchar } from "durcno";
 
 export const Comments = table(
   "public",
@@ -426,14 +426,14 @@ export const Users = table("public", "users", {
 });
 
 // ✅ Correct: table-level for composite (two or more columns)
-uniqueConstraints: (t, unique) => [
+uniqueConstraints: ((t, unique) => [
   unique("unique_user_profiles_user_id_and_platform", [t.userId, t.platform]),
-];
+]);
 
 // ❌ Error: single column not allowed in table-level constraint
-uniqueConstraints: (t, unique) => [
+uniqueConstraints: ((t, unique) => [
   unique("uq_email", [t.email]), // Use `unique` flag instead
-];
+]);
 ```
 
 ### Don't Over-Constrain

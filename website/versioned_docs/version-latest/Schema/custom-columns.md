@@ -22,9 +22,9 @@ To create a custom column, you need to:
 Here's the minimum structure for a custom column using the current `Column` API (scalar helpers + automatic array/dimension handling):
 
 ```typescript
-import * as z from "zod";
-import { Sql } from "durcno/sql";
 import { Column, ColumnConfig } from "durcno";
+import { Sql } from "durcno/sql";
+import * as z from "zod";
 
 // 1. Define the TypeScript type for your column values
 type MyValueType = string;
@@ -136,9 +136,9 @@ Note: the `Column` generic order is `Column<TConfig extends ColumnConfig, TColVa
 PostgreSQL provides the `citext` extension for case-insensitive text comparisons. This example shows a small custom column that maps to `citext` and ensures values round-trip as strings while integrating with Zod validation.
 
 ```typescript
-import * as z from "zod";
-import { Sql } from "durcno/sql";
 import { Column, ColumnConfig } from "durcno";
+import { Sql } from "durcno/sql";
+import * as z from "zod";
 
 type CitextVal = string;
 
@@ -192,7 +192,7 @@ export function citext<TConfig extends CitextConfig>(
 // Ensure the citext extension exists in your migration or database:
 // CREATE EXTENSION IF NOT EXISTS citext;
 
-import { table, pk, varchar, notNull } from "durcno";
+import { notNull, pk, table, varchar } from "durcno";
 import { citext } from "./citext-column";
 
 export const People = table("public", "people", {
@@ -207,9 +207,9 @@ export const People = table("public", "people", {
 Sometimes you want to store a small list of tags in a single text field and work with it as a string[] in TypeScript. This `CsvTextColumn` stores tags as an escaped, comma-separated string while presenting a `string[]` at the type level.
 
 ```typescript
-import * as z from "zod";
-import { Sql } from "durcno/sql";
 import { Column, ColumnConfig } from "durcno";
+import { Sql } from "durcno/sql";
+import * as z from "zod";
 
 type Tags = string[];
 
@@ -269,7 +269,7 @@ export function csvText<TConfig extends CsvTextConfig>(
 **Usage:**
 
 ```typescript
-import { table, pk, varchar } from "durcno";
+import { pk, table, varchar } from "durcno";
 import { csvText } from "./csv-text-column";
 
 export const Articles = table("public", "articles", {

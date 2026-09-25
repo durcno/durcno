@@ -40,7 +40,7 @@ Represents a single geographic point (longitude, latitude).
 - **JS type**: `[number, number]` — `[longitude, latitude]`
 
 ```typescript
-import { table, pk, varchar, notNull, geography } from "durcno";
+import { geography, notNull, pk, table, varchar } from "durcno";
 
 export const Locations = table("public", "locations", {
   id: pk(),

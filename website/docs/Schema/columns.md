@@ -85,7 +85,7 @@ Use `char` for fixed-length codes like ISO country codes (2 chars) or currency c
 - Notes: Use for exact decimal values where precision matters (e.g., financial data, scientific calculations). Values are returned as strings to avoid JavaScript floating-point precision loss.
 
 ```typescript
-import { table, numeric, pk, notNull } from "durcno";
+import { notNull, numeric, pk, table } from "durcno";
 
 export const Products = table("public", "products", {
   id: pk(),
@@ -137,7 +137,7 @@ Serial columns are PostgreSQL's legacy auto-incrementing integer types.
 #### `serial`
 
 ```typescript
-import { primaryKey, table, serial, varchar, notNull } from "durcno";
+import { notNull, primaryKey, serial, table, varchar } from "durcno";
 
 export const Logs = table("public", "logs", {
   id: serial({ primaryKey }),
@@ -154,7 +154,7 @@ db.insertInto(Logs).values({
 #### `smallserial`
 
 ```typescript
-import { primaryKey, table, smallserial, varchar, notNull } from "durcno";
+import { notNull, primaryKey, smallserial, table, varchar } from "durcno";
 
 export const Categories = table("public", "categories", {
   id: smallserial({ primaryKey }),
@@ -169,7 +169,7 @@ Use `smallserial` for tables with a known small number of rows (under 32,767). I
 #### `bigserial`
 
 ```typescript
-import { primaryKey, table, bigserial, timestamp, notNull } from "durcno";
+import { bigserial, notNull, primaryKey, table, timestamp } from "durcno";
 
 export const Events = table("public", "events", {
   id: bigserial({ primaryKey }),
@@ -184,7 +184,7 @@ export const Events = table("public", "events", {
 - Notes: Commonly used for immutable identifiers. UUID values can be generated either by the database (server-side DEFAULT clauses) or in your application before insertion.
 
 ```typescript
-import { primaryKey, table, uuid, varchar, notNull } from "durcno";
+import { notNull, primaryKey, table, uuid, varchar } from "durcno";
 
 export const Users = table("public", "users", {
   id: uuid({ primaryKey, notNull }),
@@ -198,7 +198,7 @@ export const Users = table("public", "users", {
 You can specify a `version` to enforce UUID version validation in the generated Zod schema. Supported versions: `"v1"` through `"v8"`. **Defaults to `"v7"`** when not specified.
 
 ```typescript
-import { table, uuid, notNull, pk } from "durcno";
+import { notNull, pk, table, uuid } from "durcno";
 
 export const Tokens = table("public", "tokens", {
   id: pk(),
@@ -247,7 +247,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; -- for uuid_generate_v4()
 - Notes: Recommended for correct UTC handling. Always stores and retrieves dates respecting timezones.
 
 ```typescript
-import { table, timestamptz, notNull, now } from "durcno";
+import { notNull, now, table, timestamptz } from "durcno";
 
 export const Posts = table("public", "posts", {
   createdAt: timestamptz({ notNull }).default(now()),
@@ -266,7 +266,7 @@ export const Posts = table("public", "posts", {
 - Notes: `withTimezone: false` by default, meaning it uses `timestamp without time zone`. Set `withTimezone: true` if you want the legacy behavior, but preferring `timestamptz` is recommended. Use server-side DEFAULT clauses in migrations when you want database-generated timestamps.
 
 ```typescript
-import { table, timestamp, notNull } from "durcno";
+import { notNull, table, timestamp } from "durcno";
 
 export const PostsLocal = table("public", "postsLocal", {
   localCreatedAt: timestamp({ notNull }),
@@ -282,7 +282,7 @@ export const PostsLocal = table("public", "postsLocal", {
 - Notes: Stores time-of-day with timezone offset (e.g., `12:30:45+02:00`).
 
 ```typescript
-import { table, timetz, notNull } from "durcno";
+import { notNull, table, timetz } from "durcno";
 
 export const SchedulesTz = table("public", "schedulesTz", {
   startsAt: timetz({ notNull }),
@@ -298,7 +298,7 @@ export const SchedulesTz = table("public", "schedulesTz", {
 - Notes: Stores time-of-day without date. `withTimezone: false` by default. Using `timetz` is recommended if you need timezone offsets.
 
 ```typescript
-import { table, time, notNull } from "durcno";
+import { notNull, table, time } from "durcno";
 
 export const Schedules = table("public", "schedules", {
   startsAt: time({ notNull }),
@@ -321,7 +321,7 @@ export const Schedules = table("public", "schedules", {
 - Notes: Use when allowed values are stable. For frequently-changing allowed values consider check constraints.
 
 ```typescript
-import { table, enumtype, pk, notNull } from "durcno";
+import { enumtype, notNull, pk, table } from "durcno";
 
 export const UserRole = enumtype("public", "userRole", [
   "admin",
@@ -360,7 +360,7 @@ export const Users = table("public", "users", {
 Use the `.$type<T>()` chainable modifier to specify the TypeScript type of the JSON data.
 
 ```typescript
-import { table, jsonb, pk } from "durcno";
+import { jsonb, pk, table } from "durcno";
 
 export const Users = table("public", "users", {
   id: pk(),
@@ -383,7 +383,7 @@ PostgreSQL provides specialized column types for storing network addresses, maki
 - Notes: Stores IPv4 or IPv6 host addresses with optional subnet mask. Use for individual host addresses.
 
 ```typescript
-import { table, inet, pk, notNull, unique } from "durcno";
+import { inet, notNull, pk, table, unique } from "durcno";
 
 export const Servers = table("public", "servers", {
   id: pk(),
@@ -418,7 +418,7 @@ await db.insertInto(Servers).values({
 - Notes: Stores IPv4 or IPv6 network addresses. CIDR requires network prefix notation (e.g., `192.168.0.0/24`). Use for defining network ranges and subnets.
 
 ```typescript
-import { table, cidr, pk, notNull } from "durcno";
+import { cidr, notNull, pk, table } from "durcno";
 
 export const Networks = table("public", "networks", {
   id: pk(),
@@ -453,7 +453,7 @@ Use `inet` for individual host addresses (with optional netmask for routing info
 - Notes: Stores MAC (Media Access Control) addresses. Supports common formats: colon-separated (`00:11:22:33:44:55`), hyphen-separated (`00-11-22-33-44-55`), or plain hex.
 
 ```typescript
-import { table, macaddr, pk, notNull, unique, varchar } from "durcno";
+import { macaddr, notNull, pk, table, unique, varchar } from "durcno";
 
 export const NetworkDevices = table("public", "networkDevices", {
   id: pk(),
@@ -497,7 +497,7 @@ Durcno supports PostgreSQL arrays for any column type using the `dimension` opti
 #### Usage
 
 ```typescript
-import { table, integer, varchar, pk, array, tuple } from "durcno";
+import { array, integer, pk, table, tuple, varchar } from "durcno";
 
 export const SensorReadings = table("public", "sensorReadings", {
   id: pk(),
@@ -555,7 +555,7 @@ These are passed directly to the column factory function and affect SQL column d
 Makes a column required (NOT NULL constraint).
 
 ```typescript
-import { table, varchar, notNull } from "durcno";
+import { notNull, table, varchar } from "durcno";
 
 export const Users = table("public", "users", {
   email: varchar({ length: 255, notNull }), // Required
@@ -568,7 +568,7 @@ export const Users = table("public", "users", {
 Adds a UNIQUE constraint to ensure values are unique across rows.
 
 ```typescript
-import { table, varchar, unique, notNull } from "durcno";
+import { notNull, table, unique, varchar } from "durcno";
 
 export const Users = table("public", "users", {
   username: varchar({ length: 50, unique, notNull }),
@@ -581,7 +581,7 @@ export const Users = table("public", "users", {
 Marks the column as a single-column primary key.
 
 ```typescript
-import { table, serial, primaryKey, varchar, notNull } from "durcno";
+import { notNull, primaryKey, serial, table, varchar } from "durcno";
 
 export const Users = table("public", "users", {
   id: serial({ primaryKey }),
@@ -598,7 +598,7 @@ Methods called on a column instance after construction. These can be chained tog
 Sets a SQL `DEFAULT` clause for the column. Accepts a literal value or an `Sql` expression. Columns with a default become optional on insert.
 
 ```typescript
-import { table, integer, boolean, timestamp, notNull, now } from "durcno";
+import { boolean, integer, notNull, now, table, timestamp } from "durcno";
 
 export const Posts = table("public", "posts", {
   viewCount: integer().default(0),
@@ -612,7 +612,7 @@ export const Posts = table("public", "posts", {
 Creates a foreign key reference to another table's column. Accepts either a lazy column getter `() => Table.column` or an object `{ column: () => Table.column, onDelete?: OnDeleteAction }`. Defaults to `CASCADE` on delete.
 
 ```typescript
-import { table, pk, bigint, notNull } from "durcno";
+import { bigint, notNull, pk, table } from "durcno";
 
 export const Users = table("public", "users", { id: pk() });
 
@@ -697,7 +697,7 @@ Use `.$insertFn()` for values set once at creation (e.g. `createdAt`). Use `.$up
 Overrides the TypeScript type inferred for the column's value. This is a **compile-time only** operation — it does not affect runtime behavior or SQL. Useful for `json`/`jsonb` columns where you want to narrow the type from `unknown`.
 
 ```typescript
-import { table, jsonb, pk } from "durcno";
+import { jsonb, pk, table } from "durcno";
 
 export const Users = table("public", "users", {
   id: pk(),
@@ -715,7 +715,7 @@ export const Users = table("public", "users", {
 Creates an auto-incrementing bigint primary key column.
 
 ```typescript
-import { table, pk, varchar } from "durcno";
+import { pk, table, varchar } from "durcno";
 
 export const Users = table("public", "users", {
   id: pk(), // Auto-incrementing primary key
@@ -728,7 +728,7 @@ export const Users = table("public", "users", {
 You can also create custom primary keys using column modifiers:
 
 ```typescript
-import { table, varchar, integer, primaryKey, notNull } from "durcno";
+import { integer, notNull, primaryKey, table, varchar } from "durcno";
 
 export const Users = table("public", "users", {
   id: integer({ primaryKey, notNull }),
@@ -743,14 +743,14 @@ Durcno provides full TypeScript type inference for all column types:
 
 ```typescript
 import {
-  table,
-  pk,
-  varchar,
-  integer,
   boolean,
-  timestamp,
+  integer,
   notNull,
   now,
+  pk,
+  table,
+  timestamp,
+  varchar,
 } from "durcno";
 
 export const Users = table("public", "users", {

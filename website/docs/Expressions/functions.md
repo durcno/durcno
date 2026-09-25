@@ -82,7 +82,7 @@ const [{ average }] = await db
 Returns the minimum or maximum value. The return type matches the column's value type (or `null` if no rows match).
 
 ```typescript
-import { min, max } from "durcno";
+import { max, min } from "durcno";
 
 const [row] = await db.from(Orders).select(() => ({
   earliest: min(Orders.createdAt),
@@ -111,7 +111,7 @@ const stats = await db.from(Orders).select(() => ({
 Aggregate functions can be filtered in `.having()` clauses and sorted by alias in `.orderBy()`:
 
 ```typescript
-import { count, sum, gt, desc } from "durcno";
+import { count, desc, gt, sum } from "durcno";
 
 // Order by aggregate alias
 await db
@@ -207,7 +207,7 @@ const result = await db.from(Users).select(() => ({
 Returns the number of characters in a string expression.
 
 ```typescript
-import { length, gt } from "durcno";
+import { gt, length } from "durcno";
 
 // Select the length
 const result = await db
@@ -239,7 +239,7 @@ const result = await db.from(Users).select(() => ({
 Returns the 1-based position of a substring within a string expression. Returns `0` if not found.
 
 ```typescript
-import { position, gt } from "durcno";
+import { gt, position } from "durcno";
 
 // Get position of '@' in email
 const result = await db.from(Users).select(() => ({
@@ -283,7 +283,7 @@ const result = await db.from(Users).select(() => ({
 String functions that return a string can be passed as the input to another string function:
 
 ```typescript
-import { lower, trim, startsWith } from "durcno";
+import { lower, startsWith, trim } from "durcno";
 
 // Trim whitespace then lowercase before filtering
 await db
@@ -327,7 +327,7 @@ const result = await db.from(Accounts).select(() => ({
 Returns the remainder of dividing the expression by `n`.
 
 ```typescript
-import { mod, eq } from "durcno";
+import { eq, mod } from "durcno";
 
 // Get rows with even IDs
 await db
@@ -403,7 +403,7 @@ Arithmetic operators combine two numeric expressions using standard math operato
 ### Basic Usage
 
 ```typescript
-import { add, sub, mul, div } from "durcno";
+import { add, div, mul, sub } from "durcno";
 
 const result = await db.from(Orders).select(() => ({
   grossTotal: add(Orders.subtotal, Orders.tax),
@@ -577,7 +577,7 @@ const authors = await db
         .from(Posts)
         .select("*")
         .where(() => eq(Posts.userId, Users.id)),
-    ),
+    )
   );
 ```
 
@@ -609,7 +609,7 @@ const usersWithRecentOrders = await db
     isIn(
       Users.id,
       db.from(Orders).select(() => ({ userId: Orders.userId })),
-    ),
+    )
   );
 
 // In WHERE clause with NOT IN subquery
@@ -620,7 +620,7 @@ const usersWithoutOrders = await db
     notIn(
       Users.id,
       db.from(Orders).select(() => ({ userId: Orders.userId })),
-    ),
+    )
   );
 ```
 
@@ -753,7 +753,7 @@ Durcno SQL functions accurately model PostgreSQL strict function nullability sem
 All scalar functions can be used with `asc()` / `desc()` in `.orderBy()`:
 
 ```typescript
-import { lower, length, asc, desc } from "durcno";
+import { asc, desc, length, lower } from "durcno";
 
 // Order by lowercased name
 await db

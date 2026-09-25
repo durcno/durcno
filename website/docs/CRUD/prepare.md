@@ -11,7 +11,7 @@ Use `prepare()` to create reusable, type-safe prepared statements that can be ex
 ### Creating a Prepared Query
 
 ```typescript
-import { prepare, eq } from "durcno";
+import { eq, prepare } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
@@ -54,7 +54,7 @@ Prepared queries does not provide runtime validation of argument type. Make sure
 You can define multiple arguments in a single prepared query:
 
 ```typescript
-import { prepare, and, eq } from "durcno";
+import { and, eq, prepare } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
@@ -74,7 +74,7 @@ const findUser = prepare(
           eq(Users.username, args.username),
           eq(Users.email, args.email),
           eq(Users.type, args.type),
-        ),
+        )
       );
   },
 );
@@ -131,7 +131,7 @@ const result = await findUserInfo.run(db, { id: 1n });
 ### OR Conditions
 
 ```typescript
-import { prepare, or, eq } from "durcno";
+import { eq, or, prepare } from "durcno";
 
 const findByEitherUsername = prepare(
   {
@@ -147,7 +147,7 @@ const findByEitherUsername = prepare(
         or(
           eq(Users.username, args.username1),
           eq(Users.username, args.username2),
-        ),
+        )
       );
   },
 );
@@ -162,7 +162,7 @@ const result = await findByEitherUsername.run(db, {
 ### Combined AND/OR Conditions
 
 ```typescript
-import { prepare, and, or, eq } from "durcno";
+import { and, eq, or, prepare } from "durcno";
 
 const complexQuery = prepare(
   {
@@ -179,7 +179,7 @@ const complexQuery = prepare(
         and(
           eq(Users.username, args.username),
           or(eq(Users.type, args.type1), eq(Users.type, args.type2)),
-        ),
+        )
       );
   },
 );
@@ -197,7 +197,7 @@ const result = await complexQuery.run(db, {
 ### Numeric Arguments
 
 ```typescript
-import { prepare, eq } from "durcno";
+import { eq, prepare } from "durcno";
 import { Posts } from "./db/schema.ts";
 
 const findPostsByUser = prepare({ userId: Posts.userId.arg() }, (args) => {
@@ -274,7 +274,7 @@ await findUser.run(db, { id: "1" });
 You can parameterize `limit` and `offset` values using `Arg.number()` and `Arg.bigint()`. This is useful when building paginated prepared queries where the page size or offset varies at runtime.
 
 ```typescript
-import { prepare, Arg } from "durcno";
+import { Arg, prepare } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
@@ -324,7 +324,7 @@ const page = await paginatedUsers.run(db, { lim: 10n, off: 20n });
 You can interpolate prepared arguments (`Arg`) directly into `sql` tagged template expressions when defining a prepared query builder statement:
 
 ```typescript
-import { prepare, Arg, sql } from "durcno";
+import { Arg, prepare, sql } from "durcno";
 
 const findUsersByAge = prepare({ age: Arg.number() }, (args) => {
   return db

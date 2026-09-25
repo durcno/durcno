@@ -15,7 +15,7 @@ Adds full type-safe parameter tracking (`Arg`) for prepared queries across all s
 Subquery function projections in `.select()` are automatically identified as non-aggregate SQL functions, preventing erroneous automatic `GROUP BY` clause generation when combined with aggregate expressions.
 
 ```typescript
-import { eq, exists, notExists, isIn, notIn } from "durcno";
+import { eq, exists, isIn, notExists, notIn } from "durcno";
 
 // Project subquery results as boolean columns in .select()
 const userProfiles = await db.from(Users).select(({ users }) => ({
@@ -39,7 +39,7 @@ const authors = await db
         .from(Posts)
         .select("*")
         .where(({ posts }) => eq(posts.userId, users.id)),
-    ),
+    )
   );
 
 // Filter using NOT IN subquery
@@ -50,6 +50,6 @@ const usersWithoutOrders = await db
     notIn(
       users.id,
       db.from(Orders).select(({ orders }) => ({ userId: orders.userId })),
-    ),
+    )
   );
 ```

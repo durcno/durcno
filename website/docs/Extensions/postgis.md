@@ -40,7 +40,7 @@ Represents a single geographic point (longitude, latitude).
 - **JS type**: `[number, number]` — `[longitude, latitude]`
 
 ```typescript
-import { table, pk, varchar, notNull, geography } from "durcno";
+import { geography, notNull, pk, table, varchar } from "durcno";
 
 export const Locations = table("public", "locations", {
   id: pk(),
@@ -268,7 +268,7 @@ const nearby = await db
       stDWithin(Properties.location, [centerLon, centerLat], input.radius),
       eq(Properties.type, input.type),
       lte(Properties.availableFrom, new Date(input.date)),
-    ),
+    )
   );
 ```
 
@@ -295,7 +295,7 @@ const withinRange = await db
   .from(Properties)
   .select("*")
   .where(() =>
-    lt(stDistance(Properties.location, [centerLon, centerLat]), 5000),
+    lt(stDistance(Properties.location, [centerLon, centerLat]), 5000)
   ); // closer than 5 km
 ```
 
@@ -314,7 +314,7 @@ const results = await db
     and(
       lt(stDistance(Properties.location, [centerLon, centerLat]), input.radius),
       eq(Properties.type, input.type),
-    ),
+    )
   );
 // results[0] → { id: bigint; type: string; distance: number }
 ```

@@ -1,13 +1,29 @@
 <p align="center">
-  <img alt="NPM Downloads" src="https://img.shields.io/npm/dw/durcno" alt="Downloads" />
-  <img src="https://img.shields.io/badge/Node.js-24%2B-339935?style=flat&logo=node.js&logoColor=white" alt="Node.js 24+" />
-  <img src="https://img.shields.io/badge/PostgreSQL-14%2B-336791?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL 14+" />
-  <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat" alt="License" />
-  <img src="https://img.shields.io/badge/vitest--green?logo=vitest" alt="License" />
+  <img
+    alt="NPM Downloads"
+    src="https://img.shields.io/npm/dw/durcno"
+    alt="Downloads"
+  />
+  <img
+    src="https://img.shields.io/badge/Node.js-24%2B-339935?style=flat&logo=node.js&logoColor=white"
+    alt="Node.js 24+"
+  />
+  <img
+    src="https://img.shields.io/badge/PostgreSQL-14%2B-336791?style=flat&logo=postgresql&logoColor=white"
+    alt="PostgreSQL 14+"
+  />
+  <img
+    src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat"
+    alt="License"
+  />
+  <img
+    src="https://img.shields.io/badge/vitest--green?logo=vitest"
+    alt="License"
+  />
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/JuVrdjeNeQ">Discord</a>  |  <a href="https://twitter.com/durcno">X</a>
+  <a href="https://discord.gg/JuVrdjeNeQ">Discord</a> | <a href="https://twitter.com/durcno">X</a>
 </p>
 
 <h1 align="center">Durcno</h1>
@@ -16,9 +32,7 @@
   <strong>A PostgreSQL Query Builder and Migration Manager for TypeScript, from the future.</strong>
 </p>
 
-<p align="center">
-  Intuitive • Type-safe • Runtime-safe • Robust
-</p>
+<p align="center">Intuitive • Type-safe • Runtime-safe • Robust</p>
 
 ---
 

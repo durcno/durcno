@@ -98,14 +98,14 @@ Create your schema file with table definitions:
 ```typescript
 // db/schema.ts
 import {
-  table,
-  pk,
-  varchar,
-  timestamp,
   enumtype,
   notNull,
-  unique,
   now,
+  pk,
+  table,
+  timestamp,
+  unique,
+  varchar,
 } from "durcno";
 
 export { Migrations } from "durcno";
@@ -126,8 +126,8 @@ Create a database client instance:
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema.ts";
 import config from "../durcno.config.ts";
+import * as schema from "./schema.ts";
 
 export const db = database(schema, config);
 ```
@@ -243,14 +243,14 @@ Define relationships between tables:
 ```typescript
 // db/schema.ts
 import {
-  table,
-  pk,
-  varchar,
   bigint,
-  relations,
   many,
-  one,
   notNull,
+  one,
+  pk,
+  relations,
+  table,
+  varchar,
 } from "durcno";
 
 export const Users = table("public", "users", {

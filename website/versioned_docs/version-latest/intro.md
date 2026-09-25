@@ -21,14 +21,14 @@ Define your database schema using clean, type-safe table definitions that map di
 
 ```typescript
 import {
-  table,
-  pk,
-  varchar,
-  timestamptz,
   enumtype,
   notNull,
-  unique,
   now,
+  pk,
+  table,
+  timestamptz,
+  unique,
+  varchar,
 } from "durcno";
 
 // Define an enum type for user roles

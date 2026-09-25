@@ -34,14 +34,14 @@ The `createInsertSchema` function creates a Zod schema optimized for INSERT oper
 
 ```typescript
 import {
-  table,
-  pk,
-  varchar,
-  timestamp,
   boolean,
-  now,
   notNull,
+  now,
+  pk,
+  table,
+  timestamp,
   unique,
+  varchar,
 } from "durcno";
 import { createInsertSchema } from "durcno/validators/zod";
 
@@ -154,8 +154,8 @@ Each refine function receives the column's base Zod type (e.g., `z.string()` for
 The generated schemas are fully typed, allowing you to infer TypeScript types from them:
 
 ```typescript
-import { z } from "zod";
 import { createInsertSchema, createUpdateSchema } from "durcno/validators/zod";
+import { z } from "zod";
 import { Users } from "./schema.ts";
 
 const insertSchema = createInsertSchema(Users);
@@ -180,7 +180,7 @@ function updateUser(id: bigint, data: UpdateUser) {
 Enum columns are automatically converted to Zod enums with the correct literal types:
 
 ```typescript
-import { table, pk, varchar, enumtype, notNull } from "durcno";
+import { enumtype, notNull, pk, table, varchar } from "durcno";
 import { createInsertSchema } from "durcno/validators/zod";
 
 const UserRole = enumtype("public", "userRole", ["admin", "moderator", "user"]);

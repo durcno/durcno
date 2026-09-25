@@ -67,7 +67,7 @@ SELECT count(*) FROM "public"."users" WHERE "name" = 'Dan';
 You can use any where clause operators with `$count`:
 
 ```typescript
-import { eq, and, gte, isNull } from "durcno";
+import { and, eq, gte, isNull } from "durcno";
 
 // Count admin users
 const adminCount = await db.$count(Users, eq(Users.type, "admin"));

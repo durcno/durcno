@@ -62,7 +62,7 @@ export default defineConfig({
   ],
   formatters: [
     createFormatter({ extensions: ["json"], command: "biome format --write" }),
-    createFormatter({ extensions: ["md"], command: "oxfmt" }),
+    createFormatter({ extensions: ["md"], command: "dprint fmt" }),
   ],
   publishers: [
     createNpmPublisher({

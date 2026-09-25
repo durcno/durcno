@@ -28,12 +28,12 @@ Distance functions are imported directly:
 
 ```typescript
 import {
-  l2Distance,
   cosineDistance,
-  innerProduct,
-  l1Distance,
   hammingDistance,
+  innerProduct,
   jaccardDistance,
+  l1Distance,
+  l2Distance,
 } from "durcno";
 ```
 
@@ -147,11 +147,11 @@ Durcno provides type-safe distance functions for use in `.select()`, `.orderBy()
 
 ```typescript
 import {
-  l2Distance,
   cosineDistance,
+  hammingDistance,
   innerProduct,
   l1Distance,
-  hammingDistance,
+  l2Distance,
 } from "durcno";
 ```
 
@@ -254,7 +254,7 @@ const results = await db
 pgvector supports specialized index types for fast nearest-neighbor search. Use the `.opclass()` method to specify an operator class when creating indexes:
 
 ```typescript
-import { table, pk, index, pgvector } from "durcno";
+import { index, pgvector, pk, table } from "durcno";
 
 export const Embeddings = table(
   "public",
@@ -284,7 +284,7 @@ export const Embeddings = table(
 | `btree`    | None (use default)                                    | Exact vector matching (rare)       |
 
 ```typescript
-import { asc, eq, index, pgvector, table, pk } from "durcno";
+import { asc, eq, index, pgvector, pk, table } from "durcno";
 
 export const Embeddings = table(
   "public",

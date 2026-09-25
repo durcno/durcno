@@ -267,8 +267,8 @@ After creating your configuration, use it with the `database` function:
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema.ts";
 import config from "../durcno.config.ts";
+import * as schema from "./schema.ts";
 
 export const db = database(schema, config);
 ```

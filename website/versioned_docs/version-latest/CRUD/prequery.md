@@ -11,7 +11,7 @@ Use `prequery()` to create reusable, type-safe prepared statements that can be e
 ### Creating a Prepared Query
 
 ```typescript
-import { prequery, eq } from "durcno";
+import { eq, prequery } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
@@ -54,7 +54,7 @@ Prepared queries does not provide runtime validation of argument type. Make sure
 You can define multiple arguments in a single prepared query:
 
 ```typescript
-import { prequery, and, eq } from "durcno";
+import { and, eq, prequery } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
@@ -131,7 +131,7 @@ const result = await findUserInfo.run(db, { id: 1n });
 ### OR Conditions
 
 ```typescript
-import { prequery, or, eq } from "durcno";
+import { eq, or, prequery } from "durcno";
 
 const findByEitherUsername = prequery(
   {
@@ -162,7 +162,7 @@ const result = await findByEitherUsername.run(db, {
 ### Combined AND/OR Conditions
 
 ```typescript
-import { prequery, and, or, eq } from "durcno";
+import { and, eq, or, prequery } from "durcno";
 
 const complexQuery = prequery(
   {
@@ -197,7 +197,7 @@ const result = await complexQuery.run(db, {
 ### Numeric Arguments
 
 ```typescript
-import { prequery, eq } from "durcno";
+import { eq, prequery } from "durcno";
 import { Posts } from "./db/schema.ts";
 
 const findPostsByUser = prequery({ userId: Posts.userId.arg() }, (args) => {
@@ -270,7 +270,7 @@ await findUser.run(db, { id: "1" });
 You can parameterize `limit` and `offset` values using `Arg.number()` and `Arg.bigint()`. This is useful when building paginated prepared queries where the page size or offset varies at runtime.
 
 ```typescript
-import { prequery, Arg } from "durcno";
+import { Arg, prequery } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 

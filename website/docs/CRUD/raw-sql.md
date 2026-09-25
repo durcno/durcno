@@ -15,11 +15,12 @@ The `sql` tagged template helper (`import { sql } from "durcno"`) returns a `Sql
 Expressions inside `sql` tagged templates are evaluated lazily when `.toSQL()`, `.string`, or `.toQuery()` is invoked.
 
 ```typescript
-import { sql, db } from "durcno";
+import { db, sql } from "durcno";
 import { Users } from "./db/schema.ts";
 
 // Primitive values and column references inside template strings:
-const queryFragment = sql`SELECT ${Users.username} FROM ${Users} WHERE ${Users.age} >= ${30}`;
+const queryFragment =
+  sql`SELECT ${Users.username} FROM ${Users} WHERE ${Users.age} >= ${30}`;
 
 // Lazy evaluation via .toSQL() or .string:
 console.log(queryFragment.toSQL());
@@ -86,7 +87,7 @@ const nullExpr = sql.null;
 import { db } from "./db/index.ts";
 
 // Execute a raw SELECT query
-const result = await db.raw<{ id: bigint; username: string }[]>(
+const result = await db.raw<{ id: bigint; username: string; }[]>(
   "SELECT id, username FROM users",
   [],
   (rows) => rows,
@@ -115,7 +116,7 @@ Always use parameterized queries to prevent SQL injection. Use `$1`, `$2`, etc. 
 
 ```typescript
 // Query with parameters
-const result = await db.raw<{ username: string; age: number }[]>(
+const result = await db.raw<{ username: string; age: number; }[]>(
   "SELECT username, age FROM users WHERE age >= $1 AND type = $2",
   [30, "admin"],
   (rows) => rows,
@@ -126,7 +127,7 @@ const result = await db.raw<{ username: string; age: number }[]>(
 
 ```typescript
 // Complex query with multiple parameters
-const result = await db.raw<{ username: string }[]>(
+const result = await db.raw<{ username: string; }[]>(
   `SELECT username FROM users 
    WHERE age > $1 AND "is_active" = $2 AND type = $3`,
   [25, "true", "user"],
@@ -140,19 +141,23 @@ The third parameter allows you to transform query results:
 
 ```typescript
 // Transform usernames to uppercase
-const usernames = await db.raw("SELECT username FROM users", [], (rows) =>
-  rows.map((r) => r.username.toUpperCase()),
+const usernames = await db.raw(
+  "SELECT username FROM users",
+  [],
+  (rows) => rows.map((r) => r.username.toUpperCase()),
 );
 // Returns: ["ALICE", "BOB", "CHARLIE"]
 
 // Extract a single value
-const count = await db.raw("SELECT COUNT(*) as count FROM users", [], (rows) =>
-  Number(rows[0].count),
+const count = await db.raw(
+  "SELECT COUNT(*) as count FROM users",
+  [],
+  (rows) => Number(rows[0].count),
 );
 // Returns: 42
 
 // Pass rows through unchanged
-const users = await db.raw<{ id: bigint; username: string }[]>(
+const users = await db.raw<{ id: bigint; username: string; }[]>(
   "SELECT id, username FROM users",
   [],
   (rows) => rows,
@@ -165,14 +170,14 @@ const users = await db.raw<{ id: bigint; username: string }[]>(
 
 ```typescript
 // Simple SELECT
-const users = await db.raw<{ username: string }[]>(
+const users = await db.raw<{ username: string; }[]>(
   "SELECT username FROM users",
   [],
   (rows) => rows,
 );
 
 // SELECT with JOIN
-const postsWithAuthors = await db.raw<{ username: string; title: string }[]>(
+const postsWithAuthors = await db.raw<{ username: string; title: string; }[]>(
   `SELECT u.username, p.title 
    FROM users u 
    JOIN posts p ON u.id = p."user_id"`,
@@ -181,7 +186,7 @@ const postsWithAuthors = await db.raw<{ username: string; title: string }[]>(
 );
 
 // Aggregate queries
-const result = await db.raw<{ count: string }[]>(
+const result = await db.raw<{ count: string; }[]>(
   "SELECT COUNT(*) as count FROM users",
   [],
   (rows) => rows,
@@ -201,7 +206,7 @@ await db.raw(
 );
 
 // Insert with RETURNING
-const inserted = await db.raw<{ id: bigint }[]>(
+const inserted = await db.raw<{ id: bigint; }[]>(
   `INSERT INTO users (username, email, type, status, role) 
    VALUES ($1, $2, $3, $4, $5) 
    RETURNING id`,
@@ -267,7 +272,7 @@ await db.raw(
 );
 
 // Query from temporary table
-const results = await db.raw<{ name: string }[]>(
+const results = await db.raw<{ name: string; }[]>(
   "SELECT name FROM temp_results",
   [],
   (rows) => rows,
@@ -277,7 +282,7 @@ const results = await db.raw<{ name: string }[]>(
 ### Complex WHERE Clauses
 
 ```typescript
-const result = await db.raw<{ username: string }[]>(
+const result = await db.raw<{ username: string; }[]>(
   `SELECT username FROM users 
    WHERE (type = $1 AND age >= $2) 
       OR (status = $3 AND created_at > $4)`,
@@ -297,7 +302,7 @@ await db.raw(
 );
 
 // Query NULL values
-const usersWithoutEmail = await db.raw<{ username: string }[]>(
+const usersWithoutEmail = await db.raw<{ username: string; }[]>(
   "SELECT username FROM users WHERE email IS NULL",
   [],
   (rows) => rows,
@@ -309,7 +314,7 @@ const usersWithoutEmail = await db.raw<{ username: string }[]>(
 Raw queries return an empty array when no rows match:
 
 ```typescript
-const result = await db.raw<{ username: string }[]>(
+const result = await db.raw<{ username: string; }[]>(
   "SELECT username FROM users WHERE username = $1",
   ["nonexistent"],
   (rows) => rows,
@@ -324,7 +329,7 @@ The generic type parameter `TReturn` allows you to specify the expected return t
 
 ```typescript
 // Specify the return type
-const users = await db.raw<{ id: bigint; username: string }[]>(
+const users = await db.raw<{ id: bigint; username: string; }[]>(
   "SELECT id, username FROM users",
   [],
   (rows) => rows,

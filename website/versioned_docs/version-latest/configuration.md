@@ -36,7 +36,7 @@ export default defineConfig({
 
 ### `schema`
 
-**Type:** `string`  
+**Type:** `string`\
 **Required:** Yes
 
 The path to your database schema file, relative to the config file location.
@@ -50,7 +50,7 @@ export default defineConfig({
 
 ### `out`
 
-**Type:** `string`  
+**Type:** `string`\
 **Default:** `"migrations"`
 
 The output directory where generated migration files will be stored.
@@ -65,7 +65,7 @@ export default defineConfig({
 
 ### `connector`
 
-**Type:** `Connector`  
+**Type:** `Connector`\
 **Required:** Yes
 
 The database connector instance. Pass the result of calling one of the connector factory functions (`pg()`, `postgres()`, `bun()`, `pglite()`), each configured with connection credentials and optional pool/logger settings.
@@ -186,7 +186,7 @@ connector: pg({
 
 #### `logger`
 
-**Type:** `QueryLogger`  
+**Type:** `QueryLogger`\
 **Optional**
 
 A logger instance that receives query execution events for successful and failed queries. Successful queries call `info()`, while failed queries call `error()`. Any object with compatible `info()` and `error()` methods can be used. Durcno ships a pre-configured Winston logger via `durcno/logger`.
@@ -209,7 +209,7 @@ export default defineConfig({
 
 #### `pool`
 
-**Type:** `object`  
+**Type:** `object`\
 **Optional**
 
 Connection pool configuration. Pass `pool` inside the connector options.
@@ -284,15 +284,15 @@ export default defineConfig({
   connector: pg({
     dbCredentials: isDevelopment
       ? {
-          host: "localhost",
-          port: 5432,
-          user: "postgres",
-          password: "devpassword",
-          database: "myapp_dev",
-        }
+        host: "localhost",
+        port: 5432,
+        user: "postgres",
+        password: "devpassword",
+        database: "myapp_dev",
+      }
       : {
-          url: process.env.DATABASE_URL!,
-        },
+        url: process.env.DATABASE_URL!,
+      },
     pool: {
       max: isDevelopment ? 5 : 20,
     },
@@ -314,22 +314,22 @@ type Config<T extends Connector = Connector> = {
 type ConnectorOptions = {
   dbCredentials:
     | {
-        host: string;
-        port?: number;
-        user: string;
-        password?: string;
-        database: string;
-        ssl?:
-          | boolean
-          | "require"
-          | "allow"
-          | "prefer"
-          | "verify-full"
-          | ConnectionOptions;
-      }
+      host: string;
+      port?: number;
+      user: string;
+      password?: string;
+      database: string;
+      ssl?:
+        | boolean
+        | "require"
+        | "allow"
+        | "prefer"
+        | "verify-full"
+        | ConnectionOptions;
+    }
     | {
-        url: string;
-      };
+      url: string;
+    };
   pool?: {
     max?: number;
   };

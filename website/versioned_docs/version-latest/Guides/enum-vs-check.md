@@ -24,7 +24,7 @@ Check constraints are a lightweight, flexible alternative to PostgreSQL ENUM typ
 Use `$type` on the column to get full TypeScript inference matching your allowed values:
 
 ```typescript
-import { table, pk, varchar, notNull } from "durcno";
+import { notNull, pk, table, varchar } from "durcno";
 
 export const Users = table(
   "public",

@@ -28,9 +28,9 @@ Use `db.update()` to modify existing rows in a table. The update builder provide
 Always use `.where()` to specify which rows to update:
 
 ```typescript
+import { eq } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
-import { eq } from "durcno";
 
 // Update a specific user's email
 await db

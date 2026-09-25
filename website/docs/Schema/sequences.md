@@ -61,7 +61,7 @@ This creates a sequence that:
 The most common use case for sequences is as column defaults. Use the `nextval()` method to generate the next value:
 
 ```typescript
-import { sequence, integer, table, pk, notNull } from "durcno";
+import { integer, notNull, pk, sequence, table } from "durcno";
 
 export const orderSequence = sequence("public", "orderSeq", {
   startWith: 1000,
@@ -189,7 +189,7 @@ Caching improves performance but may result in gaps in the sequence if the appli
 Durcno also provides `serial`, `smallserial`, and `bigserial` column types which automatically create sequences:
 
 ```typescript
-import { table, serial, bigserial } from "durcno";
+import { bigserial, serial, table } from "durcno";
 
 export const Users = table("public", "users", {
   id: serial({ notNull }), // Creates implicit sequence

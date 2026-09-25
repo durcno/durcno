@@ -19,7 +19,7 @@ Use `.innerJoin()` when you only want rows that have matching values in both tab
 
 ```typescript
 import { eq } from "durcno";
-import { Users, Posts } from "./db/schema.ts";
+import { Posts, Users } from "./db/schema.ts";
 
 const postsByAuthor = await db
   .from(Users)

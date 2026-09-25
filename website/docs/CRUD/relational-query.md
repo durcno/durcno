@@ -11,7 +11,7 @@ Use `db.query()` to fetch data with related records in a single query. The Relat
 Before using relational queries, define relations in your schema:
 
 ```typescript
-import { table, pk, varchar, bigint, relations, many, fk } from "durcno";
+import { bigint, fk, many, pk, relations, table, varchar } from "durcno";
 
 export const Users = table("public", "users", {
   id: pk(),
@@ -187,7 +187,7 @@ const users = await db.query(Users).findMany({
 `where`, `orderBy`, `limit`, and `offset` can be applied inside a `with` block for **`many`** (one-to-many) relations:
 
 ```typescript
-import { eq, desc } from "durcno";
+import { desc, eq } from "durcno";
 
 const posts = await db.query(Posts).findMany({
   with: {
@@ -212,7 +212,7 @@ const posts = await db.query(Posts).findMany({
 Use `where` to filter results:
 
 ```typescript
-import { eq, and, gte } from "durcno";
+import { and, eq, gte } from "durcno";
 
 const admins = await db.query(Users).findMany({
   where: eq(Users.type, "admin"),
@@ -271,7 +271,7 @@ const page3 = await db.query(Users).findMany({
 Combining all options:
 
 ```typescript
-import { eq, desc } from "durcno";
+import { desc, eq } from "durcno";
 
 const result = await db.query(Users).findMany({
   columns: {

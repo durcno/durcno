@@ -61,7 +61,7 @@ Database schema using type-safe table definitions:
 
 ```typescript
 // db/schema.ts
-import { table, pk, varchar, enumtype, notNull, unique } from "durcno";
+import { enumtype, notNull, pk, table, unique, varchar } from "durcno";
 
 export { Migrations } from "durcno"; // Required for migrations tracking
 
@@ -82,8 +82,8 @@ Setting up the query api:
 ```typescript
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema.ts";
 import config from "../durcno.config.ts";
+import * as schema from "./schema.ts";
 
 export const db = database(schema, config);
 ```

@@ -21,15 +21,15 @@ Relations are defined using the `relations()` function, separate from the table 
 
 ```typescript
 import {
-  table,
-  pk,
   bigint,
-  varchar,
-  relations,
-  many,
-  one,
   fk,
+  many,
   notNull,
+  one,
+  pk,
+  relations,
+  table,
+  varchar,
 } from "durcno";
 
 // Define tables
@@ -66,14 +66,14 @@ A one-to-many relationship exists when one record in a table can be associated w
 
 ```typescript
 import {
-  table,
-  pk,
   bigint,
-  varchar,
-  relations,
   many,
-  one,
   notNull,
+  one,
+  pk,
+  relations,
+  table,
+  varchar,
 } from "durcno";
 
 // One user can have many posts
@@ -140,15 +140,15 @@ A one-to-one relationship exists when one record in a table is associated with e
 
 ```typescript
 import {
-  table,
-  pk,
   bigint,
-  varchar,
-  relations,
-  one,
   fk,
   notNull,
+  one,
+  pk,
+  relations,
+  table,
   unique,
+  varchar,
 } from "durcno";
 
 export const Users = table("public", "users", {
@@ -204,19 +204,19 @@ Here's a complete example with multiple relationship types:
 
 ```typescript
 import {
-  table,
-  pk,
   bigint,
-  varchar,
+  fk,
+  many,
+  notNull,
+  now,
+  one,
+  pk,
+  relations,
+  table,
   text,
   timestamptz,
-  relations,
-  many,
-  one,
-  fk,
-  notNull,
   unique,
-  now,
+  varchar,
 } from "durcno";
 
 // Users table
@@ -518,8 +518,8 @@ export const UsersRelations = relations(Users, () => ({
 
 // db/index.ts
 import { database } from "durcno";
-import * as schema from "./schema.ts";
 import config from "./durcno.config.ts";
+import * as schema from "./schema.ts";
 
 export const db = database(schema, config);
 ```

@@ -30,7 +30,7 @@ export const Status = enumtype("public", "status", [
 Use the `.enumed()` method to create an enum column in your table:
 
 ```typescript
-import { table, pk, varchar, enumtype, notNull } from "durcno";
+import { enumtype, notNull, pk, table, varchar } from "durcno";
 
 export const UserRole = enumtype("public", "userRole", [
   "admin",
@@ -179,13 +179,13 @@ export const Users = table("public", "users", {
 
 ```typescript
 import {
-  table,
-  pk,
-  varchar,
   enumtype,
-  timestamptz,
   notNull,
   now,
+  pk,
+  table,
+  timestamptz,
+  varchar,
 } from "durcno";
 
 export const UserRole = enumtype("public", "userRole", [
@@ -212,7 +212,7 @@ export const Users = table("public", "users", {
 ### Task Tracking System
 
 ```typescript
-import { table, pk, varchar, text, enumtype, notNull } from "durcno";
+import { enumtype, notNull, pk, table, text, varchar } from "durcno";
 
 export const TaskStatus = enumtype("public", "taskStatus", [
   "todo",
@@ -239,7 +239,7 @@ export const Tasks = table("public", "tasks", {
 ### Order Processing
 
 ```typescript
-import { table, pk, bigint, enumtype, timestamptz, notNull, now } from "durcno";
+import { bigint, enumtype, notNull, now, pk, table, timestamptz } from "durcno";
 
 export const OrderStatus = enumtype("public", "orderStatus", [
   "pending",
@@ -319,7 +319,7 @@ export const UserRole = enumtype("public", "userRole", ["admin", "user"]);
 export const Status = enumtype("public", "status", ["active", "inactive"]);
 
 // db/users.ts
-import { UserRole, Status } from "./enums";
+import { Status, UserRole } from "./enums";
 
 export const Users = table("public", "users", {
   id: pk(),

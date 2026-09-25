@@ -11,7 +11,7 @@ Indexes are critical for optimizing database query performance. Durcno provides 
 Indexes are defined using the `indexes` callback in your table definition's third argument:
 
 ```typescript
-import { table, pk, varchar, integer, index, notNull } from "durcno";
+import { index, integer, notNull, pk, table, varchar } from "durcno";
 
 export const Users = table(
   "public",
@@ -262,7 +262,7 @@ For AI/ML applications using vector embeddings, Durcno supports pgvector index t
 Hierarchical Navigable Small World index for approximate nearest neighbor search.
 
 ```typescript
-import { table, pk, index, pgvector, notNull } from "durcno";
+import { index, notNull, pgvector, pk, table } from "durcno";
 
 export const Embeddings = table(
   "public",
@@ -292,7 +292,7 @@ export const Embeddings = table(
 Inverted File Flat index for approximate nearest neighbor search.
 
 ```typescript
-import { table, pk, index, pgvector, notNull, varchar } from "durcno";
+import { index, notNull, pgvector, pk, table, varchar } from "durcno";
 
 export const Documents = table(
   "public",
@@ -333,7 +333,7 @@ Operator classes allow you to specify how a column should be indexed, enabling s
 ### Basic Usage
 
 ```typescript
-import { table, pk, index, pgvector, notNull } from "durcno";
+import { index, notNull, pgvector, pk, table } from "durcno";
 
 export const Embeddings = table(
   "public",
@@ -367,7 +367,7 @@ pgvector supports several operator classes for different distance metrics:
 ### Multiple Vector Types with Different Operators
 
 ```typescript
-import { table, pk, index, pgvector, notNull } from "durcno";
+import { index, notNull, pgvector, pk, table } from "durcno";
 
 export const Embeddings = table(
   "public",

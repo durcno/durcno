@@ -83,7 +83,7 @@ The `.select()` object projection can include more than just columns. You can pr
 - **Raw SQL expressions**: `sql<T>` template fragments with typed return inference
 
 ```typescript
-import { sql, lower, coalesce } from "durcno";
+import { coalesce, lower, sql } from "durcno";
 
 const results = await db.from(Users).select(() => ({
   id: Users.id,
@@ -110,7 +110,7 @@ const results = await db.from(Users).select(() => ({
 Use `.where()` with a callback receiving the tables view to filter results. See [Filters](../Expressions/filters.md) for all available operators.
 
 ```typescript
-import { eq, and, gte } from "durcno";
+import { and, eq, gte } from "durcno";
 
 // Simple equality filter
 const admins = await db
@@ -123,7 +123,7 @@ const recentAdmins = await db
   .from(Users)
   .select("*")
   .where(() =>
-    and(eq(Users.type, "admin"), gte(Users.createdAt, new Date("2024-01-01"))),
+    and(eq(Users.type, "admin"), gte(Users.createdAt, new Date("2024-01-01")))
   );
 ```
 
@@ -170,8 +170,8 @@ const mixedSort = await db
 When using joins, you can sort by columns from any joined table in the view:
 
 ```typescript
-import { eq, asc, desc } from "durcno";
-import { Users, Posts } from "./db/schema.ts";
+import { asc, desc, eq } from "durcno";
+import { Posts, Users } from "./db/schema.ts";
 
 // Sort by username (Users), then by post creation date (Posts)
 const usersWithPosts = await db
@@ -222,7 +222,7 @@ Use joins to combine rows from related tables. See the dedicated [Joins](./joins
 
 ```typescript
 import { eq } from "durcno";
-import { Users, Posts } from "./db/schema.ts";
+import { Posts, Users } from "./db/schema.ts";
 
 // Join Users with Posts
 const usersWithPosts = await db
@@ -272,7 +272,7 @@ Use `.groupBy()` with a callback receiving the tables view and select aliases to
 **Single column:**
 
 ```typescript
-import { count, asc } from "durcno";
+import { asc, count } from "durcno";
 
 const byType = await db
   .from(Users)
@@ -298,7 +298,7 @@ const byTypeAndStatus = await db
 **Scalar expression:**
 
 ```typescript
-import { lower, count } from "durcno";
+import { count, lower } from "durcno";
 
 const byLowerUsername = await db
   .from(Users)
@@ -311,7 +311,7 @@ const byLowerUsername = await db
 When `.select()` defines named aliases, `.groupBy()` receives them in the second parameter:
 
 ```typescript
-import { lower, count } from "durcno";
+import { count, lower } from "durcno";
 
 const results = await db
   .from(Users)
@@ -348,7 +348,7 @@ const busyTypes = await db
 **Aggregate-to-aggregate:**
 
 ```typescript
-import { count, sum, gt } from "durcno";
+import { count, gt, sum } from "durcno";
 
 const results = await db
   .from(Users)
@@ -370,7 +370,7 @@ const results = await db
 ### Full Chain
 
 ```typescript
-import { eq, count, gte, asc } from "durcno";
+import { asc, count, eq, gte } from "durcno";
 
 const results = await db
   .from(Users)
@@ -424,7 +424,7 @@ const onePerTypeAndStatus = await db
 Combine `.distinctOn()` with `.select()`, `.where()`, and `.orderBy()`:
 
 ```typescript
-import { eq, asc, desc } from "durcno";
+import { asc, desc, eq } from "durcno";
 
 const latestAdminPerType = await db
   .from(Users)
