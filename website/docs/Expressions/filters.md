@@ -319,8 +319,10 @@ await db
   .where(() => ilike(Users.email, "%@EXAMPLE.COM"));
 ```
 
-:::tip Case sensitivity
-`like`, `startsWith`, `endsWith`, and `contains` are case-sensitive matching functions. For case-insensitive pattern matching, use `ilike`.
+:::tip
+
+**Case sensitivity** — `like`, `startsWith`, `endsWith`, and `contains` are case-sensitive matching functions. For case-insensitive pattern matching, use `ilike`.
+
 :::
 
 ## Logical Operators

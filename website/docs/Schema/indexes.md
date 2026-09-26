@@ -317,8 +317,9 @@ export const Documents = table(
 - Lower memory usage than HNSW
 - Good for large datasets with acceptable recall trade-offs
 
-:::note pgvector Extension
-Vector indexes require the pgvector extension:
+:::note
+
+**pgvector Extension** — Vector indexes require the pgvector extension:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -528,14 +529,16 @@ export const Orders = table(
 );
 ```
 
-:::tip Left-Prefix Rule
-A composite index on `[A, B, C]` can be used for queries on:
+:::tip
+
+**Left-Prefix Rule** — A composite index on `[A, B, C]` can be used for queries on:
 
 - `A`
 - `A, B`
 - `A, B, C`
 
 But NOT for queries on `B`, `C`, or `B, C` alone.
+
 :::
 
 ### Avoid Over-Indexing

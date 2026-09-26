@@ -6,28 +6,43 @@ sidebar_position: 7
 
 Use `db.query()` to fetch data with related records in a single query. The Relational Query Builder (RQB) leverages your schema's relations to automatically handle joins.
 
+## Methods
+
+| Method                | Description                           |
+| --------------------- | ------------------------------------- |
+| `.findMany(options)`  | Fetch multiple records                |
+| `.findFirst(options)` | Fetch first matching record or `null` |
+
 ## Prerequisites
 
 Before using relational queries, define relations in your schema:
 
 ```typescript
-import { bigint, fk, many, pk, relations, table, varchar } from "durcno";
+import {
+  bigint,
+  fk,
+  many,
+  notNull,
+  pk,
+  relations,
+  table,
+  varchar,
+} from "durcno";
 
 export const Users = table("public", "users", {
   id: pk(),
   username: varchar({ length: 50, notNull }),
 });
 
+export const UsersRelations = relations(Users, () => ({
+  posts: many(Posts, Posts.userId),
+}));
+
 export const Posts = table("public", "posts", {
   id: pk(),
   userId: bigint({ notNull }).references(() => Users.id),
   title: varchar({ length: 255 }),
 });
-
-// Define relations
-export const UsersRelations = relations(Users, () => ({
-  posts: many(Posts, Posts.userId),
-}));
 
 export const PostsRelations = relations(Posts, () => ({
   author: fk(Posts.userId, Users),
@@ -320,12 +335,14 @@ const posts = await db.query(Posts).findMany({
 // Note: Result is non-null because Posts.userId has notNull constraint
 ```
 
-:::tip Nullability
-The result type depends on the FK column's nullability:
+:::tip
+
+**Nullability** — The result type depends on the FK column's nullability:
 
 - `notNull` FK → result is `T`
 - Nullable FK → result is `T | null`
-  :::
+
+:::
 
 ### One-to-Many (`many`)
 
@@ -446,10 +463,3 @@ See [With](./with.md#ctes-with-relational-queries-query) for more CTE details an
 | `orderBy` |          ✓           |             ✗ (type error)              |
 | `limit`   |          ✓           |             ✗ (type error)              |
 | `offset`  |          ✓           |             ✗ (type error)              |
-
-## Methods Reference
-
-| Method                | Description                           |
-| --------------------- | ------------------------------------- |
-| `.findMany(options)`  | Fetch multiple records                |
-| `.findFirst(options)` | Fetch first matching record or `null` |

@@ -57,6 +57,10 @@ export const Users = table(
   },
 );
 
+export const UsersRelations = relations(Users, () => ({
+  posts: many(Posts, Posts.userId),
+}));
+
 export const Posts = table(
   "public",
   "posts",
@@ -67,14 +71,9 @@ export const Posts = table(
     createdAt: timestamptz({ notNull }).default(now()),
   },
   {
-    indexes: (t) => [index([t.userId]), index([t.userId, table.createdAt])],
+    indexes: (t) => [index([t.userId]), index([t.userId, t.createdAt])],
   },
 );
-
-// Define relations
-export const UsersRelations = relations(Users, () => ({
-  posts: many(Posts, Posts.userId),
-}));
 
 export const PostsRelations = relations(Posts, () => ({
   author: one(Users, Users.id),

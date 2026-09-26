@@ -341,8 +341,10 @@ users.forEach((user) => {
 });
 ```
 
-:::caution Type Safety Limitations
-Unlike the query builder methods, `db.raw()` does not validate your SQL against the schema at compile time. The generic type parameter is purely for type annotation—ensure your SQL matches the specified type.
+:::caution
+
+**Type Safety Limitations** — Unlike the query builder methods, `db.raw()` does not validate your SQL against the schema at compile time. The generic type parameter is purely for type annotation—ensure your SQL matches the specified type.
+
 :::
 
 ## When to Use Raw SQL
