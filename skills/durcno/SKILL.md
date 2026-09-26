@@ -1,6 +1,6 @@
 ---
 name: durcno
-description: "Durcno usage guide. Use when: defining schemas, writing queries, validating data, and managing migrations."
+description: "Durcno usage guide. Use when: defining schemas, writing queries, validating data, and managing migrations. Always read the relevant doc files **before** writing or reviewing any Durcno code."
 ---
 
 # Durcno
@@ -9,7 +9,7 @@ A PostgreSQL query builder and migration manager for TypeScript.
 
 ## Documentation
 
-Full reference documentation is symlinked in the `docs/` directory alongside this skill file. Read the relevant doc files **before** writing or reviewing any Durcno code. The `package.json` file is also symlinked alongside, so that the package metadata is available for inspection.
+The full **Durcno** documentation is symlinked in the `docs/` directory alongside this skill file. The `package.json` file is also symlinked alongside, so that the package metadata is available for inspection.
 
 | Path                      | Contents                                    |
 | ------------------------- | ------------------------------------------- |
