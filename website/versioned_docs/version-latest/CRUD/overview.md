@@ -28,6 +28,7 @@ The `db` instance provides methods for all database operations:
 | `db.update(table)`         | Start an UPDATE query                  |
 | `db.deleteFrom(table)`     | Start a DELETE query                   |
 | `db.query(table)`          | Relational Query Builder (RQB)         |
+| `db.with(...)`             | Attach or define CTEs                  |
 | `db.transaction(callback)` | Execute queries in a transaction       |
 | `db.raw(sql, args)`        | Execute raw SQL queries                |
 | `db.prepare()`             | Create a preparer for prepared queries |

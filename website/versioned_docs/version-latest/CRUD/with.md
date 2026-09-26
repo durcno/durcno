@@ -137,12 +137,77 @@ const rows = await db
   }));
 ```
 
+## CTEs with relational queries (`.query()`)
+
+You can attach CTEs to relational queries using `db.with(cte).query(Table)`. This allows you to filter the queried table or its relations using CTE subqueries in `where`, while still leveraging the relational query builder API (`.findMany()` and `.findFirst()`):
+
+```typescript
+import { db, eq, isIn } from "durcno";
+import { Users } from "./db/schema.ts";
+
+const activeUsers = db.with("activeUsers").as(
+  db
+    .from(Users)
+    .select(() => ({ id: Users.id }))
+    .where(() => eq(Users.status, "active")),
+);
+
+const users = await db
+  .with(activeUsers)
+  .query(Users)
+  .findMany({
+    where: isIn(
+      Users.id,
+      db.from(activeUsers).select(() => ({ id: activeUsers.id })),
+    ),
+    with: {
+      posts: {},
+    },
+  });
+```
+
+You can also use subquery SQL functions like `exists(...)` and `isIn(...)` directly inside the `select` option to project boolean flags computed from a CTE:
+
+```typescript
+import { db, eq, exists, isIn, lower } from "durcno";
+import { Posts, Users } from "./db/schema.ts";
+
+const usersWithAliases = await db
+  .with(activeUsers)
+  .query(Users)
+  .findMany({
+    select: {
+      userId: Users.id,
+      name: Users.username,
+      lowered: lower(Users.username),
+      isActive: exists(
+        db
+          .from(activeUsers)
+          .select(() => ({ id: activeUsers.id }))
+          .where(() => eq(activeUsers.id, Users.id)),
+      ),
+      isInActiveList: isIn(
+        Users.id,
+        db.from(activeUsers).select(() => ({ id: activeUsers.id })),
+      ),
+    },
+    with: {
+      posts: {
+        select: {
+          postId: Posts.id,
+          heading: Posts.title,
+        },
+      },
+    },
+  });
+```
+
 ## CTE usage rules
 
 - The `db.with(name).as(query)` helper creates a virtual table from a query.
-- Use `db.with(cte)` to attach one or more CTE definitions to an outer query.
+- Use `db.with(cte)` to attach one or more CTE definitions to an outer query (`.from()`, `.insertInto()`, `.update()`, `.deleteFrom()`, or `.query()`).
 - The outer `.from()` target must be a real table or a CTE reference; CTEs cannot be write targets.
-- You cannot `INSERT`, `UPDATE`, or `DELETE` directly into a CTE.
+- You cannot `INSERT`, `UPDATE`, `DELETE`, or `.query()` directly into or on a CTE.
 
 ## Examples
 
