@@ -2,29 +2,40 @@ import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import type {
   AnyColumn,
+  AnyRelations,
   AnyTableWithColumns,
+  StdTableFullName,
   TableWithColumns,
 } from "../table";
 import { DeleteQuery } from "./delete";
 import { InsertBuilder } from "./insert";
+import { RelationQueryBuilder } from "./rq";
 import { SelectBuilder } from "./select";
 import { UpdateBuilder } from "./update";
 
 /**
  * List of CTEs to be attached to a query statement.
  * Created via `db.with(cte1, cte2, ...)` and provides `.from()`, `.insertInto()`,
- * `.update()`, and `.deleteFrom()` to build the query that uses the declared CTEs.
+ * `.update()`, `.deleteFrom()`, and `.query()` to build the query that uses the declared CTEs.
  */
 export class WithStatement<
   TCtes extends AnyCteWithColumns[],
+  TAllRelations extends Record<StdTableFullName, AnyRelations>,
   TPrepare extends boolean,
 > {
   readonly #ctes: TCtes;
+  readonly #allRelations: TAllRelations;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
 
-  constructor(ctes: TCtes, executor: QueryExecutor, prepare: TPrepare) {
+  constructor(
+    ctes: TCtes,
+    allRelations: TAllRelations,
+    executor: QueryExecutor,
+    prepare: TPrepare,
+  ) {
     this.#ctes = ctes;
+    this.#allRelations = allRelations;
     this.#executor = executor;
     this.#prepare = prepare;
   }
@@ -46,6 +57,31 @@ export class WithStatement<
       table,
       null,
       undefined,
+      this.#executor,
+      this.#prepare,
+      this.#ctes,
+    );
+  }
+
+  /**
+   * Start building a relational query for the specified table with CTEs declared in the WITH clause.
+   *
+   * @param table The table to query — must have relations registered via `relations()`.
+   * @returns A `RelationQueryBuilder` with `.findMany()` and `.findFirst()` methods.
+   */
+  query<
+    UTSchema extends string,
+    UTName extends string,
+    TColumns extends Record<string, AnyColumn>,
+  >(
+    table: TableWithColumns<UTSchema, UTName, TColumns> & {
+      $isVirtual?: never;
+    },
+  ) {
+    return new RelationQueryBuilder(
+      table,
+      this.#allRelations[table._.fullName],
+      this.#allRelations,
       this.#executor,
       this.#prepare,
       this.#ctes,

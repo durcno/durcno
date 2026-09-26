@@ -8,6 +8,7 @@ import {
   database,
   defineConfig,
   eq,
+  exists,
   isIn,
   lower,
   ne,
@@ -425,5 +426,227 @@ describe("CTE queries", () => {
     expect(rows[0].directNull).toBeNull();
     expect(rows[0].sqlNull).toBeNull();
     expect(rows[0].sqlCustom).toBe("computed");
+  });
+
+  it("WITH (SELECT) → db.with(cte).query(table).findMany with relations", async () => {
+    const [u1, u2] = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "rq_alice", status: "active" }),
+        createTestUser({ username: "rq_bob", status: "inactive" }),
+      ])
+      .returning({ id: true, username: true });
+
+    await db.insertInto(schema.Posts).values([
+      {
+        userId: u1.id,
+        title: "Alice Post 1",
+        slug: "alice-post-1",
+        isPublished: true,
+      },
+      {
+        userId: u1.id,
+        title: "Alice Post 2",
+        slug: "alice-post-2",
+        isPublished: true,
+      },
+      {
+        userId: u2.id,
+        title: "Bob Post 1",
+        slug: "bob-post-1",
+        isPublished: true,
+      },
+    ]);
+
+    const activeUsers = db.with("activeUsers").as(
+      db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => eq(schema.Users.status, "active")),
+    );
+
+    const users = await db
+      .with(activeUsers)
+      .query(schema.Users)
+      .findMany({
+        where: isIn(
+          schema.Users.id,
+          db.from(activeUsers).select(() => ({ id: activeUsers.id })),
+        ),
+        columns: {
+          id: true,
+          username: true,
+        },
+        with: {
+          posts: {
+            columns: {
+              title: true,
+            },
+          },
+        },
+      });
+
+    expect(users).toHaveLength(1);
+    expect(users[0].username).toBe("rq_alice");
+    expect(users[0].posts).toEqual([
+      { title: "Alice Post 1" },
+      { title: "Alice Post 2" },
+    ]);
+  });
+
+  it("WITH (SELECT) → db.with(cte).query(table).findFirst with relations", async () => {
+    const [u1] = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "rq_first_alice", status: "active" }),
+      ])
+      .returning({ id: true, username: true });
+
+    await db.insertInto(schema.Posts).values([
+      {
+        userId: u1.id,
+        title: "First Post",
+        slug: "first-post",
+        isPublished: true,
+      },
+    ]);
+
+    const activeUsers = db.with("activeUsers").as(
+      db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => eq(schema.Users.status, "active")),
+    );
+
+    const user = await db
+      .with(activeUsers)
+      .query(schema.Users)
+      .findFirst({
+        where: isIn(
+          schema.Users.id,
+          db.from(activeUsers).select(() => ({ id: activeUsers.id })),
+        ),
+        columns: {
+          id: true,
+          username: true,
+        },
+        with: {
+          posts: {
+            columns: {
+              title: true,
+            },
+          },
+        },
+      });
+
+    expect(user).not.toBeNull();
+    expect(user?.username).toBe("rq_first_alice");
+    expect(user?.posts).toEqual([{ title: "First Post" }]);
+  });
+
+  it("WITH multiple CTEs → db.with(cte1, cte2).query(table).findMany", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "rq_multi_alice", status: "active" }),
+      ]);
+
+    const activeUserCte = db.with("activeUserCte").as(
+      db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => eq(schema.Users.status, "active")),
+    );
+
+    const namedUserCte = db.with("namedUserCte").as(
+      db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => eq(schema.Users.username, "rq_multi_alice")),
+    );
+
+    const users = await db
+      .with(activeUserCte, namedUserCte)
+      .query(schema.Users)
+      .findMany({
+        where: isIn(
+          schema.Users.id,
+          db.from(namedUserCte).select(() => ({ id: namedUserCte.id })),
+        ),
+        columns: {
+          id: true,
+          username: true,
+        },
+      });
+
+    expect(users).toHaveLength(1);
+    expect(users[0].username).toBe("rq_multi_alice");
+  });
+
+  it("WITH (SELECT) → db.with(cte).query(table).findMany with select: option and relations", async () => {
+    const [u1] = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "rq_select_alice", status: "active" }),
+      ])
+      .returning({ id: true, username: true });
+
+    await db.insertInto(schema.Posts).values([
+      {
+        userId: u1.id,
+        title: "Alice Post",
+        slug: "alice-post",
+        isPublished: true,
+      },
+    ]);
+
+    const activeUsers = db.with("activeUsers").as(
+      db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => eq(schema.Users.status, "active")),
+    );
+
+    const users = await db
+      .with(activeUsers)
+      .query(schema.Users)
+      .findMany({
+        select: {
+          userId: schema.Users.id,
+          name: schema.Users.username,
+          lowered: lower(schema.Users.username),
+          hasActive: exists(
+            db
+              .from(activeUsers)
+              .select(() => ({ id: activeUsers.id }))
+              .where(() => eq(activeUsers.id, schema.Users.id)),
+          ),
+          inActive: isIn(
+            schema.Users.id,
+            db.from(activeUsers).select(() => ({ id: activeUsers.id })),
+          ),
+        },
+        where: isIn(
+          schema.Users.id,
+          db.from(activeUsers).select(() => ({ id: activeUsers.id })),
+        ),
+        with: {
+          posts: {
+            select: {
+              heading: schema.Posts.title,
+            },
+          },
+        },
+      });
+
+    expect(users).toHaveLength(1);
+    expect(users[0]).toEqual({
+      userId: u1.id,
+      name: "rq_select_alice",
+      lowered: "rq_select_alice",
+      hasActive: true,
+      inActive: true,
+      posts: [{ heading: "Alice Post" }],
+    });
   });
 });

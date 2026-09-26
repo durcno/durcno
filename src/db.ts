@@ -21,6 +21,7 @@ import {
   type IsTableWC,
   Relations,
   type StdRelations,
+  type StdTableFullName,
   type StdTableWithColumns,
   Table,
   type TableWCorNever,
@@ -36,7 +37,7 @@ import {
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnyDBorTX = Base<any, any, any, false>;
 
-export type StdTableFullName = `"${string}"."${string}"`;
+export type { StdTableFullName } from "./table";
 
 class Base<
   TTName extends string,
@@ -429,7 +430,11 @@ class Base<
     UTSchema extends string,
     UTName extends string,
     TColumns extends Record<string, AnyColumn>,
-  >(table: TableWithColumns<UTSchema, UTName, TColumns>) {
+  >(
+    table: TableWithColumns<UTSchema, UTName, TColumns> & {
+      $isVirtual?: never;
+    },
+  ) {
     return new RelationQueryBuilder(
       table,
       this.#allRelations[table._.fullName],
@@ -479,7 +484,7 @@ class Base<
    */
   with<TCtes extends [AnyCteWithColumns, ...AnyCteWithColumns[]]>(
     ...ctes: TCtes
-  ): WithStatement<TCtes, TPrepare>;
+  ): WithStatement<TCtes, TAllRelations, TPrepare>;
   with<TCteName extends string, TCtes extends AnyCteWithColumns[]>(
     nameOrFirstCte: TCteName | AnyCteWithColumns,
     ...restCtes: TCtes
@@ -498,6 +503,7 @@ class Base<
     }
     return new WithStatement(
       [nameOrFirstCte, ...restCtes],
+      this.#allRelations,
       this.#getExecutor(),
       this.$.pre,
     );

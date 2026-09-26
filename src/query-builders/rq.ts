@@ -1,5 +1,6 @@
 import type { QueryExecutor } from "../connectors/common";
 import { fk } from "../constraints/foreign-key";
+import type { AnyCteWithColumns } from "../cte";
 import { is, isTCol } from "../entity";
 import type { FilterExpression } from "../filters/index";
 import { type InferValueType, SqlFn } from "../functions/index";
@@ -13,13 +14,14 @@ import type {
   TableWithColumns,
 } from "../table";
 import type { SelfOrArray, Valueof } from "../types";
+import { buildWithClause } from "./helpers";
 import type {
   OrderExpression,
   StdOrder,
   StdOrderSqlFn,
 } from "./orderby-clause";
 import { Arg } from "./prepare";
-import { Query, type QueryContext } from "./query";
+import { type AnyQuery, Query, type QueryContext } from "./query";
 import { QueryPromise } from "./query-promise";
 
 type RelationReturnType<
@@ -260,18 +262,21 @@ export class RelationQueryBuilder<
   readonly #allRelations: TAllRelations;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
+  readonly #ctes: readonly AnyCteWithColumns[] | null;
   constructor(
     table: TableWithColumns<TTSchema, TTName, TTColumns>,
     relations: TTRelations,
     allRelations: TAllRelations,
     executor: QueryExecutor,
     prepare: TPrepare,
+    ctes: readonly AnyCteWithColumns[] | null = null,
   ) {
     this.#table = table;
     this.#relations = relations;
     this.#allRelations = allRelations;
     this.#executor = executor;
     this.#prepare = prepare;
+    this.#ctes = ctes;
   }
 
   findMany<
@@ -328,6 +333,7 @@ export class RelationQueryBuilder<
       this.#allRelations,
       options,
       this.#executor,
+      this.#ctes,
     );
   }
 
@@ -417,6 +423,7 @@ export class RelationQueryBuilder<
       this.#allRelations,
       { ...options, limit: 1 },
       this.#executor,
+      this.#ctes,
     );
     const result = await query;
     // biome-ignore lint/suspicious/noExplicitAny: <>
@@ -458,6 +465,7 @@ class RelationQuery<
   readonly #allRelations: TAllRelations;
   readonly #options: TOptions;
   readonly #executor: QueryExecutor;
+  readonly #ctes: readonly AnyCteWithColumns[] | null;
 
   constructor(
     table: TableWithColumns<TTSchema, TTName, TTColumns>,
@@ -465,6 +473,7 @@ class RelationQuery<
     allRelations: TAllRelations,
     options: TOptions,
     executor: QueryExecutor,
+    ctes: readonly AnyCteWithColumns[] | null = null,
   ) {
     super();
     this.#table = table;
@@ -472,11 +481,21 @@ class RelationQuery<
     this.#allRelations = allRelations;
     this.#options = options;
     this.#executor = executor;
+    this.#ctes = ctes;
   }
 
-  toQuery() {
+  toQuery(parentQuery?: AnyQuery): Query<TReturn> {
+    const isRoot = parentQuery === undefined;
     const options = this.#options;
-    const query = new Query("SELECT ", this.handleRows.bind(this));
+    const query: Query<TReturn> = parentQuery
+      ? (parentQuery as unknown as Query<TReturn>)
+      : new Query("", this.handleRows.bind(this));
+
+    if (isRoot && this.#ctes?.length) {
+      buildWithClause(this.#ctes, query);
+    }
+
+    query.sql += "SELECT ";
 
     const selects: string[] = [];
     const selectEntries = getSelectEntries(options);

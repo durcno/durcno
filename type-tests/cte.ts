@@ -1,5 +1,16 @@
 import type { InferQueryColumns } from "durcno";
-import { add, asc, concat, count, eq, isIn, lower, now, sql } from "durcno";
+import {
+  add,
+  asc,
+  concat,
+  count,
+  eq,
+  exists,
+  isIn,
+  lower,
+  now,
+  sql,
+} from "durcno";
 import { db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
@@ -93,6 +104,10 @@ db.with(projectedUsers).insertInto(projectedUsers);
 db.with(projectedUsers).update(projectedUsers);
 // @ts-expect-error: Cannot DELETE FROM a CTE table
 db.with(projectedUsers).deleteFrom(projectedUsers);
+// @ts-expect-error: Cannot query a CTE table with relational query builder
+db.with(projectedUsers).query(projectedUsers);
+// @ts-expect-error: Cannot query a CTE table directly with relational query builder
+db.query(projectedUsers);
 
 // -------------------------------------------------------------------------
 // Function-backed virtual columns: InferQueryColumns preserves SqlFn types
@@ -284,3 +299,120 @@ const multipleCtesQuery = db
   .select("*");
 type MultipleCtesRows = Awaited<typeof multipleCtesQuery>;
 Expect<Equal<MultipleCtesRows, { lname: string }[]>>();
+
+// -------------------------------------------------------------------------
+// CTEs with relational queries: db.with(cte).query(Table)
+// -------------------------------------------------------------------------
+
+const directQuery = db.query(Users).findMany({
+  with: {
+    posts: {},
+  },
+});
+type DirectRows = Awaited<typeof directQuery>;
+
+const cteRelationalQuery = db
+  .with(projectedUsers)
+  .query(Users)
+  .findMany({
+    where: isIn(
+      Users.id,
+      db.from(projectedUsers).select(() => ({ id: projectedUsers.id })),
+    ),
+    with: {
+      posts: {},
+    },
+  });
+
+type CteRelationalRows = Awaited<typeof cteRelationalQuery>;
+Expect<Equal<CteRelationalRows, DirectRows>>();
+
+const directFirstQuery = db.query(Users).findFirst({
+  with: {
+    posts: {},
+  },
+});
+type DirectFirstRow = Awaited<typeof directFirstQuery>;
+
+const cteRelationalFirstQuery = db
+  .with(projectedUsers)
+  .query(Users)
+  .findFirst({
+    where: isIn(
+      Users.id,
+      db.from(projectedUsers).select(() => ({ id: projectedUsers.id })),
+    ),
+    with: {
+      posts: {},
+    },
+  });
+
+type CteRelationalFirstRow = Awaited<typeof cteRelationalFirstQuery>;
+Expect<Equal<CteRelationalFirstRow, DirectFirstRow>>();
+
+const multipleCtesRelationalQuery = db
+  .with(lowerCte, countCte)
+  .query(Users)
+  .findMany({});
+type MultipleCtesRelationalRows = Awaited<typeof multipleCtesRelationalQuery>;
+Expect<Equal<MultipleCtesRelationalRows, (typeof Users.$)["inferSelect"][]>>();
+
+const preparedCteQuery = db
+  .prepare()
+  .with(projectedUsers)
+  .query(Users)
+  .findMany({});
+type PreparedCteRows = Awaited<typeof preparedCteQuery>;
+Expect<Equal<PreparedCteRows, (typeof Users.$)["inferSelect"][]>>();
+
+db.with(projectedUsers)
+  .query(Users)
+  // @ts-expect-error: Cannot query non-existent relation with CTE
+  .findMany({ with: { nonExistent: {} } });
+
+const cteRelationalSelectQuery = db
+  .with(projectedUsers)
+  .query(Users)
+  .findMany({
+    select: {
+      userId: Users.id,
+      name: Users.username,
+      lowered: lower(Users.username),
+      hasProjected: exists(
+        db
+          .from(projectedUsers)
+          .select(() => ({ id: projectedUsers.id }))
+          .where(() => eq(projectedUsers.id, Users.id)),
+      ),
+      inProjected: isIn(
+        Users.id,
+        db.from(projectedUsers).select(() => ({ id: projectedUsers.id })),
+      ),
+    },
+    where: isIn(
+      Users.id,
+      db.from(projectedUsers).select(() => ({ id: projectedUsers.id })),
+    ),
+    with: {
+      posts: {
+        select: {
+          postTitle: Posts.title,
+        },
+      },
+    },
+  });
+
+type CteRelationalSelectRows = Awaited<typeof cteRelationalSelectQuery>;
+Expect<
+  Equal<
+    CteRelationalSelectRows,
+    {
+      userId: bigint;
+      name: string;
+      lowered: string;
+      hasProjected: boolean;
+      inProjected: boolean;
+      posts: { postTitle: string | null }[];
+    }[]
+  >
+>();

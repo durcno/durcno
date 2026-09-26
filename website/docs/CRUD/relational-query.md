@@ -344,6 +344,83 @@ const users = await db.query(Users).findMany({
 // Type: { ...; posts: { id: bigint; userId: bigint; title: string }[] }[]
 ```
 
+## Common Table Expressions (CTEs)
+
+Attach CTEs to relational queries with `db.with(...)`:
+
+```typescript
+import { db, eq, isIn } from "durcno";
+import { Users } from "./db/schema.ts";
+
+const activeUsers = db.with("activeUsers").as(
+  db
+    .from(Users)
+    .select(() => ({ id: Users.id }))
+    .where(() => eq(Users.status, "active")),
+);
+
+const users = await db
+  .with(activeUsers)
+  .query(Users)
+  .findMany({
+    where: isIn(
+      Users.id,
+      db.from(activeUsers).select(() => ({ id: activeUsers.id })),
+    ),
+    with: {
+      posts: {},
+    },
+  });
+```
+
+You can also use subquery SQL functions like `exists(...)` and `isIn(...)` directly inside the `select` option to project boolean flags computed from a CTE:
+
+```typescript
+import { db, eq, exists, isIn, lower } from "durcno";
+import { Posts, Users } from "./db/schema.ts";
+
+const users = await db
+  .with(activeUsers)
+  .query(Users)
+  .findMany({
+    select: {
+      userId: Users.id,
+      name: Users.username,
+      lowered: lower(Users.username),
+      // Correlated subquery using exists() against the CTE:
+      isActive: exists(
+        db
+          .from(activeUsers)
+          .select(() => ({ id: activeUsers.id }))
+          .where(() => eq(activeUsers.id, Users.id)),
+      ),
+      // Set-membership check using isIn() against the CTE:
+      isInActiveList: isIn(
+        Users.id,
+        db.from(activeUsers).select(() => ({ id: activeUsers.id })),
+      ),
+    },
+    with: {
+      posts: {
+        select: {
+          postId: Posts.id,
+          heading: Posts.title,
+        },
+      },
+    },
+  });
+// Type: {
+//   userId: bigint;
+//   name: string;
+//   lowered: string;
+//   isActive: boolean;
+//   isInActiveList: boolean;
+//   posts: { postId: bigint; heading: string | null }[];
+// }[]
+```
+
+See [With](./with.md#ctes-with-relational-queries-query) for more CTE details and patterns.
+
 ## Options Reference
 
 ### Top-level options (`findMany` / `findFirst`)

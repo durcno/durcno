@@ -392,6 +392,8 @@ export type StdRelations = Relations<
 // biome-ignore lint/suspicious/noExplicitAny: <>
 export type AnyRelations = Relations<any, any, any, any>;
 
+export type StdTableFullName = `"${string}"."${string}"`;
+
 export function relations<
   TTSchema extends string,
   TTName extends string,

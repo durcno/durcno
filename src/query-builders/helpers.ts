@@ -12,11 +12,12 @@ export function buildWithClause(
   query: AnyQuery,
 ): void {
   query.sql += "WITH ";
-  ctes.forEach((cte, i) => {
+  for (let i = 0; i < ctes.length; i++) {
+    const cte = ctes[i];
     query.sql += `${cte._.fullName} AS (`;
     cte.query.toQuery(query);
     query.sql += i < ctes.length - 1 ? "), " : ") ";
-  });
+  }
 }
 
 /**
