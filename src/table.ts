@@ -11,7 +11,7 @@ import type {
 } from "./constraints/unique";
 import type { Index } from "./indexes";
 import { entityType } from "./symbols";
-import type { CamelToSnake, Key, SnakeCase, Valueof } from "./types";
+import type { CamelToSnake, Key, Prettify, SnakeCase, Valueof } from "./types";
 import { camelToSnake } from "./utils";
 
 // biome-ignore lint/suspicious/noExplicitAny: AnyColumn is a wildcard type for any column
@@ -135,9 +135,32 @@ export class Table<
 > {
   static readonly [entityType] = "Table";
   readonly $!: {
-    inferSelect: {
+    /** Inferred select model shape (all columns mapped to their select types). */
+    inferSelect: Prettify<{
       [ColName in keyof TColumns]: TColumns[ColName]["ValTypeSelect"];
-    };
+    }>;
+    /** Inferred insert model shape (required columns mandatory; columns with defaults, generated columns, and nullable columns are optional). */
+    inferInsert: Prettify<
+      {
+        [ColName in keyof TColumns as TColumns[ColName]["ValTypeInsert"] extends never
+          ? never
+          : undefined extends TColumns[ColName]["ValTypeInsert"]
+            ? never
+            : ColName]: TColumns[ColName]["ValTypeInsert"];
+      } & {
+        [ColName in keyof TColumns as TColumns[ColName]["ValTypeInsert"] extends never
+          ? never
+          : undefined extends TColumns[ColName]["ValTypeInsert"]
+            ? ColName
+            : never]?: Exclude<TColumns[ColName]["ValTypeInsert"], undefined>;
+      }
+    >;
+    /** Inferred update model shape (primary key columns omitted; all other columns optional). */
+    inferUpdate: Prettify<{
+      [ColName in keyof TColumns as TColumns[ColName]["ValTypeUpdate"] extends never
+        ? never
+        : ColName]?: Exclude<TColumns[ColName]["ValTypeUpdate"], undefined>;
+    }>;
     columns: TColumns;
   };
   _: TableConfig<TSchema, TName, TColumns>;
@@ -201,6 +224,61 @@ export type TableWCorNever<T> =
 export type IsTableWC<T> =
   // biome-ignore lint/suspicious/noExplicitAny: <>
   T extends TableWithColumns<any, any, any> ? true : false;
+
+/**
+ * Infers the select model shape of a table (all columns mapped to their select types).
+ *
+ * @example
+ * ```typescript
+ * type User = InferSelect<typeof Users>;
+ * ```
+ */
+export type InferSelect<T> = T extends { $: { inferSelect: infer S } }
+  ? S
+  : never;
+/** Alias for {@link InferSelect}. */
+export type InferSelectModel<T> = InferSelect<T>;
+
+/**
+ * Infers the insert model shape of a table.
+ * Required columns must be specified; columns with defaults, generated columns,
+ * and nullable columns are optional.
+ *
+ * @example
+ * ```typescript
+ * type NewUser = InferInsert<typeof Users>;
+ * ```
+ */
+export type InferInsert<T> = T extends { $: { inferInsert: infer I } }
+  ? I
+  : never;
+/** Alias for {@link InferInsert}. */
+export type InferInsertModel<T> = InferInsert<T>;
+
+/**
+ * Infers the update model shape of a table.
+ * Primary key columns are omitted; all other columns are optional.
+ *
+ * @example
+ * ```typescript
+ * type UserUpdate = InferUpdate<typeof Users>;
+ * ```
+ */
+export type InferUpdate<T> = T extends { $: { inferUpdate: infer U } }
+  ? U
+  : never;
+/** Alias for {@link InferUpdate}. */
+export type InferUpdateModel<T> = InferUpdate<T>;
+
+/** Infers the insert value type of an individual column. */
+export type InferInsertValue<TCol> = TCol extends { ValTypeInsert: infer V }
+  ? V
+  : never;
+
+/** Infers the update value type of an individual column. */
+export type InferUpdateValue<TCol> = TCol extends { ValTypeUpdate: infer V }
+  ? V
+  : never;
 
 /**
  * Creates a typed table definition with column accessors.

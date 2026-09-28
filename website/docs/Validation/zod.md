@@ -274,3 +274,7 @@ export const updateUserSchema = createUpdateSchema(Users, {
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
 ```
+
+:::tip
+**Compile-Time Only Inference** — If you only need compile-time TypeScript models without runtime Zod validation, you can use Durcno's built-in inference types (`InferSelect`, `InferInsert`, `InferUpdate`). See **[Types](../Advanced/types.md)** for details.
+:::

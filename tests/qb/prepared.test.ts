@@ -4,9 +4,11 @@ import type Docker from "dockerode";
 import {
   type $Client,
   Arg,
+  add,
   database,
   defineConfig,
   eq,
+  lower,
   prepare,
   sql,
 } from "durcno";
@@ -132,6 +134,29 @@ describe("prepare", () => {
     expect(rows[0].email).toBe("prepare@test.com");
   });
 
+  it("should insert with scalar function and Arg in values", async () => {
+    const insertPre = prepare(
+      { username: schema.Users.username.arg() },
+      (args) =>
+        db
+          .prepare()
+          .insertInto(schema.Users)
+          .values({
+            username: lower(args.username),
+            email: "preparescalar@test.com",
+            type: "user",
+            status: "active",
+            role: "user",
+          })
+          .returning("*"),
+    );
+
+    const rows = await insertPre.run(db, { username: "UPPERCASE_USER" });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].username).toBe("uppercase_user");
+  });
+
   // ── UPDATE ────────────────────────────────────────────────────────────
   // Arg in: where (Users.id.arg())
   it("should update with Arg in where", async () => {
@@ -154,6 +179,29 @@ describe("prepare", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].id).toBe(user.id);
     expect(rows[0].email).toBe("updated@test.com");
+  });
+
+  it("should update with scalar function and Arg in set", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ score: 50 }))
+      .returning("*");
+
+    const updatePre = prepare(
+      { userId: schema.Users.id.arg(), inc: schema.Users.score.arg() },
+      (args) =>
+        db
+          .prepare()
+          .update(schema.Users)
+          .set({ score: add(schema.Users.score, args.inc) })
+          .where(eq(schema.Users.id, args.userId))
+          .returning("*"),
+    );
+
+    const rows = await updatePre.run(db, { userId: user.id, inc: 25 });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].score).toBe(75);
   });
 
   // ── DELETE ────────────────────────────────────────────────────────────

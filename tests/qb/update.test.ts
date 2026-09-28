@@ -1,7 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, database, defineConfig, eq, sql } from "durcno";
+import {
+  type $Client,
+  add,
+  coalesce,
+  concat,
+  database,
+  defineConfig,
+  eq,
+  lower,
+  mul,
+  sql,
+  sub,
+  upper,
+} from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -382,5 +395,220 @@ describe("UPDATE queries", () => {
       .where(() => eq(schema.Users.id, user.id));
 
     expect(updated[0].username).toBe("mixedcase");
+  });
+
+  it("should update a column to another column value", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(
+        createTestUser({
+          bio: "original bio",
+          description: "from description",
+        }),
+      )
+      .returning({ id: true });
+
+    await db
+      .update(schema.Users)
+      .set({ bio: schema.Users.description })
+      .where(eq(schema.Users.id, user.id));
+
+    const [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+
+    expect(updated.bio).toBe("from description");
+  });
+
+  it("should update columns using arithmetic scalar SQL functions (add, sub, mul)", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ score: 100 }))
+      .returning({ id: true });
+
+    // Test add
+    await db
+      .update(schema.Users)
+      .set({ score: add(schema.Users.score, 25) })
+      .where(eq(schema.Users.id, user.id));
+
+    let [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(updated.score).toBe(125);
+
+    // Test sub
+    await db
+      .update(schema.Users)
+      .set({ score: sub(schema.Users.score, 15) })
+      .where(eq(schema.Users.id, user.id));
+
+    [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(updated.score).toBe(110);
+
+    // Test mul
+    await db
+      .update(schema.Users)
+      .set({ score: mul(schema.Users.score, 2) })
+      .where(eq(schema.Users.id, user.id));
+
+    [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(updated.score).toBe(220);
+  });
+
+  it("should update columns using string scalar SQL functions (lower, upper, concat)", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "MixedCaseUser", bio: "profile" }))
+      .returning({ id: true });
+
+    // lower
+    await db
+      .update(schema.Users)
+      .set({ username: lower(schema.Users.username) })
+      .where(eq(schema.Users.id, user.id));
+
+    let [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(updated.username).toBe("mixedcaseuser");
+
+    // upper
+    await db
+      .update(schema.Users)
+      .set({ username: upper(schema.Users.username) })
+      .where(eq(schema.Users.id, user.id));
+
+    [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(updated.username).toBe("MIXEDCASEUSER");
+
+    // concat
+    await db
+      .update(schema.Users)
+      .set({ bio: concat(schema.Users.bio, " - updated") })
+      .where(eq(schema.Users.id, user.id));
+
+    [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(updated.bio).toBe("profile - updated");
+  });
+
+  it("should update columns using conditional scalar SQL function (coalesce)", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ bio: null }))
+      .returning({ id: true });
+
+    await db
+      .update(schema.Users)
+      .set({ bio: coalesce(schema.Users.bio, "default bio") })
+      .where(eq(schema.Users.id, user.id));
+
+    const [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(updated.bio).toBe("default bio");
+  });
+
+  it("should update with mixed values, columns, and scalar functions in a single set", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(
+        createTestUser({
+          username: "Alice",
+          score: 10,
+          description: "awesome",
+        }),
+      )
+      .returning({ id: true });
+
+    await db
+      .update(schema.Users)
+      .set({
+        username: lower(schema.Users.username),
+        score: add(schema.Users.score, 5),
+        bio: schema.Users.description,
+        isActive: true,
+      })
+      .where(eq(schema.Users.id, user.id));
+
+    const [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+
+    expect(updated.username).toBe("alice");
+    expect(updated.score).toBe(15);
+    expect(updated.bio).toBe("awesome");
+    expect(updated.isActive).toBe(true);
+  });
+
+  it("should update using scalar functions with returning clause", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ score: 50 }))
+      .returning({ id: true });
+
+    const [result] = await db
+      .update(schema.Users)
+      .set({ score: add(schema.Users.score, 10) })
+      .where(eq(schema.Users.id, user.id))
+      .returning({ id: true, score: true });
+
+    expect(result.score).toBe(60);
+    expect(result.id).toEqual(user.id);
+  });
+
+  it("should omit undefined properties from SET clause in partial updates", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "orig_name", bio: "orig_bio" }))
+      .returning({ id: true });
+
+    await db
+      .update(schema.Users)
+      .set({
+        username: "updated_name",
+        bio: undefined,
+      })
+      .where(eq(schema.Users.id, user.id));
+
+    const [updated] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+
+    expect(updated.username).toBe("updated_name");
+    expect(updated.bio).toBe("orig_bio"); // Unchanged, not set to 'undefined' string
+  });
+
+  it("should throw an error when .set() has no columns to update", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser())
+      .returning({ id: true });
+
+    await expect(
+      db
+        .update(schema.Users)
+        .set({ bio: undefined })
+        .where(eq(schema.Users.id, user.id))
+        .execute(),
+    ).rejects.toThrow("No columns to set in UPDATE query.");
   });
 });

@@ -151,6 +151,13 @@ export {
 } from "./functions/subquery";
 export { index, uniqueIndex } from "./indexes";
 export { Migrations, pk } from "./models";
+export type {
+  ConflictScopeColumns,
+  ConflictUpdateableItem,
+  ConflictUpdateValues,
+  InsertableItem,
+  InsertValues,
+} from "./query-builders/insert";
 export {
   asc,
   desc,
@@ -163,6 +170,11 @@ export type {
   InferSelectValue,
   SelectableItem,
 } from "./query-builders/select";
+export type {
+  UpdateableItem,
+  UpdateSetValues,
+  UpdateValues,
+} from "./query-builders/update";
 export { sequence } from "./sequence";
 
 import { is } from "./entity";
@@ -174,6 +186,14 @@ export { Sql, sql } from "./sql";
 export {
   type AnyColumn,
   fk,
+  type InferInsert,
+  type InferInsertModel,
+  type InferInsertValue,
+  type InferSelect,
+  type InferSelectModel,
+  type InferUpdate,
+  type InferUpdateModel,
+  type InferUpdateValue,
   many,
   one,
   relations,

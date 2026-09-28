@@ -1,7 +1,8 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
-import { is } from "../entity";
+import { is, isCol } from "../entity";
 import type { FilterExpression } from "../filters/index";
+import { SqlFn } from "../functions/index";
 import { Sql } from "../sql";
 import type { AnyColumn, TableWithColumns } from "../table";
 import type { Key } from "../types";
@@ -15,6 +16,59 @@ import { Arg } from "./prepare";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
+/**
+ * Allowed expression for an individual column in an `UPDATE .set()` payload.
+ * Accepts literals, prepared args, compatible columns, scalar SQL functions, or raw SQL.
+ */
+export type UpdateableItem<
+  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  ColName extends keyof TTableWC["_"]["columns"],
+  TPrepare extends boolean = false,
+> =
+  | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+  | (TPrepare extends true
+      ? Arg<TTableWC["_"]["columns"][ColName]["ValType"]>
+      : never)
+  | {
+      [K in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][K]["ValTypeSelect"] extends Exclude<
+        TTableWC["_"]["columns"][ColName]["ValTypeUpdate"],
+        undefined
+      >
+        ? TTableWC["_"]["columns"][K]
+        : never;
+    }[keyof TTableWC["_"]["columns"]]
+  | SqlFn<
+      TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
+      TPrepare extends true ? boolean : false,
+      "scalar",
+      string,
+      Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+    >
+  | Sql;
+
+/**
+ * Column values payload for `UpdateBuilder.set()`.
+ * Excludes primary key columns.
+ */
+export type UpdateValues<
+  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean = false,
+> = {
+  [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
+    ? never
+    : ColName]?: UpdateableItem<TTableWC, ColName, TPrepare>;
+};
+
+/** Alias for `UpdateValues`. */
+export type UpdateSetValues<
+  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean = false,
+> = UpdateValues<TTableWC, TPrepare>;
+
+/**
+ * Intermediate builder for constructing an `UPDATE` statement.
+ * Provides `.set()` to specify column updates.
+ */
 export class UpdateBuilder<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
   TPrepare extends boolean,
@@ -35,18 +89,13 @@ export class UpdateBuilder<
     this.#$ctes = ctes;
   }
 
-  set<
-    TValues extends {
-      [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
-        ? never
-        : ColName]?:
-        | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
-        | Sql
-        | (TPrepare extends true
-            ? Arg<TTableWC["_"]["columns"][ColName]["ValType"]>
-            : never);
-    },
-  >(values: TValues) {
+  /**
+   * Specifies the column-value pairs to update on the target table.
+   *
+   * @param values An object mapping table column names to updated expressions (literals, columns, SQL functions, or raw SQL).
+   * @returns An `UpdateQuery` instance to chain `.where()` and `.returning()` clauses.
+   */
+  set<TValues extends UpdateValues<TTableWC, TPrepare>>(values: TValues) {
     return new UpdateQuery(
       this.#table,
       values,
@@ -59,19 +108,14 @@ export class UpdateBuilder<
   }
 }
 
+/**
+ * Executable query representation of an `UPDATE` statement.
+ * Supports chaining `.where()` and `.returning()` clauses.
+ */
 export class UpdateQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
   TPrepare extends boolean,
-  TValues extends {
-    [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
-      ? never
-      : ColName]?:
-      | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
-      | Sql
-      | (TPrepare extends true
-          ? Arg<TTableWC["_"]["columns"][ColName]["ValType"]>
-          : never);
-  },
+  TValues extends UpdateValues<TTableWC, TPrepare>,
   TWhere extends
     | FilterExpression<
         TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
@@ -130,6 +174,11 @@ export class UpdateQuery<
     this.#$ctes = ctes;
   }
 
+  /**
+   * Adds a `WHERE` condition to filter which rows are updated.
+   *
+   * @param where Filter condition expression.
+   */
   where<
     TWhere extends FilterExpression<
       TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
@@ -187,48 +236,51 @@ export class UpdateQuery<
 
     query.sql += " SET ";
 
-    // Collect fields from set values
-    const explicitFields = new Set<string>(Object.keys(this.#values));
+    let hasSet = false;
+    const values = this.#values as Record<string, unknown>;
 
-    // Build the combined values map with updateFn values
-    const allFields: string[] = [];
-    const allValues: unknown[] = [];
-
-    // First, add explicit values
-    for (const field of explicitFields) {
-      allFields.push(field);
-      allValues.push((this.#values as Record<string, unknown>)[field]);
-    }
-
-    // Then, add updateFn values for columns not explicitly provided
-    for (const colName in this.#table._.columns) {
-      const column = this.#table._.columns[colName];
-      if (!explicitFields.has(colName) && column.hasUpdateFn) {
-        allFields.push(colName);
-        allValues.push(column.getUpdateFnVal);
-      }
-    }
-
-    allFields.forEach((field, index) => {
+    // Emit explicitly provided non-undefined values
+    for (const field in values) {
+      const value = values[field];
+      if (value === undefined) continue;
       const column = this.#table._.columns[field];
-      const value = allValues[index];
+      if (!column) continue;
+
+      if (hasSet) query.sql += ", ";
+      hasSet = true;
 
       query.sql += `"${column.nameSql}" = `;
-      if (value instanceof Sql) {
+      if (isCol(value)) {
+        value.toQuery(query);
+      } else if (value instanceof SqlFn) {
+        value.toQuery(query);
+      } else if (value instanceof Sql) {
         value.toQuery(query);
       } else if (is(value, Arg)) {
         const cast = value.cast ?? column.sqlCast ?? null;
-        const castSuffix = cast ? `::${cast}` : "";
-        query.sql += `$${value.index}${castSuffix}`;
+        query.sql += `$${value.index}`;
+        if (cast) query.sql += `::${cast}`;
         query.arguments.push(value.key);
       } else {
         query.sql += column.toSQL(value, { cast: true });
       }
+    }
 
-      if (index !== allFields.length - 1) {
-        query.sql += ", ";
+    // Add updateFn values for columns not explicitly provided
+    for (const colName in this.#table._.columns) {
+      const column = this.#table._.columns[colName];
+      if (column.hasUpdateFn && values[colName] === undefined) {
+        if (hasSet) query.sql += ", ";
+        hasSet = true;
+
+        query.sql += `"${column.nameSql}" = `;
+        query.sql += column.toSQL(column.getUpdateFnVal, { cast: true });
       }
-    });
+    }
+
+    if (!hasSet) {
+      throw new Error("No columns to set in UPDATE query.");
+    }
 
     if (this.#$where) {
       query.sql += ` WHERE `;

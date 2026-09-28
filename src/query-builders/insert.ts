@@ -2,6 +2,7 @@ import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
 import type { AnyFilterExpression, FilterExpression } from "../filters/index";
+import { SqlFn } from "../functions/index";
 import { Sql } from "../sql";
 import {
   type AnyColumn,
@@ -10,7 +11,7 @@ import {
   type TableColumn,
   type TableWithColumns,
 } from "../table";
-import type { Key, Valueof } from "../types";
+import type { Key, Prettify, SelfOrArray, Valueof } from "../types";
 import {
   buildReturningClause,
   buildWithClause,
@@ -31,10 +32,63 @@ type ConflictClause =
       where?: AnyFilterExpression;
     };
 
-type ToExcludeColumn<T extends TableAnyColumn> =
+/** Converts a table column into an `EXCLUDED` pseudo-table column reference. */
+export type ToExcludeColumn<T extends TableAnyColumn> =
   T extends TableColumn<string, string, infer CName, infer Column>
     ? TableColumn<"", "EXCLUDED", CName, Column>
     : never;
+
+/** Columns in scope for conflict clauses, combining table columns and `EXCLUDED` columns. */
+export type ConflictScopeColumns<
+  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+> =
+  | TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
+  | ToExcludeColumn<TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]>;
+
+/**
+ * Allowed expression for an individual column in an `ON CONFLICT DO UPDATE SET` payload.
+ * Accepts literals, prepared args, compatible columns, scalar SQL functions, or raw SQL.
+ */
+export type ConflictUpdateableItem<
+  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  ColName extends keyof TTableWC["_"]["columns"],
+  TPrepare extends boolean = false,
+> =
+  | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+  | (TPrepare extends true
+      ? Arg<TTableWC["_"]["columns"][ColName]["ValType"]>
+      : never)
+  | {
+      [K in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][K]["ValTypeSelect"] extends Exclude<
+        TTableWC["_"]["columns"][ColName]["ValTypeUpdate"],
+        undefined
+      >
+        ?
+            | TTableWC["_"]["columns"][K]
+            | ToExcludeColumn<TTableWC["_"]["columns"][K]>
+        : never;
+    }[keyof TTableWC["_"]["columns"]]
+  | SqlFn<
+      ConflictScopeColumns<TTableWC>,
+      TPrepare extends true ? boolean : false,
+      "scalar",
+      string,
+      Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+    >
+  | Sql;
+
+/**
+ * Column values payload for `ConflictBuilder.doUpdateSet()`.
+ * Excludes primary key columns.
+ */
+export type ConflictUpdateValues<
+  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean = false,
+> = {
+  [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
+    ? never
+    : ColName]?: ConflictUpdateableItem<TTableWC, ColName, TPrepare>;
+};
 
 /** Builder returned by `InsertQuery#onConflict()`. */
 export class ConflictBuilder<
@@ -70,7 +124,12 @@ export class ConflictBuilder<
     return this.#factory({ action: "nothing", columns: this.#columns });
   }
 
-  /** Adds `ON CONFLICT DO UPDATE SET` clause. */
+  /**
+   * Adds `ON CONFLICT DO UPDATE SET` clause to handle conflicts by updating existing rows.
+   *
+   * @param set Callback returning column-value update pairs, with access to `excluded` columns.
+   * @param where Optional filter condition applied to the conflict update target.
+   */
   doUpdateSet(
     set: (ctx: {
       excluded: {
@@ -78,27 +137,14 @@ export class ConflictBuilder<
           TTableWC["_"]["columns"][ColName]
         >;
       };
-    }) => {
-      [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
-        ? never
-        : ColName]?:
-        | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
-        | Valueof<Omit<TTableWC["_"]["columns"], ColName>>
-        | ToExcludeColumn<Valueof<TTableWC["_"]["columns"]>>;
-    },
+    }) => ConflictUpdateValues<TTableWC, TPrepare>,
     where?: (ctx: {
       excluded: {
         [ColName in keyof TTableWC["_"]["columns"]]: ToExcludeColumn<
           TTableWC["_"]["columns"][ColName]
         >;
       };
-    }) => FilterExpression<
-      | TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
-      | ToExcludeColumn<
-          TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
-        >,
-      TPrepare
-    >,
+    }) => FilterExpression<ConflictScopeColumns<TTableWC>, TPrepare>,
   ): THasColumns extends true
     ? InsertQuery<TTableWC, TPrepare, TReturning>
     : never {
@@ -129,6 +175,50 @@ export class ConflictBuilder<
   }
 }
 
+/**
+ * Allowed expression for an individual column in an `INSERT .values()` payload.
+ * Accepts literals, prepared args, column-free scalar SQL functions, or raw SQL.
+ */
+export type InsertableItem<
+  TColumn extends AnyColumn,
+  TPrepare extends boolean = false,
+> =
+  | Exclude<TColumn["ValTypeInsert"], undefined>
+  | (TPrepare extends true ? Arg<TColumn["ValType"]> : never)
+  | SqlFn<
+      never,
+      TPrepare extends true ? boolean : false,
+      "scalar",
+      string,
+      Exclude<TColumn["ValTypeInsert"], undefined>
+    >
+  | Sql;
+
+/**
+ * Column values payload for `InsertBuilder.values()`.
+ * Excludes generated-always columns; columns with defaults or nullable columns are optional.
+ */
+export type InsertValues<
+  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TPrepare extends boolean = false,
+> = {
+  [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeInsert"] extends never
+    ? never
+    : undefined extends TTableWC["_"]["columns"][ColName]["ValTypeInsert"]
+      ? never
+      : ColName]: InsertableItem<TTableWC["_"]["columns"][ColName], TPrepare>;
+} & {
+  [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeInsert"] extends never
+    ? never
+    : undefined extends TTableWC["_"]["columns"][ColName]["ValTypeInsert"]
+      ? ColName
+      : never]?: InsertableItem<TTableWC["_"]["columns"][ColName], TPrepare>;
+};
+
+/**
+ * Intermediate builder for constructing an `INSERT` statement.
+ * Provides `.values()` to specify rows to be inserted.
+ */
 export class InsertBuilder<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
   TPrepare extends boolean,
@@ -148,39 +238,14 @@ export class InsertBuilder<
     this.#prepare = prepare;
     this.#$ctes = ctes;
   }
-  values(
-    values: {
-      [colName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][colName]["ValTypeInsert"] extends never
-        ? never
-        : undefined extends TTableWC["_"]["columns"][colName]["ValTypeInsert"]
-          ? never
-          : colName]:
-        | TTableWC["_"]["columns"][colName]["ValTypeInsert"]
-        | Sql
-        | (TPrepare extends true
-            ? Arg<TTableWC["_"]["columns"][colName]["ValType"]>
-            : never);
-    } & {
-      [colName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][colName]["ValTypeInsert"] extends never
-        ? never
-        : undefined extends TTableWC["_"]["columns"][colName]["ValTypeInsert"]
-          ? colName
-          : never]?:
-        | Exclude<TTableWC["_"]["columns"][colName]["ValTypeInsert"], undefined>
-        | Sql
-        | (TPrepare extends true
-            ? Arg<TTableWC["_"]["columns"][colName]["ValType"]>
-            : never);
-    } extends infer TValues
-      ?
-          | {
-              [colName in keyof TValues]: TValues[colName];
-            }
-          | {
-              [colName in keyof TValues]: TValues[colName];
-            }[]
-      : never,
-  ) {
+
+  /**
+   * Specifies the row or rows of column values to insert into the table.
+   *
+   * @param values A single row object or an array of row objects matching table columns.
+   * @returns An `InsertQuery` instance to execute or chain further clauses (`returning`, `onConflict`).
+   */
+  values(values: SelfOrArray<Prettify<InsertValues<TTableWC, TPrepare>>>) {
     return new InsertQuery(
       this.#table,
       values,
@@ -192,6 +257,10 @@ export class InsertBuilder<
   }
 }
 
+/**
+ * Executable query representation of an `INSERT` statement.
+ * Supports chaining `.returning()` and `.onConflict()` clauses.
+ */
 export class InsertQuery<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
   TPrepare extends boolean,
@@ -336,6 +405,8 @@ export class InsertQuery<
           } else {
             query.sql += "DEFAULT";
           }
+        } else if (value instanceof SqlFn) {
+          value.toQuery(query);
         } else if (value instanceof Sql) {
           value.toQuery(query);
         } else if (is(value, Arg)) {
@@ -371,14 +442,23 @@ export class InsertQuery<
         query.sql += " DO NOTHING";
       } else {
         query.sql += " DO UPDATE SET ";
-        const setEntries = Object.entries(this.#$conflict.setValues);
+        const setEntries = Object.entries(this.#$conflict.setValues).filter(
+          ([, value]) => value !== undefined,
+        );
         setEntries.forEach(([fieldName, value], idx) => {
           const col = this.#table._.columns[fieldName];
           query.sql += `"${col.nameSql}" = `;
           if (isCol(value)) {
             value.toQuery(query);
+          } else if (value instanceof SqlFn) {
+            value.toQuery(query);
           } else if (value instanceof Sql) {
             value.toQuery(query);
+          } else if (is(value, Arg)) {
+            const cast = value.cast ?? col.sqlCast ?? null;
+            const castSuffix = cast ? `::${cast}` : "";
+            query.sql += `$${value.index}${castSuffix}`;
+            query.arguments.push(value.key);
           } else {
             query.sql += col.toSQL(value, { cast: true });
           }

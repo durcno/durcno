@@ -1,4 +1,17 @@
-import { and, asc, count, desc, eq, gt, gte, lower, sql, sum } from "durcno";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  type InferSelect,
+  type InferSelectModel,
+  lower,
+  sql,
+  sum,
+} from "durcno";
 import {
   Comments,
   db,
@@ -8,6 +21,10 @@ import {
   Users,
 } from "./schema";
 import { type Equal, Expect } from "./utils";
+
+// Type test: InferSelect and InferSelectModel
+type UsersModel = InferSelect<typeof Users>;
+Expect<Equal<InferSelectModel<typeof Users>, UsersModel>>();
 
 // Type test: select all columns
 const allUsersQuery = db.from(Users).select("*");
@@ -26,6 +43,7 @@ Expect<
     }[]
   >
 >();
+Expect<Equal<UsersModel, AllUsers[number]>>();
 
 // Type test: select specific columns
 const usernameOnlyQuery = db

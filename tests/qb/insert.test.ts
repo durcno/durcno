@@ -1,7 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, database, defineConfig, eq, gt } from "durcno";
+import {
+  type $Client,
+  add,
+  coalesce,
+  concat,
+  database,
+  defineConfig,
+  eq,
+  gt,
+  lower,
+  sql,
+  upper,
+} from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -531,6 +543,145 @@ describe("INSERT queries", () => {
         .where(() => eq(schema.Users.username, "conditionalSkip"));
       expect(users).toHaveLength(1);
       expect(users[0].score).toBe(50); // should not be updated to 20
+    });
+
+    it("doUpdateSet: should update with scalar SQL functions referencing table columns and excluded", async () => {
+      const user = createTestUser({
+        username: "upsertFnUser",
+        score: 10,
+        bio: "initial_bio",
+      });
+      await db.insertInto(schema.Users).values(user);
+
+      await db
+        .insertInto(schema.Users)
+        .values({ ...user, score: 5 })
+        .onConflict(schema.Users.username)
+        .doUpdateSet(({ excluded }) => ({
+          score: add(schema.Users.score, excluded.score),
+          bio: concat(schema.Users.bio, " - incremented"),
+        }));
+
+      const [updated] = await db
+        .from(schema.Users)
+        .select("*")
+        .where(() => eq(schema.Users.username, "upsertFnUser"));
+
+      expect(updated.score).toBe(15);
+      expect(updated.bio).toBe(`${user.bio} - incremented`);
+    });
+
+    it("doUpdateSet: should update with raw Sql expression and table column reference", async () => {
+      const user = createTestUser({
+        username: "upsertSqlUser",
+        description: "table description",
+      });
+      await db.insertInto(schema.Users).values(user);
+
+      await db
+        .insertInto(schema.Users)
+        .values({ ...user, score: 5 })
+        .onConflict(schema.Users.username)
+        .doUpdateSet(() => ({
+          bio: schema.Users.description,
+          score: sql`99 + 1`,
+        }));
+
+      const [updated] = await db
+        .from(schema.Users)
+        .select("*")
+        .where(() => eq(schema.Users.username, "upsertSqlUser"));
+
+      expect(updated.bio).toBe("table description");
+      expect(updated.score).toBe(100);
+    });
+  });
+
+  describe("scalar SQL functions in values", () => {
+    it("should insert a row using string and arithmetic scalar SQL functions", async () => {
+      const user = createTestUser({
+        username: "initial_user",
+      });
+
+      await db.insertInto(schema.Users).values({
+        ...user,
+        username: lower("MIXEDCASE_USER"),
+        bio: concat("hello", " world"),
+        score: add(50, 25),
+      });
+
+      const [inserted] = await db
+        .from(schema.Users)
+        .select("*")
+        .where(() => eq(schema.Users.username, "mixedcase_user"));
+
+      expect(inserted).toBeDefined();
+      expect(inserted.username).toBe("mixedcase_user");
+      expect(inserted.bio).toBe("hello world");
+      expect(inserted.score).toBe(75);
+    });
+
+    it("should insert with coalesce scalar SQL function", async () => {
+      const user = createTestUser({ username: "coalesce_user" });
+
+      await db.insertInto(schema.Users).values({
+        ...user,
+        bio: coalesce(null, "fallback_bio"),
+      });
+
+      const [inserted] = await db
+        .from(schema.Users)
+        .select("*")
+        .where(() => eq(schema.Users.username, "coalesce_user"));
+
+      expect(inserted.bio).toBe("fallback_bio");
+    });
+
+    it("should insert multi-row with scalar SQL functions and literal values", async () => {
+      const user1 = createTestUser({ username: "unused1" });
+      const user2 = createTestUser({ username: "unused2" });
+
+      await db.insertInto(schema.Users).values([
+        {
+          ...user1,
+          username: lower("MULTI_ROW_1"),
+          score: add(10, 5),
+        },
+        {
+          ...user2,
+          username: upper("multi_row_2"),
+          score: 100,
+        },
+      ]);
+
+      const [row1] = await db
+        .from(schema.Users)
+        .select("*")
+        .where(() => eq(schema.Users.username, "multi_row_1"));
+      const [row2] = await db
+        .from(schema.Users)
+        .select("*")
+        .where(() => eq(schema.Users.username, "MULTI_ROW_2"));
+
+      expect(row1.score).toBe(15);
+      expect(row2.score).toBe(100);
+    });
+
+    it("should insert using scalar SQL functions with returning clause", async () => {
+      const user = createTestUser({ username: "unused_returning" });
+
+      const [result] = await db
+        .insertInto(schema.Users)
+        .values({
+          ...user,
+          username: lower("RETURNING_USER"),
+          score: add(40, 2),
+        })
+        .returning({ id: true, username: true, score: true });
+
+      expect(result.username).toBe("returning_user");
+      expect(result.score).toBe(42);
+      expect(result.id).toBeDefined();
     });
   });
 });
