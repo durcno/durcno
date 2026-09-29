@@ -1,8 +1,12 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { FilterExpression } from "../filters/index";
-import type { AnyColumn, TableWithColumns } from "../table";
+import type {
+  AnyColumn,
+  StdTableWithColumns,
+  TableWithColumns,
+} from "../table";
 import type { Valueof } from "../types";
-
+import { mapStarRows } from "./helpers";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -57,13 +61,9 @@ export class FirstQuery<
 
   handleRows(rows: Record<string, unknown>[]): TReturn {
     if (rows.length === 0) return null as TReturn;
-
-    const row = rows[0];
-    const newRow: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(row)) {
-      const column = this.#$table._.columnsBySql[key];
-      newRow[column.name] = column.fromDriver(value);
-    }
-    return newRow as TReturn;
+    return mapStarRows(
+      rows,
+      this.#$table as unknown as StdTableWithColumns,
+    )[0] as TReturn;
   }
 }

@@ -185,6 +185,7 @@ tests/                    # Runtime integration tests
 ├── columns/              # Column read/write tests
 ├── qb/                   # Query builders integration tests
 └── cli/                  # CLI integration tests
+perf/                     # Vitest benchmarks of hot paths
 
 website/                  # Website
 ├── src/                  # Pages and components
@@ -219,11 +220,13 @@ dist/                     # Production compiled output
 - **`pnpm run tsclint`**: Run TypeScript type checking `src/`
 - **`pnpm run tsclint-cli`**: Run CLI TypeScript type checking `src/cli/`
 - **`pnpm run tsclint-tests`**: Run TypeScript type checking `tests/`
+- **`pnpm run tsclint-perf`**: Run TypeScript type checking `perf/`
 - **`pnpm run test-types`**: Run only type tests `type-tests/`
-- **`pnpm run tsclint-all`**: Run all type checks (tsclint + tsclint-cli + test-types + tsclint-tests)
+- **`pnpm run tsclint-all`**: Run all type checks (tsclint + tsclint-cli + test-types + tsclint-tests + tsclint-perf)
 - **`pnpm run build`**: Build `src/` (tsdown) and `cli/` (esbuild) into `dist/`
 - **`pnpm run test`**: Build src & cli then run integration tests `tests/`
 - **`pnpm test tests/cli/`**: Run a single folder/file of integration tests (requires Docker)
+- **`pnpm bench`**: Build src then run the benchmarks in `perf/` (no Docker)
 
 ### Development Process
 
@@ -239,6 +242,7 @@ Durcno uses two clearly separated test suites — **Type tests** and **Integrati
 
 - **Type tests (`type-tests/`)** — compile-time checks for TypeScript inference (use `Expect`, `Equal` / `@ts-expect-error`). Things that are not practical for integration tests. Required for any change that affects exported types or API shapes.
 - **Integration tests (`tests/`)** — runtime tests (Vitest) validating columns, query builders, migrations, and CLI behavior. Keep them deterministic, and fast.
+- **Benchmarks (`perf/`)** — Vitest benchmarks for hot paths (currently the `handleRows` row conversion of select/relational queries). No database involved: synthetic driver rows are passed straight to `handleRows`.
 
 Quick rules:
 
@@ -252,6 +256,7 @@ Commands:
 
 - `pnpm run test-types` — runs "Type tests" in `type-tests/`
 - `pnpm run test` — runs all integration tests in `tests/`
+- `pnpm bench` — runs the benchmarks in `perf/`
 
 > 💡 Tip: Run a single folder or file while running integration tests to speed feedback,
 > by using `pnpm test tests/cli/` or `pnpm test tests/qb/my.test.ts`

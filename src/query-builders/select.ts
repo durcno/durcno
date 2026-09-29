@@ -32,7 +32,13 @@ import {
   isScalarSqlFn,
   type StdGroupByExpression,
 } from "./groupby-clause";
-import { buildWithClause, type SelectAliasesView } from "./helpers";
+import {
+  applyStarRowsPlan,
+  buildStarRowsPlan,
+  buildWithClause,
+  type SelectAliasesView,
+  type StarRowsPlan,
+} from "./helpers";
 import type { OrderExpression } from "./orderby-clause";
 import { type AnyArg, Arg } from "./prepare";
 import { type AnyQuery, Query } from "./query";
@@ -534,6 +540,83 @@ export class SelectBuilder<
 }
 
 // ============================================================================
+// Runtime helpers — row conversion
+// ============================================================================
+
+/**
+ * Precomputed conversion of an explicit `.select({...})` projection.
+ * Which converter a key needs depends only on the projection, never on the
+ * row, so the type dispatch is resolved once and replayed per row.
+ * Keys needing no conversion (raw `Sql` and string literals) are left out.
+ */
+type SelectRowsPlan = {
+  keys: string[];
+  converts: ((value: unknown) => unknown)[];
+};
+
+/** Replaces any driver value with `null` — used for `null` projections. */
+function toNull(): unknown {
+  return null;
+}
+
+/** Converts a driver value to `bigint`, mapping NULL to `null`. */
+function fromDriverBigInt(value: unknown): bigint | null {
+  return value === null || value === undefined
+    ? null
+    : BigInt(value as string | number);
+}
+
+/** Converts a driver value to `boolean`, mapping NULL to `null`. */
+function fromDriverBoolean(value: unknown): boolean | null {
+  if (value === null || value === undefined) return null;
+  return value === true || value === "t" || value === "true";
+}
+
+/** Converts a driver value to `number`, mapping NULL to `null`. */
+function fromDriverNumber(value: unknown): number | null {
+  return value === null || value === undefined ? null : Number(value);
+}
+
+/**
+ * Returns the driver-to-JS converter for a single projection item, or null
+ * when the value passes through untouched (raw `Sql`, string literals).
+ */
+function buildSelectItemConverter(
+  item: unknown,
+): ((value: unknown) => unknown) | null {
+  if (item === null) return toNull;
+  if (isTCol(item)) {
+    const column = item as unknown as AnyColumn;
+    return (value) => column.fromDriver(value);
+  }
+  if (item instanceof SqlFn) {
+    return (value) => item.fromDriverValue(value);
+  }
+  const type = typeof item;
+  if (type === "bigint") return fromDriverBigInt;
+  if (type === "boolean") return fromDriverBoolean;
+  if (type === "number") return fromDriverNumber;
+  return null;
+}
+
+/** Builds the conversion plan of an explicit projection for the given keys. */
+function buildSelectRowsPlan(
+  select: Record<string, unknown>,
+  keys: readonly string[],
+): SelectRowsPlan {
+  const planKeys: string[] = [];
+  const converts: ((value: unknown) => unknown)[] = [];
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const convert = buildSelectItemConverter(select[key]);
+    if (convert === null) continue;
+    planKeys.push(key);
+    converts.push(convert);
+  }
+  return { keys: planKeys, converts };
+}
+
+// ============================================================================
 // SelectQuery
 // ============================================================================
 
@@ -620,6 +703,8 @@ export class SelectQuery<
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
   #cachedView: Record<string, Record<string, StdTableColumn>> | null = null;
   #cachedSelectAliases: Record<string, string> | null = null;
+  #selectRowsPlan: SelectRowsPlan | null = null;
+  #starRowsPlan: StarRowsPlan | null = null;
 
   constructor(
     table: TableWithColumns<TTSchema, TTName, TColumns>,
@@ -1035,61 +1120,33 @@ export class SelectQuery<
   handleRows(rows: Record<string, unknown>[]) {
     if (this.#$select !== undefined) {
       if (rows.length === 0) return [] as TReturn;
-      const keys = Object.keys(rows[0]);
-      rows.forEach((row) => {
-        keys.forEach((key) => {
-          const item = (this.#$select as Record<string, unknown>)[key];
-          if (item === null) {
-            row[key] = null;
-          } else if (isTCol(item)) {
-            row[key] = item.fromDriver(row[key]);
-          } else if (item instanceof SqlFn) {
-            row[key] = item.fromDriverValue(row[key]);
-          } else if (typeof item === "bigint") {
-            row[key] =
-              row[key] === null || row[key] === undefined
-                ? null
-                : BigInt(row[key] as string | number);
-          } else if (typeof item === "boolean") {
-            row[key] =
-              row[key] === null || row[key] === undefined
-                ? null
-                : row[key] === true || row[key] === "t" || row[key] === "true";
-          } else if (typeof item === "number") {
-            row[key] =
-              row[key] === null || row[key] === undefined
-                ? null
-                : Number(row[key]);
-          }
-        });
-      });
+      if (!this.#selectRowsPlan) {
+        this.#selectRowsPlan = buildSelectRowsPlan(
+          this.#$select as Record<string, unknown>,
+          Object.keys(rows[0]),
+        );
+      }
+      const plan = this.#selectRowsPlan;
+      const keys = plan.keys;
+      const converts = plan.converts;
+      for (let r = 0; r < rows.length; r++) {
+        const row = rows[r];
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i];
+          row[key] = converts[i](row[key]);
+        }
+      }
       return rows as TReturn;
-    } else {
-      if (rows.length === 0) return [] as TReturn;
-      const newRows: Record<string, unknown>[] = [];
-      const keys = Object.keys(rows[0]);
-      rows.forEach((row) => {
-        const newRow: Record<string, unknown> = {};
-        keys.forEach((key) => {
-          let column =
-            this.#table._.columnsBySql[key] ?? this.#table._.columns[key];
-          if (column === undefined) {
-            this.#$joins?.forEach((join) => {
-              const joinCol =
-                join.table._.columnsBySql[key] ?? join.table._.columns[key];
-              if (joinCol !== undefined) {
-                column = joinCol;
-              }
-            });
-          }
-          if (column === undefined)
-            throw new Error(`Column ${key} not found in any table`);
-          newRow[column.name] = column.fromDriver(row[key]);
-        });
-        newRows.push(newRow);
-      });
-      return newRows as TReturn;
     }
+    if (rows.length === 0) return [] as TReturn;
+    if (!this.#starRowsPlan) {
+      this.#starRowsPlan = buildStarRowsPlan(
+        this.#table as unknown as StdTableWithColumns,
+        this.#$joins,
+        Object.keys(rows[0]),
+      );
+    }
+    return applyStarRowsPlan(rows, this.#starRowsPlan) as TReturn;
   }
 }
 

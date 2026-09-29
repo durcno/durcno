@@ -582,26 +582,26 @@ class RelationQuery<
     return this.handleRows(rows);
   }
 
-  #convertCtx?: ConvertContext;
+  #convertLevel?: ConvertLevel;
 
-  #getConvertCtx(): ConvertContext {
-    if (!this.#convertCtx) {
-      this.#convertCtx = buildConvertContext(
+  #getConvertLevel(): ConvertLevel {
+    if (!this.#convertLevel) {
+      this.#convertLevel = buildConvertLevel(
         this.#options as unknown as OptionsView,
       );
     }
-    return this.#convertCtx;
+    return this.#convertLevel;
   }
 
   handleRows(rows: Record<string, unknown>[]): TReturn {
     if (rows.length === 0) return rows as TReturn;
-    const ctx = this.#getConvertCtx();
+    const level = this.#getConvertLevel();
     for (let i = 0; i < rows.length; i++) {
       convert(
         rows[i],
         this.#table as unknown as StdTableWithColumns,
         this.#allRelations,
-        ctx,
+        level,
       );
     }
     return rows as TReturn;
@@ -1006,69 +1006,149 @@ function orderByToQuery(
   }
 }
 
-/** Precomputed conversion context for a level in the relation tree. */
-type ConvertContext = {
+/**
+ * Conversion state for one level of the relation tree.
+ * `aliasMap` is derived from the query options; `plan` is memoized from the
+ * keys of the first row seen at that level and then replayed for every sibling.
+ */
+type ConvertLevel = {
   aliasMap: Map<string, unknown> | null;
-  with?: Record<string, ConvertContext> | undefined;
+  nested: Record<string, ConvertLevel> | null;
+  plan: LevelPlan | null;
 };
 
 /**
- * Builds the conversion context tree once for the given options,
+ * Precomputed per-key conversion for one level of a result set. A driver key
+ * always resolves to the same converter, so lookups into `aliasMap`, the table
+ * columns and the relation map are done once instead of once per cell.
+ */
+type LevelPlan = {
+  keys: string[];
+  applies: ((object: Record<string, unknown>, value: unknown) => void)[];
+};
+
+/**
+ * Builds the conversion state tree once for the given options,
  * avoiding per-row Map allocations and validations during row conversion.
  */
-function buildConvertContext(options?: OptionsView): ConvertContext {
+function buildConvertLevel(options?: OptionsView): ConvertLevel {
   const selectEntries = options ? getSelectEntries(options) : null;
-  const aliasMap = selectEntries ? new Map(selectEntries) : null;
-  let nestedWith: Record<string, ConvertContext> | undefined;
+  const level: ConvertLevel = {
+    aliasMap: selectEntries ? new Map(selectEntries) : null,
+    nested: null,
+    plan: null,
+  };
   if (options?.with) {
     for (const key of Object.keys(options.with)) {
       const nestedOpts = options.with[key];
       if (nestedOpts) {
-        if (!nestedWith) nestedWith = {};
-        nestedWith[key] = buildConvertContext(nestedOpts);
+        if (!level.nested) level.nested = {};
+        level.nested[key] = buildConvertLevel(nestedOpts);
       }
     }
   }
-  return { aliasMap, with: nestedWith };
+  return level;
 }
 
-function convert(
-  object: Record<string, any>,
+/** Returns the conversion state of a relation, creating it on first use. */
+function childConvertLevel(level: ConvertLevel, key: string): ConvertLevel {
+  let child = level.nested?.[key];
+  if (!child) {
+    child = { aliasMap: null, nested: null, plan: null };
+    if (!level.nested) level.nested = {};
+    level.nested[key] = child;
+  }
+  return child;
+}
+
+/**
+ * Builds the conversion plan of a level from the keys of its first row.
+ * Keys that resolve to nothing — an unknown column with no matching relation —
+ * are left out and pass through untouched.
+ */
+function buildLevelPlan(
+  object: Record<string, unknown>,
   table: StdTableWithColumns,
   allRelations: Record<string, StdRelations>,
-  ctx?: ConvertContext,
-) {
-  const aliasMap = ctx?.aliasMap;
-  for (const key of Object.keys(object)) {
+  level: ConvertLevel,
+): LevelPlan {
+  const aliasMap = level.aliasMap;
+  const relations = allRelations[table._.fullName];
+  const keys = Object.keys(object);
+  const planKeys: string[] = [];
+  const applies: LevelPlan["applies"] = [];
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
     const aliased = aliasMap?.get(key);
     if (aliased !== undefined) {
       if (isTCol(aliased)) {
-        object[key] = aliased.fromDriver(object[key]);
+        const column = aliased as unknown as AnyColumn;
+        planKeys.push(key);
+        applies.push((obj, value) => {
+          obj[key] = column.fromDriver(value);
+        });
       } else if (aliased instanceof SqlFn) {
-        object[key] = aliased.fromDriverValue(object[key]);
+        planKeys.push(key);
+        applies.push((obj, value) => {
+          obj[key] = aliased.fromDriverValue(value);
+        });
       }
       continue;
     }
     const column = table._.columns[key];
     if (column) {
-      object[key] = column.fromDriver(object[key]);
-    } else {
-      const relations = allRelations[table._.fullName];
-      if (relations) {
-        const relation = relations.map[key];
-        if (relation) {
-          const nestedCtx = ctx?.with?.[key];
-          if (relation.t === "Many") {
-            for (let i = 0; i < object[key].length; i++) {
-              convert(object[key][i], relation.table, allRelations, nestedCtx);
-            }
-          } else if (relation.t === "One" || relation.t === "Fk") {
-            if (object[key] !== null) {
-              convert(object[key], relation.table, allRelations, nestedCtx);
-            }
-          }
-        }
-      }
+      planKeys.push(key);
+      applies.push((obj, value) => {
+        obj[key] = column.fromDriver(value);
+      });
+      continue;
     }
+    const relation = relations?.map[key];
+    if (!relation) continue;
+    const childTable = relation.table as unknown as StdTableWithColumns;
+    const childLevel = childConvertLevel(level, key);
+    planKeys.push(key);
+    if (relation.t === "Many") {
+      applies.push((_obj, value) => {
+        const children = value as Record<string, unknown>[];
+        for (let c = 0; c < children.length; c++) {
+          convert(children[c], childTable, allRelations, childLevel);
+        }
+      });
+    } else {
+      applies.push((_obj, value) => {
+        if (value !== null) {
+          convert(
+            value as Record<string, unknown>,
+            childTable,
+            allRelations,
+            childLevel,
+          );
+        }
+      });
+    }
+  }
+  return { keys: planKeys, applies };
+}
+
+/**
+ * Converts one row in place, memoizing the level plan on the first row so
+ * every sibling row reuses the same key-to-converter resolution.
+ */
+function convert(
+  object: Record<string, any>,
+  table: StdTableWithColumns,
+  allRelations: Record<string, StdRelations>,
+  level: ConvertLevel,
+) {
+  if (!level.plan) {
+    level.plan = buildLevelPlan(object, table, allRelations, level);
+  }
+  const plan = level.plan;
+  const keys = plan.keys;
+  const applies = plan.applies;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    applies[i](object, object[key]);
   }
 }

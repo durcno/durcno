@@ -1,11 +1,16 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import type { FilterExpression } from "../filters/index";
-import type { AnyColumn, TableWithColumns } from "../table";
+import type {
+  AnyColumn,
+  StdTableWithColumns,
+  TableWithColumns,
+} from "../table";
 import type { Key, Valueof } from "../types";
 import {
   buildReturningClause,
   buildWithClause,
+  mapStarRows,
   type ReturningColumns,
   resolveReturningColumns,
 } from "./helpers";
@@ -144,15 +149,9 @@ export class DeleteQuery<
   }
 
   handleRows(rows: Record<string, unknown>[]) {
-    const newRows: Record<string, unknown>[] = [];
-    rows.forEach((row) => {
-      const newRow: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(row)) {
-        const column = this.#$table._.columnsBySql[key];
-        newRow[column.name] = column.fromDriver(value);
-      }
-      newRows.push(newRow);
-    });
-    return newRows as TReturn;
+    return mapStarRows(
+      rows,
+      this.#$table as unknown as StdTableWithColumns,
+    ) as TReturn;
   }
 }

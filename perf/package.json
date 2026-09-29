@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "vitest bench --run",
+    "tsclint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "durcno": "link:..",
+    "vitest": "^4.0.18"
+  }
+}

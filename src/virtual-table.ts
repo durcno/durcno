@@ -137,18 +137,37 @@ export type InferQueryColumns<
   ? MapSourcesToColumns<TVirtualName, TColumns>
   : never;
 
+/**
+ * Resolves the driver-value converter of a virtual column's source once, so
+ * `fromDriverScalar` does not re-dispatch on the source kind for every value.
+ */
+function buildSourceFromDriver(
+  source: AnySelectableSource,
+): (value: unknown) => unknown {
+  if (isCol(source)) return (value) => source.fromDriverScalar(value);
+  if (source instanceof SqlFn) return (value) => source.fromDriverValue(value);
+  if (typeof source === "number") return (value) => Number(value);
+  if (typeof source === "bigint")
+    return (value) => BigInt(value as string | number);
+  if (typeof source === "boolean")
+    return (value) => value === true || value === "t" || value === "true";
+  return (value) => value;
+}
+
 class VirtualColumn<TColumn extends AnyColumn> extends Column<
   TColumn["config"],
   TColumn["$"]["TsType"],
   TColumn["$"]["PgType"]
 > {
   readonly #source: AnySelectableSource;
+  readonly #fromDriver: (value: unknown) => unknown;
 
   constructor(source: AnySelectableSource, config?: TColumn["config"]) {
     super(
       config ?? ((isCol(source) ? source.config : {}) as TColumn["config"]),
     );
     this.#source = source;
+    this.#fromDriver = buildSourceFromDriver(source);
   }
 
   override get nameSql(): string {
@@ -210,22 +229,7 @@ class VirtualColumn<TColumn extends AnyColumn> extends Column<
 
   fromDriverScalar(value: unknown): TColumn["$"]["TsType"] | null {
     if (value === null) return null;
-    if (isCol(this.#source)) {
-      return this.#source.fromDriverScalar(value) as
-        | TColumn["$"]["TsType"]
-        | null;
-    }
-    if (this.#source instanceof SqlFn) {
-      return this.#source.fromDriverValue(value) as
-        | TColumn["$"]["TsType"]
-        | null;
-    }
-    if (typeof this.#source === "number") return Number(value) as never;
-    if (typeof this.#source === "bigint")
-      return BigInt(value as string | number) as never;
-    if (typeof this.#source === "boolean")
-      return (value === true || value === "t" || value === "true") as never;
-    return value as TColumn["$"]["TsType"] | null;
+    return this.#fromDriver(value) as TColumn["$"]["TsType"] | null;
   }
 
   /** @internal */

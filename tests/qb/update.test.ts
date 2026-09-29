@@ -174,6 +174,25 @@ describe("UPDATE queries", () => {
     expect(result[0].id).toEqual(user.id);
   });
 
+  it("should update and exclude fields from RETURNING", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "exclupdate", type: "user" }))
+      .returning({ id: true });
+
+    const result = await db
+      .update(schema.Users)
+      .set({ username: "excluded_update" })
+      .where(eq(schema.Users.id, user.id))
+      .returning({ email: false });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toEqual(user.id);
+    expect(result[0].username).toBe("excluded_update");
+    expect(result[0].type).toBe("user");
+    expect(result[0]).not.toHaveProperty("email");
+  });
+
   it("should update to null value", async () => {
     const [user] = await db
       .insertInto(schema.Users)

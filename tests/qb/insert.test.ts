@@ -277,6 +277,26 @@ describe("INSERT queries", () => {
     );
   });
 
+  it("should insert and exclude fields from RETURNING", async () => {
+    const result = await db
+      .insertInto(schema.Users)
+      .values({
+        username: "excluded",
+        email: "excluded@example.com",
+        type: "user",
+        status: "active",
+        role: "user",
+      })
+      .returning({ email: false });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBeDefined();
+    expect(result[0].username).toBe("excluded");
+    expect(result[0].type).toBe("user");
+    expect(result[0].createdAt).toBeInstanceOf(Date);
+    expect(result[0]).not.toHaveProperty("email");
+  });
+
   it("should allow explicit value to override insertFn", async () => {
     const explicitDate = new Date("2020-01-01T00:00:00.000Z");
 

@@ -8,10 +8,11 @@
   "files": {
     "includes": [
       "*.{ts,json}",
-      "{src,type-tests,tests,website}/*.{ts,json}",
+      "{src,type-tests,tests,website,perf}/*.{ts,json}",
       "src/**/*.{ts,json}",
       "tests/**/*.{ts,json}",
       "!tests/**/migrations.test/**/*.{ts,mts}",
+      "perf/**/*.{ts,json}",
       "website/{docs,src}/**/*.{ts,tsx,js,cjs,json}",
       "!website/docs/api/**/*",
       "scripts/*.{js,cjs}",

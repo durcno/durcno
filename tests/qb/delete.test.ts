@@ -116,6 +116,24 @@ describe("DELETE queries", () => {
     expect(remaining).toHaveLength(0);
   });
 
+  it("should delete and exclude fields from RETURNING", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "todeleteexcl", type: "user" }))
+      .returning({ id: true });
+
+    const deleted = await db
+      .deleteFrom(schema.Users)
+      .where(eq(schema.Users.id, user.id))
+      .returning({ email: false });
+
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0].id).toEqual(user.id);
+    expect(deleted[0].username).toBe("todeleteexcl");
+    expect(deleted[0].type).toBe("user");
+    expect(deleted[0]).not.toHaveProperty("email");
+  });
+
   it("should not delete rows when WHERE clause matches nothing", async () => {
     await db
       .insertInto(schema.Users)

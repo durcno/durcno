@@ -294,6 +294,8 @@ export abstract class Column<
     | { column: () => StdTableColumn; onDelete: OnDeleteAction }
     | undefined;
   #check: ((c: StdTableColumn) => AnyFilter | Sql) | undefined;
+  // Cached from the config, since it is read on every driver conversion
+  readonly #dimensions: Readonly<(number | null)[]> | undefined;
 
   // Stores the key/name of the column
   #name: string | undefined;
@@ -307,6 +309,7 @@ export abstract class Column<
     this.#primaryKey = "primaryKey" in config ? !!config.primaryKey : false;
     this.#unique = "unique" in config ? !!config.unique : false;
     this.#notNull = "notNull" in config ? !!config.notNull : false;
+    this.#dimensions = config.dimension?.dims;
   }
 
   _ = {
@@ -356,7 +359,7 @@ export abstract class Column<
   get dimensions():
     | Readonly<[number | null, ...(number | null)[]]>
     | undefined {
-    return this.config.dimension?.dims as
+    return this.#dimensions as
       | Readonly<[number | null, ...(number | null)[]]>
       | undefined;
   }
@@ -443,7 +446,7 @@ export abstract class Column<
     if (value === null) return null;
     if (value instanceof Sql) return value.string;
 
-    if (!this.dimensions) {
+    if (!this.#dimensions) {
       // No dimensions - delegate to scalar implementation
       return this.toDriverScalar(value as TColVal | Sql | null);
     }
@@ -458,7 +461,7 @@ export abstract class Column<
    * Helper to recursively process multi-dimensional arrays for toDriver.
    */
   #toDriverArrayElement(value: unknown, dimIndex: number): unknown {
-    const dimensions = this.dimensions as readonly (number | null)[];
+    const dimensions = this.#dimensions as readonly (number | null)[];
     if (dimIndex >= dimensions.length - 1) {
       // Innermost dimension - use scalar method
       return this.toDriverScalar(value as TColVal | Sql | null);
@@ -525,7 +528,7 @@ export abstract class Column<
   fromDriver(value: unknown): this["ValType"] | null {
     if (value === null) return null;
 
-    if (!this.dimensions) {
+    if (!this.#dimensions) {
       return this.fromDriverScalar(value) as this["ValType"] | null;
     }
 
@@ -612,7 +615,7 @@ export abstract class Column<
    * Helper to recursively process multi-dimensional arrays for fromDriver.
    */
   #fromDriverArray(arr: unknown[], dimIndex: number): unknown[] {
-    const dimensions = this.dimensions as readonly (number | null)[];
+    const dimensions = this.#dimensions as readonly (number | null)[];
     if (dimIndex >= dimensions.length - 1) {
       // Innermost dimension - convert scalars
       return arr.map((item) => this.fromDriverScalar(item));
