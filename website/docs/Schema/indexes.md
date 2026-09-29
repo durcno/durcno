@@ -458,9 +458,61 @@ export const UserProfiles = table(
 );
 ```
 
+## Partial Indexes
+
+A partial index is an index built over a subset of a table defined by a conditional expression (a `WHERE` clause). Partial indexes reduce index size and maintenance overhead while speeding up queries that match the condition.
+
+Use the `.where()` method on an `Index` instance, passing any standard filter expression or raw `sql`. See the [Filters](../Expressions/filters.md) documentation for all available filter operators (`eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `isNull`, `isNotNull`, `and`, `or`, `inArray`, etc.).
+
+```typescript
+import {
+  eq,
+  index,
+  isNull,
+  pk,
+  table,
+  timestamptz,
+  uniqueIndex,
+  varchar,
+} from "durcno";
+
+export const Users = table(
+  "public",
+  "users",
+  {
+    id: pk(),
+    email: varchar({ length: 255, notNull }),
+    status: varchar({ length: 50, notNull }),
+    deletedAt: timestamptz({}),
+  },
+  {
+    indexes: (t) => [
+      // Basic partial index: index active users only
+      index([t.email]).where(eq(t.status, "active")),
+
+      // Partial unique index: soft deletes pattern (unique among non-deleted rows)
+      uniqueIndex("users_active_email_idx", [t.email]).where(
+        isNull(t.deletedAt),
+      ),
+    ],
+  },
+);
+```
+
+### Method Chaining Order
+
+The method chaining order mirrors PostgreSQL's SQL syntax:
+`CREATE [UNIQUE] INDEX [name] ON table [USING method] (columns) [WHERE predicate]`
+
+```typescript
+index("idx_orders_recent_unprocessed", [t.createdAt])
+  .using("btree")
+  .where(eq(t.status, "unprocessed"));
+```
+
 ## Index Naming
 
-Durcno automatically generates index names based on the table and column names:
+Durcno automatically generates index names based on the table and column names when no custom name is passed:
 
 ```typescript
 // Table: users
@@ -469,6 +521,13 @@ Durcno automatically generates index names based on the table and column names:
 // - users_username_index
 // - users_email_index
 // - users_username_email_index (for composite)
+```
+
+To provide an explicit name, pass it as the first argument to `index()` or `uniqueIndex()`:
+
+```typescript
+index("idx_users_email", [t.email]);
+uniqueIndex("uidx_users_active_email", [t.email]).where(isNull(t.deletedAt));
 ```
 
 ## Best Practices
@@ -765,3 +824,4 @@ REINDEX TABLE "public"."users";
 
 - Learn about [Columns](./columns.md) to define your table structure
 - Explore [Relations](./relations.md) to work with table relationships
+- Explore [Filters](../Expressions/filters.md) for all filter operators available in partial indexes

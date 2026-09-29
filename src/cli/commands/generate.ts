@@ -13,6 +13,7 @@ import type {
   Snapshot,
   SnapshotColumn,
   SnapshotTable,
+  SnapshotTableIndex,
 } from "../../migration/snapshot";
 import type { Options } from "..";
 import { ensureNoEntityCollisions, getMigrationFolderNames } from "../checks";
@@ -531,6 +532,7 @@ export function generateMigration(
           .join(", ");
         let indexStmt = `ddl.createIndex("${idx.name}").on("${currTable.schema}", "${currTable.name}", [${cols}]).using("${idx.type}")`;
         if (idx.unique) indexStmt += ".unique()";
+        if (idx.where) indexStmt += `.where(\`${idx.where}\`)`;
         statements.push(indexStmt);
       }
       continue;
@@ -773,9 +775,11 @@ function generateAlterTableStmts(
     }
   }
 
-  // Drop removed indexes (must happen before columns are dropped)
+  // Drop removed or changed indexes (must happen before columns are dropped)
   for (const idxName in prevTable.indexes) {
-    if (!currTable.indexes[idxName]) {
+    const prevIdx = prevTable.indexes[idxName];
+    const currIdx = currTable.indexes[idxName];
+    if (!currIdx || !indexesEqual(prevIdx, currIdx)) {
       statements.push(`ddl.dropIndex("${idxName}")`);
     }
   }
@@ -786,10 +790,12 @@ function generateAlterTableStmts(
     );
   }
 
-  // Create new indexes (must happen after columns are added)
+  // Create new or changed indexes (must happen after columns are added)
   for (const idxName in currTable.indexes) {
-    if (!prevTable.indexes[idxName]) {
-      const idx = currTable.indexes[idxName];
+    const prevIdx = prevTable.indexes[idxName];
+    const currIdx = currTable.indexes[idxName];
+    if (!prevIdx || !indexesEqual(prevIdx, currIdx)) {
+      const idx = currIdx;
       const cols = idx.columns
         .map((c) =>
           c.opclass ? `["${c.name}", "${c.opclass}"]` : `"${c.name}"`,
@@ -797,9 +803,22 @@ function generateAlterTableStmts(
         .join(", ");
       let indexStmt = `ddl.createIndex("${idx.name}").on("${currTable.schema}", "${currTable.name}", [${cols}]).using("${idx.type}")`;
       if (idx.unique) indexStmt += ".unique()";
+      if (idx.where) indexStmt += `.where(\`${idx.where}\`)`;
       statements.push(indexStmt);
     }
   }
+}
+
+function indexesEqual(a: SnapshotTableIndex, b: SnapshotTableIndex): boolean {
+  if (a.type !== b.type) return false;
+  if (a.unique !== b.unique) return false;
+  if ((a.where ?? undefined) !== (b.where ?? undefined)) return false;
+  if (a.columns.length !== b.columns.length) return false;
+  for (let i = 0; i < a.columns.length; i++) {
+    if (a.columns[i].name !== b.columns[i].name) return false;
+    if (a.columns[i].opclass !== b.columns[i].opclass) return false;
+  }
+  return true;
 }
 
 function genDdlColumnOptions(col: SnapshotColumn) {

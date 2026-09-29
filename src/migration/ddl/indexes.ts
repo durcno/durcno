@@ -43,6 +43,7 @@ export class CreateIndexBuilder extends DDLStatement {
   private indexColumns: (string | [string, string])[] = [];
   private isUnique = false;
   private isConcurrent = false;
+  private wherePredicate?: string;
 
   /**
    * @param indexName - The name of the index to create.
@@ -113,6 +114,19 @@ export class CreateIndexBuilder extends DDLStatement {
     return this;
   }
 
+  /**
+   * Add a WHERE predicate to create a partial index.
+   *
+   * SQL equivalent: `WHERE <predicate>`
+   *
+   * @param predicate - The SQL condition string for the partial index.
+   * @returns `this` for chaining.
+   */
+  where(predicate: string): this {
+    this.wherePredicate = predicate;
+    return this;
+  }
+
   toSQL(): string {
     const tableRelation = `"${this.tableSchema}"."${this.tableName}"`;
     const columns = this.indexColumns
@@ -124,7 +138,8 @@ export class CreateIndexBuilder extends DDLStatement {
       .join(", ");
     const uniqueStr = this.isUnique ? " UNIQUE" : "";
     const concurrentlyStr = this.isConcurrent ? " CONCURRENTLY" : "";
-    return `CREATE${uniqueStr} INDEX${concurrentlyStr} ${this.indexName} ON ${tableRelation} USING ${this.indexType} (${columns});`;
+    const whereStr = this.wherePredicate ? ` WHERE ${this.wherePredicate}` : "";
+    return `CREATE${uniqueStr} INDEX${concurrentlyStr} ${this.indexName} ON ${tableRelation} USING ${this.indexType} (${columns})${whereStr};`;
   }
 
   applyToSnapshot(snapshot: Snapshot): void {
@@ -144,6 +159,7 @@ export class CreateIndexBuilder extends DDLStatement {
       }),
       type: this.indexType,
       unique: this.isUnique,
+      where: this.wherePredicate,
     };
   }
 }

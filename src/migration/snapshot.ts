@@ -9,7 +9,6 @@ import { Enum } from "../enumtype";
 import type { IndexType } from "../indexes";
 import { Query, type QueryContext } from "../query-builders/query";
 import { Sequence } from "../sequence";
-import { Sql } from "../sql";
 import { type StdTableWithColumns, Table } from "../table";
 import type { SnakeCase } from "../types";
 
@@ -142,6 +141,8 @@ export interface SnapshotTableIndex {
   type: IndexType;
   /** Whether this is a unique index. */
   unique: boolean;
+  /** Optional WHERE predicate for partial indexes. */
+  where?: string;
 }
 
 /**
@@ -267,8 +268,21 @@ export function snapshot(entities: unknown[]): Snapshot {
           };
         }
       }
+      const checkCtx: QueryContext = {
+        tableAliases: new Map([
+          [`${table._.schemaSql}.${table._.nameSql}`, null],
+          [`${table._.schema}.${table._.name}`, null],
+        ]),
+      };
       (table._.extra.indexes?.(table as StdTableWithColumns) ?? []).forEach(
         (index) => {
+          const whereExpr = index._.getWhere();
+          let whereSql: string | undefined;
+          if (whereExpr) {
+            const q = new Query("", () => []);
+            whereExpr.toQuery(q, checkCtx);
+            whereSql = q.sql;
+          }
           ss.tables[`${table._.schemaSql}.${table._.nameSql}`].indexes[
             index._.getName(table)
           ] = {
@@ -281,14 +295,10 @@ export function snapshot(entities: unknown[]): Snapshot {
             }),
             type: index._.getUsing(),
             unique: index._.getUnique(),
+            where: whereSql,
           };
         },
       );
-      const checkCtx: QueryContext = {
-        tableAliases: new Map([
-          [`${table._.schemaSql}.${table._.nameSql}`, null],
-        ]),
-      };
       (
         table._.extra.checkConstraints?.(table as StdTableWithColumns, check) ??
         []

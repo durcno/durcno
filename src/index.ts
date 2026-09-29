@@ -149,7 +149,11 @@ export {
   notExists,
   notIn,
 } from "./functions/subquery";
-export { index, uniqueIndex } from "./indexes";
+export {
+  type IndexType,
+  index,
+  uniqueIndex,
+} from "./indexes";
 export { Migrations, pk } from "./models";
 export type {
   ConflictScopeColumns,
