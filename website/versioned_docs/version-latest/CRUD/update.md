@@ -171,6 +171,75 @@ await db
   .where(eq(Users.id, 1n));
 ```
 
+## Using Column References
+
+Columns can be updated using values from other columns on the same table. Columns are referenced directly from the table definition:
+
+```typescript
+// Copy values from another column
+await db
+  .update(Users)
+  .set({ bio: Users.description })
+  .where(eq(Users.id, 1n));
+```
+
+:::note
+**Type Compatibility** — TypeScript validates column value types at compile-time: you can only assign a column whose select type is assignable to the target column's update type. For instance, a nullable column (`T | null`) cannot be assigned to a `notNull` column (`T`).
+:::
+
+## Using Scalar SQL Functions
+
+Durcno supports scalar SQL functions directly in `.set()`, including arithmetic, string, and conditional functions:
+
+### Arithmetic Functions
+
+Increment or modify numeric columns using `add()`, `sub()`, `mul()`, `div()`, etc.:
+
+```typescript
+import { add, sub } from "durcno";
+
+// Increment user score by 10 and decrement user points by 5
+await db
+  .update(Users)
+  .set({ score: add(Users.score, 10), points: sub(Users.points, 5) })
+  .where(eq(Users.id, 1n));
+```
+
+### String Functions
+
+Transform string columns using `lower()`, `upper()`, `concat()`, `trim()`, etc.:
+
+```typescript
+import { concat, lower } from "durcno";
+
+// Normalize username to lowercase and append suffix to bio
+await db
+  .update(Users)
+  .set({
+    username: lower(Users.username),
+    bio: concat(Users.bio, " - verified"),
+  })
+  .where(eq(Users.id, 1n));
+```
+
+### Conditional Functions
+
+Use `coalesce()` to provide fallback values for nullable columns:
+
+```typescript
+import { coalesce } from "durcno";
+
+// Set bio to fallback if currently null
+await db
+  .update(Users)
+  .set({ bio: coalesce(Users.bio, "No bio provided") })
+  .where(eq(Users.id, 1n));
+```
+
+:::warning
+**No Aggregate Functions** — Aggregate functions (such as `count()`, `sum()`, or `avg()`) are not allowed in `UPDATE SET` and will produce a TypeScript compilation error.
+:::
+
 ## Primary Key Restriction
 
 Primary key columns cannot be updated and are strictly excluded from the set object type in TypeScript:
@@ -182,6 +251,37 @@ await db
   .set({ id: 999 }) // Property 'id' does not exist in type ...
   .where(eq(Users.id, 1n));
 ```
+
+## Partial Updates & Undefined Properties
+
+Properties assigned `undefined` in `.set({...})` are automatically ignored and omitted from the generated `SET` clause. This allows passing partial update objects directly from application handlers without manual field filtering:
+
+```typescript
+import { type InferUpdate } from "durcno";
+
+const patch: InferUpdate<typeof Users> = {
+  username: "new_name",
+  bio: undefined, // bio is omitted from the SQL SET clause and left unchanged in DB
+};
+
+await db
+  .update(Users)
+  .set(patch)
+  .where(eq(Users.id, 1n));
+```
+
+:::caution
+**Empty Updates** — If all properties in `.set({...})` evaluate to `undefined` (or the object contains no columns to set), executing the query will throw an error:
+
+```typescript
+// Throws: Error: "No columns to set in UPDATE query."
+await db
+  .update(Users)
+  .set({ bio: undefined })
+  .where(eq(Users.id, 1n));
+```
+
+:::
 
 ## Method Chaining Order
 

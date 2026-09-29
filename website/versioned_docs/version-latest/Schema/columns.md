@@ -218,8 +218,9 @@ The `version` option only affects Zod schema validation (via `createInsertSchema
 - Insert behavior: UUID columns with a server `.default()` or `.$insertFn()` are optional on insert; otherwise provide a value or mark `notNull` accordingly.
 - Best practices: Prefer server-side generation for primary keys (so the DB controls uniqueness/creation), or use `.$insertFn()` for application-generated UUIDs (e.g., `crypto.randomUUID()`).
 
-:::info Extension note
-To use PostgreSQL server-side generators, enable the appropriate extension:
+:::info
+
+**Extension note** — To use PostgreSQL server-side generators, enable the appropriate extension:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgcrypto; -- for gen_random_uuid()
@@ -442,8 +443,10 @@ await db.insertInto(Networks).values({
 });
 ```
 
-:::tip INET vs CIDR
-Use `inet` for individual host addresses (with optional netmask for routing info). Use `cidr` for network addresses where the host bits must be zero (e.g., `192.168.1.0/24` not `192.168.1.5/24`).
+:::tip
+
+**INET vs CIDR** — Use `inet` for individual host addresses (with optional netmask for routing info). Use `cidr` for network addresses where the host bits must be zero (e.g., `192.168.1.0/24` not `192.168.1.5/24`).
+
 :::
 
 #### `macaddr`
@@ -477,8 +480,10 @@ await db.insertInto(NetworkDevices).values({
 });
 ```
 
-:::info Network Address Validation
-All network address types perform format validation. Invalid addresses will cause runtime errors when inserting. The validation happens both in TypeScript (via Zod schemas) and in PostgreSQL.
+:::info
+
+**Network Address Validation** — All network address types perform format validation. Invalid addresses will cause runtime errors when inserting. The validation happens both in TypeScript (via Zod schemas) and in PostgreSQL.
+
 :::
 
 ### PostGIS Columns
@@ -628,8 +633,10 @@ export const Posts = table("public", "posts", {
 });
 ```
 
-:::tip Self-Referencing Foreign Keys
-For foreign keys that point back to **the same table** (e.g., a `parentId` column that references `id` on the same table), use the `foreignKeys` callback in the table's fourth argument instead. See [Foreign Keys](./constraints.md#foreign-keys) in the Constraints page.
+:::tip
+
+**Self-Referencing Foreign Keys** — For foreign keys that point back to **the same table** (e.g., a `parentId` column that references `id` on the same table), use the `foreignKeys` callback in the table's fourth argument instead. See [Foreign Keys](./constraints.md#foreign-keys) in the Constraints page.
+
 :::
 
 #### `.generatedAlways()`

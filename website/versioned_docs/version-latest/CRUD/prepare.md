@@ -107,7 +107,64 @@ const createUser = prepare({ username: Users.username.arg() }, (args) => {
 const [user] = await createUser.run(db, { username: "new_user" });
 ```
 
-The same pattern also applies to `update().set(...)`, `delete().where(...)`, and relational queries created with `query().findMany({...})`.
+### Combining Arguments with Scalar Functions
+
+Prepared arguments can be wrapped in scalar SQL functions directly inside `values()`:
+
+```typescript
+import { lower, prepare } from "durcno";
+
+const createUser = prepare({ username: Users.username.arg() }, (args) => {
+  return db
+    .prepare()
+    .insertInto(Users)
+    .values({
+      username: lower(args.username),
+      email: "prepare@example.com",
+      type: "user",
+    })
+    .returning("*");
+});
+
+const [user] = await createUser.run(db, { username: "JOHN_DOE" });
+// user.username is stored as "john_doe"
+```
+
+## Using Arguments in UPDATE Statements
+
+Prepared arguments can be used in `update().set(...)` to update column values dynamically, and can be combined with scalar SQL functions:
+
+```typescript
+import { add, eq, prepare } from "durcno";
+
+// 1. Direct argument assignment in set()
+const updateUserEmail = prepare(
+  { id: Users.id.arg(), email: Users.email.arg() },
+  (args) =>
+    db
+      .prepare()
+      .update(Users)
+      .set({ email: args.email })
+      .where(eq(Users.id, args.id))
+      .returning("*"),
+);
+
+// 2. Combining arguments with table columns and scalar functions in set()
+const incrementScore = prepare(
+  { id: Users.id.arg(), inc: Users.score.arg() },
+  (args) =>
+    db
+      .prepare()
+      .update(Users)
+      .set({ score: add(Users.score, args.inc) })
+      .where(eq(Users.id, args.id))
+      .returning("*"),
+);
+
+const [updated] = await incrementScore.run(db, { id: 1n, inc: 25 });
+```
+
+The same pattern also applies to `delete().where(...)` and relational queries created with `query().findMany({...})`.
 
 ## Selective Column Selection
 

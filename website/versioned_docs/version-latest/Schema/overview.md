@@ -57,6 +57,10 @@ export const Users = table(
   },
 );
 
+export const UsersRelations = relations(Users, () => ({
+  posts: many(Posts, Posts.userId),
+}));
+
 export const Posts = table(
   "public",
   "posts",
@@ -67,14 +71,9 @@ export const Posts = table(
     createdAt: timestamptz({ notNull }).default(now()),
   },
   {
-    indexes: (t) => [index([t.userId]), index([t.userId, table.createdAt])],
+    indexes: (t) => [index([t.userId]), index([t.userId, t.createdAt])],
   },
 );
-
-// Define relations
-export const UsersRelations = relations(Users, () => ({
-  posts: many(Posts, Posts.userId),
-}));
 
 export const PostsRelations = relations(Posts, () => ({
   author: one(Users, Users.id),
@@ -436,9 +435,15 @@ export const Posts = table("public", "posts", {
 });
 ```
 
+## Model Type Inference
+
+Durcno provides utility types (`InferSelect`, `InferInsert`, `InferUpdate`) to infer pure TypeScript data shapes directly from your table schemas. These types represent pure domain models without query-builder AST wrappers, making them ideal for typing API requests, responses, handlers, and DTOs.
+
+For detailed documentation, column-level value inference, and query result typing, see **[Types](../Advanced/types.md)**.
+
 ## Next Steps
 
 - **[Columns](./columns.md)**: Learn about all available column types
-- **[Enum Types](./enums.md)**: Define constrained value sets
 - **[Relations](./relations.md)**: Define table relationships
 - **[Migrations](../Migrations/overview.md)**: Manage schema changes over time
+- **[Types](../Advanced/types.md)**: Explore TypeScript inference utilities for models and queries

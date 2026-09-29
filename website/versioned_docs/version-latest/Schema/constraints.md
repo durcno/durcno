@@ -15,12 +15,14 @@ Durcno supports four types of table-level constraints:
 | **Primary Key** | Define a composite primary key (two or more columns) | `primaryKey(name, columns)` via callback                         |
 | **Foreign Key** | Enforce referential integrity between tables         | `fk(column).references(refColumn)` via callback                  |
 
-:::tip Column-Level vs Table-Level
-For **single-column** primary keys and unique constraints, use the column-level flags `primaryKey` and `unique` directly on the column definition. Table-level `unique()` and `primaryKey()` (passed as callback parameters) require **two or more columns** and are designed for composite (multi-column) cases.
+:::tip
+
+**Column-Level vs Table-Level** — For **single-column** primary keys and unique constraints, use the column-level flags `primaryKey` and `unique` directly on the column definition. Table-level `unique()` and `primaryKey()` (passed as callback parameters) require **two or more columns** and are designed for composite (multi-column) cases.
 
 For **single-column check constraints**, you can use the column-level `.check(fn)` chainable modifier instead of `checkConstraints`. The constraint name is auto-generated as `{table}_{column}_check`.
 
 For **column-level foreign keys**, use the `.references()` chainable modifier. Use the table-level `foreignKeys` callback for **self-referencing** foreign keys (e.g., a `parentId` column that refers back to the same table's `id`).
+
 :::
 
 ---
@@ -111,8 +113,10 @@ export const Employees = table("public", "employees", {
 
 The callback receives the typed column reference as its argument so you keep full type safety and IDE autocomplete.
 
-:::caution Naming
-Column-level check constraint names are automatically generated as `{table}_{column}_check` and cannot be customised. If you need a specific name, use the `checkConstraints` callback instead.
+:::caution
+
+**Naming** — Column-level check constraint names are automatically generated as `{table}_{column}_check` and cannot be customised. If you need a specific name, use the `checkConstraints` callback instead.
+
 :::
 
 ---

@@ -32,11 +32,14 @@ import {
   varchar,
 } from "durcno";
 
-// Define tables
 export const Users = table("public", "users", {
   id: pk(),
   username: varchar({ length: 50, notNull }),
 });
+
+export const UsersRelations = relations(Users, () => ({
+  posts: many(Posts, Posts.userId),
+}));
 
 export const Posts = table("public", "posts", {
   id: pk(),
@@ -44,18 +47,15 @@ export const Posts = table("public", "posts", {
   title: varchar({ length: 255, notNull }),
 });
 
-// Define relations
-export const UsersRelations = relations(Users, () => ({
-  posts: many(Posts, Posts.userId),
-}));
-
 export const PostsRelations = relations(Posts, () => ({
   author: fk(Posts.userId, Users),
 }));
 ```
 
-:::tip Naming Convention
-Use the `Relations` suffix for relation objects (e.g., `UsersRelations`, `PostsRelations`) to distinguish them from table definitions.
+:::tip
+
+**Naming Convention** — Use the `Relations` suffix for relation objects (e.g., `UsersRelations`, `PostsRelations`) to distinguish them from table definitions.
+
 :::
 
 ## Relation Types
@@ -82,16 +82,16 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, notNull }),
 });
 
+// User has many posts
+export const UsersRelations = relations(Users, () => ({
+  posts: many(Posts, Posts.userId),
+}));
+
 export const Posts = table("public", "posts", {
   id: pk(),
   userId: bigint({ notNull }).references(() => Users.id),
   title: varchar({ length: 255, notNull }),
 });
-
-// User has many posts
-export const UsersRelations = relations(Users, () => ({
-  posts: many(Posts, Posts.userId),
-}));
 ```
 
 **Syntax:**
@@ -127,12 +127,14 @@ fk(foreignKeyColumn, targetTable);
 - `foreignKeyColumn`: The column on the current table that references another table
 - `targetTable`: The table being referenced
 
-:::tip Nullability
-The result type of `fk()` relations depends on the foreign key column's nullability:
+:::tip
+
+**Nullability** — The result type of `fk()` relations depends on the foreign key column's nullability:
 
 - If the FK column has `notNull`, the result is `T`
 - If the FK column is nullable, the result is `T | null`
-  :::
+
+:::
 
 ### One-to-One Relationship
 
@@ -156,6 +158,11 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, notNull }),
 });
 
+// User has one profile (using `one` - FK is on the related table)
+export const UsersRelations = relations(Users, () => ({
+  profile: one(UserProfiles, UserProfiles.userId),
+}));
+
 export const UserProfiles = table("public", "userProfiles", {
   id: pk(),
   userId: bigint({ unique, notNull }).references(() => Users.id),
@@ -163,19 +170,16 @@ export const UserProfiles = table("public", "userProfiles", {
   avatarUrl: varchar({ length: 255 }),
 });
 
-// User has one profile (using `one` - FK is on the related table)
-export const UsersRelations = relations(Users, () => ({
-  profile: one(UserProfiles, UserProfiles.userId),
-}));
-
 // Profile belongs to one user (using `fk` - FK is on the current table)
 export const UserProfilesRelations = relations(UserProfiles, () => ({
   user: fk(UserProfiles.userId, Users),
 }));
 ```
 
-:::tip One-to-One Requirement
-For true one-to-one relationships, use `unique` constraint on the foreign key column to ensure each user can only have one profile.
+:::tip
+
+**One-to-One Requirement** — For true one-to-one relationships, use `unique` constraint on the foreign key column to ensure each user can only have one profile.
+
 :::
 
 ### Choosing Between `fk()` and `one()`
@@ -227,6 +231,12 @@ export const Users = table("public", "users", {
   createdAt: timestamptz({ notNull }).default(now()),
 });
 
+export const UsersRelations = relations(Users, () => ({
+  profile: one(UserProfiles, UserProfiles.userId),
+  posts: many(Posts, Posts.userId),
+  comments: many(Comments, Comments.userId),
+}));
+
 // User profiles (one-to-one with users)
 export const UserProfiles = table("public", "userProfiles", {
   id: pk(),
@@ -235,6 +245,10 @@ export const UserProfiles = table("public", "userProfiles", {
   avatarUrl: varchar({ length: 255 }),
   website: varchar({ length: 255 }),
 });
+
+export const UserProfilesRelations = relations(UserProfiles, () => ({
+  user: fk(UserProfiles.userId, Users),
+}));
 
 // Posts (many-to-one with users)
 export const Posts = table("public", "posts", {
@@ -245,6 +259,11 @@ export const Posts = table("public", "posts", {
   createdAt: timestamptz({ notNull }).default(now()),
 });
 
+export const PostsRelations = relations(Posts, () => ({
+  author: fk(Posts.userId, Users),
+  comments: many(Comments, Comments.postId),
+}));
+
 // Comments (many-to-one with users and posts)
 export const Comments = table("public", "comments", {
   id: pk(),
@@ -253,22 +272,6 @@ export const Comments = table("public", "comments", {
   body: text({ notNull }),
   createdAt: timestamptz({ notNull }).default(now()),
 });
-
-// Define all relations
-export const UsersRelations = relations(Users, () => ({
-  profile: one(UserProfiles, UserProfiles.userId),
-  posts: many(Posts, Posts.userId),
-  comments: many(Comments, Comments.userId),
-}));
-
-export const UserProfilesRelations = relations(UserProfiles, () => ({
-  user: fk(UserProfiles.userId, Users),
-}));
-
-export const PostsRelations = relations(Posts, () => ({
-  author: fk(Posts.userId, Users),
-  comments: many(Comments, Comments.postId),
-}));
 
 export const CommentsRelations = relations(Comments, () => ({
   post: fk(Comments.postId, Posts),
@@ -335,10 +338,18 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, notNull }),
 });
 
+export const UsersRelations = relations(Users, () => ({
+  posts: many(Posts, Posts.userId),
+}));
+
 export const Categories = table("public", "categories", {
   id: pk(),
   name: varchar({ length: 100, notNull }),
 });
+
+export const CategoriesRelations = relations(Categories, () => ({
+  posts: many(Posts, Posts.categoryId),
+}));
 
 export const Posts = table("public", "posts", {
   id: pk(),
@@ -347,14 +358,6 @@ export const Posts = table("public", "posts", {
   title: varchar({ length: 255, notNull }),
   content: text({ notNull }),
 });
-
-export const UsersRelations = relations(Users, () => ({
-  posts: many(Posts, Posts.userId),
-}));
-
-export const CategoriesRelations = relations(Categories, () => ({
-  posts: many(Posts, Posts.categoryId),
-}));
 
 export const PostsRelations = relations(Posts, () => ({
   author: fk(Posts.userId, Users),
@@ -371,12 +374,21 @@ export const Customers = table("public", "customers", {
   name: varchar({ length: 255, notNull }),
 });
 
+export const CustomersRelations = relations(Customers, () => ({
+  orders: many(Orders, Orders.customerId),
+}));
+
 export const Orders = table("public", "orders", {
   id: pk(),
   customerId: bigint({ notNull }).references(() => Customers.id),
   totalAmount: integer({ notNull }),
   createdAt: timestamptz({ notNull }).default(now()),
 });
+
+export const OrdersRelations = relations(Orders, () => ({
+  customer: fk(Orders.customerId, Customers),
+  items: many(OrderItems, OrderItems.orderId),
+}));
 
 export const OrderItems = table("public", "orderItems", {
   id: pk(),
@@ -386,25 +398,16 @@ export const OrderItems = table("public", "orderItems", {
   price: integer({ notNull }),
 });
 
+export const OrderItemsRelations = relations(OrderItems, () => ({
+  order: fk(OrderItems.orderId, Orders),
+  product: fk(OrderItems.productId, Products),
+}));
+
 export const Products = table("public", "products", {
   id: pk(),
   name: varchar({ length: 255, notNull }),
   price: integer({ notNull }),
 });
-
-export const CustomersRelations = relations(Customers, () => ({
-  orders: many(Orders, Orders.customerId),
-}));
-
-export const OrdersRelations = relations(Orders, () => ({
-  customer: fk(Orders.customerId, Customers),
-  items: many(OrderItems, OrderItems.orderId),
-}));
-
-export const OrderItemsRelations = relations(OrderItems, () => ({
-  order: fk(OrderItems.orderId, Orders),
-  product: fk(OrderItems.productId, Products),
-}));
 
 export const ProductsRelations = relations(Products, () => ({
   orderItems: many(OrderItems, OrderItems.productId),
@@ -419,17 +422,17 @@ export const Users = table("public", "users", {
   username: varchar({ length: 50, unique, notNull }),
 });
 
+export const UsersRelations = relations(Users, () => ({
+  following: many(Follows, Follows.followerId),
+  followers: many(Follows, Follows.followingId),
+}));
+
 export const Follows = table("public", "follows", {
   id: pk(),
   followerId: bigint({ notNull }).references(() => Users.id),
   followingId: bigint({ notNull }).references(() => Users.id),
   createdAt: timestamptz({ notNull }).default(now()),
 });
-
-export const UsersRelations = relations(Users, () => ({
-  following: many(Follows, Follows.followerId),
-  followers: many(Follows, Follows.followingId),
-}));
 
 export const FollowsRelations = relations(Follows, () => ({
   follower: fk(Follows.followerId, Users),
