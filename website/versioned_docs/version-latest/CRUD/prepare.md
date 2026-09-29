@@ -404,6 +404,21 @@ Evaluating `.toSQL()` directly on a `Sql` object containing an `Arg` parameter o
 2. **Type Safety**: Full TypeScript inference for parameters and results
 3. **Reusability**: Define once, execute many times with different values across `SELECT`, `INSERT`, `UPDATE`, `DELETE`, and relational queries
 
+## Connector Support
+
+While Durcno compiles and caches SQL query construction at the JavaScript level across all connectors, execution as an actual PostgreSQL prepared query at the driver/protocol level depends on the underlying connector:
+
+| Connector    | Import Path                  | Prepared Statement Support | Details                                                                                                           |
+| ------------ | ---------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **postgres** | `durcno/connectors/postgres` | Supported                  | Passes `{ prepare: true }` to `postgres.js` to execute as a server-side prepared statement.                       |
+| **bun**      | `durcno/connectors/bun`      | Supported (automatic)      | Automatically activated and cached in Bun's SQL client according to its documentation.                            |
+| **pg**       | `durcno/connectors/pg`       | Not supported              | Actual PostgreSQL prepared queries are not currently supported; statements run as standard parameterized queries. |
+| **pglite**   | `durcno/connectors/pglite`   | Not documented             | PGlite does not document prepared statement support; statements run as in-process parameterized queries.          |
+
+:::note
+Even with connectors where server-side prepared statements are not supported (such as `pg`), Durcno's `prepare()` still provides benefits by compiling query builders, SQL strings, and parameter mapping once upfront on the client, avoiding query construction overhead on repeated `.run()` calls.
+:::
+
 ## API Reference
 
 ### `prepare(args, statement)`
