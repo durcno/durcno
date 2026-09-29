@@ -1862,4 +1862,235 @@ describe("Relational queries", () => {
       expect(users[0].posts[0].comments[0].body).toBe("HELLO");
     });
   });
+
+  describe("Relation subquery projection", () => {
+    it("should project only requested columns in the relation subquery", () => {
+      const { sql } = db
+        .query(schema.Users)
+        .findMany({
+          columns: { id: true },
+          with: {
+            posts: { columns: { id: true, title: true } },
+          },
+        })
+        .toQuery();
+
+      expect(sql).toContain('SELECT "posts"."id", "posts"."title" FROM');
+      // `content` is never read by the parent projection, so it must not be scanned
+      expect(sql).not.toContain('"posts"."content"');
+      expect(sql).not.toContain('"posts".*');
+    });
+
+    it("should still carry nested relation data alongside the narrowed projection", () => {
+      const { sql } = db
+        .query(schema.Users)
+        .findMany({
+          columns: { id: true },
+          with: {
+            posts: {
+              columns: { id: true },
+              with: { comments: { columns: { id: true } } },
+            },
+          },
+        })
+        .toQuery();
+
+      expect(sql).toContain('"posts__comments"."data" AS "comments_data"');
+      expect(sql).toContain('\'comments\', "posts"."comments_data"');
+    });
+
+    it("should project every column when no column filter is given", () => {
+      const { sql } = db
+        .query(schema.Users)
+        .findMany({
+          columns: { id: true },
+          with: { posts: {} },
+        })
+        .toQuery();
+
+      // No filter means every column is requested, so the projection is full
+      // but still explicit — and must not collapse to `*`
+      expect(sql).toContain('"posts"."id"');
+      expect(sql).toContain('"posts"."content"');
+      expect(sql).not.toContain('"posts".*');
+    });
+
+    it("should narrow the projection in exclude mode", () => {
+      const { sql } = db
+        .query(schema.Users)
+        .findMany({
+          columns: { id: true },
+          with: { posts: { columns: { content: false } } },
+        })
+        .toQuery();
+
+      expect(sql).toContain('"posts"."id"');
+      expect(sql).not.toContain('"posts"."content"');
+    });
+
+    it("should keep the full projection in alias select mode", () => {
+      // A SqlFn's referenced columns are not introspectable, so `*` is kept
+      const { sql } = db
+        .query(schema.Users)
+        .findMany({
+          select: { id: schema.Users.id },
+          with: {
+            posts: { select: { label: lower(schema.Posts.title) } },
+          },
+        })
+        .toQuery();
+
+      expect(sql).toContain('"posts".*');
+      expect(sql).toContain('\'label\', lower("posts"."title")');
+    });
+
+    it("should return the narrowed columns correctly at runtime", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insertInto(schema.Posts)
+        .values(createTestPost(user.id, { title: "projected" }))
+        .returning({ id: true });
+
+      await db
+        .insertInto(schema.Comments)
+        .values(createTestComment(post.id, user.id, { body: "inner" }));
+
+      const users = await db.query(schema.Users).findMany({
+        columns: { id: true },
+        with: {
+          posts: {
+            columns: { title: true },
+            with: { comments: { columns: { body: true } } },
+          },
+        },
+      });
+
+      expect(users[0].posts).toEqual([
+        { title: "projected", comments: [{ body: "inner" }] },
+      ]);
+    });
+  });
+
+  describe("Nested Many relation limit/offset", () => {
+    it("should honor a nested limit of 0", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insertInto(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      await db
+        .insertInto(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "c1" }),
+          createTestComment(post.id, user.id, { body: "c2" }),
+        ]);
+
+      const { sql } = db
+        .query(schema.Posts)
+        .findMany({
+          columns: { id: true },
+          with: { comments: { columns: { id: true }, limit: 0 } },
+        })
+        .toQuery();
+      expect(sql).toContain("LIMIT 0");
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true },
+        with: { comments: { columns: { id: true }, limit: 0 } },
+      });
+
+      expect(posts[0].comments).toEqual([]);
+    });
+
+    it("should apply nested offset after limit", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insertInto(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      await db
+        .insertInto(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "a" }),
+          createTestComment(post.id, user.id, { body: "b" }),
+          createTestComment(post.id, user.id, { body: "c" }),
+          createTestComment(post.id, user.id, { body: "d" }),
+        ]);
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true },
+        with: {
+          comments: {
+            columns: { body: true },
+            orderBy: asc(schema.Comments.body),
+            limit: 2,
+            offset: 1,
+          },
+        },
+      });
+
+      expect(posts[0].comments.map((c) => c.body)).toEqual(["b", "c"]);
+    });
+
+    it("should emit nested offset without a limit", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      const [post] = await db
+        .insertInto(schema.Posts)
+        .values(createTestPost(user.id))
+        .returning({ id: true });
+
+      await db
+        .insertInto(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "a" }),
+          createTestComment(post.id, user.id, { body: "b" }),
+        ]);
+
+      const { sql } = db
+        .query(schema.Posts)
+        .findMany({
+          columns: { id: true },
+          with: {
+            comments: {
+              columns: { body: true },
+              orderBy: asc(schema.Comments.body),
+              offset: 1,
+            },
+          },
+        })
+        .toQuery();
+      expect(sql).toContain('ORDER BY "comments"."body" ASC OFFSET 1');
+
+      const posts = await db.query(schema.Posts).findMany({
+        columns: { id: true },
+        with: {
+          comments: {
+            columns: { body: true },
+            orderBy: asc(schema.Comments.body),
+            offset: 1,
+          },
+        },
+      });
+
+      expect(posts[0].comments.map((c) => c.body)).toEqual(["b"]);
+    });
+  });
 });

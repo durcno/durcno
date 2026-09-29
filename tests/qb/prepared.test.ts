@@ -5,6 +5,7 @@ import {
   type $Client,
   Arg,
   add,
+  asc,
   database,
   defineConfig,
   eq,
@@ -16,6 +17,8 @@ import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
 import {
+  createTestComment,
+  createTestPost,
   createTestUser,
   generateMigrationsDirPath,
   runDurcnoCli,
@@ -258,6 +261,49 @@ describe("prepare", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].id).toBe(user1.id);
     expect(rows[0].username).toBe("query_user_1");
+  });
+
+  // Arg in: nested limit/offset of a `many` relation
+  it("should query with Arg in nested relation limit and offset", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser())
+      .returning("*");
+
+    const [post] = await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user.id))
+      .returning("*");
+
+    await db
+      .insertInto(schema.Comments)
+      .values([
+        createTestComment(post.id, user.id, { body: "a" }),
+        createTestComment(post.id, user.id, { body: "b" }),
+        createTestComment(post.id, user.id, { body: "c" }),
+      ]);
+
+    const queryPre = prepare({ lim: Arg.number(), off: Arg.number() }, (args) =>
+      db
+        .prepare()
+        .query(schema.Posts)
+        .findMany({
+          columns: { id: true },
+          with: {
+            comments: {
+              columns: { body: true },
+              orderBy: asc(schema.Comments.body),
+              limit: args.lim,
+              offset: args.off,
+            },
+          },
+        }),
+    );
+
+    // The nested limit/offset must bind as query arguments, not be inlined —
+    // an inlined Arg would surface as a SQL syntax error here
+    const rows = await queryPre.run(db, { lim: 2, off: 1 });
+    expect(rows[0].comments.map((c) => c.body)).toEqual(["b", "c"]);
   });
 
   describe("Sql template literal with Arg", () => {

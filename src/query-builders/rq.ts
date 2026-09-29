@@ -20,7 +20,7 @@ import type {
   StdOrder,
   StdOrderSqlFn,
 } from "./orderby-clause";
-import { Arg } from "./prepare";
+import { type AnyArg, Arg } from "./prepare";
 import { type AnyQuery, Query, type QueryContext } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -570,22 +570,7 @@ class RelationQuery<
       ) as (StdOrder | StdOrderSqlFn)[];
       orderByToQuery(orders, query);
     }
-    if (options.limit !== undefined) {
-      query.sql += " LIMIT ";
-      if (is(options.limit, Arg<number | bigint>)) {
-        query.addArg(options.limit);
-      } else {
-        query.sql += options.limit.toString();
-      }
-    }
-    if (options.offset !== undefined) {
-      query.sql += " OFFSET ";
-      if (is(options.offset, Arg<number | bigint>)) {
-        query.addArg(options.offset);
-      } else {
-        query.sql += options.offset.toString();
-      }
-    }
+    appendLimitOffset(query, options.limit, options.offset);
     query.sql += ";";
     return query;
   }
@@ -845,7 +830,23 @@ function buildRelationSubquery(
     ? allRelations[relation.table._.fullName]
     : undefined;
 
-  query.sql += ` FROM (SELECT "${escIdentifier(aliasPath)}".*`;
+  query.sql += " FROM (SELECT ";
+  // Project only the columns the parent projection actually reads, instead of
+  // `alias.*`, so the inner scan does not read/return unrequested columns.
+  // Alias (`select`) mode falls back to `*` because the referenced columns
+  // cannot be derived from an opaque `SqlFn` expression.
+  const projectionEntries = getSelectEntries(options)
+    ? null
+    : getSelectedColumns(options.columns, relation.table._.columns);
+  if (projectionEntries && projectionEntries.length > 0) {
+    for (let i = 0; i < projectionEntries.length; i++) {
+      if (i > 0) query.sql += ", ";
+      const column = projectionEntries[i][1];
+      query.sql += `"${escIdentifier(aliasPath)}"."${escIdentifier(column.nameSql ?? "")}"`;
+    }
+  } else {
+    query.sql += `"${escIdentifier(aliasPath)}".*`;
+  }
 
   if (nestedTableRelations) {
     for (const nestedKey in options.with) {
@@ -944,7 +945,7 @@ function buildRelationSubquery(
     query.sql += ` LIMIT 1`;
   }
 
-  // Apply user-supplied orderBy and limit for Many relations
+  // Apply user-supplied orderBy, limit and offset for Many relations
   if (relation.t === "Many") {
     if (options.orderBy) {
       const orders = (
@@ -957,11 +958,39 @@ function buildRelationSubquery(
       };
       orderByToQuery(orders, query, ctx);
     }
-    if (options.limit) query.sql += ` LIMIT ${options.limit}`;
+    appendLimitOffset(query, options.limit, options.offset);
   }
 
   query.sql += `) "${escIdentifier(aliasPath)}"`;
   query.sql += `) "${escIdentifier(aliasPath)}" ON true`;
+}
+
+/**
+ * Appends a `LIMIT` and/or `OFFSET` clause to `query.sql`, resolving prepared
+ * `Arg` placeholders to their `$N` binding. Emits `OFFSET` only after `LIMIT`,
+ * as required by PostgreSQL when both are present.
+ */
+function appendLimitOffset(
+  query: Query,
+  limit: number | bigint | AnyArg | undefined,
+  offset: number | bigint | AnyArg | undefined,
+): void {
+  if (limit !== undefined) {
+    query.sql += " LIMIT ";
+    if (is(limit, Arg<number | bigint>)) {
+      query.addArg(limit);
+    } else {
+      query.sql += limit.toString();
+    }
+  }
+  if (offset !== undefined) {
+    query.sql += " OFFSET ";
+    if (is(offset, Arg<number | bigint>)) {
+      query.addArg(offset);
+    } else {
+      query.sql += offset.toString();
+    }
+  }
 }
 
 /** Appends an ORDER BY clause for `orders` to `query.sql`. */
