@@ -29,7 +29,7 @@ This is NOT a Drizzle-based project - it's a custom query builder and migration 
 - **Website**: Docusaurus (https://durcno.dev)
 - **License**: Apache-2.0
 
-**Important**: Durcno only supports **PostgreSQL 14 and above**, **Node.js 25 and above**.
+**Important**: Durcno only supports **PostgreSQL 14 and above**, **Node.js 24.14 and above**.
 
 ## Usage
 
@@ -111,8 +111,11 @@ await db.insertInto(Users).values({
 });
 
 // Update user
-await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
+await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1n));
 ```
+
+> **SELECT** takes a callback `(() => eq(...))`,
+> while **UPDATE/DELETE** take the filter directly `(eq(...))`.
 
 ## Core Concepts
 
@@ -136,11 +139,11 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
 **Fluent API**: Chainable methods provide an intuitive query-building experience:
 
 - `.select()` - Define columns to return (e.g. `select("*")` for all columns, or `select(() => ({ id: Users.id }))` for specific columns; use callback view `({ posts }) => ...` only for left-joined tables)
-- `.where()` - Add filtering conditions via callback (`() => eq(Users.type, "user")`)
+- `.where()` - Add filtering conditions; SELECT takes a callback (`() => eq(Users.type, "user")`), UPDATE/DELETE take the filter directly (`eq(Users.type, "user")`)
 - `.orderBy()` - Sort results via callback (`() => asc(Users.name)` or `(_, { alias }) => asc(alias)`)
 - `.groupBy()` - Group results via callback (`() => [Users.type]` or `(_, { alias }) => [alias]`)
 - `.having()` - Filter grouped results via callback (`() => ...`)
-- `.limit()` > `.offset()` - Paginate results
+- `.limit()` / `.offset()` - Paginate results
 
 **Query Builders**: Separate classes in `src/query-builders/` handle different query types (SELECT, INSERT, UPDATE, DELETE, ...) with consistent patterns and full type safety.
 
@@ -163,7 +166,7 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1));
 
 ## Project Structure
 
-### Directory Organization
+### Core Folders
 
 ```
 src/
@@ -177,7 +180,7 @@ src/
 ├── migration/            # Migration handling
 └── cli/                  # CLI entry and commands
 
-type-tests/               # Infered type safety checks
+type-tests/               # Inferred type safety checks
 tests/                    # Runtime integration tests
 ├── columns/              # Column read/write tests
 ├── qb/                   # Query builders integration tests
@@ -193,10 +196,10 @@ dist/                     # Production compiled output
 
 ### Core Files
 
-- **`src/index.ts`**: All public exports - **EXPORT NEW APIS HERE**
+- **`src/index.ts`**: All public exports - **EXPORT NEW PUBLIC APIs HERE**
 - **`src/db.ts`**: Query builder creator classes
 - **`src/table.ts`**: Table and column types
-- **`src/indexes.ts`**: Database index definitions
+- **`src/indexes.ts`**: Index definitions (`using`, `unique`, partial `where`, custom name)
 - **`src/types.ts`**: Shared TypeScript utility types
 - **`src/models.ts`**: Migration tracking table definition
 - **`src/columns/common.ts`**: Base column class
@@ -206,17 +209,21 @@ dist/                     # Production compiled output
 
 ### Environment Setup
 
-1. **Setup Node.js**: Ensure Node.js 25+ is installed
+1. **Setup Node.js**: Ensure Node.js 24.14+ is installed (see `engines.node` in `package.json`)
 2. **Install Dependencies**: Run `pnpm i`
 
 ### Available Scripts
 
 - **`pnpm run lint`**: Run Biome linter
+- **`pnpm run format`**: Format with Biome + dprint + oxfmt
 - **`pnpm run tsclint`**: Run TypeScript type checking `src/`
 - **`pnpm run tsclint-cli`**: Run CLI TypeScript type checking `src/cli/`
-- **`pnpm run tsclint-all`**: Run all checks (lint + tsclint + tsclint-cli + test-types)
+- **`pnpm run tsclint-tests`**: Run TypeScript type checking `tests/`
 - **`pnpm run test-types`**: Run only type tests `type-tests/`
+- **`pnpm run tsclint-all`**: Run all type checks (tsclint + tsclint-cli + test-types + tsclint-tests)
+- **`pnpm run build`**: Build `src/` (tsdown) and `cli/` (esbuild) into `dist/`
 - **`pnpm run test`**: Build src & cli then run integration tests `tests/`
+- **`pnpm test tests/cli/`**: Run a single folder/file of integration tests (requires Docker)
 
 ### Development Process
 
@@ -230,7 +237,7 @@ dist/                     # Production compiled output
 
 Durcno uses two clearly separated test suites — **Type tests** and **Integration tests** — with distinct scope and rules.
 
-- **Type tests (`type-tests/`)** — compile-time checks for TypeScript inference (use `Expect`,`Equal` / `@ts-expect-error`). Things that not practical for Integration tests. Required for any change that affects exported types or API shapes.
+- **Type tests (`type-tests/`)** — compile-time checks for TypeScript inference (use `Expect`, `Equal` / `@ts-expect-error`). Things that are not practical for integration tests. Required for any change that affects exported types or API shapes.
 - **Integration tests (`tests/`)** — runtime tests (Vitest) validating columns, query builders, migrations, and CLI behavior. Keep them deterministic, and fast.
 
 Quick rules:
@@ -277,12 +284,12 @@ Expect<Equal<R, User[]>>();
 db.from(Users)
   .select("*")
   // @ts-expect-error: eq expects a column, not a string
-  .where(eq("invalid", 123));
+  .where(() => eq("invalid", 123));
 ```
 
 ### Integration tests (tests/)
 
-Integrations test are ran using Vitest and Docker.
+Integration tests are run using Vitest and Docker.
 
 Purpose: Verify runtime behavior.
 
@@ -366,4 +373,4 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 
 ---
 
-**Important :** Update this(AGENTS.md) file when you change anything mentioned here.
+**Important :** Update this (AGENTS.md) file when you change anything mentioned here.
