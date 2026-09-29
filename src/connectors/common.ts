@@ -180,9 +180,14 @@ abstract class $QueryExecutor {
    *
    * @param query - The SQL query string to execute.
    * @param args - Optional array of parameter values for parameterized queries.
+   * @param prepare - Optional flag indicating whether to execute as a prepared statement.
    * @returns A promise that resolves with the query result.
    */
-  abstract query(query: string, args?: SqlArgType[]): Promise<unknown>;
+  abstract query(
+    query: string,
+    args?: SqlArgType[],
+    prepare?: boolean,
+  ): Promise<unknown>;
 
   /**
    * Executes a SQL query string and arguments by forwarding to {@link query}.
@@ -190,12 +195,17 @@ abstract class $QueryExecutor {
    *
    * @param str - The SQL query string to execute.
    * @param args - Optional array of parameter values for parameterized queries.
+   * @param prepare - Optional flag indicating whether to execute as a prepared statement.
    * @returns A promise that resolves with the raw query result.
    */
-  async execStrArgs(str: string, args?: SqlArgType[]): Promise<unknown> {
+  async execStrArgs(
+    str: string,
+    args?: SqlArgType[],
+    prepare?: boolean,
+  ): Promise<unknown> {
     const start = this.logger ? performance.now() : 0;
     try {
-      const result = await this.query(str, args);
+      const result = await this.query(str, args, prepare);
       if (this.logger) {
         this.logger.info("Query executed", {
           sql: str,
@@ -220,10 +230,11 @@ abstract class $QueryExecutor {
    * Executes a {@link Query} object by forwarding its sql and arguments to {@link execStrArgs}.
    *
    * @param q - The {@link Query} object to execute.
+   * @param prepare - Optional flag indicating whether to execute as a prepared statement.
    * @returns A promise that resolves with the raw query result.
    */
-  async execQuery(q: Query<unknown>): Promise<unknown> {
-    return this.execStrArgs(q.sql, q.arguments);
+  async execQuery(q: Query<unknown>, prepare?: boolean): Promise<unknown> {
+    return this.execStrArgs(q.sql, q.arguments, prepare);
   }
 }
 

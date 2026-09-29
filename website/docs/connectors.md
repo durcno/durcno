@@ -295,3 +295,4 @@ const users = await db.from(Users).select("*");
 | Modern ESM-first projects        | `postgres`            |
 | Local / Offline / Embedded apps  | `pglite`              |
 | Testing / Unit tests             | `pglite`              |
+| Native prepared statements       | `postgres`            |

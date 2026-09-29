@@ -81,7 +81,11 @@ export class PrepareQuery<TReturn> extends QueryPromise<TReturn> {
   }
 
   async execute(): Promise<TReturn> {
-    const res = await this.executor.execStrArgs(this.query.sql, this.arguments);
+    const res = await this.executor.execStrArgs(
+      this.query.sql,
+      this.arguments,
+      true,
+    );
     const rows = this.executor.getRows(res);
     return this.handleRows(rows);
   }

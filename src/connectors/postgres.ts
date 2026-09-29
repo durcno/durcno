@@ -51,8 +51,13 @@ class PostgresClient extends $Client {
   async query(
     query: string,
     args?: (string | number | null)[],
+    prepare?: boolean,
   ): Promise<unknown> {
-    return this.#sql.unsafe(query, args);
+    return this.#sql.unsafe(
+      query,
+      args,
+      prepare ? { prepare: true } : undefined,
+    );
   }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
@@ -83,8 +88,13 @@ class PostgresPool extends $Pool {
   async query(
     query: string,
     args?: (string | number | null)[],
+    prepare?: boolean,
   ): Promise<unknown> {
-    return this.#sql.unsafe(query, args);
+    return this.#sql.unsafe(
+      query,
+      args,
+      prepare ? { prepare: true } : undefined,
+    );
   }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
@@ -116,8 +126,13 @@ class PostgresPoolClient extends $Client {
   async query(
     query: string,
     args?: (string | number | null)[],
+    prepare?: boolean,
   ): Promise<unknown> {
-    return this.#sql.unsafe(query, args);
+    return this.#sql.unsafe(
+      query,
+      args,
+      prepare ? { prepare: true } : undefined,
+    );
   }
   async connect(): Promise<void> {}
   getRows(response: any): any[] {
