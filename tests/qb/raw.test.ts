@@ -298,6 +298,28 @@ describe("Raw SQL queries", () => {
     expect(result).toEqual(["USER1", "USER2"]);
   });
 
+  it("should return raw rows when rowsHandler is omitted", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([createTestUser({ username: "raw_default" })]);
+
+    const result = await db.raw<{ username: string }[]>(
+      "SELECT username FROM users",
+    );
+
+    expect(result).toEqual([{ username: "raw_default" }]);
+  });
+
+  it("should return raw rows when both args and rowsHandler are omitted", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([createTestUser({ username: "raw_bare" })]);
+
+    const result = await db.raw("SELECT username FROM users");
+
+    expect(result).toEqual([{ username: "raw_bare" }]);
+  });
+
   describe("Sql template evaluation", () => {
     it("should lazily evaluate primitive values on toSQL()", () => {
       const s = sql`SELECT ${"hello'world"}, ${42}, ${true}, ${null}`;

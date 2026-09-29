@@ -454,7 +454,7 @@ class Base<
   raw<TReturn = unknown>(
     query: string,
     args: SqlArgType[] = [],
-    rowsHandler: ((rows: any[]) => TReturn) | undefined,
+    rowsHandler?: (rows: any[]) => TReturn,
   ) {
     return new RawQuery(query, args, rowsHandler, this.#getExecutor());
   }

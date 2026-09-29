@@ -89,8 +89,6 @@ import { db } from "./db/index.ts";
 // Execute a raw SELECT query
 const result = await db.raw<{ id: bigint; username: string; }[]>(
   "SELECT id, username FROM users",
-  [],
-  (rows) => rows,
 );
 ```
 
@@ -104,11 +102,11 @@ db.raw<TReturn>(
 ): Promise<TReturn>
 ```
 
-| Parameter     | Type                                                | Description                                                                |
-| ------------- | --------------------------------------------------- | -------------------------------------------------------------------------- |
-| `query`       | `string`                                            | The raw SQL query string with `$1`, `$2`, etc. placeholders for parameters |
-| `args`        | `(string \| number \| bigint \| boolean \| null)[]` | Array of parameter values to bind to query placeholders                    |
-| `rowsHandler` | `(rows: any[]) => TReturn`                          | Optional function to transform the result rows                             |
+| Parameter     | Type                                                | Description                                                                              |
+| ------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `query`       | `string`                                            | The raw SQL query string with `$1`, `$2`, etc. placeholders for parameters               |
+| `args`        | `(string \| number \| bigint \| boolean \| null)[]` | Array of parameter values to bind to query placeholders. Defaults to `[]`                |
+| `rowsHandler` | `(rows: any[]) => TReturn`                          | Optional function to transform the result rows. Defaults to returning the rows unchanged |
 
 ## Parameterized Queries
 
@@ -119,7 +117,6 @@ Always use parameterized queries to prevent SQL injection. Use `$1`, `$2`, etc. 
 const result = await db.raw<{ username: string; age: number; }[]>(
   "SELECT username, age FROM users WHERE age >= $1 AND type = $2",
   [30, "admin"],
-  (rows) => rows,
 );
 ```
 
@@ -131,7 +128,6 @@ const result = await db.raw<{ username: string; }[]>(
   `SELECT username FROM users 
    WHERE age > $1 AND "is_active" = $2 AND type = $3`,
   [25, "true", "user"],
-  (rows) => rows,
 );
 ```
 
@@ -155,14 +151,9 @@ const count = await db.raw(
   (rows) => Number(rows[0].count),
 );
 // Returns: 42
-
-// Pass rows through unchanged
-const users = await db.raw<{ id: bigint; username: string; }[]>(
-  "SELECT id, username FROM users",
-  [],
-  (rows) => rows,
-);
 ```
+
+Omitting `rowsHandler` returns the rows unchanged.
 
 ## Common Operations
 
@@ -172,8 +163,6 @@ const users = await db.raw<{ id: bigint; username: string; }[]>(
 // Simple SELECT
 const users = await db.raw<{ username: string; }[]>(
   "SELECT username FROM users",
-  [],
-  (rows) => rows,
 );
 
 // SELECT with JOIN
@@ -181,15 +170,11 @@ const postsWithAuthors = await db.raw<{ username: string; title: string; }[]>(
   `SELECT u.username, p.title 
    FROM users u 
    JOIN posts p ON u.id = p."user_id"`,
-  [],
-  (rows) => rows,
 );
 
 // Aggregate queries
 const result = await db.raw<{ count: string; }[]>(
   "SELECT COUNT(*) as count FROM users",
-  [],
-  (rows) => rows,
 );
 const count = Number.parseInt(result[0].count);
 ```
@@ -202,7 +187,6 @@ await db.raw(
   `INSERT INTO users (username, email, type, status, role) 
    VALUES ($1, $2, $3, $4, $5)`,
   ["newuser", "user@example.com", "user", "active", "user"],
-  undefined,
 );
 
 // Insert with RETURNING
@@ -211,7 +195,6 @@ const inserted = await db.raw<{ id: bigint; }[]>(
    VALUES ($1, $2, $3, $4, $5) 
    RETURNING id`,
   ["newuser", "user@example.com", "user", "active", "user"],
-  (rows) => rows,
 );
 ```
 
@@ -222,14 +205,12 @@ const inserted = await db.raw<{ id: bigint; }[]>(
 await db.raw(
   "UPDATE users SET username = $1 WHERE id = $2",
   ["updated_name", "123"],
-  undefined,
 );
 
 // Update with conditions
 await db.raw(
   "UPDATE users SET status = $1 WHERE type = $2 AND age >= $3",
   ["inactive", "user", 65],
-  undefined,
 );
 ```
 
@@ -243,7 +224,6 @@ await db.raw("DELETE FROM users WHERE id = $1", ["123"], undefined);
 await db.raw(
   "DELETE FROM users WHERE status = $1 AND last_login < $2",
   ["inactive", "2024-01-01"],
-  undefined,
 );
 ```
 
@@ -260,22 +240,17 @@ await db.raw(
     id SERIAL PRIMARY KEY,
     name VARCHAR(100)
   )`,
-  [],
-  undefined,
 );
 
 // Insert into temporary table
 await db.raw(
   "INSERT INTO temp_results (name) VALUES ($1)",
   ["test"],
-  undefined,
 );
 
 // Query from temporary table
 const results = await db.raw<{ name: string; }[]>(
   "SELECT name FROM temp_results",
-  [],
-  (rows) => rows,
 );
 ```
 
@@ -287,7 +262,6 @@ const result = await db.raw<{ username: string; }[]>(
    WHERE (type = $1 AND age >= $2) 
       OR (status = $3 AND created_at > $4)`,
   ["admin", 30, "active", "2024-01-01"],
-  (rows) => rows,
 );
 ```
 
@@ -298,14 +272,11 @@ const result = await db.raw<{ username: string; }[]>(
 await db.raw(
   "INSERT INTO users (username, email) VALUES ($1, $2)",
   ["testuser", null],
-  undefined,
 );
 
 // Query NULL values
 const usersWithoutEmail = await db.raw<{ username: string; }[]>(
   "SELECT username FROM users WHERE email IS NULL",
-  [],
-  (rows) => rows,
 );
 ```
 
@@ -317,7 +288,6 @@ Raw queries return an empty array when no rows match:
 const result = await db.raw<{ username: string; }[]>(
   "SELECT username FROM users WHERE username = $1",
   ["nonexistent"],
-  (rows) => rows,
 );
 
 console.log(result); // []
@@ -331,8 +301,6 @@ The generic type parameter `TReturn` allows you to specify the expected return t
 // Specify the return type
 const users = await db.raw<{ id: bigint; username: string; }[]>(
   "SELECT id, username FROM users",
-  [],
-  (rows) => rows,
 );
 
 // TypeScript knows the shape of 'users'
