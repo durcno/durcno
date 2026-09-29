@@ -56,15 +56,17 @@ const durcnoFormat = printf(
  *
  * @example
  * ```ts
- * import { createQueryLogger } from "durcno/logger";
  * import { defineConfig } from "durcno";
  * import { pg } from "durcno/connectors/pg";
+ * import { createQueryLogger } from "durcno/logger";
  *
- * export default defineConfig(pg(), {
+ * export default defineConfig({
  *   schema: "db/schema.ts",
  *   out: "migrations",
- *   dbCredentials: { url: process.env.DATABASE_URL! },
- *   logger: createQueryLogger(),
+ *   connector: pg({
+ *     dbCredentials: { url: process.env.DATABASE_URL! },
+ *     logger: createQueryLogger(),
+ *   }),
  * });
  * ```
  */
