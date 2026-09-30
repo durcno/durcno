@@ -1,13 +1,41 @@
 name: Feature Request
 description: Suggest an idea for Durcno
 title: "[Feature]: "
-labels: ["enhancement", "triage"]
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for taking the time to suggest a new feature!
-        Please search the [existing issues](https://github.com/durcno/durcno/issues) to ensure this feature hasn't already been requested.
+
+        > [!NOTE]
+        > Durcno is in `alpha`. If you are looking for help using an existing
+        > feature, or want to discuss an idea before it becomes an issue, start a
+        > [Discussion](https://github.com/durcno/durcno/discussions).
+
+        Before filing, please search the [existing issues](https://github.com/durcno/durcno/issues) and the [docs](https://durcno.dev) to ensure this feature hasn't already been requested or documented.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Durcno would this affect?
+      options:
+        - Query builder
+        - Migrations
+        - CLI
+        - Connectors
+        - Schema & columns
+        - Relations
+        - Filters & expressions
+        - Extensions (PostGIS / pgvector)
+        - Validation (zod)
+        - Logger
+        - Types & inference
+        - Performance
+        - Docs
+    validations:
+      required: true
 
   - type: textarea
     id: description
@@ -30,10 +58,20 @@ body:
     attributes:
       label: Proposed Implementation / API
       description: If you have an idea of how this feature should look (e.g., API design, code snippets), please share it here.
+      render: typescript
       placeholder: |
-        ```typescript
         const result = await db.from(Users).newFeature();
-        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or Current Workaround
+      description: |
+        What have you tried instead, and does something work today that this
+        feature would replace? If this is a request for parity with another
+        library, name it.
     validations:
       required: false
 

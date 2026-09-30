@@ -1,0 +1,62 @@
+name: Documentation
+description: Report an issue in the Durcno documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping keep the docs accurate!
+
+        The documentation lives at [durcno.dev](https://durcno.dev) and is tracked
+        in `website/docs/`. If you can, open a pull request with the fix
+        alongside this issue — see [CONTRIBUTING.md](https://github.com/durcno/durcno/blob/main/CONTRIBUTING.md).
+
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: Which page is affected? Use its path or full URL.
+      placeholder: e.g., https://durcno.dev/docs/CRUD/select or CRUD/select.md
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong?
+      options:
+        - Broken or incorrect example
+        - Outdated information
+        - Missing content
+        - Typo or grammar
+        - Navigation or organization
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What is wrong, and what should it say instead?
+      placeholder: The example on this page uses `.where(eq(...))`, but select queries take a callback.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested-change
+    attributes:
+      label: Suggested Change
+      description: Optional — paste a corrected snippet or paragraph.
+    validations:
+      required: false
+
+  - type: input
+    id: durcno-version
+    attributes:
+      label: Durcno Version
+      description: Which version were the docs written against / did you read?
+      placeholder: e.g., 1.0.0-alpha.31
+    validations:
+      required: true

@@ -1,13 +1,74 @@
 name: Bug Report
 description: File a bug report to help us improve Durcno
 title: "[Bug]: "
-labels: ["bug", "triage"]
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-        Before filing a new issue, please search the [existing issues](https://github.com/durcno/durcno/issues) to see if it has already been reported.
+
+        > [!NOTE]
+        > Durcno is in `alpha` and its API may change between releases. If this
+        > looks like a design or API concern rather than something broken, a
+        > [Discussion](https://github.com/durcno/durcno/discussions) is faster.
+
+        Before filing, please:
+
+        1. Search the [existing issues](https://github.com/durcno/durcno/issues).
+        2. Reproduce against the latest alpha (`npm add durcno@alpha`).
+        3. Skim [CONTRIBUTING.md](https://github.com/durcno/durcno/blob/main/CONTRIBUTING.md).
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Durcno is this about?
+      options:
+        - Query builder
+        - Migrations
+        - CLI
+        - Connectors
+        - Schema & columns
+        - Relations
+        - Filters & expressions
+        - Extensions (PostGIS / pgvector)
+        - Validation (zod)
+        - Logger
+        - Types & inference
+        - Performance
+        - Docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of failure is it?
+      description: Picking the closest option helps route the report.
+      options:
+        - Type error (TypeScript)
+        - Runtime error
+        - Incorrect generated SQL
+        - Migration diff / drift
+        - Performance regression
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connector
+    attributes:
+      label: Connector
+      description: Which connector are you using? Behavior differs per driver.
+      options:
+        - postgres (postgres.js)
+        - pg (node-postgres)
+        - bun (Bun SQL)
+        - pglite
+        - N/A (schema or migrations only)
+    validations:
+      required: true
 
   - type: textarea
     id: description
@@ -23,12 +84,43 @@ body:
     attributes:
       label: Reproduction
       description: |
-        Please provide a minimal reproducible example. A link to a GitHub repository or a code snippet. 
-        Remember that Durcno is a query builder, so please include your schema, query, and any relevant database context.
+        Please provide a minimal reproducible example: a link to a repository is
+        best, otherwise include your `durcno.config.ts` (credentials redacted),
+        the relevant part of your schema, and the query that misbehaves.
       placeholder: |
-        1. Define schema...
-        2. Run query...
-        3. See error...
+        ```typescript
+        // durcno.config.ts
+        // db/schema.ts
+        // db/index.ts
+        const users = await db.from(Users).select("*");
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: generated-sql
+    attributes:
+      label: Generated SQL or Migration Output
+      description: |
+        Paste the SQL Durcno produced, if you can get it. For queries you can log
+        it with `console.log(db.from(Users).select("*").toQuery().prettify())`.
+        For CLI or migration issues, paste the command you ran and its output.
+        Skip if you could not produce any.
+      placeholder: |
+        SELECT "public"."users"."id" FROM "public"."users"
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: Error Output
+      description: |
+        The full error message and stack trace, or the wrong/unexpected result
+        when nothing is thrown.
+      placeholder: |
+        TypeError: ...
+            at ...
     validations:
       required: true
 
@@ -44,8 +136,8 @@ body:
     id: durcno-version
     attributes:
       label: Durcno Version
-      description: Which version of Durcno are you using?
-      placeholder: e.g., 1.0.0-alpha.7
+      description: Which version of Durcno are you using? (`pnpm exec durcno --version`)
+      placeholder: e.g., 1.0.0-alpha.31
     validations:
       required: true
 
@@ -53,17 +145,26 @@ body:
     id: runtime-version
     attributes:
       label: Runtime and Version
-      description: Which runtime and version are you using? (e.g., Node.js 25+, Bun, Deno)
-      placeholder: e.g., Node.js 25.0.0, Bun 1.1.0, Deno 1.42.0
+      description: Which runtime and version are you using? (e.g., Node.js 24.14+, Bun, Deno)
+      placeholder: e.g., Node.js 24.14.0, Bun 1.3.0, Deno 2.5.0
     validations:
       required: true
+
+  - type: input
+    id: driver-version
+    attributes:
+      label: Driver Version
+      description: Which version of the underlying driver are you using? (optional)
+      placeholder: e.g., pg 8.19.0, postgres 3.4.9
+    validations:
+      required: false
 
   - type: input
     id: pg-version
     attributes:
       label: PostgreSQL Version
       description: Which PostgreSQL version are you using? (Durcno requires PostgreSQL 14+)
-      placeholder: e.g., 16.2
+      placeholder: e.g., 18.2
     validations:
       required: true
 
@@ -72,7 +173,7 @@ body:
     attributes:
       label: TypeScript Version
       description: Which version of TypeScript are you using?
-      placeholder: e.g., 6.0.0
+      placeholder: e.g., 6.0.2
     validations:
       required: true
 
@@ -80,4 +181,4 @@ body:
     id: additional-context
     attributes:
       label: Additional Context
-      description: Add any other context about the problem here (e.g., OS, log outputs, etc.).
+      description: Add any other context about the problem here (e.g., OS, logger output, related issues).
