@@ -14,6 +14,20 @@ export type DurcnoEntity<T> = (
   [entityType]: string;
 };
 
+const ctorBrands = new WeakMap<object, ReadonlySet<string>>();
+
+/** Collects every `entityType` brand declared on a constructor's prototype chain. */
+function brandsOf(ctor: object): ReadonlySet<string> {
+  const brands = new Set<string>();
+  for (let c: object | null = ctor; c; c = Object.getPrototypeOf(c)) {
+    const brand = (c as Record<symbol, unknown>)[entityType];
+    if (typeof brand === "string") {
+      brands.add(brand);
+    }
+  }
+  return brands;
+}
+
 export function is<T extends DurcnoEntity<any>>(
   value: any,
   type: T,
@@ -24,19 +38,23 @@ export function is<T extends DurcnoEntity<any>>(
   if (value instanceof type) {
     return true;
   }
-
-  let cls = Object.getPrototypeOf(value).constructor;
-  if (cls) {
-    // Traverse the prototype chain to find the entityKind
-    while (cls) {
-      if (entityType in cls && cls[entityType] === type[entityType]) {
-        return true;
-      }
-      cls = Object.getPrototypeOf(cls);
-    }
+  const valueType = typeof value;
+  if (valueType !== "object" && valueType !== "function") {
+    return false;
   }
 
-  return false;
+  const proto = Object.getPrototypeOf(value);
+  if (proto === null) {
+    return false;
+  }
+
+  const ctor = proto.constructor as object;
+  let brands = ctorBrands.get(ctor);
+  if (brands === undefined) {
+    brands = brandsOf(ctor);
+    ctorBrands.set(ctor, brands);
+  }
+  return brands.has(type[entityType]);
 }
 
 export function isCol(value: any): value is AnyColumn {

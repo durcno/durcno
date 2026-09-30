@@ -40,20 +40,32 @@ export type AnyArg = Arg<any>;
 
 export type IsArg<T> = T extends AnyArg ? true : false;
 
+/** One resolved argument slot, in `$N` placeholder order, for a single `run()`. */
+type ArgSlot = {
+  readonly key: keyof Record<string, AnyArg>;
+  readonly handler: (val: never) => string | number | null;
+};
+
 export class PrepareStatement<TArgs extends Record<string, AnyArg>, TReturn> {
   readonly #query: Query<TReturn>;
-  readonly #args: TArgs;
-  constructor(query: Query<TReturn>, args: TArgs) {
+  readonly #slots: readonly ArgSlot[];
+  constructor(query: Query<TReturn>, slots: readonly ArgSlot[]) {
     this.#query = query;
-    this.#args = args;
+    this.#slots = slots;
   }
+
   run(
     db: AnyDBorTX,
     values: { [K in keyof TArgs]: TArgs[K]["$"]["TsType"] },
   ): PrepareQuery<TReturn> {
-    const args = [] as BasicTypes[];
-    for (const k of this.#query.arguments) {
-      args.push(this.#args[k as keyof TArgs].handler(values[k as keyof TArgs]));
+    const slots = this.#slots;
+    const count = slots.length;
+    const args = new Array<BasicTypes>(count);
+    for (let i = 0; i < count; i++) {
+      const slot = slots[i];
+      args[i] = (slot.handler as (val: unknown) => string | number | null)(
+        values[slot.key as keyof TArgs],
+      );
     }
     return new PrepareQuery(this.#query, args, db._.getExecutor());
   }
@@ -108,5 +120,13 @@ export function prepare<TArgs extends Record<string, AnyArg>, TReturn>(
     args[key].key = key;
   }
   const query = statement(args).toQuery() as Query<TReturn>;
-  return new PrepareStatement<TArgs, TReturn>(query, args);
+  const slots: ArgSlot[] = [];
+  for (const key of query.arguments as (keyof TArgs & string)[]) {
+    const arg = args[key];
+    slots.push({
+      key,
+      handler: arg.handler as (val: unknown) => string | number | null,
+    });
+  }
+  return new PrepareStatement<TArgs, TReturn>(query, slots);
 }
