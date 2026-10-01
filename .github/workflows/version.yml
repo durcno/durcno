@@ -27,8 +27,6 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter='durcno'
-      - name: Build package
-        run: pnpm run build
       - name: Version
         run: pnpm exec cngpac version --commit --tag --push --publish --release
         env:

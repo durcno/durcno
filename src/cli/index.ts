@@ -9,7 +9,7 @@ import { shell } from "./commands/shell";
 import { squash } from "./commands/squash";
 import { status } from "./commands/status";
 
-program.version(process.env.VERSION ?? "1.0.0");
+program.version(process.env.VERSION ?? "0.0.0");
 
 const Options = {
   config: ["--config <path>", "Path to the config file"],

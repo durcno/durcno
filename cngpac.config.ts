@@ -17,6 +17,9 @@ export default defineConfig({
     owner: "durcno",
     name: "durcno",
   },
+  build: {
+    script: "build",
+  },
   changelog: {
     generator: createChangelogGenerator({
       githubToken: process.env.GITHUB_TOKEN || "",
