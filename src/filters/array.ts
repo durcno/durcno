@@ -47,7 +47,7 @@ export class ArrayContainsFilter<
     if (is(this.values, Arg<TCol["ValType"][]>)) {
       query.addArg(this.values);
     } else {
-      query.sql += `${this.left.toSQL(this.values)}::${this.left.sqlType}`;
+      query.sql += this.left.toSQLExpression(this.values);
     }
   }
 }
@@ -97,7 +97,7 @@ export class ArrayContainedByFilter<
     if (is(this.values, Arg<TCol["ValType"]>)) {
       query.addArg(this.values);
     } else {
-      query.sql += `${this.left.toSQL(this.values)}::${this.left.sqlType}`;
+      query.sql += this.left.toSQLExpression(this.values);
     }
   }
 }
@@ -144,7 +144,7 @@ export class ArrayOverlapsFilter<
     if (is(this.right, Arg<TCol["ValType"]>)) {
       query.addArg(this.right);
     } else {
-      query.sql += `${this.left.toSQL(this.right)}::${this.left.sqlType}`;
+      query.sql += this.left.toSQLExpression(this.right);
     }
   }
 }

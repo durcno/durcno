@@ -435,6 +435,10 @@ export const SimpleArrayTests = table("public", "simpleArrayTests", {
   requiredScores: integer({ notNull, dimension: array() }),
   // Optional integer array
   optionalScores: integer({ dimension: array() }),
+  // Optional date array
+  optionalDates: date({ dimension: array() }),
+  // Optional timestamptz array
+  optionalInstants: timestamptz({ dimension: array() }),
 });
 
 /**

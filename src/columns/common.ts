@@ -492,6 +492,16 @@ export abstract class Column<
   }
 
   /**
+   * Converts a JavaScript value to a SQL literal that can stand on its own in a
+   * SQL expression (e.g. in comparisons or function arguments).
+   */
+  toSQLExpression(value: this["ValType"] | Sql | null): string {
+    const sql = this.toSQL(value);
+    if (!this.dimensions) return sql;
+    return `${sql}::${this.sqlType}`;
+  }
+
+  /**
    * Helper to recursively process multi-dimensional arrays for toSQL.
    */
   #toSQLArray(

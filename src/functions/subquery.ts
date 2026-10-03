@@ -196,7 +196,7 @@ export class InFn<
         if (is(v, Arg)) {
           query.addArg(v);
         } else {
-          query.sql += this.field.toSQL(v);
+          query.sql += this.field.toSQLExpression(v);
         }
         if (i < this.values.length - 1) query.sql += ", ";
       }

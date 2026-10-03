@@ -127,6 +127,8 @@ Additional helpers available on every `Column` instance:
 - `$insertFn(fn)` / `$updateFn(fn)` and the corresponding `hasInsertFn` / `hasUpdateFn` / `insertFnVal()` / `updateFnVal()` helpers.
 - `$type<T>()` — a compile-time only helper to override the TypeScript value type for the column.
 - `arg()` — returns an `Arg` helper that binds the column's driver conversion and its `sqlCast` type (useful for prepared statements). The generated placeholder is automatically suffixed with `::type` when `sqlCastScalar` is non-null.
+- `toSQL(value, { cast })` — returns the value as a SQL literal; `{ cast: true }` adds the cast the write paths (`insert`/`update`) rely on.
+- `toSQLExpression(value)` — returns the value as a SQL literal for an expression (e.g. the value side of a comparison or function argument). Array literals are typed by PostgreSQL, so they are cast to the column's array type (`ARRAY['a']::varchar(100)[]`).
 - `fullName` — returns the quoted `"schema"."column"` style name when the column is attached to a table.
 
 Note: the `Column` generic order is `Column<TConfig extends ColumnConfig, TColVal>` (first is config type, second is the value type). For examples see the built-in `varchar` and `json` column implementations.

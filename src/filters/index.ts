@@ -90,7 +90,7 @@ export class ComparisonLeftIsColumn<
     } else if (this.right instanceof SqlFn) {
       this.right.toQuery(query, ctx);
     } else {
-      query.sql += this.left.toSQL(this.right);
+      query.sql += this.left.toSQLExpression(this.right);
     }
   }
 }

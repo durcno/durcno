@@ -5,8 +5,10 @@ import {
   arrayHas,
   arrayOverlaps,
   eq,
+  isIn,
   isNotNull,
   isNull,
+  ne,
 } from "durcno";
 import { createInsertSchema } from "durcno/validators/zod";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -601,6 +603,105 @@ describe("Array Column Types", () => {
   });
 
   // ==========================================================================
+  // Array columns compared with eq/ne/isIn — the value side needs a cast
+  // ==========================================================================
+
+  describe("array columns compared with eq/ne/isIn", () => {
+    beforeEach(async () => {
+      await cleanTestData([schema.SimpleArrayTests]);
+      const db = getDb();
+      await db.insertInto(schema.SimpleArrayTests).values([
+        {
+          requiredTags: ["a", "b"],
+          requiredScores: [1, 2],
+          optionalDates: [new Date("2024-01-01"), new Date("2024-02-01")],
+          optionalInstants: [new Date("2024-01-01T00:00:00Z")],
+        },
+        { requiredTags: ["c"], requiredScores: [3] },
+        { requiredTags: ["a", "b"], requiredScores: [1, 2] },
+      ]);
+    });
+
+    it("eq: varchar[] matches the stored array", async () => {
+      const db = getDb();
+      const result = await db
+        .from(schema.SimpleArrayTests)
+        .select("*")
+        .where(() => eq(schema.SimpleArrayTests.requiredTags, ["a", "b"]));
+      expect(result).toHaveLength(2);
+    });
+
+    it("eq: varchar[] does not match a different array", async () => {
+      const db = getDb();
+      const result = await db
+        .from(schema.SimpleArrayTests)
+        .select("*")
+        .where(() => eq(schema.SimpleArrayTests.requiredTags, ["a", "z"]));
+      expect(result).toHaveLength(0);
+    });
+
+    it("ne: varchar[] returns the non-matching rows", async () => {
+      const db = getDb();
+      const result = await db
+        .from(schema.SimpleArrayTests)
+        .select("*")
+        .where(() => ne(schema.SimpleArrayTests.requiredTags, ["a", "b"]));
+      expect(result).toHaveLength(1);
+      expect(result[0].requiredTags).toEqual(["c"]);
+    });
+
+    it("eq: integer[] matches the stored array", async () => {
+      const db = getDb();
+      const result = await db
+        .from(schema.SimpleArrayTests)
+        .select("*")
+        .where(() => eq(schema.SimpleArrayTests.requiredScores, [3]));
+      expect(result).toHaveLength(1);
+      expect(result[0].requiredTags).toEqual(["c"]);
+    });
+
+    it("eq: date[] matches the stored array", async () => {
+      const db = getDb();
+      const result = await db
+        .from(schema.SimpleArrayTests)
+        .select("*")
+        .where(() =>
+          eq(schema.SimpleArrayTests.optionalDates, [
+            new Date("2024-01-01"),
+            new Date("2024-02-01"),
+          ]),
+        );
+      expect(result).toHaveLength(1);
+      expect(result[0].optionalInstants).toEqual([new Date("2024-01-01")]);
+    });
+
+    it("eq: timestamptz[] matches the stored array", async () => {
+      const db = getDb();
+      const result = await db
+        .from(schema.SimpleArrayTests)
+        .select("*")
+        .where(() =>
+          eq(schema.SimpleArrayTests.optionalInstants, [
+            new Date("2024-01-01T00:00:00Z"),
+          ]),
+        );
+      expect(result).toHaveLength(1);
+      expect(result[0].optionalDates).toHaveLength(2);
+    });
+
+    it("isIn: varchar[] matches any of the given arrays", async () => {
+      const db = getDb();
+      const result = await db
+        .from(schema.SimpleArrayTests)
+        .select("*")
+        .where(() =>
+          isIn(schema.SimpleArrayTests.requiredTags, [["a", "b"], ["x"]]),
+        );
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  // ==========================================================================
   // Array filters on StatusEnum[]: all five filter types
   // ==========================================================================
 
@@ -680,6 +781,18 @@ describe("Array Column Types", () => {
         .where(() => arrayAll(schema.EnumArrayTests.requiredPriorities, "low"));
       // only ["low","low"] qualifies
       expect(result).toHaveLength(1);
+    });
+
+    it("eq: enum[] matches the stored array", async () => {
+      const db = getDb();
+      const result = await db
+        .from(schema.EnumArrayTests)
+        .select("*")
+        .where(() =>
+          eq(schema.EnumArrayTests.requiredStatuses, ["active", "pending"]),
+        );
+      expect(result).toHaveLength(1);
+      expect(result[0].requiredPriorities).toEqual(["high"]);
     });
   });
 });

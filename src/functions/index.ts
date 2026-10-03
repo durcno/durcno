@@ -162,7 +162,7 @@ export function appendOperand(
   } else if (Array.isArray(expr)) {
     const lead = options?.leadOperand;
     if (lead && isCol(lead) && lead.dimensions) {
-      query.sql += lead.toSQL(expr);
+      query.sql += lead.toSQLExpression(expr);
     } else {
       const jsonKind =
         (options?.preferJsonb ? "jsonb" : null) ??
