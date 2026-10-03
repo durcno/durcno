@@ -334,6 +334,51 @@ describe("Numeric Column Types", () => {
         .where(() => eq(schema.NumericTests.id, insertedId));
       expect(row.value).toBe("999.99");
     });
+
+    it("filter by numeric value", async () => {
+      const db = getDb();
+      const rows = await db
+        .from(schema.NumericTests)
+        .select("*")
+        .where(() => eq(schema.NumericTests.value, "999.99"));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].value).toBe("999.99");
+    });
+
+    it("preserves arbitrary precision through insert and filter", async () => {
+      const db = getDb();
+      const precise = "123456789012345678901234567890.123456789";
+      const [inserted] = await db
+        .insertInto(schema.NumericTests)
+        .values({ value: precise })
+        .returning({ id: true });
+      const rows = await db
+        .from(schema.NumericTests)
+        .select("*")
+        .where(() => eq(schema.NumericTests.value, precise));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].value).toBe(precise);
+      await db
+        .deleteFrom(schema.NumericTests)
+        .where(eq(schema.NumericTests.id, inserted.id));
+    });
+
+    it("rejects an invalid numeric value in a filter", async () => {
+      const db = getDb();
+      await expect(
+        db
+          .from(schema.NumericTests)
+          .select("*")
+          .where(() => eq(schema.NumericTests.value, "abc")),
+      ).rejects.toThrow("Invalid numeric value: abc");
+    });
+
+    it("rejects an invalid numeric value on insert", async () => {
+      const db = getDb();
+      await expect(
+        db.insertInto(schema.NumericTests).values({ value: "12x" }),
+      ).rejects.toThrow("Invalid numeric value: 12x");
+    });
   });
   // ==========================================================================
   // REAL

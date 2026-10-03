@@ -4,6 +4,15 @@ import { Column, type ColumnConfig } from "./common";
 
 type NumericValType = string;
 
+const NUMERIC_LITERAL_REGEX = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+/**
+ * Whether `value` is a valid PostgreSQL `numeric` literal.
+ */
+function isNumericLiteral(value: string): boolean {
+  return NUMERIC_LITERAL_REGEX.test(value);
+}
+
 type NumericConfig = ColumnConfig & {
   /**
    * The total number of significant digits (1-1000).
@@ -47,13 +56,9 @@ export class NumericColumn<TConfig extends NumericConfig> extends Column<
   }
 
   get zodTypeScaler() {
-    return z.string().refine(
-      (val) => {
-        const num = Number(val);
-        return !Number.isNaN(num) && Number.isFinite(num);
-      },
-      { message: "Invalid numeric value" },
-    );
+    return z.string().refine(isNumericLiteral, {
+      message: "Invalid numeric value",
+    });
   }
 
   toDriverScalar(value: NumericValType | Sql | null) {
@@ -61,12 +66,12 @@ export class NumericColumn<TConfig extends NumericConfig> extends Column<
     return value instanceof Sql ? value.string : value;
   }
 
-  toSQLScalar(value: string | Sql | null): string {
+  toSQLScalar(value: NumericValType | Sql | null): string {
     if (value === null) return "NULL";
     if (value instanceof Sql) return value.string;
-
-    Number(value);
-
+    if (!isNumericLiteral(value)) {
+      throw new Error(`Invalid numeric value: ${value}`);
+    }
     return value;
   }
 

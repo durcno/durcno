@@ -189,9 +189,24 @@ describe("SQL Injection Protection (String JS Type Columns)", () => {
       expectEq: "12345.67",
     },
     {
-      name: "should keep SQL-like payload visible for dedicated validation",
+      name: "should serialize sign, exponent and bare-fraction forms",
+      input: "-1.5e-10",
+      expectEq: "-1.5e-10",
+    },
+    {
+      name: "should reject SQL injection payload as invalid numeric value",
       input: "0; DROP TABLE users; --",
-      expectEq: "0; DROP TABLE users; --",
+      throws: "Invalid numeric value",
+    },
+    {
+      name: "should reject non-numeric identifiers",
+      input: "abc",
+      throws: "Invalid numeric value",
+    },
+    {
+      name: "should reject hex-looking payloads that Number() would accept",
+      input: "0x27",
+      throws: "Invalid numeric value",
     },
     { name: "should handle null values", input: null, expectEq: "NULL" },
   ]);
