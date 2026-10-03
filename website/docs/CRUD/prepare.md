@@ -87,6 +87,47 @@ const result = await findUser.run(db, {
 });
 ```
 
+## Reusing an Argument
+
+The same argument can be referenced in several places in one statement. It is
+bound once and every position it appears in refers to it:
+
+```typescript
+import { eq, isIn, prepare } from "durcno";
+import { db } from "./db/index.ts";
+import { Users } from "./db/schema.ts";
+
+// "username" is one argument, used twice in the IN list
+const findByName = prepare({ username: Users.username.arg() }, (args) => {
+  return db
+    .prepare()
+    .from(Users)
+    .select("*")
+    .where(() => isIn(Users.username, [args.username, args.username]));
+});
+
+const result = await findByName.run(db, { username: "john" });
+// SELECT * FROM "users" WHERE "users"."username" IN ($1, $1)
+```
+
+The same applies to filters, `values()`, `set()`, and relational queries — a
+multi-row insert can share one argument across all rows:
+
+```typescript
+const createUsers = prepare({ score: Users.score.arg() }, (args) => {
+  return db
+    .prepare()
+    .insertInto(Users)
+    .values([
+      { username: "alice", type: "user", score: args.score },
+      { username: "bob", type: "user", score: args.score },
+    ])
+    .returning("*");
+});
+
+const users = await createUsers.run(db, { score: 10 });
+```
+
 ## Using Arguments in INSERT Values
 
 Prepared arguments can also be used inside `insert().values(...)` when you want to bind runtime values for a new row:

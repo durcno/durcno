@@ -10,7 +10,9 @@ export class Arg<TType> {
   $!: {
     TsType: TType;
   };
+  /** `$N` placeholder number of this argument, assigned by `prepare` (0 before). */
   index: number = 0;
+  /** Name of this argument in the `prepare` args object, assigned by `prepare`. */
   key: string = "";
   /** Handler function to convert the argument value to a format suitable for the database client. */
   readonly handler: (val: TType) => string | number | null;
@@ -120,12 +122,13 @@ export function prepare<TArgs extends Record<string, AnyArg>, TReturn>(
     args[key].key = key;
   }
   const query = statement(args).toQuery() as Query<TReturn>;
+  const argCount = query.arguments.length;
   const slots: ArgSlot[] = [];
-  for (const key of query.arguments as (keyof TArgs & string)[]) {
-    const arg = args[key];
+  for (let i = 0; i < argCount; i++) {
+    const key = keys[i] as keyof TArgs & string;
     slots.push({
       key,
-      handler: arg.handler as (val: unknown) => string | number | null,
+      handler: args[key].handler as (val: unknown) => string | number | null,
     });
   }
   return new PrepareStatement<TArgs, TReturn>(query, slots);

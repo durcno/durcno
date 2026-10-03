@@ -262,10 +262,7 @@ export class UpdateQuery<
       } else if (value instanceof Sql) {
         value.toQuery(query);
       } else if (is(value, Arg)) {
-        const cast = value.cast ?? column.sqlCast ?? null;
-        query.sql += `$${value.index}`;
-        if (cast) query.sql += `::${cast}`;
-        query.arguments.push(value.key);
+        query.addArg(value, value.cast ?? column.sqlCast ?? null);
       } else {
         query.sql += column.toSQL(value, { cast: true });
       }

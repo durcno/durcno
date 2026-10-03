@@ -5,10 +5,12 @@ import {
   type $Client,
   Arg,
   add,
+  and,
   asc,
   database,
   defineConfig,
   eq,
+  isIn,
   lower,
   prepare,
   sql,
@@ -111,6 +113,63 @@ describe("prepare", () => {
     expect(rows[0].username).toBe("alice");
   });
 
+  // ── Arg binding ───────────────────────────────────────────────────────
+  // One Arg reused in several places writes one placeholder per position but
+  // binds one value; each Arg keeps the value its own `$N` refers to.
+  it("should bind a single Arg reused across an isIn list", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "isIn_alice" }),
+        createTestUser({ username: "isIn_bob" }),
+      ]);
+
+    const selectPre = prepare({ name: schema.Users.username.arg() }, (args) =>
+      db
+        .prepare()
+        .from(schema.Users)
+        .select("*")
+        .where(() => isIn(schema.Users.username, [args.name, args.name])),
+    );
+
+    const rows = await selectPre.run(db, { name: "isIn_bob" });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].username).toBe("isIn_bob");
+  });
+
+  it("should bind each Arg to its own placeholder when written out of order", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "order_alice", age: 99 }));
+
+    // `username` is written first but sorts after `age`, so it is `$2`.
+    const selectPre = prepare(
+      { age: schema.Users.age.arg(), name: schema.Users.username.arg() },
+      (args) =>
+        db
+          .prepare()
+          .from(schema.Users)
+          .select("*")
+          .where(() =>
+            and(
+              eq(schema.Users.username, args.name),
+              eq(schema.Users.age, args.age),
+            ),
+          ),
+    );
+
+    const matched = await selectPre.run(db, { age: 99, name: "order_alice" });
+    expect(matched).toHaveLength(1);
+    expect(matched[0].username).toBe("order_alice");
+
+    const mismatched = await selectPre.run(db, {
+      age: 98,
+      name: "order_alice",
+    });
+    expect(mismatched).toHaveLength(0);
+  });
+
   // ── INSERT ────────────────────────────────────────────────────────────
   // Arg in: values (username column)
   it("should insert with Arg in values", async () => {
@@ -160,6 +219,38 @@ describe("prepare", () => {
     expect(rows[0].username).toBe("uppercase_user");
   });
 
+  it("should bind a single Arg reused across insert rows", async () => {
+    const insertPre = prepare({ score: schema.Users.score.arg() }, (args) =>
+      db
+        .prepare()
+        .insertInto(schema.Users)
+        .values([
+          {
+            username: "shared_arg_1",
+            email: "shared1@test.com",
+            type: "user",
+            status: "active",
+            role: "user",
+            score: args.score,
+          },
+          {
+            username: "shared_arg_2",
+            email: "shared2@test.com",
+            type: "user",
+            status: "active",
+            role: "user",
+            score: args.score,
+          },
+        ])
+        .returning("*"),
+    );
+
+    const rows = await insertPre.run(db, { score: 42 });
+
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.score)).toEqual([42, 42]);
+  });
+
   // ── UPDATE ────────────────────────────────────────────────────────────
   // Arg in: where (Users.id.arg())
   it("should update with Arg in where", async () => {
@@ -205,6 +296,28 @@ describe("prepare", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].score).toBe(75);
+  });
+
+  it("should bind a single Arg reused in set and where", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "to_self_update", score: 10 }))
+      .returning("*");
+
+    const updatePre = prepare({ score: schema.Users.score.arg() }, (args) =>
+      db
+        .prepare()
+        .update(schema.Users)
+        .set({ score: args.score })
+        .where(eq(schema.Users.score, args.score))
+        .returning("*"),
+    );
+
+    const rows = await updatePre.run(db, { score: 10 });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe(user.id);
+    expect(rows[0].score).toBe(10);
   });
 
   // ── DELETE ────────────────────────────────────────────────────────────

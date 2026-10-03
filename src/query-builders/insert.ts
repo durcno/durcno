@@ -412,10 +412,7 @@ export class InsertQuery<
         } else if (value instanceof Sql) {
           value.toQuery(query);
         } else if (is(value, Arg)) {
-          const cast = value.cast ?? column.sqlCast ?? null;
-          const castSuffix = cast ? `::${cast}` : "";
-          query.sql += `$${value.index}${castSuffix}`;
-          query.arguments.push(value.key);
+          query.addArg(value, value.cast ?? column.sqlCast ?? null);
         } else {
           query.sql += column.toSQL(value, { cast: true });
         }
@@ -457,10 +454,7 @@ export class InsertQuery<
           } else if (value instanceof Sql) {
             value.toQuery(query);
           } else if (is(value, Arg)) {
-            const cast = value.cast ?? col.sqlCast ?? null;
-            const castSuffix = cast ? `::${cast}` : "";
-            query.sql += `$${value.index}${castSuffix}`;
-            query.arguments.push(value.key);
+            query.addArg(value, value.cast ?? col.sqlCast ?? null);
           } else {
             query.sql += col.toSQL(value, { cast: true });
           }

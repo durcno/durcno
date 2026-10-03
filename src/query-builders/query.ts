@@ -28,11 +28,17 @@ export class Query<TReturn = unknown> {
     this.rowsHandler = rowsHandler;
   }
 
-  /** Appends a prepared-query `Arg` placeholder with optional cast suffix. */
-  addArg(arg: AnyArg) {
-    const castSuffix = arg.cast ? `::${arg.cast}` : "";
+  /**
+   * Appends a prepared-query `Arg` placeholder with an optional cast, falling
+   * back to the `Arg`'s own cast.
+   */
+  addArg(arg: AnyArg, cast: string | null = arg.cast) {
+    const castSuffix = cast ? `::${cast}` : "";
     this.sql += `$${arg.index}${castSuffix}`;
-    this.arguments.push(arg.key);
+    const slot = arg.index - 1;
+    if (slot >= 0 && this.arguments[slot] === undefined) {
+      this.arguments[slot] = arg.key;
+    }
   }
 
   /** Pushes an argument value and returns the `$N[::cast]` placeholder string. */
