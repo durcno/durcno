@@ -557,13 +557,25 @@ class DB<
       );
       const result = await callback(tx);
       await client.execStrArgs("COMMIT;");
-      await client.close();
 
       return result;
     } catch (error) {
-      await client.execStrArgs("ROLLBACK;");
-      await client.close();
+      try {
+        await client.execStrArgs("ROLLBACK;");
+      } catch (rollbackError) {
+        client.logger?.error("Transaction ROLLBACK failed", {
+          error: rollbackError,
+        });
+      }
       throw error;
+    } finally {
+      try {
+        await client.close();
+      } catch (closeError) {
+        client.logger?.error("Failed to release transaction connection", {
+          error: closeError,
+        });
+      }
     }
   }
 

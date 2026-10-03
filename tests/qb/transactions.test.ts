@@ -290,6 +290,21 @@ describe("Transactions", () => {
     expect(comments).toHaveLength(1);
   });
 
+  it("should release the connection on repeated failing transactions", async () => {
+    // The pool is capped at 2 connections, so any leaked slot makes the
+    // following transactions wait forever for one that never comes back.
+    for (let i = 0; i < 5; i++) {
+      await expect(
+        db.transaction(async () => {
+          throw new Error(`Intentional rollback ${i}`);
+        }),
+      ).rejects.toThrow(`Intentional rollback ${i}`);
+    }
+
+    // A connection is still available once every failure has been handled.
+    await expect(db.transaction(async () => "ok")).resolves.toBe("ok");
+  });
+
   it("should rollback all changes on partial failure", async () => {
     const [user] = await db
       .insertInto(schema.Users)

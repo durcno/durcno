@@ -1,5 +1,5 @@
 import type { ConnectionOptions } from "node:tls";
-import type { QueryLogger } from "../logger";
+import type { DurcnoLogger } from "../logger";
 import type { MigrationOptions } from "../migration/index";
 import type { Query } from "../query-builders/query";
 import type { SqlArgType } from "../types";
@@ -48,8 +48,8 @@ export type ConnectorOptions = {
      */
     max?: number;
   };
-  /** Optional logger instance for query logging. */
-  logger?: QueryLogger;
+  /** Optional logger instance for query and lifecycle logging. */
+  logger?: DurcnoLogger;
 };
 
 /**
@@ -167,8 +167,8 @@ export abstract class Connector {
 abstract class $QueryExecutor {
   /** The connector options used to create this executor. */
   options: ConnectorOptions;
-  /** Optional logger instance for query logging. */
-  logger?: QueryLogger;
+  /** Optional logger instance for query and lifecycle logging. */
+  logger?: DurcnoLogger;
 
   constructor(options: ConnectorOptions) {
     this.options = options;
@@ -208,18 +208,23 @@ abstract class $QueryExecutor {
       const result = await this.query(str, args, prepare);
       if (this.logger) {
         this.logger.info("Query executed", {
-          sql: str,
-          arguments: args,
-          durationMs: performance.now() - start,
+          query: {
+            sql: str,
+            arguments: args,
+            durationMs: performance.now() - start,
+          },
         });
       }
       return result;
     } catch (error) {
       if (this.logger) {
         this.logger.error("Query failed", {
-          sql: str,
-          arguments: args,
-          durationMs: performance.now() - start,
+          query: {
+            sql: str,
+            arguments: args,
+            durationMs: performance.now() - start,
+          },
+          error,
         });
       }
       throw error;

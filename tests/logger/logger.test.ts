@@ -1,5 +1,10 @@
 import type { QueryLogger } from "durcno";
-import { createQueryLogger } from "durcno/logger";
+import {
+  createDurcnoLogger,
+  createLogger,
+  createQueryLogger,
+  formatDurcnoLog,
+} from "durcno/logger";
 import { describe, expect, it, vi } from "vitest";
 import { $Client, $Pool } from "../../src/connectors/common";
 import { Query } from "../../src/query-builders/query";
@@ -45,11 +50,16 @@ class TestPool extends $Pool {
 }
 
 describe("Logger", () => {
-  describe("createQueryLogger", () => {
+  describe("createLogger", () => {
     it("returns an object with an info and error method", () => {
-      const logger = createQueryLogger();
+      const logger = createLogger();
       expect(typeof logger.info).toBe("function");
       expect(typeof logger.error).toBe("function");
+    });
+
+    it("aliases createQueryLogger and createDurcnoLogger", () => {
+      expect(createQueryLogger).toBe(createLogger);
+      expect(createDurcnoLogger).toBe(createLogger);
     });
   });
 
@@ -68,8 +78,10 @@ describe("Logger", () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         "Query executed",
         expect.objectContaining({
-          sql: "SELECT * FROM users WHERE id = $1",
-          arguments: [42],
+          query: expect.objectContaining({
+            sql: "SELECT * FROM users WHERE id = $1",
+            arguments: [42],
+          }),
         }),
       );
     });
@@ -96,7 +108,10 @@ describe("Logger", () => {
       expect(mockLogger.error).toHaveBeenCalledWith(
         "Query failed",
         expect.objectContaining({
-          sql: "SELECT 1",
+          query: expect.objectContaining({
+            sql: "SELECT 1",
+          }),
+          error: testError,
         }),
       );
     });
@@ -117,8 +132,10 @@ describe("Logger", () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         "Query executed",
         expect.objectContaining({
-          sql: 'INSERT INTO users ("name") VALUES ($1)',
-          arguments: ["John"],
+          query: expect.objectContaining({
+            sql: 'INSERT INTO users ("name") VALUES ($1)',
+            arguments: ["John"],
+          }),
         }),
       );
     });
@@ -145,7 +162,10 @@ describe("Logger", () => {
       expect(mockLogger.error).toHaveBeenCalledWith(
         "Query failed",
         expect.objectContaining({
-          sql: "SELECT 1",
+          query: expect.objectContaining({
+            sql: "SELECT 1",
+          }),
+          error: testError,
         }),
       );
     });
@@ -168,8 +188,10 @@ describe("Logger", () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         "Query executed",
         expect.objectContaining({
-          sql: "SELECT * FROM users WHERE id = $1 AND name = $2",
-          arguments: [1, "Alice"],
+          query: expect.objectContaining({
+            sql: "SELECT * FROM users WHERE id = $1 AND name = $2",
+            arguments: [1, "Alice"],
+          }),
         }),
       );
     });
@@ -189,9 +211,161 @@ describe("Logger", () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         "Query executed",
         expect.objectContaining({
-          sql: "UPDATE users SET name = $1 WHERE id = $2",
-          arguments: [null, 5],
+          query: expect.objectContaining({
+            sql: "UPDATE users SET name = $1 WHERE id = $2",
+            arguments: [null, 5],
+          }),
         }),
+      );
+    });
+  });
+
+  describe("formatDurcnoLog", () => {
+    const formatInfo = (info: Record<string, unknown>) => {
+      return formatDurcnoLog({
+        level: "info",
+        message: "test",
+        label: "durcno",
+        timestamp: "2026-10-02T10:00:00.000Z",
+        ...info,
+      });
+    };
+
+    it("formats a standard query with SQL, arguments, and duration using query object", () => {
+      const out = formatInfo({
+        level: "info",
+        message: "Query executed",
+        query: {
+          sql: "SELECT * FROM users\nWHERE id = $1",
+          arguments: [42],
+          durationMs: 3.14,
+        },
+      });
+
+      expect(out).toBe(
+        [
+          "2026-10-02T10:00:00.000Z [durcno] INFO: Query executed",
+          "  ┌ SQL",
+          "  │ SELECT * FROM users",
+          "  │ WHERE id = $1",
+          "  ├ Arguments",
+          "  │ $1 = 42",
+          "  ├ Duration",
+          "  │ 3.14ms",
+          "  └",
+        ].join("\n"),
+      );
+    });
+
+    it("supports legacy flat metadata format as a fallback", () => {
+      const out = formatInfo({
+        level: "info",
+        message: "Query executed",
+        sql: "SELECT * FROM users\nWHERE id = $1",
+        arguments: [42],
+        durationMs: 3.14,
+      });
+
+      expect(out).toBe(
+        [
+          "2026-10-02T10:00:00.000Z [durcno] INFO: Query executed",
+          "  ┌ SQL",
+          "  │ SELECT * FROM users",
+          "  │ WHERE id = $1",
+          "  ├ Arguments",
+          "  │ $1 = 42",
+          "  ├ Duration",
+          "  │ 3.14ms",
+          "  └",
+        ].join("\n"),
+      );
+    });
+
+    it("formats a failed query with SQL and Error", () => {
+      const err = new Error("syntax error at or near 'FORM'");
+      err.stack = "Error: syntax error\n    at Driver.query (/db/driver.ts:10)";
+
+      const out = formatInfo({
+        level: "error",
+        message: "Query failed",
+        sql: "SELECT * FORM users",
+        durationMs: 1.5,
+        error: err,
+      });
+
+      expect(out).toBe(
+        [
+          "2026-10-02T10:00:00.000Z [durcno] ERROR: Query failed",
+          "  ┌ SQL",
+          "  │ SELECT * FORM users",
+          "  ├ Duration",
+          "  │ 1.50ms",
+          "  ├ Error",
+          "  │ Error: syntax error",
+          "  │     at Driver.query (/db/driver.ts:10)",
+          "  └",
+        ].join("\n"),
+      );
+    });
+
+    it("formats transaction failure logs with only error field (no SQL)", () => {
+      const rollbackErr = new Error("Connection terminated unexpectedly");
+      rollbackErr.stack =
+        "Error: Connection terminated\n    at Socket.onClose (/net/socket.ts:25)";
+
+      const out = formatInfo({
+        level: "error",
+        message: "Transaction ROLLBACK failed",
+        error: rollbackErr,
+      });
+
+      expect(out).toBe(
+        [
+          "2026-10-02T10:00:00.000Z [durcno] ERROR: Transaction ROLLBACK failed",
+          "  ┌ Error",
+          "  │ Error: Connection terminated",
+          "  │     at Socket.onClose (/net/socket.ts:25)",
+          "  └",
+        ].join("\n"),
+      );
+    });
+
+    it("formats object errors cleanly", () => {
+      const out = formatInfo({
+        level: "error",
+        message: "Failed to release transaction connection",
+        error: { code: "ECONNRESET", detail: "socket hang up" },
+      });
+
+      expect(out).toContain("  ┌ Error");
+      expect(out).toContain('  │   "code": "ECONNRESET"');
+      expect(out).toContain('  │   "detail": "socket hang up"');
+      expect(out).toContain("  └");
+    });
+
+    it("handles circular objects in error without throwing", () => {
+      const circular: Record<string, unknown> = { name: "cycle" };
+      circular.self = circular;
+
+      const out = formatInfo({
+        level: "error",
+        message: "Custom error",
+        error: circular,
+      });
+
+      expect(out).toContain("  ┌ Error");
+      expect(out).toContain("  │ [object Object]");
+      expect(out).toContain("  └");
+    });
+
+    it("formats plain messages without metadata as single-line", () => {
+      const out = formatInfo({
+        level: "info",
+        message: "Connected to database",
+      });
+
+      expect(out).toBe(
+        "2026-10-02T10:00:00.000Z [durcno] INFO: Connected to database",
       );
     });
   });
