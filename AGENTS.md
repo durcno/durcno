@@ -336,6 +336,9 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 - **Type Safety**: Try not to use `any`, prefer proper type guards or `unknown`
 - **Import Paths**: Use relative imports (e.g., `./common`, `../table`) in all TypeScript files within the root `src` folder.
 - **Importing**: Always use `type` modifier for type-only imports
+- **Public API Exports**: Ensure all new public types, builders, functions, operators, and schemas are exported from `src/index.ts`
+- **Feature & Architectural Parity**: Maintain consistency and parity across parallel query builders, column types, and filter builders
+- **Arity Conventions**: Follow established where-clause conventions (callback `() => eq(...)` for SELECT, direct filter `eq(...)` for UPDATE/DELETE)
 - **Code Documentation**: Add small and concise jsdoc comments to all internal functions, classes, and methods for better code readability and maintainability.
 - **Node builtins**: Prefix with `node:`
 - **Don't append code at the end of files** — find the right place for it based on its purpose and related entities
@@ -352,7 +355,11 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 
 ### Performance Considerations
 
-- Avoid unnecessary string instantiation or return, prefer direct concatenation
+- **Hot vs. Cold Paths**: Distinguish hot paths (`toSQL()`, `build()`, SQL generation, column encode/decode, `handleRows`) from cold paths (CLI, migrations, DDL). Focus performance optimizations on hot paths.
+- **SQL String Building**: Prefer direct `query.sql += ...` appends; avoid intermediate template literals or `.map(...).join()` allocations in compilation loops.
+- **Loop Hoisting**: Hoist escaping (`escIdentifier`, `escLiteral`), `JSON.stringify`, regexes, and repeated computations outside loops.
+- **Hot-Path Allocations**: Avoid object/array spreads, unnecessary `.filter().map()` chains, and defensive copying on query-build hot paths.
+- **Generated SQL**: Avoid redundant `DISTINCT`, unnecessary subselects, or casts that trigger sequential scans in PostgreSQL.
 
 ## Guides
 
