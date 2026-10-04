@@ -611,32 +611,24 @@ export function database<TEntities extends Record<string, unknown>>(
   entities: TEntities,
   config: Config,
 ) {
-  const tables = Object.fromEntries(
-    Object.entries(entities)
-      .map(([name, entity]) => {
-        if (is(entity, Table)) {
-          return [name, entity] as [string, StdTableWithColumns];
-        }
-        return undefined;
-      })
-      .filter(
-        (entry): entry is [string, StdTableWithColumns] => entry !== undefined,
-      ),
-  );
-
-  const allRelations = Object.fromEntries(
-    Object.entries(entities)
-      .map(([_, entity]) => {
-        if (typeof entity === "function" && is(entity(), Relations)) {
-          return [entity().table._.fullName, entity()] as [
-            string,
-            StdRelations,
-          ];
-        }
-        return undefined;
-      })
-      .filter((entry): entry is [string, StdRelations] => entry !== undefined),
-  );
+  const tables: Record<string, StdTableWithColumns> = {};
+  const allRelations: Record<string, StdRelations> = {};
+  for (const [name, entity] of Object.entries(entities)) {
+    if (is(entity, Table)) {
+      tables[name] = entity as StdTableWithColumns;
+      continue;
+    }
+    if (typeof entity !== "function" || entity.length !== 0) continue;
+    let relations: unknown;
+    try {
+      relations = entity();
+    } catch {
+      continue;
+    }
+    if (is(relations, Relations)) {
+      allRelations[relations.table._.fullName] = relations;
+    }
+  }
   return new DB(
     tables,
     allRelations,

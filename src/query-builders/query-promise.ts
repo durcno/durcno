@@ -37,7 +37,10 @@ export abstract class QueryPromise<T> implements Promise<T> {
       | undefined
       | null,
   ): Promise<TResult1 | TResult2> {
-    return this.execute().then(onFulfilled).catch(onRejected);
+    const promise = this.execute();
+    if (onRejected) return promise.then(onFulfilled, onRejected);
+    if (onFulfilled) return promise.then(onFulfilled);
+    return promise as Promise<TResult1 | TResult2>;
   }
 
   abstract toQuery(parentQuery?: AnyQuery): Query<T>;

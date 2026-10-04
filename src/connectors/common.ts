@@ -198,27 +198,27 @@ abstract class $QueryExecutor {
    * @param prepare - Optional flag indicating whether to execute as a prepared statement.
    * @returns A promise that resolves with the raw query result.
    */
-  async execStrArgs(
+  execStrArgs(
     str: string,
     args?: SqlArgType[],
     prepare?: boolean,
   ): Promise<unknown> {
-    const start = this.logger ? performance.now() : 0;
-    try {
-      const result = await this.query(str, args, prepare);
-      if (this.logger) {
-        this.logger.info("Query executed", {
+    const logger = this.logger;
+    if (!logger) return this.query(str, args, prepare);
+    const start = performance.now();
+    return this.query(str, args, prepare).then(
+      (result) => {
+        logger.info("Query executed", {
           query: {
             sql: str,
             arguments: args,
             durationMs: performance.now() - start,
           },
         });
-      }
-      return result;
-    } catch (error) {
-      if (this.logger) {
-        this.logger.error("Query failed", {
+        return result;
+      },
+      (error) => {
+        logger.error("Query failed", {
           query: {
             sql: str,
             arguments: args,
@@ -226,9 +226,9 @@ abstract class $QueryExecutor {
           },
           error,
         });
-      }
-      throw error;
-    }
+        throw error;
+      },
+    );
   }
 
   /**
@@ -238,7 +238,7 @@ abstract class $QueryExecutor {
    * @param prepare - Optional flag indicating whether to execute as a prepared statement.
    * @returns A promise that resolves with the raw query result.
    */
-  async execQuery(q: Query<unknown>, prepare?: boolean): Promise<unknown> {
+  execQuery(q: Query<unknown>, prepare?: boolean): Promise<unknown> {
     return this.execStrArgs(q.sql, q.arguments, prepare);
   }
 }

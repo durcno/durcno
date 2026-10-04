@@ -303,6 +303,8 @@ export abstract class Column<
   #nameSql: string | undefined;
   // Stores the table reference
   #table: undefined;
+  // Lazily built `"table"."column"` identifier.
+  #fullName: string | undefined;
 
   constructor(config: TConfig) {
     this.config = config;
@@ -317,10 +319,12 @@ export abstract class Column<
     setName: (name: string) => {
       this.#name = name;
       this.#nameSql = camelToSnake(name);
+      this.#fullName = undefined;
     },
     // Setter to set the table reference when the column is added to a table
     setTable: (table: StdTable) => {
       this.#table = table as unknown as undefined;
+      this.#fullName = undefined;
     },
   };
 
@@ -367,10 +371,11 @@ export abstract class Column<
   abstract get sqlTypeScalar(): string;
   get sqlType() {
     const base = this.sqlTypeScalar;
-    if (!this.dimensions) return base;
+    const dimensions = this.#dimensions;
+    if (!dimensions) return base;
 
     // For each configured dimension, append either `[N]` (fixed size) or `[]` (unspecified)
-    const suffix = this.dimensions
+    const suffix = dimensions
       .map((d) => (d === null ? "[]" : `[${d}]`))
       .join("");
     return `${base}${suffix}`;
@@ -383,9 +388,10 @@ export abstract class Column<
   get sqlCast(): string | null {
     const base = this.sqlCastScalar;
     if (base === null) return null;
-    if (!this.dimensions) return base;
+    const dimensions = this.#dimensions;
+    if (!dimensions) return base;
 
-    const suffix = this.dimensions
+    const suffix = dimensions
       .map((d) => (d === null ? "[]" : `[${d}]`))
       .join("");
     return `${base}${suffix}`;
@@ -417,7 +423,12 @@ export abstract class Column<
    * @returns string `"table"."column"`
    */
   get fullName(): string {
-    return `"${this.table?._.nameSql}"."${this.nameSql}"`;
+    let fullName = this.#fullName;
+    if (fullName === undefined) {
+      fullName = `"${this.table?._.nameSql}"."${this.nameSql}"`;
+      this.#fullName = fullName;
+    }
+    return fullName;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -482,9 +493,12 @@ export abstract class Column<
     if (value === null) return "NULL";
     if (value instanceof Sql) return value.string;
 
-    if (!this.dimensions) {
-      if (!options?.cast || !this.sqlCastScalar) return this.toSQLScalar(value);
-      return `${this.toSQLScalar(value)}::${this.sqlCastScalar}`;
+    if (!this.#dimensions) {
+      // `sqlCastScalar` is a getter that builds a fresh type string, so read it
+      // once — `insert`/`update` pass `cast: true` for every bulk cell.
+      const cast = this.sqlCastScalar;
+      if (!options?.cast || !cast) return this.toSQLScalar(value);
+      return `${this.toSQLScalar(value)}::${cast}`;
     }
 
     // Handle array with ARRAY[...] syntax
@@ -497,7 +511,7 @@ export abstract class Column<
    */
   toSQLExpression(value: this["ValType"] | Sql | null): string {
     const sql = this.toSQL(value);
-    if (!this.dimensions) return sql;
+    if (!this.#dimensions) return sql;
     return `${sql}::${this.sqlType}`;
   }
 
@@ -509,17 +523,17 @@ export abstract class Column<
     dimIndex: number,
     options?: { cast?: boolean },
   ): string {
-    const dimensions = this.dimensions as readonly (number | null)[];
+    const dimensions = this.#dimensions as readonly (number | null)[];
     if (arr.length === 0) {
       return "'{}'";
     }
 
     if (dimIndex >= dimensions.length - 1) {
       // Innermost dimension - elements are scalars
+      const cast = options?.cast ? this.sqlCastScalar : null;
       const elements = arr.map((item) => {
-        if (!options?.cast || !this.sqlCastScalar)
-          return this.toSQLScalar(item as TColVal | Sql);
-        return `${this.toSQLScalar(item as TColVal | Sql)}::${this.sqlCastScalar}`;
+        if (!cast) return this.toSQLScalar(item as TColVal | Sql);
+        return `${this.toSQLScalar(item as TColVal | Sql)}::${cast}`;
       });
       return `ARRAY[${elements.join(", ")}]`;
     }

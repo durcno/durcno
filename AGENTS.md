@@ -184,8 +184,9 @@ type-tests/               # Inferred type safety checks
 tests/                    # Runtime integration tests
 ├── columns/              # Column read/write tests
 ├── qb/                   # Query builders integration tests
-└── cli/                  # CLI integration tests
-perf/                     # Vitest benchmarks of hot paths
+├── unit/                 # No-database unit tests of internal helpers
+├── cli/                  # CLI integration tests
+perf/                     # Benchmarks of hot paths
 
 website/                  # Website
 ├── src/                  # Pages and components
@@ -242,7 +243,12 @@ Durcno uses two clearly separated test suites — **Type tests** and **Integrati
 
 - **Type tests (`type-tests/`)** — compile-time checks for TypeScript inference (use `Expect`, `Equal` / `@ts-expect-error`). Things that are not practical for integration tests. Required for any change that affects exported types or API shapes.
 - **Integration tests (`tests/`)** — runtime tests (Vitest) validating columns, query builders, migrations, and CLI behavior. Keep them deterministic, and fast.
-- **Benchmarks (`perf/`)** — Vitest benchmarks for hot paths (currently the `handleRows` row conversion of select/relational queries). No database involved: synthetic driver rows are passed straight to `handleRows`.
+- **Benchmarks (`perf/`)** — Vitest benchmarks for hot paths, no database involved:
+  - `handle-rows.bench.ts` — row conversion (`handleRows`)
+  - `query-build.bench.ts` — query construction cost (`toQuery()`)
+  - `query-overhead.bench.ts` — per-query promise overhead
+
+  Benchmarks throughput on a shared machine varies by up to ~2× run to run: compare `min` across several runs or A/B with the change reverted, never a single run.
 
 Quick rules:
 
@@ -250,7 +256,7 @@ Quick rules:
 - Add/Update/Run **integration tests** for runtime behavior validation.
 - Cover positive, negative, and edge cases
 - Separate concerns, and avoid redundancy in tests
-- Always import from `durcno` in tests, not from the root `src` folder.
+- Always import from `durcno` in tests; use relative imports only if not exported.
 
 Commands:
 

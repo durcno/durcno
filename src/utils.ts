@@ -1,6 +1,11 @@
 import type { CamelToSnake, SnakeCase } from "./types";
 
 /**
+ * Cache of already-converted identifiers.
+ */
+const camelToSnakeCache = new Map<string, string>();
+
+/**
  * Converts a camelCase or PascalCase string to snake_case.
  * Returns a {@link SnakeCase}-branded value so the type system can distinguish
  * converted identifiers from raw user-supplied strings.
@@ -11,10 +16,14 @@ import type { CamelToSnake, SnakeCase } from "./types";
 export function camelToSnake<T extends string>(
   str: T,
 ): SnakeCase<CamelToSnake<T>> {
-  return str
+  const cached = camelToSnakeCache.get(str);
+  if (cached !== undefined) return cached as SnakeCase<CamelToSnake<T>>;
+  const snake = str
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2") // handles consecutive caps: "XMLParser" → "xml_parser"
     .replace(/([a-z])([A-Z])/g, "$1_$2") // handles standard: "camelCase" → "camel_case"
-    .toLowerCase() as SnakeCase<CamelToSnake<T>>;
+    .toLowerCase();
+  camelToSnakeCache.set(str, snake);
+  return snake as SnakeCase<CamelToSnake<T>>;
 }
 
 export function snakeToCamel(str: string): string {
@@ -29,23 +38,4 @@ export async function tryCatch<T>(
   } catch (error: any) {
     return [null, error];
   }
-}
-
-export function memoize<F extends (...args: any[]) => any>(func: F): F {
-  const cache: Record<string, ReturnType<F>> = {};
-  return ((...args) => {
-    // Generate a unique key for the arguments.
-    // JSON.stringify is a simple way to create a key from complex arguments.
-    const key = JSON.stringify(args);
-
-    // Check if the result for these arguments is already in the cache
-    if (cache[key]) {
-      return cache[key];
-    } else {
-      // If not in cache, call the original function and store the result
-      const result = func(...args);
-      cache[key] = result;
-      return result;
-    }
-  }) as F;
 }

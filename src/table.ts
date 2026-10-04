@@ -172,18 +172,16 @@ export class Table<
     extra: TableExtra<TSchema, TName, TColumns>,
   ) {
     bindNameNTable(this as unknown as StdTable, columns);
+    const schemaSql = camelToSnake(schema);
+    const nameSql = camelToSnake(name);
     this._ = {
       schema,
-      schemaSql: camelToSnake(schema),
+      schemaSql,
       name,
-      nameSql: camelToSnake(name),
+      nameSql,
       fullName: (schema !== ""
-        ? `"${camelToSnake(schema)}"."${camelToSnake(name)}"`
-        : camelToSnake(name)) as TableConfig<
-        TSchema,
-        TName,
-        TColumns
-      >["fullName"],
+        ? `"${schemaSql}"."${nameSql}"`
+        : nameSql) as TableConfig<TSchema, TName, TColumns>["fullName"],
       columns: columns as TableConfig<TSchema, TName, TColumns>["columns"],
       columnsBySql: Object.fromEntries(
         Object.values(columns).map((col) => [col.nameSql, col]),

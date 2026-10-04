@@ -107,17 +107,23 @@ sql.null = Sql.null;
 /**
  * Escapes a string for use as a double-quoted PostgreSQL identifier.
  * Doubles any embedded `"` characters: `foo"bar` -> `foo""bar`.
+ *
+ * Identifiers rarely contain the escape character, so the `indexOf` guard skips
+ * the regex scan for the common case and returns the input unchanged.
  */
 export function escIdentifier(value: string): string {
-  return value.replace(/"/g, '""');
+  return value.indexOf('"') === -1 ? value : value.replace(/"/g, '""');
 }
 
 /**
  * Escapes a string for use inside a single-quoted PostgreSQL literal.
  * Doubles any embedded `'` characters: `it's` -> `it''s`.
+ *
+ * Literals rarely contain the escape character, so the `indexOf` guard skips the
+ * regex scan for the common case and returns the input unchanged.
  */
 export function escLiteral(value: string): string {
-  return value.replace(/'/g, "''");
+  return value.indexOf("'") === -1 ? value : value.replace(/'/g, "''");
 }
 
 export function toSqlValue(
