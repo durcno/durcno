@@ -1,3 +1,4 @@
+import { resolveFromDriver } from "../columns/common";
 import type { QueryExecutor } from "../connectors/common";
 import { fk } from "../constraints/foreign-key";
 import type { AnyCteWithColumns } from "../cte";
@@ -466,6 +467,7 @@ class RelationQuery<
   readonly #options: TOptions;
   readonly #executor: QueryExecutor;
   readonly #ctes: readonly AnyCteWithColumns[] | null;
+  #convertLevel?: ConvertLevel;
 
   constructor(
     table: TableWithColumns<TTSchema, TTName, TTColumns>,
@@ -582,13 +584,9 @@ class RelationQuery<
     return this.handleRows(rows);
   }
 
-  #convertLevel?: ConvertLevel;
-
   #getConvertLevel(): ConvertLevel {
     if (!this.#convertLevel) {
-      this.#convertLevel = buildConvertLevel(
-        this.#options as unknown as OptionsView,
-      );
+      this.#convertLevel = buildConvertLevel(this.#options);
     }
     return this.#convertLevel;
   }
@@ -1018,13 +1016,11 @@ type ConvertLevel = {
 };
 
 /**
- * Precomputed per-key conversion for one level of a result set. A driver key
- * always resolves to the same converter, so lookups into `aliasMap`, the table
- * columns and the relation map are done once instead of once per cell.
+ * Precomputed per-key conversion for one level of a relational result set.
+ * Lookups are resolved once; each closure reads its own value from the row.
  */
 type LevelPlan = {
-  keys: string[];
-  applies: ((object: Record<string, unknown>, value: unknown) => void)[];
+  applies: readonly ((object: Record<string, unknown>) => void)[];
 };
 
 /**
@@ -1075,31 +1071,29 @@ function buildLevelPlan(
   const aliasMap = level.aliasMap;
   const relations = allRelations[table._.fullName];
   const keys = Object.keys(object);
-  const planKeys: string[] = [];
-  const applies: LevelPlan["applies"] = [];
+  const applies: LevelPlan["applies"][number][] = [];
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
     const aliased = aliasMap?.get(key);
     if (aliased !== undefined) {
       if (isTCol(aliased)) {
         const column = aliased as unknown as AnyColumn;
-        planKeys.push(key);
-        applies.push((obj, value) => {
-          obj[key] = column.fromDriver(value);
+        const fromDriver = resolveFromDriver(column);
+        applies.push((obj) => {
+          obj[key] = fromDriver(obj[key]);
         });
       } else if (aliased instanceof SqlFn) {
-        planKeys.push(key);
-        applies.push((obj, value) => {
-          obj[key] = aliased.fromDriverValue(value);
+        applies.push((obj) => {
+          obj[key] = aliased.fromDriverValue(obj[key]);
         });
       }
       continue;
     }
     const column = table._.columns[key];
     if (column) {
-      planKeys.push(key);
-      applies.push((obj, value) => {
-        obj[key] = column.fromDriver(value);
+      const fromDriver = resolveFromDriver(column);
+      applies.push((obj) => {
+        obj[key] = fromDriver(obj[key]);
       });
       continue;
     }
@@ -1107,16 +1101,16 @@ function buildLevelPlan(
     if (!relation) continue;
     const childTable = relation.table as unknown as StdTableWithColumns;
     const childLevel = childConvertLevel(level, key);
-    planKeys.push(key);
     if (relation.t === "Many") {
-      applies.push((_obj, value) => {
-        const children = value as Record<string, unknown>[];
+      applies.push((obj) => {
+        const children = obj[key] as Record<string, unknown>[];
         for (let c = 0; c < children.length; c++) {
           convert(children[c], childTable, allRelations, childLevel);
         }
       });
     } else {
-      applies.push((_obj, value) => {
+      applies.push((obj) => {
+        const value = obj[key];
         if (value !== null) {
           convert(
             value as Record<string, unknown>,
@@ -1128,7 +1122,7 @@ function buildLevelPlan(
       });
     }
   }
-  return { keys: planKeys, applies };
+  return { applies };
 }
 
 /**
@@ -1144,11 +1138,9 @@ function convert(
   if (!level.plan) {
     level.plan = buildLevelPlan(object, table, allRelations, level);
   }
-  const plan = level.plan;
-  const keys = plan.keys;
-  const applies = plan.applies;
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    applies[i](object, object[key]);
+  const applies = level.plan.applies;
+  const width = applies.length;
+  for (let i = 0; i < width; i++) {
+    applies[i](object);
   }
 }

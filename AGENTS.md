@@ -186,7 +186,7 @@ tests/                    # Runtime integration tests
 ├── qb/                   # Query builders integration tests
 ├── unit/                 # No-database unit tests of internal helpers
 ├── cli/                  # CLI integration tests
-perf/                     # Benchmarks of hot paths
+perf/                     # Benchmarks of hot paths, plus A/B harnesses
 
 website/                  # Website
 ├── src/                  # Pages and components
@@ -248,7 +248,11 @@ Durcno uses two clearly separated test suites — **Type tests** and **Integrati
   - `query-build.bench.ts` — query construction cost (`toQuery()`)
   - `query-overhead.bench.ts` — per-query promise overhead
 
-  Benchmarks throughput on a shared machine varies by up to ~2× run to run: compare `min` across several runs or A/B with the change reverted, never a single run.
+  Two sibling harnesses in the same folder are **not** picked up by `vitest bench`; they answer questions a Vitest benchmark cannot:
+  - `handle-rows.paths.ts` — compares the two `SELECT *` conversion paths against each other
+  - `handle-rows.ab.ts` — compares two builds by loading both `dist` snapshots into one process
+
+  Benchmarks throughput on a shared machine varies by up to ~2× run to run. Compare `min` across several runs, never a single run. **Do not A/B by rebuilding and swapping `dist` between separate runs** — that proved too noisy to resolve differences of this size, reporting a real 20% regression as noise. Use `handle-rows.ab.ts`, which alternates both builds inside one sample loop.
 
 Quick rules:
 

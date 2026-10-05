@@ -64,3 +64,16 @@ export const UsersRelations = relations(Users, () => ({
 export const PostsRelations = relations(Posts, () => ({
   comments: many(Comments, Comments.postId),
 }));
+
+/**
+ * Every column is a single lowercase word, so its driver key already equals its
+ * camelCase output key. A `SELECT *` over this table therefore takes the
+ * in-place row-conversion path, which `handle-rows.bench.ts` measures.
+ */
+export const Tokens = table("public", "tokens", {
+  id: bigint({}),
+  name: varchar({ length: 50 }),
+  kind: varchar({ length: 20 }),
+  bio: text({}),
+  enabled: boolean({}),
+});

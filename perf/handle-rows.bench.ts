@@ -13,6 +13,18 @@ import * as schema from "./schema";
  * what real usage does — a query is built, executed once, and its rows
  * converted once. Any per-query precomputation is therefore charged to the
  * benchmark, exactly as it is in production.
+ *
+ * Two of the three conversion paths mutate the rows they are given (the
+ * explicit projection and relational paths always have; `SELECT *` does when
+ * no key has to be renamed), so their fixtures are driver-shaped only on the
+ * first pass. The `select("*") in place` case therefore builds its rows per
+ * iteration; the others share one fixture across all benches, so they measure
+ * converting already-converted values and are only meaningful when compared
+ * against another run made the same way.
+ *
+ * `handle-rows.paths.ts` and `handle-rows.ab.ts` are sibling harnesses for
+ * questions a vitest bench cannot settle: comparing the two conversion paths,
+ * and comparing two builds. Neither is picked up by `vitest bench`.
  */
 const db = database(
   schema,
@@ -105,6 +117,35 @@ const relationalRows = Array.from({ length: PARENTS }, (_, i) =>
   relationalUser(i),
 );
 
+/** Driver-shaped `tokens` row — every key is already its output key. */
+function driverToken(i: number): Record<string, unknown> {
+  return {
+    id: String(i),
+    name: `token_${i}`,
+    kind: i % 2 === 0 ? "a" : "b",
+    bio: `biography of token ${i}`,
+    enabled: i % 3 === 0,
+  };
+}
+
+/**
+ * The in-place conversion path writes back into the rows it is handed, so one
+ * fixture cannot be reused: every iteration has to be given fresh driver rows
+ * or it would time `BigInt(1n)` where it should time `BigInt("1")`, quietly
+ * measuring the cost of converting already-converted values.
+ *
+ * Building the fixture inside the body keeps that cost uniform. Pooling the
+ * fixtures instead was tried and rejected: a pool is only reusable if all of it
+ * is rebuilt every lap, and rebuilding it in one go turns into a p95/max
+ * outlier that swamps the numbers. So this case's absolute value includes
+ * fixture construction — compare it against other runs of itself, not against
+ * the other cases. `handle-rows.paths.ts` is the harness to use for a real
+ * comparison; it builds fixtures outside the timed region.
+ */
+function buildInPlaceRows(): Record<string, unknown>[] {
+  return Array.from({ length: ROWS }, (_, i) => driverToken(i));
+}
+
 describe("handleRows", () => {
   bench(`select("*") — ${ROWS} rows x 12 cols`, () => {
     db.from(schema.Users).select("*").handleRows(selectStarRows);
@@ -133,4 +174,8 @@ describe("handleRows", () => {
         .handleRows(relationalRows);
     },
   );
+
+  bench(`select("*") in place — ${ROWS} rows x 5 cols`, () => {
+    db.from(schema.Tokens).select("*").handleRows(buildInPlaceRows());
+  });
 });

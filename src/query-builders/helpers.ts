@@ -1,3 +1,4 @@
+import { resolveFromDriver } from "../columns/common";
 import type { AnyCteWithColumns } from "../cte";
 import type { AnyColumn } from "../table";
 import type { Key } from "../types";
@@ -41,18 +42,20 @@ type StarSource = {
 };
 
 /**
- * Precomputed column resolution for a `SELECT *` result set.
- * A driver key always maps to the same column for every row, so the lookup is
- * done once by {@link buildStarRowsPlan} and replayed per row by
- * {@link applyStarRowsPlan}.
+ * Precomputed conversion plan for a `SELECT *` result set. Built once by
+ * {@link buildStarRowsPlan}, applied per-row by {@link applyStarRowsPlan}.
  */
 export type StarRowsPlan = {
-  /** Driver (SQL) key of each projected column, in order. */
-  sqlKeys: string[];
-  /** camelCase output key of each projected column, in order. */
-  outKeys: string[];
-  /** Column converting each value, in order. */
-  columns: AnyColumn[];
+  /** Writes one converted driver column into the output row. */
+  readonly converts: readonly ((
+    row: Record<string, unknown>,
+    out: Record<string, unknown>,
+  ) => void)[];
+  /**
+   * True when every driver key already equals its output key, so the driver row
+   * can be converted in place instead of allocating a new object.
+   */
+  readonly inPlace: boolean;
 };
 
 /**
@@ -70,47 +73,60 @@ export function buildStarRowsPlan(
   joins: readonly { table: StarSource }[] | null | undefined,
   sqlKeys: readonly string[],
 ): StarRowsPlan {
-  const outKeys: string[] = [];
-  const columns: AnyColumn[] = [];
-  for (let i = 0; i < sqlKeys.length; i++) {
+  const width = sqlKeys.length;
+  const converts: StarRowsPlan["converts"][number][] = [];
+  let inPlace = true;
+  for (let i = 0; i < width; i++) {
     const key = sqlKeys[i];
     let column = table._.columnsBySql[key] ?? table._.columns[key];
     if (column === undefined && joins) {
-      for (let j = 0; j < joins.length; j++) {
+      for (let j = joins.length - 1; j >= 0; j--) {
         const joinCols = joins[j].table._;
         const joinCol = joinCols.columnsBySql[key] ?? joinCols.columns[key];
         if (joinCol !== undefined) {
           column = joinCol;
+          break;
         }
       }
     }
     if (column === undefined) {
       throw new Error(`Column ${key} not found in any table`);
     }
-    outKeys.push(column.name as string);
-    columns.push(column);
+    const outKey = column.name as string;
+    if (outKey !== key) inPlace = false;
+    const fromDriver = resolveFromDriver(column);
+    converts.push((row, out) => {
+      out[outKey] = fromDriver(row[key]);
+    });
   }
-  return { sqlKeys: sqlKeys.slice(), outKeys, columns };
+  return { converts, inPlace };
 }
 
 /**
- * Converts driver rows to camelCase objects using a prebuilt plan.
- * Always returns a new array of new objects; the input rows are left untouched.
+ * Converts driver rows using a prebuilt plan. When no key needs renaming,
+ * rows are converted in place; otherwise new objects are allocated.
  */
 export function applyStarRowsPlan(
   rows: Record<string, unknown>[],
   plan: StarRowsPlan,
 ): Record<string, unknown>[] {
-  const sqlKeys = plan.sqlKeys;
-  const outKeys = plan.outKeys;
-  const columns = plan.columns;
-  const width = sqlKeys.length;
+  const converts = plan.converts;
+  const width = converts.length;
+  if (plan.inPlace) {
+    for (let r = 0; r < rows.length; r++) {
+      const row = rows[r];
+      for (let i = 0; i < width; i++) {
+        converts[i](row, row);
+      }
+    }
+    return rows;
+  }
   const newRows: Record<string, unknown>[] = new Array(rows.length);
   for (let r = 0; r < rows.length; r++) {
     const row = rows[r];
     const newRow: Record<string, unknown> = {};
     for (let i = 0; i < width; i++) {
-      newRow[outKeys[i]] = columns[i].fromDriver(row[sqlKeys[i]]);
+      converts[i](row, newRow);
     }
     newRows[r] = newRow;
   }

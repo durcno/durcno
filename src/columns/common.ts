@@ -861,6 +861,21 @@ export abstract class Column<
   }
 }
 
+/**
+ * Returns a converter closure that avoids per-value null/dimension checks.
+ * Scalar columns inline the null guard and call `fromDriverScalar` directly;
+ * array-dimension columns fall back to the full `fromDriver`.
+ */
+export function resolveFromDriver(
+  column: AnyColumn,
+): (value: unknown) => unknown {
+  if (column.dimensions !== undefined) {
+    return (value: unknown) => column.fromDriver(value);
+  }
+  return (value: unknown) =>
+    value === null ? null : column.fromDriverScalar(value);
+}
+
 export class IndexOn<TCol extends AnyColumn = AnyColumn> {
   static readonly [entityType] = "IndexOn";
   constructor(
