@@ -92,6 +92,32 @@ export type ConflictUpdateValues<
     : ColName]?: ConflictUpdateableItem<TTableWC, ColName, TPrepare>;
 };
 
+/**
+ * The `INSERT`'s column list, resolved once per table.
+ */
+const insertColumnsCache = new WeakMap<
+  StdTableWithColumns,
+  { fields: string[]; list: string }
+>();
+
+function insertColumnsOf(table: StdTableWithColumns): {
+  fields: string[];
+  list: string;
+} {
+  let cached = insertColumnsCache.get(table);
+  if (cached === undefined) {
+    const columns = table._.columns;
+    const fields = Object.keys(columns);
+    const names: string[] = [];
+    for (const field of fields) {
+      names.push(`"${columns[field].nameSql}"`);
+    }
+    cached = { fields, list: names.join(", ") };
+    insertColumnsCache.set(table, cached);
+  }
+  return cached;
+}
+
 /** Builder returned by `InsertQuery#onConflict()`. */
 export class ConflictBuilder<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
@@ -389,18 +415,21 @@ export class InsertQuery<
       ? this.#values
       : [this.#values];
 
-    const fields = Object.keys(this.#table._.columns);
+    const tableColumns = this.#table._.columns;
+    const { fields, list } = insertColumnsOf(
+      this.#table as unknown as StdTableWithColumns,
+    );
     query.sql += " ( ";
-    query.sql += fields
-      .map((field) => `"${this.#table._.columns[field].nameSql}"`)
-      .join(", ");
+    query.sql += list;
     query.sql += " ) VALUES";
 
     valuesArray.forEach((row, i) => {
+      if (i !== 0) query.sql += ",\n";
       query.sql += " (";
       fields.forEach((fieldName, j) => {
         const value = row[fieldName];
-        const column = this.#table._.columns[fieldName];
+        const column = tableColumns[fieldName];
+        if (j !== 0) query.sql += ", ";
         if (value === undefined) {
           if (column.hasInsertFn) {
             query.sql += column.toSQL(column.getInsertFnVal, { cast: true });
@@ -416,14 +445,8 @@ export class InsertQuery<
         } else {
           query.sql += column.toSQL(value, { cast: true });
         }
-        if (j !== fields.length - 1) {
-          query.sql += ", ";
-        }
       });
       query.sql += ")";
-      if (i !== valuesArray.length - 1) {
-        query.sql += ",\n";
-      }
     });
 
     if (this.#$conflict) {
@@ -433,7 +456,10 @@ export class InsertQuery<
 
       if (columns.length > 0) {
         query.sql += " (";
-        query.sql += columns.map((col) => `"${col.nameSql}"`).join(", ");
+        for (let i = 0; i < columns.length; i++) {
+          if (i !== 0) query.sql += ", ";
+          query.sql += `"${columns[i].nameSql}"`;
+        }
         query.sql += ")";
       }
 
@@ -441,11 +467,14 @@ export class InsertQuery<
         query.sql += " DO NOTHING";
       } else {
         query.sql += " DO UPDATE SET ";
-        const setEntries = Object.entries(this.#$conflict.setValues).filter(
-          ([, value]) => value !== undefined,
-        );
-        setEntries.forEach(([fieldName, value], idx) => {
-          const col = this.#table._.columns[fieldName];
+        const setValues = this.#$conflict.setValues;
+        let firstSet = true;
+        for (const fieldName in setValues) {
+          const value = setValues[fieldName];
+          if (value === undefined) continue;
+          const col = tableColumns[fieldName];
+          if (!firstSet) query.sql += ", ";
+          firstSet = false;
           query.sql += `"${col.nameSql}" = `;
           if (isCol(value)) {
             value.toQuery(query);
@@ -458,10 +487,7 @@ export class InsertQuery<
           } else {
             query.sql += col.toSQL(value, { cast: true });
           }
-          if (idx < setEntries.length - 1) {
-            query.sql += ", ";
-          }
-        });
+        }
         if (this.#$conflict.where) {
           query.sql += " WHERE ";
           this.#$conflict.where.toQuery(query);

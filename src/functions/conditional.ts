@@ -154,14 +154,16 @@ export class CoalesceFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "coalesce(";
-    const preferJsonb = isJsonbOperand(this.exprs[0]);
-    this.exprs.forEach((expr, i) => {
-      appendOperand(query, expr, ctx, {
-        preferJsonb,
-        leadOperand: this.exprs[0],
-      });
-      if (i < this.exprs.length - 1) query.sql += ", ";
-    });
+    const exprs = this.exprs;
+    // Same for every operand, so it is built once rather than per operand.
+    const options = {
+      preferJsonb: isJsonbOperand(exprs[0]),
+      leadOperand: exprs[0],
+    };
+    for (let i = 0; i < exprs.length; i++) {
+      if (i !== 0) query.sql += ", ";
+      appendOperand(query, exprs[i], ctx, options);
+    }
     query.sql += ")";
   }
 }
@@ -291,10 +293,13 @@ export class GreatestFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "greatest(";
-    this.exprs.forEach((expr, i) => {
-      appendOperand(query, expr, ctx, { leadOperand: this.exprs[0] });
-      if (i < this.exprs.length - 1) query.sql += ", ";
-    });
+    const exprs = this.exprs;
+    // Same for every operand, so it is built once rather than per operand.
+    const options = { leadOperand: exprs[0] };
+    for (let i = 0; i < exprs.length; i++) {
+      if (i !== 0) query.sql += ", ";
+      appendOperand(query, exprs[i], ctx, options);
+    }
     query.sql += ")";
   }
 }
@@ -357,10 +362,13 @@ export class LeastFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "least(";
-    this.exprs.forEach((expr, i) => {
-      appendOperand(query, expr, ctx, { leadOperand: this.exprs[0] });
-      if (i < this.exprs.length - 1) query.sql += ", ";
-    });
+    const exprs = this.exprs;
+    // Same for every operand, so it is built once rather than per operand.
+    const options = { leadOperand: exprs[0] };
+    for (let i = 0; i < exprs.length; i++) {
+      if (i !== 0) query.sql += ", ";
+      appendOperand(query, exprs[i], ctx, options);
+    }
     query.sql += ")";
   }
 }

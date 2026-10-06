@@ -192,13 +192,13 @@ export class InFn<
       this.field.toQuery(query, ctx);
       query.sql += this.isNot ? " NOT IN (" : " IN (";
       for (let i = 0; i < this.values.length; i++) {
+        if (i !== 0) query.sql += ", ";
         const v = this.values[i];
         if (is(v, Arg)) {
           query.addArg(v);
         } else {
           query.sql += this.field.toSQLExpression(v);
         }
-        if (i < this.values.length - 1) query.sql += ", ";
       }
       query.sql += ")";
     } else {

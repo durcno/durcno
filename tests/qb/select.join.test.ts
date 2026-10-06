@@ -1,7 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, asc, database, defineConfig, desc, eq } from "durcno";
+import {
+  type $Client,
+  asc,
+  count,
+  database,
+  defineConfig,
+  desc,
+  eq,
+  gte,
+  isNotNull,
+} from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -738,6 +748,152 @@ describe("SELECT with LEFT JOIN", () => {
     // Post 2 does not have a comment, so commentBody should be null
     expect(result[1].postTitle).toBe("Post 2");
     expect(result[1].commentBody).toBeNull();
+  });
+
+  it("should keep left-joined columns usable through a chain of clause methods", async () => {
+    const [user1] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "chain_a" }))
+      .returning({ id: true });
+    const [user2] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "chain_b" }))
+      .returning({ id: true });
+    await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "chain_c" }));
+
+    const [postA1] = await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user1.id, { title: "A-1" }))
+      .returning({ id: true });
+    await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user1.id, { title: "A-2" }));
+    await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user2.id, { title: "B-1" }));
+
+    await db
+      .insertInto(schema.Comments)
+      .values(
+        createTestComment(postA1.id, user1.id, { body: "comment on A-1" }),
+      );
+
+    const joined = () =>
+      db
+        .from(schema.Users)
+        .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+        .leftJoin(schema.Comments, () =>
+          eq(schema.Comments.postId, schema.Posts.id),
+        )
+        .select(({ posts, comments }) => ({
+          username: schema.Users.username,
+          postTitle: posts.title,
+          commentBody: comments.body,
+        }));
+
+    // Every clause method after the joins reads its columns from the view, so a
+    // stale view would show up as a filter or an ordering on the wrong table.
+    const page = await joined()
+      .where(({ posts }) => isNotNull(posts.title))
+      .orderBy(({ posts }) => [asc(schema.Users.username), desc(posts.title)])
+      .limit(2)
+      .offset(1);
+
+    expect(page.map((r) => [r.username, r.postTitle])).toEqual([
+      ["chain_a", "A-1"],
+      ["chain_b", "B-1"],
+    ]);
+    expect(page[0].commentBody).toBe("comment on A-1");
+    expect(page[1].commentBody).toBeNull();
+
+    // The user with no post survives the same chain, with nulls on both joins.
+    const all = await joined().orderBy(({ posts }) => [
+      asc(schema.Users.username),
+      asc(posts.title),
+    ]);
+
+    expect(all.map((r) => r.postTitle)).toEqual(["A-1", "A-2", "B-1", null]);
+    expect(all[3].commentBody).toBeNull();
+  });
+
+  it("should keep left-joined columns usable through groupBy and having", async () => {
+    const [user1] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "grp_a" }))
+      .returning({ id: true });
+    const [user2] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "grp_b" }))
+      .returning({ id: true });
+    await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "grp_c" }));
+
+    await db
+      .insertInto(schema.Posts)
+      .values([
+        createTestPost(user1.id, { title: "P-1" }),
+        createTestPost(user1.id, { title: "P-2" }),
+        createTestPost(user2.id, { title: "Q-1" }),
+      ]);
+
+    // groupBy and having are the last two clause callbacks to read a view
+    // column: a wrong column would group on the wrong table, or reference one
+    // the statement never joined.
+    const grouped = () =>
+      db
+        .from(schema.Users)
+        .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+        .select(({ posts }) => ({
+          username: schema.Users.username,
+          postTitle: posts.title,
+          joined: count("*"),
+        }))
+        .groupBy(({ posts }) => [schema.Users.username, posts.title])
+        .orderBy(({ posts }) => [asc(schema.Users.username), asc(posts.title)]);
+
+    const rows = await grouped();
+    expect(rows.map((r) => [r.username, r.postTitle, r.joined])).toEqual([
+      ["grp_a", "P-1", 1],
+      ["grp_a", "P-2", 1],
+      ["grp_b", "Q-1", 1],
+      ["grp_c", null, 1],
+    ]);
+
+    // Counting the left-joined column is 0 for the unmatched row, so a HAVING
+    // on that count drops the NULL group the plain query above keeps.
+    const withPosts = await grouped().having(({ posts }) =>
+      gte(count(posts.title), 1),
+    );
+    expect(withPosts.map((r) => [r.username, r.postTitle])).toEqual([
+      ["grp_a", "P-1"],
+      ["grp_a", "P-2"],
+      ["grp_b", "Q-1"],
+    ]);
+
+    // The group key is the joined table's own qualified column. A view that
+    // lost its joins would group on the wrong table, or on a table this
+    // statement never joined.
+    const sql = grouped().toQuery().sql;
+    expect(sql).toContain('GROUP BY "users"."username", "posts"."title"');
+
+    // A view forwarded into a derived builder must still describe that builder,
+    // so the chain renders the same SQL as one rebuilt from scratch with every
+    // step re-created from `db`.
+    const rebuilt = db
+      .from(schema.Users)
+      .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .select(({ posts }) => ({
+        username: schema.Users.username,
+        postTitle: posts.title,
+        joined: count("*"),
+      }))
+      .groupBy(({ posts }) => [schema.Users.username, posts.title])
+      .orderBy(({ posts }) => [asc(schema.Users.username), asc(posts.title)]);
+
+    expect(sql).toBe(rebuilt.toQuery().sql);
   });
 
   it("should handle left join on a table with enum columns without metadata corruption", async () => {

@@ -219,24 +219,61 @@ type TableColumns<
 // Runtime helper — builds the namespaced view object
 // ============================================================================
 
-/** Builds the per-table columns view at runtime. Left join columns are cloned nullable. */
+/** Columns view passed to clause callbacks, keyed by table name. */
+type ColumnsViewRecord = Record<string, Record<string, StdTableColumn>>;
+
+/**
+ * Nullable column records, memoised per joined table.
+ *
+ * A `LEFT JOIN` needs every column of the joined table cloned nullable, and a
+ * chain of joins asks for the same tables again and again. Tables are
+ * per-schema singletons, so keying on the table object bounds the cache.
+ *
+ * The clones are shared by every view that mentions the table, so they must be
+ * treated as read-only — the columns view exists only to be handed to
+ * `eq(...)`, `asc(...)` and friends.
+ */
+const nullableColumnsCache = new WeakMap<
+  StdTableWithColumns,
+  Record<string, StdTableColumn>
+>();
+
+/** Returns the nullable clone of every column of `table`, built once per table. */
+function buildNullableColumns(
+  table: StdTableWithColumns,
+): Record<string, StdTableColumn> {
+  let cols = nullableColumnsCache.get(table);
+  if (cols === undefined) {
+    cols = {};
+    for (const key in table._.columns) {
+      cols[key] = table._.columns[key].cloneAsNullable() as StdTableColumn;
+    }
+    nullableColumnsCache.set(table, cols);
+  }
+  return cols;
+}
+
+/**
+ * Builds the per-table columns view at runtime. Left join columns are cloned
+ * nullable; the clones themselves come from {@link buildNullableColumns}.
+ *
+ * The result is a fresh top-level object — join methods copy it before adding
+ * the table they join — but its per-table records are shared.
+ */
 function buildColumnsView(
   table: StdTableWithColumns,
   joins: JoinEntry[] | null,
-): Record<string, Record<string, StdTableColumn>> {
-  const view: Record<string, Record<string, StdTableColumn>> = {};
+): ColumnsViewRecord {
+  const view: ColumnsViewRecord = {};
   view[table._.name] = table._.columns;
-  joins?.forEach((j) => {
-    if (j.type === "left") {
-      const cols: Record<string, StdTableColumn> = {};
-      for (const key in j.table._.columns) {
-        cols[key] = j.table._.columns[key].cloneAsNullable() as StdTableColumn;
-      }
-      view[j.table._.name] = cols;
-    } else {
-      view[j.table._.name] = j.table._.columns;
+  if (joins) {
+    for (const join of joins) {
+      view[join.table._.name] =
+        join.type === "left"
+          ? buildNullableColumns(join.table)
+          : join.table._.columns;
     }
-  });
+  }
   return view;
 }
 
@@ -298,8 +335,13 @@ export class SelectBuilder<
   readonly #$joins: TJoins;
   readonly #$distinctOn: StdTableColumn[] | undefined;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
-  #cachedView: Record<string, Record<string, StdTableColumn>> | null = null;
+  #cachedView: ColumnsViewRecord | null;
 
+  /**
+   * @param cachedView - Columns view of the builder this one derives from.
+   *   Pass it only when `table` and `joins` are both forwarded unchanged; a
+   *   stale view would hand callbacks the wrong nullability.
+   */
   constructor(
     table: TableWithColumns<TTSchema, TTName, TColumns>,
     joins: TJoins,
@@ -307,6 +349,7 @@ export class SelectBuilder<
     executor: QueryExecutor,
     prepare: TPrepare,
     ctes: readonly AnyCteWithColumns[] | null = null,
+    cachedView: ColumnsViewRecord | null = null,
   ) {
     this.#table = table;
     this.#$joins = joins;
@@ -314,10 +357,11 @@ export class SelectBuilder<
     this.#executor = executor;
     this.#prepare = prepare;
     this.#$ctes = ctes;
+    this.#cachedView = cachedView;
   }
 
   /** Returns the memoized columns view for this builder instance. */
-  #getView(): Record<string, Record<string, StdTableColumn>> {
+  #getView(): ColumnsViewRecord {
     if (!this.#cachedView) {
       this.#cachedView = buildColumnsView(
         this.#table as unknown as StdTableWithColumns,
@@ -385,6 +429,8 @@ export class SelectBuilder<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      // `joins` changed, so the parent's view no longer matches.
+      null,
     );
   }
 
@@ -446,6 +492,9 @@ export class SelectBuilder<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      // `joins` changed — the joined table is only reachable through this
+      // method's own `on` view, so the parent's view must not be reused.
+      null,
     );
   }
 
@@ -465,6 +514,7 @@ export class SelectBuilder<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#cachedView,
     );
   }
 
@@ -535,6 +585,7 @@ export class SelectBuilder<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#cachedView,
     );
   }
 }
@@ -608,8 +659,7 @@ function buildSelectRowsPlan(
 ): SelectRowsPlan {
   const planKeys: string[] = [];
   const converts: ((value: unknown) => unknown)[] = [];
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
+  for (const key of keys) {
     const convert = buildSelectItemConverter(select[key]);
     if (convert === null) continue;
     planKeys.push(key);
@@ -703,11 +753,16 @@ export class SelectQuery<
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
-  #cachedView: Record<string, Record<string, StdTableColumn>> | null = null;
+  #cachedView: ColumnsViewRecord | null;
   #cachedSelectAliases: Record<string, string> | null = null;
   #selectRowsPlan: SelectRowsPlan | null = null;
   #starRowsPlan: StarRowsPlan | null = null;
 
+  /**
+   * @param cachedView - Columns view of the query this one derives from. Pass
+   *   it only when `table` and `joins` are both forwarded unchanged; a stale
+   *   view would hand callbacks the wrong nullability.
+   */
   constructor(
     table: TableWithColumns<TTSchema, TTName, TColumns>,
     joins: TJoins,
@@ -722,6 +777,7 @@ export class SelectQuery<
     executor: QueryExecutor,
     prepare: TPrepare,
     ctes: readonly AnyCteWithColumns[] | null = null,
+    cachedView: ColumnsViewRecord | null = null,
   ) {
     super();
     this.#table = table;
@@ -737,10 +793,11 @@ export class SelectQuery<
     this.#executor = executor;
     this.#prepare = prepare;
     this.#$ctes = ctes;
+    this.#cachedView = cachedView;
   }
 
   /** Returns the memoized columns view for this query instance. */
-  #getView(): Record<string, Record<string, StdTableColumn>> {
+  #getView(): ColumnsViewRecord {
     if (!this.#cachedView) {
       this.#cachedView = buildColumnsView(
         this.#table as unknown as StdTableWithColumns,
@@ -753,9 +810,14 @@ export class SelectQuery<
   /** Returns the memoized select aliases view for this query instance. */
   #getSelectAliases(): Record<string, string> {
     if (!this.#cachedSelectAliases) {
-      this.#cachedSelectAliases = this.#$select
-        ? Object.fromEntries(Object.keys(this.#$select).map((k) => [k, k]))
-        : {};
+      const select = this.#$select;
+      const aliases: Record<string, string> = {};
+      if (select) {
+        for (const key in select) {
+          aliases[key] = key;
+        }
+      }
+      this.#cachedSelectAliases = aliases;
     }
     return this.#cachedSelectAliases;
   }
@@ -783,6 +845,7 @@ export class SelectQuery<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#cachedView,
     );
   }
 
@@ -818,6 +881,7 @@ export class SelectQuery<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#cachedView,
     );
   }
 
@@ -862,6 +926,7 @@ export class SelectQuery<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#cachedView,
     ) as unknown as Omit<this, "groupBy">;
   }
 
@@ -897,6 +962,7 @@ export class SelectQuery<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#cachedView,
     ) as unknown as Omit<this, "having">;
   }
 
@@ -919,6 +985,7 @@ export class SelectQuery<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#cachedView,
     ) as unknown as Omit<this, "limit">;
   }
 
@@ -941,6 +1008,7 @@ export class SelectQuery<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#cachedView,
     ) as unknown as Omit<this, "offset">;
   }
 
@@ -954,13 +1022,24 @@ export class SelectQuery<
     }
 
     query.sql += "SELECT ";
-    if (this.#$distinctOn?.length) {
-      query.sql += `DISTINCT ON (${this.#$distinctOn.map((c) => c.fullName).join(", ")}) `;
+    const distinctOn = this.#$distinctOn;
+    if (distinctOn?.length) {
+      query.sql += "DISTINCT ON (";
+      for (let i = 0; i < distinctOn.length; i++) {
+        if (i !== 0) query.sql += ", ";
+        query.sql += distinctOn[i].fullName;
+      }
+      query.sql += ") ";
     }
-    const entries = this.#$select ? Object.entries(this.#$select) : null;
-    if (entries) {
-      for (let i = 0; i < entries.length; i++) {
-        const [key, item] = entries[i];
+    const select = this.#$select;
+    // Keys rather than entries: a projection of N items would otherwise allocate
+    // N `[key, value]` pairs per query.
+    const keys = select ? Object.keys(select) : [];
+    if (select) {
+      for (let i = 0; i < keys.length; i++) {
+        if (i !== 0) query.sql += ", ";
+        const key = keys[i];
+        const item = select[key];
         if (item === null) {
           query.sql += `NULL AS "${escIdentifier(key)}"`;
         } else if (item instanceof SqlFn) {
@@ -974,27 +1053,32 @@ export class SelectQuery<
         } else {
           query.sql += `${toSqlValue(item as never)} AS "${escIdentifier(key)}"`;
         }
-        if (i < entries.length - 1) query.sql += ", ";
       }
     } else {
       query.sql += "*";
     }
     query.sql += " FROM ";
     query.sql += this.#table._.fullName;
-    this.#$joins?.forEach((join) => {
-      const keyword = join.type === "left" ? "LEFT" : "INNER";
-      query.sql += ` ${keyword} JOIN ${join.table._.fullName} ON `;
-      join.on.toQuery(query);
-    });
+    const joins = this.#$joins;
+    if (joins) {
+      for (const join of joins) {
+        query.sql += join.type === "left" ? " LEFT JOIN " : " INNER JOIN ";
+        query.sql += join.table._.fullName;
+        query.sql += " ON ";
+        join.on.toQuery(query);
+      }
+    }
     if (this.#$where) {
       query.sql += " WHERE ";
       this.#$where.toQuery(query);
     }
     if (this.#$groupBy?.length) {
       // Explicit GROUP BY — bypasses auto GROUP BY detection
+      const groupBy = this.#$groupBy;
       query.sql += " GROUP BY ";
-      for (let i = 0; i < this.#$groupBy.length; i++) {
-        const expr = this.#$groupBy[i];
+      for (let i = 0; i < groupBy.length; i++) {
+        if (i !== 0) query.sql += ", ";
+        const expr = groupBy[i];
         if (typeof expr === "string") {
           query.sql += `"${escIdentifier(expr)}"`;
         } else if (isScalarSqlFn(expr)) {
@@ -1002,34 +1086,39 @@ export class SelectQuery<
         } else {
           query.sql += expr.fullName; // → "table"."col"
         }
-        if (i < this.#$groupBy.length - 1) query.sql += ", ";
       }
-    } else if (entries) {
-      const hasAggregate = entries.some(
-        ([, item]) => item instanceof SqlFn && item.isAggregate,
-      );
+    } else if (select) {
+      let hasAggregate = false;
+      for (const key of keys) {
+        const item = select[key];
+        if (item instanceof SqlFn && item.isAggregate) {
+          hasAggregate = true;
+          break;
+        }
+      }
       if (hasAggregate) {
         const nonAggItems: Array<{ toQuery: (q: Query<unknown>) => void }> = [];
-        const seenCols = new Set<string>();
+        // Columns are per-table singletons, so identity is a free key.
+        const seenCols = new Set<StdTableColumn>();
 
-        for (const [, item] of entries) {
+        for (const key of keys) {
+          const item = select[key];
           if (isTCol(item)) {
             const col = item as unknown as StdTableColumn;
-            if (!seenCols.has(col.fullName)) {
-              seenCols.add(col.fullName);
+            if (!seenCols.has(col)) {
+              seenCols.add(col);
               nonAggItems.push(col);
             }
           } else if (item instanceof SqlFn && !item.isAggregate) {
-            if (
-              "referencedColumns" in item &&
-              Array.isArray(item.referencedColumns) &&
-              item.referencedColumns.length > 0
-            ) {
-              for (const col of item.referencedColumns) {
+            // `referencedColumns` is a rebuilding getter, so read it once.
+            const refs =
+              "referencedColumns" in item ? item.referencedColumns : undefined;
+            if (Array.isArray(refs) && refs.length > 0) {
+              for (const col of refs) {
                 if (isTCol(col)) {
                   const tableCol = col;
-                  if (!seenCols.has(tableCol.fullName)) {
-                    seenCols.add(tableCol.fullName);
+                  if (!seenCols.has(tableCol)) {
+                    seenCols.add(tableCol);
                     nonAggItems.push(tableCol);
                   }
                 }
@@ -1043,8 +1132,8 @@ export class SelectQuery<
         if (nonAggItems.length > 0) {
           query.sql += " GROUP BY ";
           for (let i = 0; i < nonAggItems.length; i++) {
+            if (i !== 0) query.sql += ", ";
             nonAggItems[i].toQuery(query);
-            if (i < nonAggItems.length - 1) query.sql += ", ";
           }
         }
       }
@@ -1060,8 +1149,8 @@ export class SelectQuery<
         : [this.#$orderBy];
       query.sql += " ORDER BY ";
       for (let i = 0; i < orders.length; i++) {
+        if (i !== 0) query.sql += ", ";
         orders[i].toQuery(query);
-        if (i < orders.length - 1) query.sql += ", ";
       }
     }
     if (this.#$limit !== undefined) {

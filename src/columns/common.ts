@@ -294,8 +294,11 @@ export abstract class Column<
     | { column: () => StdTableColumn; onDelete: OnDeleteAction }
     | undefined;
   #check: ((c: StdTableColumn) => AnyFilter | Sql) | undefined;
-  // Cached from the config, since it is read on every driver conversion
+
+  // Cached from the config
   readonly #dimensions: Readonly<(number | null)[]> | undefined;
+  #sqlType: string | undefined; // Lazily built
+  #sqlCast: string | undefined; // Lazily built
 
   // Stores the key/name of the column
   #name: string | undefined;
@@ -369,16 +372,20 @@ export abstract class Column<
   }
 
   abstract get sqlTypeScalar(): string;
-  get sqlType() {
-    const base = this.sqlTypeScalar;
-    const dimensions = this.#dimensions;
-    if (!dimensions) return base;
 
-    // For each configured dimension, append either `[N]` (fixed size) or `[]` (unspecified)
-    const suffix = dimensions
-      .map((d) => (d === null ? "[]" : `[${d}]`))
-      .join("");
-    return `${base}${suffix}`;
+  /**
+   * The full PostgreSQL type, dimensions included. Fixed by the column's config,
+   * so it is built once — array dimensions are read on every cast and every
+   * `toSQLExpression`.
+   */
+  get sqlType() {
+    const cached = this.#sqlType;
+    if (cached !== undefined) return cached;
+    const type = this.#dimensions
+      ? `${this.sqlTypeScalar}${this.#dimensionsSuffix(this.#dimensions)}`
+      : this.sqlTypeScalar;
+    this.#sqlType = type;
+    return type;
   }
 
   /** Returns the PostgreSQL cast type for this column's scalar value, or `null` if no cast is needed. */
@@ -386,15 +393,26 @@ export abstract class Column<
 
   /** Returns the full PostgreSQL cast type including array dimensions, or `null` if no cast is needed. */
   get sqlCast(): string | null {
+    const cached = this.#sqlCast;
+    if (cached !== undefined) return cached;
     const base = this.sqlCastScalar;
     if (base === null) return null;
-    const dimensions = this.#dimensions;
-    if (!dimensions) return base;
+    const cast = this.#dimensions
+      ? `${base}${this.#dimensionsSuffix(this.#dimensions)}`
+      : base;
+    this.#sqlCast = cast;
+    return cast;
+  }
 
-    const suffix = dimensions
-      .map((d) => (d === null ? "[]" : `[${d}]`))
-      .join("");
-    return `${base}${suffix}`;
+  /**
+   * Appends either `[N]` (fixed size) or `[]` (unspecified) per dimension.
+   */
+  #dimensionsSuffix(dimensions: Readonly<(number | null)[]>): string {
+    let suffix = "";
+    for (const dimension of dimensions) {
+      suffix += dimension === null ? "[]" : `[${dimension}]`;
+    }
+    return suffix;
   }
 
   abstract get zodTypeScaler(): z.ZodType;
@@ -531,18 +549,22 @@ export abstract class Column<
     if (dimIndex >= dimensions.length - 1) {
       // Innermost dimension - elements are scalars
       const cast = options?.cast ? this.sqlCastScalar : null;
-      const elements = arr.map((item) => {
-        if (!cast) return this.toSQLScalar(item as TColVal | Sql);
-        return `${this.toSQLScalar(item as TColVal | Sql)}::${cast}`;
-      });
-      return `ARRAY[${elements.join(", ")}]`;
+      let sql = "ARRAY[";
+      for (let i = 0; i < arr.length; i++) {
+        if (i !== 0) sql += ", ";
+        const scalar = this.toSQLScalar(arr[i] as TColVal | Sql);
+        sql += cast ? `${scalar}::${cast}` : scalar;
+      }
+      return `${sql}]`;
     }
 
     // Not at innermost - elements are arrays
-    const elements = arr.map((item) =>
-      this.#toSQLArray(item as unknown[], dimIndex + 1, options),
-    );
-    return `ARRAY[${elements.join(", ")}]`;
+    let sql = "ARRAY[";
+    for (let i = 0; i < arr.length; i++) {
+      if (i !== 0) sql += ", ";
+      sql += this.#toSQLArray(arr[i] as unknown[], dimIndex + 1, options);
+    }
+    return `${sql}]`;
   }
 
   /**

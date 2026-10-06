@@ -277,6 +277,130 @@ describe("INSERT queries", () => {
     );
   });
 
+  it("should resolve an omitted insertFn value per row of the batch", async () => {
+    const beforeInsert = new Date();
+
+    const result = await db
+      .insertInto(schema.AuditLogs)
+      .values([
+        { action: "batch_1", modifiedAt: new Date() },
+        { action: "batch_2", modifiedAt: new Date() },
+        { action: "batch_3", modifiedAt: new Date() },
+      ])
+      .returning({ action: true, createdAt: true, publicId: true });
+
+    const afterInsert = new Date();
+
+    expect(result).toHaveLength(3);
+    // Every row that omitted the column got its own generated value.
+    expect(new Set(result.map((row) => row.publicId)).size).toBe(3);
+    for (const row of result) {
+      expect(row.createdAt.getTime()).toBeGreaterThanOrEqual(
+        beforeInsert.getTime(),
+      );
+      expect(row.createdAt.getTime()).toBeLessThanOrEqual(
+        afterInsert.getTime(),
+      );
+    }
+  });
+
+  it("should not repeat an insertFn value that a unique column constrains", async () => {
+    // A batch-wide value function would emit one UUID for the whole statement
+    // and the unique constraint would reject the second row.
+    const result = await db
+      .insertInto(schema.AuditLogs)
+      .values([
+        { action: "unique_1", modifiedAt: new Date() },
+        { action: "unique_2", modifiedAt: new Date() },
+        { action: "unique_3", modifiedAt: new Date() },
+      ])
+      .returning({ action: true, publicId: true });
+
+    expect(result).toHaveLength(3);
+    expect(new Set(result.map((row) => row.publicId)).size).toBe(3);
+  });
+
+  it("should keep a supplied insertFn value per row in a mixed batch", async () => {
+    const explicitDate = new Date("2020-01-01T00:00:00.000Z");
+
+    const result = await db
+      .insertInto(schema.AuditLogs)
+      .values([
+        {
+          action: "mixed_supplied",
+          createdAt: explicitDate,
+          modifiedAt: new Date(),
+        },
+        { action: "mixed_omitted_1", modifiedAt: new Date() },
+        { action: "mixed_omitted_2", modifiedAt: new Date() },
+      ])
+      .returning({ action: true, createdAt: true, publicId: true });
+
+    expect(result).toHaveLength(3);
+    expect(result[0].createdAt.getTime()).toBe(explicitDate.getTime());
+    expect(result[1].createdAt.getTime()).not.toBe(explicitDate.getTime());
+    expect(result[2].createdAt.getTime()).not.toBe(explicitDate.getTime());
+    // Only the rows that omitted the column ran the value function.
+    expect(new Set(result.map((row) => row.publicId)).size).toBe(3);
+  });
+
+  it("should place each row's values in the right columns when others are omitted", async () => {
+    const rows = await db
+      .insertInto(schema.Users)
+      .values([
+        {
+          username: "partial_email",
+          type: "user",
+          status: "active",
+          role: "user",
+          email: "partial@example.com",
+        },
+        {
+          username: "partial_bio",
+          type: "user",
+          status: "active",
+          role: "user",
+          bio: "only a bio",
+          score: 7,
+        },
+        {
+          username: "partial_none",
+          type: "admin",
+          status: "pending",
+          role: "moderator",
+        },
+      ])
+      .returning("*");
+
+    // Each row kept its own values, and took the column default everywhere else.
+    expect(
+      [...rows].sort((a, b) => a.username.localeCompare(b.username)),
+    ).toEqual([
+      expect.objectContaining({
+        username: "partial_bio",
+        email: null,
+        bio: "only a bio",
+        score: 7,
+        balance: 0n,
+      }),
+      expect.objectContaining({
+        username: "partial_email",
+        email: "partial@example.com",
+        bio: null,
+        score: 0,
+        balance: 0n,
+      }),
+      expect.objectContaining({
+        username: "partial_none",
+        email: null,
+        bio: null,
+        score: 0,
+        type: "admin",
+        role: "moderator",
+      }),
+    ]);
+  });
+
   it("should insert and exclude fields from RETURNING", async () => {
     const result = await db
       .insertInto(schema.Users)
@@ -297,6 +421,21 @@ describe("INSERT queries", () => {
     expect(result[0]).not.toHaveProperty("email");
   });
 
+  it("should return RETURNING columns in table column order", async () => {
+    const result = await db
+      .insertInto(schema.Users)
+      .values({
+        username: "keyorder",
+        type: "user",
+        status: "active",
+        role: "user",
+      })
+      .returning({ username: true, createdAt: true, id: true });
+
+    // Table column order, not the order the caller listed the keys in.
+    expect(Object.keys(result[0])).toEqual(["id", "username", "createdAt"]);
+  });
+
   it("should allow explicit value to override insertFn", async () => {
     const explicitDate = new Date("2020-01-01T00:00:00.000Z");
 
@@ -311,6 +450,43 @@ describe("INSERT queries", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].createdAt.getTime()).toBe(explicitDate.getTime());
+  });
+
+  it("should keep supplied insertFn values across a batch and on a re-render", async () => {
+    const explicitDate = new Date("2020-01-01T00:00:00.000Z");
+
+    const builder = db
+      .insertInto(schema.AuditLogs)
+      .values([
+        {
+          action: "supplied_a",
+          createdAt: explicitDate,
+          modifiedAt: new Date(),
+        },
+        {
+          action: "supplied_b",
+          createdAt: explicitDate,
+          modifiedAt: new Date(),
+        },
+      ])
+      .returning({ action: true, createdAt: true, publicId: true });
+
+    const first = await builder;
+    const second = await builder;
+
+    // No row ran the createdAt value function: a supplied value is never
+    // overwritten, whether or not other rows of the batch omit the column.
+    for (const rows of [first, second]) {
+      expect(rows).toHaveLength(2);
+      for (const row of rows) {
+        expect(row.createdAt.getTime()).toBe(explicitDate.getTime());
+      }
+    }
+    // Each render resolved its own publicIds: a value function reused across
+    // renders would replay the first render's and trip the unique constraint.
+    expect(new Set([...first, ...second].map((row) => row.publicId)).size).toBe(
+      4,
+    );
   });
 
   describe("returning('*')", () => {

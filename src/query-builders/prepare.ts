@@ -124,10 +124,11 @@ export function prepare<TArgs extends Record<string, AnyArg>, TReturn>(
   const query = statement(args).toQuery() as Query<TReturn>;
   const argCount = query.arguments.length;
   const slots: ArgSlot[] = [];
-  for (let i = 0; i < argCount; i++) {
-    const key = keys[i] as keyof TArgs & string;
+  // Only the args the query actually emitted; `keys` may hold unused ones.
+  for (const key of keys) {
+    if (slots.length === argCount) break;
     slots.push({
-      key,
+      key: key as keyof TArgs & string,
       handler: args[key].handler as (val: unknown) => string | number | null,
     });
   }

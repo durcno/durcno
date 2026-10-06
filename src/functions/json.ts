@@ -52,6 +52,18 @@ export type HasArgInTuple<TTuple extends readonly unknown[]> =
 // ============================================================================
 
 /**
+ * Table name of the first column of a `to_json` / `toJsonb` target, or
+ * `undefined` when the target is not a record of columns.
+ */
+function firstColumnTableName(target: object): string | undefined {
+  for (const key in target) {
+    const value = (target as Record<string, unknown>)[key];
+    return isTCol(value) ? value.table?._.nameSql : undefined;
+  }
+  return undefined;
+}
+
+/**
  * SQL scalar expression: `json_build_object(...)`
  * Builds a JSON object out of a key-value mapping of columns, expressions, or literals.
  */
@@ -72,7 +84,8 @@ export class JsonBuildObjectFn<
   /** Returns all table columns directly referenced by fields of this JSON object. */
   get referencedColumns(): AnyColumn[] {
     const cols: AnyColumn[] = [];
-    for (const val of Object.values(this.fields)) {
+    for (const key in this.fields) {
+      const val = this.fields[key];
       if (isCol(val)) {
         cols.push(val);
       } else if (
@@ -112,12 +125,13 @@ export class JsonBuildObjectFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "json_build_object(";
-    const entries = Object.entries(this.fields);
-    entries.forEach(([key, val], idx) => {
-      query.sql += `'${escLiteral(key)}', `;
-      appendOperand(query, val, ctx);
-      if (idx < entries.length - 1) query.sql += ", ";
-    });
+    const fields = this.fields;
+    const keys = Object.keys(fields);
+    for (let i = 0; i < keys.length; i++) {
+      if (i !== 0) query.sql += ", ";
+      query.sql += `'${escLiteral(keys[i])}', `;
+      appendOperand(query, fields[keys[i]], ctx);
+    }
     query.sql += ")";
   }
 }
@@ -143,7 +157,8 @@ export class JsonbBuildObjectFn<
   /** Returns all table columns directly referenced by fields of this JSON object. */
   get referencedColumns(): AnyColumn[] {
     const cols: AnyColumn[] = [];
-    for (const val of Object.values(this.fields)) {
+    for (const key in this.fields) {
+      const val = this.fields[key];
       if (isCol(val)) {
         cols.push(val);
       } else if (
@@ -183,12 +198,14 @@ export class JsonbBuildObjectFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "jsonb_build_object(";
-    const entries = Object.entries(this.fields);
-    entries.forEach(([key, val], idx) => {
-      query.sql += `'${escLiteral(key)}', `;
-      appendOperand(query, val, ctx, { preferJsonb: true });
-      if (idx < entries.length - 1) query.sql += ", ";
-    });
+    const fields = this.fields;
+    const keys = Object.keys(fields);
+    const options = { preferJsonb: true };
+    for (let i = 0; i < keys.length; i++) {
+      if (i !== 0) query.sql += ", ";
+      query.sql += `'${escLiteral(keys[i])}', `;
+      appendOperand(query, fields[keys[i]], ctx, options);
+    }
     query.sql += ")";
   }
 }
@@ -426,9 +443,7 @@ export class ToJsonFn<
       !isCol(this.target) &&
       !(this.target instanceof Sql)
     ) {
-      const firstCol = Object.values(this.target)[0];
-      const tableName =
-        firstCol && isTCol(firstCol) ? firstCol.table?._.nameSql : undefined;
+      const tableName = firstColumnTableName(this.target);
       if (tableName) {
         query.sql += `"${escIdentifier(tableName)}"`;
       } else {
@@ -483,9 +498,7 @@ export class ToJsonbFn<
       !isCol(this.target) &&
       !(this.target instanceof Sql)
     ) {
-      const firstCol = Object.values(this.target)[0];
-      const tableName =
-        firstCol && isTCol(firstCol) ? firstCol.table?._.nameSql : undefined;
+      const tableName = firstColumnTableName(this.target);
       if (tableName) {
         query.sql += `"${escIdentifier(tableName)}"`;
       } else {
@@ -571,10 +584,11 @@ export class JsonBuildArrayFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "json_build_array(";
-    this.items.forEach((item, idx) => {
-      appendOperand(query, item, ctx);
-      if (idx < this.items.length - 1) query.sql += ", ";
-    });
+    const items = this.items;
+    for (let i = 0; i < items.length; i++) {
+      if (i !== 0) query.sql += ", ";
+      appendOperand(query, items[i], ctx);
+    }
     query.sql += ")";
   }
 }
@@ -622,10 +636,12 @@ export class JsonbBuildArrayFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "jsonb_build_array(";
-    this.items.forEach((item, idx) => {
-      appendOperand(query, item, ctx, { preferJsonb: true });
-      if (idx < this.items.length - 1) query.sql += ", ";
-    });
+    const items = this.items;
+    const options = { preferJsonb: true };
+    for (let i = 0; i < items.length; i++) {
+      if (i !== 0) query.sql += ", ";
+      appendOperand(query, items[i], ctx, options);
+    }
     query.sql += ")";
   }
 }

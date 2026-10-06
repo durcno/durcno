@@ -9,6 +9,7 @@ import {
   count,
   database,
   defineConfig,
+  desc,
   eq,
   isNotNull,
   isNull,
@@ -348,6 +349,35 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       expect(row.allUsers).toHaveLength(2);
       expect(row.allUsers![0].username).toBe("alice");
       expect(row.allUsers![1].username).toBe("bob");
+    });
+
+    it("should order aggregated rows by more than one key", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "author" }))
+        .returning({ id: true });
+      const [post] = await db
+        .insertInto(schema.Posts)
+        .values(createTestPost(user.id, { title: "Post" }))
+        .returning({ id: true });
+
+      // All three share a post, so the first key ties and the second decides.
+      await db
+        .insertInto(schema.Comments)
+        .values([
+          createTestComment(post.id, user.id, { body: "first" }),
+          createTestComment(post.id, user.id, { body: "second" }),
+          createTestComment(post.id, user.id, { body: "third" }),
+        ]);
+
+      const [row] = await db.from(schema.Comments).select(() => ({
+        bodies: jsonAgg(schema.Comments.body).orderBy(
+          asc(schema.Comments.postId),
+          desc(schema.Comments.id),
+        ),
+      }));
+
+      expect(row.bodies).toEqual(["third", "second", "first"]);
     });
 
     it("should support .distinct() on jsonAgg and jsonbAgg", async () => {

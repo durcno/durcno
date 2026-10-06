@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { camelToSnake } from "../../src/utils";
 
-/**
- * `camelToSnake` unit tests. No database involved.
- *
- * Imported from `src` rather than `durcno` because the helper is internal and
- * not re-exported from the public entry point.
- */
 describe("camelToSnake", () => {
   it("converts consecutive capitals", () => {
     expect(camelToSnake("XMLParser")).toBe("xml_parser");

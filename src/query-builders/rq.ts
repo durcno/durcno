@@ -499,7 +499,7 @@ class RelationQuery<
 
     query.sql += "SELECT ";
 
-    const selects: string[] = [];
+    let firstSelect = true;
     const selectEntries = getSelectEntries(options);
     if (selectEntries) {
       validateAliasKeys(
@@ -512,15 +512,20 @@ class RelationQuery<
           this.#table as unknown as StdTableWithColumns,
           alias,
         );
-        const fragment = renderAliasedExpr(query, expr);
-        selects.push(`${fragment} AS "${escIdentifier(alias)}"`);
+        if (firstSelect) firstSelect = false;
+        else query.sql += ", ";
+        query.sql += renderAliasedExpr(query, expr);
+        query.sql += ` AS "${escIdentifier(alias)}"`;
       }
     } else {
       for (const [colName, column] of getSelectedColumns(
         options.columns,
         this.#table._.columns,
       )) {
-        selects.push(`${column.fullName} AS "${escIdentifier(colName)}"`);
+        if (firstSelect) firstSelect = false;
+        else query.sql += ", ";
+        query.sql += column.fullName;
+        query.sql += ` AS "${escIdentifier(colName)}"`;
       }
     }
     const relations = this.#allRelations[this.#table._.fullName];
@@ -530,17 +535,18 @@ class RelationQuery<
           const relation = relations.map[key];
           if (relation) {
             // Use relation key as alias for top-level relations
-            selects.push(
-              `"${escIdentifier(key)}"."data" AS "${escIdentifier(key)}"`,
-            );
+            if (firstSelect) firstSelect = false;
+            else query.sql += ", ";
+            const quotedKey = escIdentifier(key);
+            query.sql += `"${quotedKey}"."data" AS "${quotedKey}"`;
           }
         }
       }
     }
-    query.sql += selects.join(", ");
 
-    query.sql += " FROM";
-    query.sql += ` ${this.#table._.fullName} "${escIdentifier(this.#table._.nameSql)}"`;
+    query.sql += " FROM ";
+    query.sql += this.#table._.fullName;
+    query.sql += ` "${escIdentifier(this.#table._.nameSql)}"`;
     if (options.with) {
       for (const key in options.with) {
         const otps = options.with[key];
@@ -594,9 +600,9 @@ class RelationQuery<
   handleRows(rows: Record<string, unknown>[]): TReturn {
     if (rows.length === 0) return rows as TReturn;
     const level = this.#getConvertLevel();
-    for (let i = 0; i < rows.length; i++) {
+    for (const row of rows) {
       convert(
-        rows[i],
+        row,
         this.#table as unknown as StdTableWithColumns,
         this.#allRelations,
         level,
@@ -606,6 +612,17 @@ class RelationQuery<
   }
 }
 
+/** Returns every table column as an entry list. */
+function allColumnEntries(
+  tableColumns: Record<string, AnyColumn>,
+): [string, AnyColumn][] {
+  const entries: [string, AnyColumn][] = [];
+  for (const colName in tableColumns) {
+    entries.push([colName, tableColumns[colName]]);
+  }
+  return entries;
+}
+
 /**
  * Returns the [colName, column] entries to include based on the columns filter option.
  */
@@ -613,14 +630,23 @@ function getSelectedColumns(
   columns: StdOptions["columns"],
   tableColumns: Record<string, AnyColumn>,
 ): [string, AnyColumn][] {
-  const entries = Object.entries(tableColumns) as [string, AnyColumn][];
-  if (columns === undefined || Object.keys(columns).length === 0) {
-    return entries;
+  if (columns === undefined) return allColumnEntries(tableColumns);
+  // The first flag decides how the listed columns are read: `true` includes
+  // them, anything else excludes them. A filter that lists nothing includes
+  // every column.
+  let inclusion: boolean | undefined;
+  for (const key in columns) {
+    inclusion = columns[key] === true;
+    break;
   }
-  if (Object.values(columns).at(0) === true) {
-    return entries.filter(([colName]) => colName in columns);
+  if (inclusion === undefined) return allColumnEntries(tableColumns);
+  const entries: [string, AnyColumn][] = [];
+  for (const colName in tableColumns) {
+    if (colName in columns === inclusion) {
+      entries.push([colName, tableColumns[colName]]);
+    }
   }
-  return entries.filter(([colName]) => !(colName in columns));
+  return entries;
 }
 
 /** Structural view of relational options used by runtime helpers. */
@@ -630,6 +656,12 @@ type OptionsView = {
   with?: Record<string, OptionsView | undefined> | undefined;
 };
 
+/** True when the record has no own enumerable keys, without allocating one. */
+function isEmptyRecord(record: Record<string, unknown>): boolean {
+  for (const _ in record) return false;
+  return true;
+}
+
 /**
  * Returns validated [alias, expr] entries when `select` is present and
  * non-empty, otherwise null (fall back to `columns`).
@@ -637,11 +669,11 @@ type OptionsView = {
  */
 function getSelectEntries(options: OptionsView): [string, unknown][] | null {
   const select = options.select as Record<string, unknown> | undefined;
-  if (select === undefined || Object.keys(select).length === 0) {
+  if (select === undefined || isEmptyRecord(select)) {
     return null;
   }
   const columns = options.columns as Record<string, unknown> | undefined;
-  if (columns !== undefined && Object.keys(columns).length > 0) {
+  if (columns !== undefined && !isEmptyRecord(columns)) {
     throw new Error(
       "Relational `select` and `columns` are mutually exclusive. Use one or the other at each level (including inside `with`).",
     );
@@ -654,7 +686,7 @@ function validateAliasKeys(
   select: Record<string, unknown>,
   withOptions: Record<string, unknown> | undefined,
 ): void {
-  for (const alias of Object.keys(select)) {
+  for (const alias in select) {
     if (alias.length === 0) {
       throw new Error("Relational `select` alias names must be non-empty.");
     }
@@ -724,21 +756,24 @@ function renderAliasedExpr(
 }
 
 /**
- * Build the json_build_object selects for a relation, including nested relations.
+ * Appends the json_build_object arguments for a relation, including nested
+ * relations, straight to `query.sql` — the fragments go out in order, so there
+ * is no list to assemble and join.
  * @param query - The query object (used to render alias-mode expressions with correct arg indices)
  * @param alias - The alias used for the inner subquery (e.g., "posts", "posts__comments")
  * @param options - The options for this relation
  * @param table - The table being selected from
  * @param allRelations - All relations in the schema
  */
-function getJsonBuildObjectSelects(
+function appendJsonBuildObjectSelects(
   query: Query,
   alias: string,
   options: StdOptions,
   table: StdTableWithColumns,
   allRelations: Record<string, StdRelations>,
-) {
-  const selects: string[] = [];
+): void {
+  // `first` stands in for the join that used to separate an assembled list.
+  let first = true;
 
   // Add column selects
   const selectEntries = getSelectEntries(options);
@@ -752,17 +787,21 @@ function getJsonBuildObjectSelects(
     };
     for (const [outKey, expr] of selectEntries) {
       validateAliasExpr(expr, table, outKey);
-      const fragment = renderAliasedExpr(query, expr, ctx);
-      selects.push(`'${escLiteral(outKey)}', ${fragment}`);
+      if (first) first = false;
+      else query.sql += ", ";
+      query.sql += `'${escLiteral(outKey)}', `;
+      // Renders to `query.sql` and rolls back, so its fragment is appended here.
+      query.sql += renderAliasedExpr(query, expr, ctx);
     }
   } else {
+    const quotedAlias = escIdentifier(alias);
     for (const [colName, column] of getSelectedColumns(
       options.columns,
       table._.columns,
     )) {
-      selects.push(
-        `'${escLiteral(colName)}', "${escIdentifier(alias)}"."${escIdentifier(column.nameSql ?? "")}"`,
-      );
+      if (first) first = false;
+      else query.sql += ", ";
+      query.sql += `'${escLiteral(colName)}', "${quotedAlias}"."${escIdentifier(column.nameSql ?? "")}"`;
     }
   }
 
@@ -770,21 +809,20 @@ function getJsonBuildObjectSelects(
   if (options.with) {
     const tableRelations = allRelations[table._.fullName];
     if (tableRelations) {
+      const quotedAlias = escIdentifier(alias);
       for (const nestedKey in options.with) {
         const nestedRelation = tableRelations.map[nestedKey];
         if (nestedRelation) {
           // The inner subquery aliases nested data as "${nestedKey}_data",
           // and the inner subquery itself is aliased as "${alias}",
           // so we reference "${alias}"."${nestedKey}_data"
-          selects.push(
-            `'${escLiteral(nestedKey)}', "${escIdentifier(alias)}"."${escIdentifier(nestedKey)}_data"`,
-          );
+          if (first) first = false;
+          else query.sql += ", ";
+          query.sql += `'${escLiteral(nestedKey)}', "${quotedAlias}"."${escIdentifier(nestedKey)}_data"`;
         }
       }
     }
   }
-
-  return selects;
 }
 
 /**
@@ -809,19 +847,23 @@ function buildRelationSubquery(
 ): void {
   query.sql += " LEFT JOIN LATERAL (";
 
-  const jsonSelects = getJsonBuildObjectSelects(
+  if (relation.t === "Many") {
+    query.sql += "SELECT coalesce(json_agg(json_build_object(";
+  } else {
+    // One or Fk
+    query.sql += "SELECT json_build_object(";
+  }
+  appendJsonBuildObjectSelects(
     query,
     aliasPath,
     options,
     relation.table,
     allRelations,
   );
-
   if (relation.t === "Many") {
-    query.sql += `SELECT coalesce(json_agg(json_build_object(${jsonSelects.join(", ")})), '[]'::json) AS "data"`;
+    query.sql += `)), '[]'::json) AS "data"`;
   } else {
-    // One or Fk
-    query.sql += `SELECT json_build_object(${jsonSelects.join(", ")}) AS "data"`;
+    query.sql += ') AS "data"';
   }
 
   const nestedTableRelations = options.with
@@ -838,7 +880,7 @@ function buildRelationSubquery(
     : getSelectedColumns(options.columns, relation.table._.columns);
   if (projectionEntries && projectionEntries.length > 0) {
     for (let i = 0; i < projectionEntries.length; i++) {
-      if (i > 0) query.sql += ", ";
+      if (i !== 0) query.sql += ", ";
       const column = projectionEntries[i][1];
       query.sql += `"${escIdentifier(aliasPath)}"."${escIdentifier(column.nameSql ?? "")}"`;
     }
@@ -999,8 +1041,8 @@ function orderByToQuery(
 ): void {
   query.sql += " ORDER BY ";
   for (let i = 0; i < orders.length; i++) {
+    if (i !== 0) query.sql += ", ";
     orders[i].toQuery(query, ctx);
-    if (i < orders.length - 1) query.sql += ", ";
   }
 }
 
@@ -1035,7 +1077,7 @@ function buildConvertLevel(options?: OptionsView): ConvertLevel {
     plan: null,
   };
   if (options?.with) {
-    for (const key of Object.keys(options.with)) {
+    for (const key in options.with) {
       const nestedOpts = options.with[key];
       if (nestedOpts) {
         if (!level.nested) level.nested = {};
@@ -1072,8 +1114,7 @@ function buildLevelPlan(
   const relations = allRelations[table._.fullName];
   const keys = Object.keys(object);
   const applies: LevelPlan["applies"][number][] = [];
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
+  for (const key of keys) {
     const aliased = aliasMap?.get(key);
     if (aliased !== undefined) {
       if (isTCol(aliased)) {
@@ -1104,8 +1145,8 @@ function buildLevelPlan(
     if (relation.t === "Many") {
       applies.push((obj) => {
         const children = obj[key] as Record<string, unknown>[];
-        for (let c = 0; c < children.length; c++) {
-          convert(children[c], childTable, allRelations, childLevel);
+        for (const child of children) {
+          convert(child, childTable, allRelations, childLevel);
         }
       });
     } else {
@@ -1138,9 +1179,7 @@ function convert(
   if (!level.plan) {
     level.plan = buildLevelPlan(object, table, allRelations, level);
   }
-  const applies = level.plan.applies;
-  const width = applies.length;
-  for (let i = 0; i < width; i++) {
-    applies[i](object);
+  for (const apply of level.plan.applies) {
+    apply(object);
   }
 }

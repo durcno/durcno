@@ -15,6 +15,7 @@ import {
   text,
   timestamptz,
   unique,
+  uuid,
   varchar,
 } from "durcno";
 
@@ -186,4 +187,8 @@ export const AuditLogs = table("public", "auditLogs", {
   createdAt: timestamptz({ notNull }).$insertFn(() => new Date()),
   // updateFn: auto-generate modifiedAt on every update
   modifiedAt: timestamptz({ notNull }).$updateFn(() => new Date()),
+  // insertFn on a `unique` column: the constraint is what makes a repeated
+  // per-batch value observable, so a batch insert of this table fails outright
+  // if the value function is resolved once per query instead of once per row.
+  publicId: uuid({ unique }).$insertFn(() => crypto.randomUUID()),
 });

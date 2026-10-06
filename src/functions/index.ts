@@ -112,6 +112,29 @@ export interface AppendOperandOptions {
   leadOperand?: unknown;
 }
 
+type FnClassWithJsonKind = { name: string };
+
+/**
+ * JSON kind of a `SqlFn` class, or `null` when the class name says nothing and
+ * the instance's own `pgType` has to decide. Classes are stable, so the cache
+ * stays small.
+ */
+const jsonKindByClass = new WeakMap<
+  FnClassWithJsonKind,
+  "json" | "jsonb" | null
+>();
+
+/**
+ * `json` must lose to `jsonb`, and a name carrying neither is unknown rather
+ * than absent — the instance may still report a `pgType`.
+ */
+function resolveJsonKindByName(name: string): "json" | "jsonb" | null {
+  const lower = name.toLowerCase();
+  if (lower.includes("jsonb")) return "jsonb";
+  if (lower.includes("json")) return "json";
+  return null;
+}
+
 /**
  * Detects whether an expression or column represents a JSON or JSONB value at runtime.
  */
@@ -124,9 +147,13 @@ export function detectJsonKind(e: unknown): "json" | "jsonb" | null {
     return null;
   }
   if (e instanceof SqlFn) {
-    const name = e.constructor.name.toLowerCase();
-    if (name.includes("jsonb")) return "jsonb";
-    if (name.includes("json")) return "json";
+    const ctor = e.constructor as FnClassWithJsonKind;
+    let kind = jsonKindByClass.get(ctor);
+    if (kind === undefined) {
+      kind = resolveJsonKindByName(ctor.name);
+      jsonKindByClass.set(ctor, kind);
+    }
+    if (kind !== null) return kind;
     const pgType = (e as any).pgType;
     if (pgType === "jsonb") return "jsonb";
     if (pgType === "json") return "json";
@@ -176,7 +203,12 @@ export function appendOperand(
       } else if (expr.length === 0) {
         query.sql += "'{}'";
       } else {
-        query.sql += `ARRAY[${expr.map((item) => toSqlValue(item)).join(", ")}]`;
+        query.sql += "ARRAY[";
+        for (let i = 0; i < expr.length; i++) {
+          if (i !== 0) query.sql += ", ";
+          query.sql += toSqlValue(expr[i]);
+        }
+        query.sql += "]";
       }
     }
   } else if (typeof expr === "string") {

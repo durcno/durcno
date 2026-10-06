@@ -5,6 +5,7 @@ import {
   type $Client,
   abs,
   add,
+  caseWhen,
   ceil,
   coalesce,
   concat,
@@ -290,5 +291,40 @@ describe("String and Numeric Functions", () => {
     expect(result[0].directBigInt).toBe(100n);
     expect(result[0].directBoolTrue).toBe(true);
     expect(result[0].directBoolFalse).toBe(false);
+  });
+
+  it("should render an expression nested inside another expression at every nesting kind", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(
+        createTestUser({
+          username: "NestedUser",
+          email: "Nested@Example.com",
+        }),
+      )
+      .returning({ id: true });
+
+    // Every column re-enters a render from inside another one: a function's
+    // operand list, a CASE branch, and a raw template's interpolated values.
+    const result = await db
+      .from(schema.Users)
+      .select(() => ({
+        inVariadic: concat(
+          lower(schema.Users.username),
+          upper(schema.Users.email),
+        ),
+        inCaseThen: caseWhen(
+          eq(schema.Users.type, "admin"),
+          lower(schema.Users.username),
+        ).else(upper(schema.Users.username)),
+        inRawTemplate: sql`${lower(schema.Users.username)} || ${upper(schema.Users.email)}`,
+        rawInRawTemplate: sql`${lower(schema.Users.username)} || ${sql`${upper(schema.Users.email)}`}`,
+      }))
+      .where(() => eq(schema.Users.id, user.id));
+
+    expect(result[0].inVariadic).toBe("nesteduserNESTED@EXAMPLE.COM");
+    expect(result[0].inCaseThen).toBe("NESTEDUSER");
+    expect(result[0].inRawTemplate).toBe("nesteduserNESTED@EXAMPLE.COM");
+    expect(result[0].rawInRawTemplate).toBe("nesteduserNESTED@EXAMPLE.COM");
   });
 });

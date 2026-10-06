@@ -1,21 +1,21 @@
+/**
+ * Benchmarks the fixed per-query overhead of the execute path: the promise
+ * plumbing in `QueryPromise.then` and the `execQuery` / `execStrArgs`
+ * pass-throughs in the connector base class. No database is involved — the stub
+ * pool resolves immediately — so the numbers isolate promise overhead from SQL
+ * generation, row conversion and network time.
+ *
+ * The stub returns a single row on purpose: the overhead is a handful of promise
+ * allocations per query, and any meaningful row count would bury it under
+ * `handleRows`, which `handle-rows.bench.ts` measures instead.
+ *
+ * `pnpm bench`. Reading the numbers: AGENTS.md (Performance).
+ */
 import { asc, database, defineConfig, eq } from "durcno";
 import { bench, describe } from "vitest";
 import * as schema from "./schema";
 import { createStubConnector } from "./stub-connector";
 
-/**
- * Benchmarks for the fixed per-query overhead of the execute path: the promise
- * plumbing in `QueryPromise.then` plus the `execQuery` / `execStrArgs`
- * pass-throughs in the connector base class. No database is involved — the stub
- * pool resolves immediately — so the numbers isolate JS promise overhead from
- * SQL generation, row conversion and network time. Run with `pnpm bench` from
- * the repo root.
- *
- * The stub returns a single row on purpose. The overhead being measured is a
- * handful of promise allocations per query, so any meaningful row count would
- * bury it under `handleRows` cost — that cost is measured by
- * `handle-rows.bench.ts` instead.
- */
 const ROWS = 1;
 
 const stubRows = Array.from({ length: ROWS }, (_, i) => ({

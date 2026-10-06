@@ -38,10 +38,12 @@ export class Sql<TTsType = unknown> {
   }
 
   toSQL(): string {
+    const strings = this.#strings;
+    const params = this.#params;
     let s = "";
-    this.#strings.forEach((str, i) => {
-      s += str;
-      const param = this.#params[i];
+    for (let i = 0; i < strings.length; i++) {
+      s += strings[i];
+      const param = params[i];
       if (param !== undefined) {
         if (is(param, Arg)) {
           throw new Error(
@@ -57,14 +59,16 @@ export class Sql<TTsType = unknown> {
           s += toSqlValue(param);
         }
       }
-    });
+    }
     return s;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
-    this.#strings.forEach((str, i) => {
-      query.sql += str;
-      const param = this.#params[i];
+    const strings = this.#strings;
+    const params = this.#params;
+    for (let i = 0; i < strings.length; i++) {
+      query.sql += strings[i];
+      const param = params[i];
       if (param !== undefined) {
         if (is(param, Arg)) {
           query.addArg(param);
@@ -78,7 +82,7 @@ export class Sql<TTsType = unknown> {
           query.sql += toSqlValue(param);
         }
       }
-    });
+    }
   }
 }
 

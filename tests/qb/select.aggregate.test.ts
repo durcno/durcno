@@ -524,6 +524,36 @@ describe("SELECT aggregate functions", () => {
       expect(adminGroup?.total).toBe(1);
     });
 
+    it("should group once when the same column is projected under two aliases", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "alice", type: "admin" }),
+          createTestUser({ username: "bob", type: "admin" }),
+          createTestUser({ username: "charlie", type: "user" }),
+          createTestUser({ username: "dave", type: "user" }),
+        ]);
+
+      // Two aliases of one column are one grouping key, so this is two groups
+      // and not four.
+      const results = await db
+        .from(schema.Users)
+        .select(() => ({
+          type: schema.Users.type,
+          sameType: schema.Users.type,
+          total: count("*"),
+        }))
+        .orderBy(() => asc(schema.Users.type));
+
+      expect(results).toHaveLength(2);
+      expect(results[0].type).toBe("admin");
+      expect(results[0].sameType).toBe("admin");
+      expect(results[0].total).toBe(2);
+      expect(results[1].type).toBe("user");
+      expect(results[1].sameType).toBe("user");
+      expect(results[1].total).toBe(2);
+    });
+
     it("should compute sum per group", async () => {
       await db
         .insertInto(schema.Users)

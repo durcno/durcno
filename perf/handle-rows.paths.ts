@@ -1,26 +1,19 @@
 #!/usr/bin/env node
 /**
- * Compares the two `SELECT *` row-conversion paths against each other.
+ * Compares the two `SELECT *` row-conversion paths against each other inside
+ * one build and one process, so no machine-load or thermal skew can favour one
+ * side. `handle-rows.bench.ts` is the regression guard, but a single vitest run
+ * cannot settle a difference this size.
  *
- * `handle-rows.bench.ts` is the regression guard, but throughput on a shared
- * machine varies by up to ~2x run to run, so a single vitest run cannot settle
- * a question like "is the in-place path actually faster?". This script exists
- * for that. It measures both paths **inside one build and one process**, feeds
- * them identical fresh driver-shaped rows, and builds fixtures outside the
- * timed region so only the conversion is counted.
- *
- * Fresh fixtures are not optional. The allocating path never mutates the rows
- * it is handed; the in-place path converts them in place. Reuse one fixture
- * and the in-place side times `BigInt(1n)` where the allocating side times
- * `BigInt("1")`, which flatters the in-place path enormously.
- *
- * For comparing two *builds* rather than two paths, use `handle-rows.ab.ts`.
+ * Fresh fixtures are not optional: the in-place path converts the rows it is
+ * handed in place, so one shared fixture would time `BigInt(1n)` where the
+ * allocating side times `BigInt("1")` — enormously flattering the in-place path.
  *
  * Usage (from the repo root): `node perf/handle-rows.paths.ts [inplace|alloc]`
  * With no argument it runs both, in that order.
  *
- * Run it on an otherwise idle machine — check `uptime` first — and repeat
- * the pair at least three times before believing a difference. Read `min`.
+ * For two *builds* rather than two paths, use `handle-rows.ab.ts`. Reading the
+ * numbers: AGENTS.md (Performance).
  */
 import {
   bigint,

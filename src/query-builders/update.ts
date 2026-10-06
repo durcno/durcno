@@ -6,6 +6,7 @@ import { SqlFn } from "../functions/index";
 import { Sql } from "../sql";
 import type {
   AnyColumn,
+  StdTableColumn,
   StdTableWithColumns,
   TableWithColumns,
 } from "../table";
@@ -69,6 +70,30 @@ export type UpdateSetValues<
   TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
   TPrepare extends boolean = false,
 > = UpdateValues<TTableWC, TPrepare>;
+
+/**
+ * Columns carrying a `$updateFn`, resolved once per table.
+ */
+const updateFnColumnsCache = new WeakMap<
+  StdTableWithColumns,
+  readonly StdTableColumn[]
+>();
+
+function updateFnColumnsOf(
+  table: StdTableWithColumns,
+): readonly StdTableColumn[] {
+  let columns = updateFnColumnsCache.get(table);
+  if (columns === undefined) {
+    const found: StdTableColumn[] = [];
+    for (const key in table._.columns) {
+      const column = table._.columns[key] as StdTableColumn;
+      if (column.hasUpdateFn) found.push(column);
+    }
+    columns = found;
+    updateFnColumnsCache.set(table, columns);
+  }
+  return columns;
+}
 
 /**
  * Intermediate builder for constructing an `UPDATE` statement.
@@ -243,12 +268,13 @@ export class UpdateQuery<
 
     let hasSet = false;
     const values = this.#values as Record<string, unknown>;
+    const columns = this.#table._.columns;
 
     // Emit explicitly provided non-undefined values
     for (const field in values) {
       const value = values[field];
       if (value === undefined) continue;
-      const column = this.#table._.columns[field];
+      const column = columns[field];
       if (!column) continue;
 
       if (hasSet) query.sql += ", ";
@@ -269,15 +295,15 @@ export class UpdateQuery<
     }
 
     // Add updateFn values for columns not explicitly provided
-    for (const colName in this.#table._.columns) {
-      const column = this.#table._.columns[colName];
-      if (column.hasUpdateFn && values[colName] === undefined) {
-        if (hasSet) query.sql += ", ";
-        hasSet = true;
+    for (const column of updateFnColumnsOf(
+      this.#table as unknown as StdTableWithColumns,
+    )) {
+      if (values[column.name as string] !== undefined) continue;
+      if (hasSet) query.sql += ", ";
+      hasSet = true;
 
-        query.sql += `"${column.nameSql}" = `;
-        query.sql += column.toSQL(column.getUpdateFnVal, { cast: true });
-      }
+      query.sql += `"${column.nameSql}" = `;
+      query.sql += column.toSQL(column.getUpdateFnVal, { cast: true });
     }
 
     if (!hasSet) {

@@ -1,12 +1,8 @@
 /**
- * Same-process A/B of the row-conversion path, across two builds.
- *
- * Loading the old and new `dist` into one process and alternating them removes
- * every source of drift except the code itself — no machine-load or thermal
- * skew can favour one side, because every round runs both back to back. This
- * matters: rebuilding and swapping `dist` between separate runs proved too
- * noisy on a shared machine to resolve differences this small. It reported a
- * real 20% regression as noise, and a consistent win as noise too.
+ * Same-process A/B of the row-conversion path, across two builds. Alternating
+ * the two builds inside one sample loop leaves only the code itself as a
+ * difference, which is the whole reason this exists: swapping `dist` between
+ * separate runs reported a real 20% regression as noise.
  *
  * Usage (from the repo root):
  *
@@ -14,12 +10,12 @@
  *   # ...change the code...
  *   pnpm build && node perf/handle-rows.ab.ts .ab-old dist
  *
- * Both directories must sit **inside the repo** — outside it, Node cannot
- * walk up to this repo's `node_modules` and resolving `zod` fails. They are
- * not gitignored, so delete them when you are done.
+ * Both directories must sit **inside the repo** — outside it, Node cannot walk
+ * up to this repo's `node_modules` and resolving `zod` fails. They are not
+ * gitignored, so delete them when you are done.
  *
- * For comparing the two conversion *paths* rather than two builds, use
- * `handle-rows.paths.ts`.
+ * For the two conversion *paths* rather than two builds, use
+ * `handle-rows.paths.ts`. Reading the numbers: AGENTS.md (Performance).
  */
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";

@@ -460,10 +460,11 @@ export class ConcatFn<
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "concat(";
-    this.exprs.forEach((expr, i) => {
-      appendTextExpr(query, expr, ctx);
-      if (i < this.exprs.length - 1) query.sql += ", ";
-    });
+    const exprs = this.exprs;
+    for (let i = 0; i < exprs.length; i++) {
+      if (i !== 0) query.sql += ", ";
+      appendTextExpr(query, exprs[i], ctx);
+    }
     query.sql += ")";
   }
 }
@@ -514,12 +515,13 @@ export class ConcatWsFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "concat_ws(";
     appendTextExpr(query, this.sep, ctx);
-    if (this.exprs.length > 0) {
+    const exprs = this.exprs;
+    if (exprs.length > 0) {
       query.sql += ", ";
-      this.exprs.forEach((expr, i) => {
-        appendTextExpr(query, expr, ctx);
-        if (i < this.exprs.length - 1) query.sql += ", ";
-      });
+      for (let i = 0; i < exprs.length; i++) {
+        if (i !== 0) query.sql += ", ";
+        appendTextExpr(query, exprs[i], ctx);
+      }
     }
     query.sql += ")";
   }

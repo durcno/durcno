@@ -107,12 +107,13 @@ export abstract class AggregateSqlFn<
 
   /** Appends `ORDER BY ...` before the closing parenthesis if present. */
   protected appendOrderBy(query: Query, ctx?: QueryContext): void {
-    if (this.$orderBy?.length) {
+    const orders = this.$orderBy;
+    if (orders?.length) {
       query.sql += " ORDER BY ";
-      this.$orderBy.forEach((order, idx) => {
-        order.toQuery(query, ctx);
-        if (idx < this.$orderBy!.length - 1) query.sql += ", ";
-      });
+      for (let i = 0; i < orders.length; i++) {
+        if (i !== 0) query.sql += ", ";
+        orders[i].toQuery(query, ctx);
+      }
     }
   }
 

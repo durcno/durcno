@@ -6,19 +6,23 @@ import type { AnyQuery } from "./query";
 
 /**
  * Renders the `WITH cte1 AS (...), cte2 AS (...) ` prefix into `query.sql`.
- * Call only when `ctes` is non-empty.
+ *
+ * Emits nothing when `ctes` is empty. The closing `) ` goes out after the loop
+ * so no iteration has to compute a last index, which leaves an empty list with
+ * a `WITH` and no body — so the guard comes first and callers need not check.
  */
 export function buildWithClause(
   ctes: readonly AnyCteWithColumns[],
   query: AnyQuery,
 ): void {
+  if (ctes.length === 0) return;
   query.sql += "WITH ";
   for (let i = 0; i < ctes.length; i++) {
-    const cte = ctes[i];
-    query.sql += `${cte._.fullName} AS (`;
-    cte.query.toQuery(query);
-    query.sql += i < ctes.length - 1 ? "), " : ") ";
+    if (i !== 0) query.sql += "), ";
+    query.sql += `${ctes[i]._.fullName} AS (`;
+    ctes[i].query.toQuery(query);
   }
+  query.sql += ") ";
 }
 
 /**
@@ -73,11 +77,9 @@ export function buildStarRowsPlan(
   joins: readonly { table: StarSource }[] | null | undefined,
   sqlKeys: readonly string[],
 ): StarRowsPlan {
-  const width = sqlKeys.length;
   const converts: StarRowsPlan["converts"][number][] = [];
   let inPlace = true;
-  for (let i = 0; i < width; i++) {
-    const key = sqlKeys[i];
+  for (const key of sqlKeys) {
     let column = table._.columnsBySql[key] ?? table._.columns[key];
     if (column === undefined && joins) {
       for (let j = joins.length - 1; j >= 0; j--) {
@@ -111,24 +113,22 @@ export function applyStarRowsPlan(
   plan: StarRowsPlan,
 ): Record<string, unknown>[] {
   const converts = plan.converts;
-  const width = converts.length;
   if (plan.inPlace) {
-    for (let r = 0; r < rows.length; r++) {
-      const row = rows[r];
-      for (let i = 0; i < width; i++) {
-        converts[i](row, row);
+    for (const row of rows) {
+      for (const convert of converts) {
+        convert(row, row);
       }
     }
     return rows;
   }
   const newRows: Record<string, unknown>[] = new Array(rows.length);
-  for (let r = 0; r < rows.length; r++) {
-    const row = rows[r];
+  let out = 0;
+  for (const row of rows) {
     const newRow: Record<string, unknown> = {};
-    for (let i = 0; i < width; i++) {
-      converts[i](row, newRow);
+    for (const convert of converts) {
+      convert(row, newRow);
     }
-    newRows[r] = newRow;
+    newRows[out++] = newRow;
   }
   return newRows;
 }
@@ -200,11 +200,13 @@ export function resolveReturningColumns<
   }
   const ret = returning as Record<string, boolean>;
   const hasTrue = Object.values(ret).some((value) => value === true);
-  return Object.fromEntries(
-    Object.entries(columns).filter(([key]) =>
-      hasTrue ? ret[key] === true : ret[key] !== false,
-    ),
-  ) as ReturningColumns<TColumns, TReturning>;
+  const resolved: Record<string, AnyColumn> = {};
+  for (const key in columns) {
+    if (hasTrue ? ret[key] === true : ret[key] !== false) {
+      resolved[key] = columns[key];
+    }
+  }
+  return resolved as ReturningColumns<TColumns, TReturning>;
 }
 
 /**
@@ -223,12 +225,18 @@ export function buildReturningClause(
     return;
   }
   const hasTrue = Object.values(returning).some((v) => v === true);
-  const returningFields = Object.keys(columns).filter((key) =>
-    hasTrue ? returning[key] === true : returning[key] !== false,
-  );
-  if (returningFields.length === 0) return;
-  query.sql += " RETURNING ";
-  query.sql += returningFields
-    .map((field) => `"${columns[field].nameSql}"`)
-    .join(", ");
+  let opened = false;
+  for (const key in columns) {
+    const include = hasTrue
+      ? returning[key] === true
+      : returning[key] !== false;
+    if (!include) continue;
+    if (opened) {
+      query.sql += ", ";
+    } else {
+      query.sql += " RETURNING ";
+      opened = true;
+    }
+    query.sql += `"${columns[key].nameSql}"`;
+  }
 }

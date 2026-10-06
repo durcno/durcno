@@ -653,6 +653,29 @@ Expect<
   >
 >();
 
+// Type test: left join then inner join — the view each callback is handed
+// follows the same rule, and both columns below are notNull in the schema, so
+// the pair discriminates a promoted inner join from a nullable left join
+const leftThenInnerViewQuery = db
+  .from(Users)
+  .leftJoin(UserProfiles, () => eq(Users.id, UserProfiles.userId))
+  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .select(({ posts, userProfiles }) => ({
+    postUserId: posts.userId,
+    profileUserId: userProfiles.userId,
+  }));
+
+type LeftThenInnerView = Awaited<typeof leftThenInnerViewQuery>;
+Expect<
+  Equal<
+    LeftThenInnerView,
+    {
+      postUserId: bigint; // Posts — inner join, not nullable
+      profileUserId: bigint | null; // UserProfiles — left join, nullable
+    }[]
+  >
+>();
+
 // Type test: left join with SqlFn (e.g., lower, concat)
 const leftJoinSqlFnQuery = db
   .from(Users)

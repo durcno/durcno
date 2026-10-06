@@ -1,15 +1,12 @@
+/**
+ * `escIdentifier` / `escLiteral` unit tests. No database is involved.
+ *
+ * Both helpers short-circuit when the escape character is absent, so the escape
+ * and no-escape paths are both covered explicitly.
+ */
 import { describe, expect, it } from "vitest";
 import { escIdentifier, escLiteral } from "../../src/sql";
 
-/**
- * `escIdentifier` / `escLiteral` unit tests. No database involved.
- *
- * Both helpers short-circuit when the escape character is absent, so the
- * escape and no-escape paths are both covered explicitly.
- *
- * Imported from `src` rather than `durcno` because the helpers are internal and
- * not re-exported from the public entry point.
- */
 describe("escIdentifier", () => {
   it("doubles embedded double quotes", () => {
     expect(escIdentifier('foo"bar')).toBe('foo""bar');

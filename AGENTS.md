@@ -7,10 +7,11 @@
 3. Core Concepts
 4. Project Structure
 5. Development Workflow
-6. Testing Guide
-7. Documentation
-8. Best Practices
-9. Guides
+6. Testing
+7. Performance
+8. Documentation
+9. Best Practices
+10. Guides
 
 ## Overview
 
@@ -233,26 +234,17 @@ dist/                     # Production compiled output
 
 1. **Code Changes**: Make changes to source files
 2. **Type Validation**: Add if necessary, and ensure TypeScript compilation passes
-3. **Testing**: Add if necessary, and run appropriate integration tests
-4. **Linting**: Verify code quality with Biome
-5. **Documentation**: Update documentation
+3. **Micro optimization**: Add if necessary, and run appropriate micro-optimization tests
+4. **Testing**: Add if necessary, and run appropriate integration tests
+5. **Linting**: Verify code quality with Biome
+6. **Documentation**: Update documentation
 
-## Testing Guide
+## Testing
 
 Durcno uses two clearly separated test suites — **Type tests** and **Integration tests** — with distinct scope and rules.
 
 - **Type tests (`type-tests/`)** — compile-time checks for TypeScript inference (use `Expect`, `Equal` / `@ts-expect-error`). Things that are not practical for integration tests. Required for any change that affects exported types or API shapes.
 - **Integration tests (`tests/`)** — runtime tests (Vitest) validating columns, query builders, migrations, and CLI behavior. Keep them deterministic, and fast.
-- **Benchmarks (`perf/`)** — Vitest benchmarks for hot paths, no database involved:
-  - `handle-rows.bench.ts` — row conversion (`handleRows`)
-  - `query-build.bench.ts` — query construction cost (`toQuery()`)
-  - `query-overhead.bench.ts` — per-query promise overhead
-
-  Two sibling harnesses in the same folder are **not** picked up by `vitest bench`; they answer questions a Vitest benchmark cannot:
-  - `handle-rows.paths.ts` — compares the two `SELECT *` conversion paths against each other
-  - `handle-rows.ab.ts` — compares two builds by loading both `dist` snapshots into one process
-
-  Benchmarks throughput on a shared machine varies by up to ~2× run to run. Compare `min` across several runs, never a single run. **Do not A/B by rebuilding and swapping `dist` between separate runs** — that proved too noisy to resolve differences of this size, reporting a real 20% regression as noise. Use `handle-rows.ab.ts`, which alternates both builds inside one sample loop.
 
 Quick rules:
 
@@ -266,7 +258,6 @@ Commands:
 
 - `pnpm run test-types` — runs "Type tests" in `type-tests/`
 - `pnpm run test` — runs all integration tests in `tests/`
-- `pnpm bench` — runs the benchmarks in `perf/`
 
 > 💡 Tip: Run a single folder or file while running integration tests to speed feedback,
 > by using `pnpm test tests/cli/` or `pnpm test tests/qb/my.test.ts`
@@ -317,6 +308,34 @@ How:
 - Use `runDurcno` function for CLI interactions.
 
 Utilities: `tests/helpers.ts`, `tests/docker-utils.ts`.
+
+## Performance
+
+`perf/` holds benchmarks and A/B harnesses for the hot paths, with no database involved.
+
+Purpose: Measure a hot-path change before shipping it, and keep the claim checkable.
+
+When: Add/Update/Remove for any change to SQL generation, query construction, row conversion, or column encode/decode.
+
+How:
+
+- Keep one case per changed path, grouped by the **kind of optimization** it holds.
+- `*.bench.ts` is the regression guard for a hot path; `*.ab.ts` answers what a single bench run cannot — build two `dist` snapshots and alternate them in one process, so a difference this small is not read as machine noise. `*.paths.ts` does the same for two bodies inside one build.
+- Before shipping a micro-optimization with no measured gain, A/B both bodies in one process; revert what does not pay and keep the harness.
+- Every harness opens with a header of 10-15 lines at the top of the file: what it measures, why the number isolates that, the fixture constraint that would make a run wrong, how to run it, and the sibling harnesses.
+
+Utilities: `perf/schema.ts`, `perf/stub-connector.ts` — no database needed.
+
+### Reading the numbers
+
+- Throughput on a shared machine varies up to ~2× run to run: compare `min` across several runs, never a single one.
+- **Never A/B by rebuilding and swapping `dist` between separate runs** — that is too noisy, it reports a real 20% regression as noise. Use the `.ab.ts` harnesses, which alternate both builds inside one sample loop.
+- Flip the order each round: always finishing the second side last biases cases under ~2 µs by 5–10%, and those cases already sit at a ±5% noise floor.
+
+Commands:
+
+- `pnpm bench` — builds `src/` then runs the benchmarks in `perf/` (no Docker)
+- `pnpm run tsclint-perf` — type-check `perf/`
 
 ## Documentation
 
@@ -370,10 +389,12 @@ Website is built using [Docusaurus 3.9](https://docusaurus.io/).
 ### Performance Considerations
 
 - **Hot vs. Cold Paths**: Distinguish hot paths (`toSQL()`, `build()`, SQL generation, column encode/decode, `handleRows`) from cold paths (CLI, migrations, DDL). Focus performance optimizations on hot paths.
+- **Memoization**: Cache fixed per-entity work in a `WeakMap` on the entity — tables and columns are per-schema singletons, so the cache is bounded and needs no invalidation. Never cache user-mutable state without documenting the staleness boundary.
 - **SQL String Building**: Prefer direct `query.sql += ...` appends; avoid intermediate template literals or `.map(...).join()` allocations in compilation loops.
-- **Loop Hoisting**: Hoist escaping (`escIdentifier`, `escLiteral`), `JSON.stringify`, regexes, and repeated computations outside loops.
-- **Hot-Path Allocations**: Avoid object/array spreads, unnecessary `.filter().map()` chains, and defensive copying on query-build hot paths.
-- **Generated SQL**: Avoid redundant `DISTINCT`, unnecessary subselects, or casts that trigger sequential scans in PostgreSQL.
+- **Loop Hoisting**: Hoist escaping repeated computations outside loops. An options object that is identical for every operand belongs outside the loop too.
+- **Loop Form**: Use `for...of` when the index is unused; index only when it is load-bearing — an `i !== 0` separator, stepping **two arrays in lockstep**, calling `converts[i]`, reverse iteration, or a bound that is not the array's own length. Reaching a second array with a counter is a wash, and `forEach` over a captured accumulator measured ~2× the indexed loop (`perf/sql-loops.paths.ts`).
+- **Clause Separators**: Emit `", "` (or `",\n"`, or `"), "`) at the **top** of a loop body, guarded by `if (i !== 0)`.
+- **Hot-Path Allocations**: Avoid object/array spreads, unnecessary `.filter().map()` chains, and defensive copying on hot paths.
 
 ## Guides
 

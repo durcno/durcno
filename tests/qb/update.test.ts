@@ -348,6 +348,31 @@ describe("UPDATE queries", () => {
     );
   });
 
+  it("should set every supplied column and refresh the updateFn ones", async () => {
+    const [inserted] = await db
+      .insertInto(schema.AuditLogs)
+      .values({
+        action: "multi_column_action",
+        message: "Initial message",
+        modifiedAt: new Date("2020-01-01T00:00:00.000Z"),
+      })
+      .returning({ id: true });
+
+    const beforeUpdate = new Date();
+
+    const [updated] = await db
+      .update(schema.AuditLogs)
+      .set({ action: "multi_column_updated", message: "Updated message" })
+      .where(eq(schema.AuditLogs.id, inserted.id))
+      .returning("*");
+
+    expect(updated.action).toBe("multi_column_updated");
+    expect(updated.message).toBe("Updated message");
+    expect(updated.modifiedAt.getTime()).toBeGreaterThanOrEqual(
+      beforeUpdate.getTime(),
+    );
+  });
+
   it("should allow explicit value to override updateFn", async () => {
     // Insert a row first
     const [inserted] = await db

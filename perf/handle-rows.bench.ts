@@ -1,31 +1,24 @@
+/**
+ * Benchmarks the row-conversion hot path (`handleRows`) of `select` and
+ * relational queries. No database is involved: synthetic driver rows go straight
+ * into `handleRows`, isolating JS conversion cost from SQL and network time.
+ *
+ * Every body builds a fresh query, as real usage does, so per-query
+ * precomputation is charged to the benchmark. Two of the three paths mutate the
+ * rows they are given, so only `select("*") in place` rebuilds its fixture per
+ * iteration; the shared fixtures only mean something against another run made
+ * the same way.
+ *
+ * `handle-rows.paths.ts` compares the two conversion paths and
+ * `handle-rows.ab.ts` two builds; `vitest bench` picks up neither.
+ *
+ * `pnpm bench`. Reading the numbers: AGENTS.md (Performance).
+ */
 import { database, defineConfig, lower, sql } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { bench, describe } from "vitest";
 import * as schema from "./schema";
 
-/**
- * Benchmarks for the row-conversion hot path (`handleRows`) of `select` and
- * relational queries. No database is involved: synthetic driver rows are fed
- * straight into `handleRows`, so the numbers isolate JS conversion cost from
- * SQL generation and network time. Run with `pnpm bench` from the repo root.
- *
- * A fresh query builder is created inside every benchmark body because that is
- * what real usage does — a query is built, executed once, and its rows
- * converted once. Any per-query precomputation is therefore charged to the
- * benchmark, exactly as it is in production.
- *
- * Two of the three conversion paths mutate the rows they are given (the
- * explicit projection and relational paths always have; `SELECT *` does when
- * no key has to be renamed), so their fixtures are driver-shaped only on the
- * first pass. The `select("*") in place` case therefore builds its rows per
- * iteration; the others share one fixture across all benches, so they measure
- * converting already-converted values and are only meaningful when compared
- * against another run made the same way.
- *
- * `handle-rows.paths.ts` and `handle-rows.ab.ts` are sibling harnesses for
- * questions a vitest bench cannot settle: comparing the two conversion paths,
- * and comparing two builds. Neither is picked up by `vitest bench`.
- */
 const db = database(
   schema,
   defineConfig({
