@@ -186,15 +186,15 @@ connector: pg({
 
 #### `logger`
 
-**Type:** `QueryLogger`\
+**Type:** `DurcnoLogger` (or `QueryLogger`)\
 **Optional**
 
-A logger instance that receives query execution events for successful and failed queries. Successful queries call `info()`, while failed queries call `error()`. Any object with compatible `info()` and `error()` methods can be used. Durcno ships a pre-configured Winston logger via `durcno/logger`.
+A logger instance that receives query execution events and database lifecycle failures (such as transaction rollbacks or connection releases). Successful queries call `info()`, while failed queries and errors call `error()`. Any object with compatible `info()` and `error()` methods can be used. Durcno ships a pre-configured Winston logger via `durcno/logger`.
 
 Pass `logger` inside the connector options. See [Query Logger](./Advanced/logger) for full details and examples.
 
 ```typescript
-import { createQueryLogger } from "durcno/logger";
+import { createLogger } from "durcno/logger";
 
 export default defineConfig({
   schema: "db/schema.ts",
@@ -202,7 +202,7 @@ export default defineConfig({
     dbCredentials: {
       url: process.env.DATABASE_URL!,
     },
-    logger: createQueryLogger(),
+    logger: createLogger(),
   }),
 });
 ```
@@ -333,6 +333,6 @@ type ConnectorOptions = {
   pool?: {
     max?: number;
   };
-  logger?: QueryLogger;
+  logger?: DurcnoLogger;
 };
 ```
