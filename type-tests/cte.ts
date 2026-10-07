@@ -146,7 +146,8 @@ const activeUsersForJoin = db.with("activeUsers").as(
 const testQuery = db
   .with(activeUsersForJoin)
   .from(Users)
-  .leftJoin(activeUsersForJoin, ({ activeUsers }) => {
+  .leftJoin(activeUsersForJoin)
+  .on(({ activeUsers }) => {
     Expect<
       Equal<typeof activeUsers.username, typeof activeUsersForJoin.username>
     >();

@@ -10,13 +10,21 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 
 ### Builder methods (SelectBuilder)
 
-| Method                        | Description                                      |
-| ----------------------------- | ------------------------------------------------ |
-| `.innerJoin(table, callback)` | Add an inner join with `() => condition`         |
-| `.leftJoin(table, callback)`  | Add a left join with `() => condition`           |
-| `.distinctOn(callback)`       | Apply DISTINCT ON via `() => col` or `[...cols]` |
-| `.select("*")`                | Select all columns                               |
-| `.select(callback)`           | Select specific columns via `() => ({ ... })`    |
+| Method                  | Description                                      |
+| ----------------------- | ------------------------------------------------ |
+| `.innerJoin(table)`     | Start an inner join, returning a join builder    |
+| `.leftJoin(table)`      | Start a left join, returning a join builder      |
+| `.distinctOn(callback)` | Apply DISTINCT ON via `() => col` or `[...cols]` |
+| `.select("*")`          | Select all columns                               |
+| `.select(callback)`     | Select specific columns via `() => ({ ... })`    |
+
+### Join builder methods (JoinBuilder)
+
+Returned by `.innerJoin(table)` / `.leftJoin(table)`. The join is committed once `.on()` supplies its condition, which is what makes a half-written join unrepresentable.
+
+| Method          | Description                                  |
+| --------------- | -------------------------------------------- |
+| `.on(callback)` | Set the `ON` condition via `() => condition` |
 
 ### Query methods (SelectQuery)
 
@@ -176,7 +184,8 @@ import { Posts, Users } from "./db/schema.ts";
 // Sort by username (Users), then by post creation date (Posts)
 const usersWithPosts = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,
@@ -227,7 +236,8 @@ import { Posts, Users } from "./db/schema.ts";
 // Join Users with Posts
 const usersWithPosts = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,
@@ -442,7 +452,8 @@ All methods can be chained in a fluent API:
 ```typescript
 const results = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,

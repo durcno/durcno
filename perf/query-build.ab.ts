@@ -26,6 +26,8 @@
  * to this repo's `node_modules` and resolving `zod` fails. They are not
  * gitignored, so delete them when you are done. Trailing arguments select cases
  * by name or by group prefix (`anchor`, `cached`, `streamed`, `loops`, `clauses`).
+ * `BATCH`, `SAMPLES` and `WARMUP` override the sample loop; see `BATCH` below for
+ * when a case is too small to resolve the change being measured.
  *
  * Reading the numbers: AGENTS.md (Performance).
  */
@@ -256,39 +258,58 @@ const partialEvents = Array.from({ length: 50 }, (_, i) => ({
   role: "user" as const,
 }));
 
+/**
+ * A `LEFT JOIN` in whichever shape the build has: a pre-`.on()` build takes the
+ * condition as `leftJoin`'s second argument, a later one splits it into `.on()`.
+ *
+ * The shape is read from `leftJoin`'s declared arity, before the timed closure.
+ * It cannot be probed by calling it: the two-argument form evaluates its
+ * condition eagerly, so a one-argument call throws instead of returning a
+ * pending join that could be inspected.
+ */
+function leftJoiner(db: Db, probe: unknown) {
+  const split = db.from(probe).leftJoin.length === 1;
+  return (q: Db, joined: unknown, cond: () => unknown): Db =>
+    split ? q.leftJoin(joined).on(cond) : q.leftJoin(joined, cond);
+}
+
 const cases: Record<string, (db: Db, s: Schema, idx: Durcno) => () => unknown> =
   {
     "anchor/select-star": (db, s) => () =>
       db.from(s.Users).select("*").toQuery(),
 
-    "cached/left-joins": (db, s, idx) => () =>
-      db
-        .from(s.Articles)
-        .leftJoin(s.ArticleRevisions, () =>
-          idx.eq(s.ArticleRevisions.articleId, s.Articles.id),
+    "cached/left-joins": (db, s, idx) => {
+      const join = leftJoiner(db, s.Articles);
+      return () =>
+        join(
+          join(db.from(s.Articles), s.ArticleRevisions, () =>
+            idx.eq(s.ArticleRevisions.articleId, s.Articles.id),
+          ),
+          s.ArticleRatings,
+          () => idx.eq(s.ArticleRatings.articleId, s.Articles.id),
         )
-        .leftJoin(s.ArticleRatings, () =>
-          idx.eq(s.ArticleRatings.articleId, s.Articles.id),
-        )
-        .select("*")
-        .toQuery(),
+          .select("*")
+          .toQuery();
+    },
 
-    "cached/left-joins-chained": (db, s, idx) => () =>
-      db
-        .from(s.Articles)
-        .leftJoin(s.ArticleRevisions, () =>
-          idx.eq(s.ArticleRevisions.articleId, s.Articles.id),
+    "cached/left-joins-chained": (db, s, idx) => {
+      const join = leftJoiner(db, s.Articles);
+      return () =>
+        join(
+          join(db.from(s.Articles), s.ArticleRevisions, () =>
+            idx.eq(s.ArticleRevisions.articleId, s.Articles.id),
+          ),
+          s.ArticleRatings,
+          () => idx.eq(s.ArticleRatings.articleId, s.Articles.id),
         )
-        .leftJoin(s.ArticleRatings, () =>
-          idx.eq(s.ArticleRatings.articleId, s.Articles.id),
-        )
-        .select("*")
-        .where(() => idx.gte(s.Articles.wordCount, 100))
-        .orderBy(() => idx.asc(s.Articles.title))
-        .groupBy(() => [s.Articles.id])
-        .having(() => idx.gte(idx.count("*"), 1))
-        .limit(50)
-        .toQuery(),
+          .select("*")
+          .where(() => idx.gte(s.Articles.wordCount, 100))
+          .orderBy(() => idx.asc(s.Articles.title))
+          .groupBy(() => [s.Articles.id])
+          .having(() => idx.gte(idx.count("*"), 1))
+          .limit(50)
+          .toQuery();
+    },
 
     "cached/insert-omitted": (db, s) => () =>
       db
@@ -497,6 +518,14 @@ const cases: Record<string, (db: Db, s: Schema, idx: Durcno) => () => unknown> =
 
 const WARMUP = Number(process.env.WARMUP ?? 30);
 const SAMPLES = Number(process.env.SAMPLES ?? 60);
+/**
+ * Builds per timed window, 1 by default. A case of a few microseconds cannot
+ * resolve a change of tens of nanoseconds: its own minimum swings ±40% between
+ * runs, far more than the delta. Raising this widens the window instead of the
+ * sample count, so `min` and `p10` stop being the statistic and `median` becomes
+ * one — divide every reported number by `BATCH` to read it per build.
+ */
+const BATCH = Number(process.env.BATCH ?? 1);
 
 function stats(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b);
@@ -537,7 +566,7 @@ async function main(): Promise<void> {
     const oldFn = cases[name](oldDb, oldSchema, oldIdx);
     const newFn = cases[name](newDb, newSchema, newIdx);
 
-    for (let i = 0; i < WARMUP; i++) {
+    for (let i = 0; i < WARMUP * BATCH; i++) {
       oldFn();
       newFn();
     }
@@ -552,11 +581,12 @@ async function main(): Promise<void> {
       // chasing.
       const oldFirst = i % 2 === 0;
       for (let round = 0; round < 2; round++) {
-        const timed = oldFirst === (round === 0) ? oldFn : newFn;
+        const first = oldFirst === (round === 0);
+        const timed = first ? oldFn : newFn;
         const t = process.hrtime.bigint();
-        timed();
-        const ms = Number(process.hrtime.bigint() - t) / 1e6;
-        (oldFirst === (round === 0) ? oldSamples : newSamples).push(ms);
+        for (let b = 0; b < BATCH; b++) timed();
+        const ms = Number(process.hrtime.bigint() - t) / 1e6 / BATCH;
+        (first ? oldSamples : newSamples).push(ms);
       }
     }
 

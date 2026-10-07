@@ -132,24 +132,20 @@ describe("query build", () => {
 describe("query build — cached per table / per class", () => {
   bench("columns view — 2 left joins", () => {
     db.from(schema.Articles)
-      .leftJoin(schema.ArticleRevisions, () =>
-        eq(schema.ArticleRevisions.articleId, schema.Articles.id),
-      )
-      .leftJoin(schema.ArticleRatings, () =>
-        eq(schema.ArticleRatings.articleId, schema.Articles.id),
-      )
+      .leftJoin(schema.ArticleRevisions)
+      .on(() => eq(schema.ArticleRevisions.articleId, schema.Articles.id))
+      .leftJoin(schema.ArticleRatings)
+      .on(() => eq(schema.ArticleRatings.articleId, schema.Articles.id))
       .select("*")
       .toQuery();
   });
 
   bench("columns view — 2 left joins + 5 chained methods", () => {
     db.from(schema.Articles)
-      .leftJoin(schema.ArticleRevisions, () =>
-        eq(schema.ArticleRevisions.articleId, schema.Articles.id),
-      )
-      .leftJoin(schema.ArticleRatings, () =>
-        eq(schema.ArticleRatings.articleId, schema.Articles.id),
-      )
+      .leftJoin(schema.ArticleRevisions)
+      .on(() => eq(schema.ArticleRevisions.articleId, schema.Articles.id))
+      .leftJoin(schema.ArticleRatings)
+      .on(() => eq(schema.ArticleRatings.articleId, schema.Articles.id))
       .select("*")
       .where(() => gte(schema.Articles.wordCount, 100))
       .orderBy(() => asc(schema.Articles.title))

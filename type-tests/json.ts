@@ -229,8 +229,10 @@ Expect<
 
 const fullJoinQuery = db
   .from(Posts)
-  .leftJoin(Users, () => eq(Users.id, Posts.userId))
-  .leftJoin(Comments, () => eq(Comments.postId, Posts.id))
+  .leftJoin(Users)
+  .on(() => eq(Users.id, Posts.userId))
+  .leftJoin(Comments)
+  .on(() => eq(Comments.postId, Posts.id))
   .select(({ users, comments }) => ({
     id: Posts.id,
     title: Posts.title,

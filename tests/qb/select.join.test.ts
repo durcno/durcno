@@ -94,7 +94,8 @@ describe("SELECT with INNER JOIN", () => {
     // Select with inner join
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select(() => ({
         username: schema.Users.username,
         postTitle: schema.Posts.title,
@@ -121,7 +122,8 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select(() => ({
         username: schema.Users.username,
         postTitle: schema.Posts.title,
@@ -149,7 +151,8 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select(() => ({
         username: schema.Users.username,
       }));
@@ -178,7 +181,8 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select(() => ({
         username: schema.Users.username,
         postTitle: schema.Posts.title,
@@ -204,7 +208,8 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select(() => ({
         username: schema.Users.username,
         email: schema.Users.email,
@@ -235,9 +240,8 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Posts)
-      .innerJoin(schema.Comments, () =>
-        eq(schema.Comments.postId, schema.Posts.id),
-      )
+      .innerJoin(schema.Comments)
+      .on(() => eq(schema.Comments.postId, schema.Posts.id))
       .select(() => ({
         postTitle: schema.Posts.title,
         commentBody: schema.Comments.body,
@@ -256,7 +260,8 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select("*");
 
     expect(result).toEqual([]);
@@ -280,10 +285,10 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
-      .innerJoin(schema.Comments, () =>
-        eq(schema.Comments.postId, schema.Posts.id),
-      )
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Comments)
+      .on(() => eq(schema.Comments.postId, schema.Posts.id))
       .select(() => ({
         username: schema.Users.username,
         postTitle: schema.Posts.title,
@@ -317,10 +322,10 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
-      .innerJoin(schema.Comments, () =>
-        eq(schema.Comments.postId, schema.Posts.id),
-      )
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Comments)
+      .on(() => eq(schema.Comments.postId, schema.Posts.id))
       .select(() => ({
         username: schema.Users.username,
         postTitle: schema.Posts.title,
@@ -362,10 +367,10 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
-      .innerJoin(schema.Comments, () =>
-        eq(schema.Comments.postId, schema.Posts.id),
-      )
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Comments)
+      .on(() => eq(schema.Comments.postId, schema.Posts.id))
       .select(() => ({
         username: schema.Users.username,
         postTitle: schema.Posts.title,
@@ -412,10 +417,10 @@ describe("SELECT with INNER JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
-      .innerJoin(schema.Comments, () =>
-        eq(schema.Comments.postId, schema.Posts.id),
-      )
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
+      .innerJoin(schema.Comments)
+      .on(() => eq(schema.Comments.postId, schema.Posts.id))
       .select(() => ({
         username: schema.Users.username,
         postTitle: schema.Posts.title,
@@ -443,9 +448,8 @@ describe("SELECT with INNER JOIN", () => {
 
       const result = await db
         .from(schema.Users)
-        .innerJoin(schema.Posts, ({ users, posts }) =>
-          eq(schema.Posts.userId, schema.Users.id),
-        )
+        .innerJoin(schema.Posts)
+        .on(({ users, posts }) => eq(schema.Posts.userId, schema.Users.id))
         .select(() => ({
           postTitle: schema.Posts.title,
         }))
@@ -474,9 +478,8 @@ describe("SELECT with INNER JOIN", () => {
 
       const result = await db
         .from(schema.Users)
-        .innerJoin(schema.Posts, ({ users, posts }) =>
-          eq(schema.Posts.userId, schema.Users.id),
-        )
+        .innerJoin(schema.Posts)
+        .on(({ users, posts }) => eq(schema.Posts.userId, schema.Users.id))
         .select(() => ({
           postTitle: schema.Posts.title,
         }))
@@ -511,9 +514,8 @@ describe("SELECT with INNER JOIN", () => {
 
       const result = await db
         .from(schema.Users)
-        .innerJoin(schema.Posts, ({ users, posts }) =>
-          eq(schema.Posts.userId, schema.Users.id),
-        )
+        .innerJoin(schema.Posts)
+        .on(({ users, posts }) => eq(schema.Posts.userId, schema.Users.id))
         .select(() => ({
           username: schema.Users.username,
           postTitle: schema.Posts.title,
@@ -545,12 +547,10 @@ describe("SELECT with INNER JOIN", () => {
 
       const result = await db
         .from(schema.Users)
-        .innerJoin(schema.Posts, ({ users, posts }) =>
-          eq(schema.Posts.userId, schema.Users.id),
-        )
-        .innerJoin(schema.Comments, () =>
-          eq(schema.Comments.postId, schema.Posts.id),
-        )
+        .innerJoin(schema.Posts)
+        .on(({ users, posts }) => eq(schema.Posts.userId, schema.Users.id))
+        .innerJoin(schema.Comments)
+        .on(() => eq(schema.Comments.postId, schema.Posts.id))
         .select(() => ({
           commentBody: schema.Comments.body,
         }))
@@ -637,7 +637,8 @@ describe("SELECT with LEFT JOIN", () => {
     // Select with left join
     const result = await db
       .from(schema.Users)
-      .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .leftJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select(({ posts }) => ({
         username: schema.Users.username,
         postTitle: posts.title,
@@ -659,7 +660,8 @@ describe("SELECT with LEFT JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .leftJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select("*");
 
     expect(result).toHaveLength(1);
@@ -688,7 +690,8 @@ describe("SELECT with LEFT JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .leftJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select(({ posts }) => ({
         username: schema.Users.username,
         lowerPostTitle: lower(posts.title),
@@ -728,10 +731,10 @@ describe("SELECT with LEFT JOIN", () => {
 
     const result = await db
       .from(schema.Users)
-      .innerJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
-      .leftJoin(schema.Comments, () =>
-        eq(schema.Comments.postId, schema.Posts.id),
-      )
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
+      .leftJoin(schema.Comments)
+      .on(() => eq(schema.Comments.postId, schema.Posts.id))
       .select(({ comments }) => ({
         username: schema.Users.username,
         postTitle: schema.Posts.title,
@@ -783,10 +786,10 @@ describe("SELECT with LEFT JOIN", () => {
     const joined = () =>
       db
         .from(schema.Users)
-        .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
-        .leftJoin(schema.Comments, () =>
-          eq(schema.Comments.postId, schema.Posts.id),
-        )
+        .leftJoin(schema.Posts)
+        .on(() => eq(schema.Posts.userId, schema.Users.id))
+        .leftJoin(schema.Comments)
+        .on(() => eq(schema.Comments.postId, schema.Posts.id))
         .select(({ posts, comments }) => ({
           username: schema.Users.username,
           postTitle: posts.title,
@@ -845,7 +848,8 @@ describe("SELECT with LEFT JOIN", () => {
     const grouped = () =>
       db
         .from(schema.Users)
-        .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+        .leftJoin(schema.Posts)
+        .on(() => eq(schema.Posts.userId, schema.Users.id))
         .select(({ posts }) => ({
           username: schema.Users.username,
           postTitle: posts.title,
@@ -884,7 +888,8 @@ describe("SELECT with LEFT JOIN", () => {
     // step re-created from `db`.
     const rebuilt = db
       .from(schema.Users)
-      .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+      .leftJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
       .select(({ posts }) => ({
         username: schema.Users.username,
         postTitle: posts.title,
@@ -908,7 +913,8 @@ describe("SELECT with LEFT JOIN", () => {
 
     const result = await db
       .from(schema.Posts)
-      .leftJoin(schema.Users, () => eq(schema.Users.id, schema.Posts.userId))
+      .leftJoin(schema.Users)
+      .on(() => eq(schema.Users.id, schema.Posts.userId))
       .select(({ users }) => ({
         postTitle: schema.Posts.title,
         userType: users.type,

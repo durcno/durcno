@@ -17,7 +17,8 @@ import { type Equal, Expect } from "./utils";
 // Type test: simple inner join selecting columns from both tables
 const usersWithProfileQuery = db
   .from(Users)
-  .innerJoin(UserProfiles, () => eq(Users.id, UserProfiles.userId))
+  .innerJoin(UserProfiles)
+  .on(() => eq(Users.id, UserProfiles.userId))
   .select(() => ({
     username: Users.username,
     bio: UserProfiles.bio,
@@ -37,7 +38,8 @@ Expect<
 // Type test: inner join with select all (default - selects from base table only)
 const usersWithPostsAllQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select("*");
 
 type UsersWithPostsAll = Awaited<typeof usersWithPostsAllQuery>;
@@ -64,7 +66,8 @@ Expect<
 // Type test: inner join selecting from joined table
 const usersWithPostsSelectPostsQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     postId: Posts.id,
     title: Posts.title,
@@ -86,7 +89,8 @@ Expect<
 // Type test: inner join with mixed columns from both tables
 const mixedColumnsQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     userId: Users.id,
     username: Users.username,
@@ -112,7 +116,8 @@ Expect<
 // Type test: inner join with orderBy on columns from both tables
 const joinOrderByQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,
@@ -125,7 +130,8 @@ Expect<Equal<JoinOrderBy, { username: string; title: string | null }[]>>();
 // Type test: inner join with where clause on base table
 const joinWithWhereBaseQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,
@@ -140,7 +146,8 @@ Expect<
 // Type test: inner join with where clause on joined table
 const joinWithWhereJoinedQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,
@@ -155,7 +162,8 @@ Expect<
 // Type test: join Posts with Comments
 const postsWithCommentsQuery = db
   .from(Posts)
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(() => ({
     postTitle: Posts.title,
     commentBody: Comments.body,
@@ -181,8 +189,10 @@ Expect<
 // Type test: double inner join Users -> Posts -> Comments
 const doubleJoinQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(() => ({
     username: Users.username,
     postTitle: Posts.title,
@@ -203,8 +213,10 @@ Expect<
 // Type test: double inner join with where clause referencing the middle table
 const doubleJoinWithMiddleWhereQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(() => ({
     username: Users.username,
     postTitle: Posts.title,
@@ -227,8 +239,10 @@ Expect<
 // Type test: double inner join with columns from all three tables
 const doubleJoinAllColumnsQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(() => ({
     userId: Users.id,
     userType: Users.type,
@@ -256,8 +270,10 @@ Expect<
 // Type test: double inner join with orderBy on any table
 const doubleJoinOrderByQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(() => ({
     username: Users.username,
     postTitle: Posts.title,
@@ -280,8 +296,10 @@ Expect<
 // Type test: double inner join with where clause
 const doubleJoinWithWhereQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(() => ({
     username: Users.username,
     postTitle: Posts.title,
@@ -304,8 +322,10 @@ Expect<
 // Type test: double inner join with limit and offset
 const doubleJoinPaginatedQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(() => ({
     username: Users.username,
     postTitle: Posts.title,
@@ -331,9 +351,12 @@ Expect<
 // Type test: triple inner join Users -> Posts -> Comments + UserProfiles
 const tripleJoinQuery = db
   .from(Users)
-  .innerJoin(UserProfiles, () => eq(Users.id, UserProfiles.userId))
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(UserProfiles)
+  .on(() => eq(Users.id, UserProfiles.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(() => ({
     username: Users.username,
     bio: UserProfiles.bio,
@@ -361,7 +384,8 @@ Expect<
 // Type test: Articles with Categories (nullable FK)
 const articlesWithCategoriesQuery = db
   .from(Articles)
-  .innerJoin(Categories, () => eq(Articles.categoryId, Categories.id))
+  .innerJoin(Categories)
+  .on(() => eq(Articles.categoryId, Categories.id))
   .select(() => ({
     articleTitle: Articles.title,
     categoryName: Categories.name,
@@ -381,7 +405,8 @@ Expect<
 // Type test: Articles with author (Users)
 const articlesWithAuthorQuery = db
   .from(Articles)
-  .innerJoin(Users, () => eq(Articles.authorId, Users.id))
+  .innerJoin(Users)
+  .on(() => eq(Articles.authorId, Users.id))
   .select(() => ({
     articleTitle: Articles.title,
     authorName: Users.username,
@@ -405,36 +430,43 @@ Expect<
 // ============================================================================
 
 db.from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   // @ts-expect-error - Using wrong column in join condition (FK from unjoined table)
   .select(() => ({ commentBody: Comments.body }));
 
 db.from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select("*")
   // @ts-expect-error - Wrong type in where clause after join
   .where(() => eq(Users.id, "not_a_number"));
 
 db.from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   // @ts-expect-error - Selecting column from wrong table should not compile
   .select(() => ({ categoryName: Categories.name }));
 
 db.from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select("*")
   // @ts-expect-error - where clause on column from unjoined table
   .where(() => eq(Comments.body, "test"));
 
 db.from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select("*")
   // @ts-expect-error - Invalid enum value in where clause after join
   .where(() => eq(Users.type, "invalid_type"));
 
 db.from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   // @ts-expect-error - Column from wrong table should not compile
   .select(() => ({
     username: Users.username,
@@ -448,7 +480,8 @@ db.from(Users)
 // Type test: left join with callback select — notNull columns from left-joined table become nullable
 const leftJoinExplicitQuery = db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({
     username: Users.username,
     postTitle: posts.title,
@@ -468,7 +501,8 @@ Expect<
 // Type test: left join with callback select — notNull column (userId) becomes nullable
 const leftJoinNotNullQuery = db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({
     username: Users.username,
     postUserId: posts.userId,
@@ -492,7 +526,8 @@ Expect<
 // Type test: left join with select all — left-joined columns become nullable
 const leftJoinSelectAllQuery = db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select("*");
 
 type LeftJoinSelectAll = Awaited<typeof leftJoinSelectAllQuery>;
@@ -520,7 +555,8 @@ Expect<
 // Type test: left join with where clause on left-joined table
 const leftJoinWithWhereQuery = db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({
     username: Users.username,
     postTitle: posts.title,
@@ -535,7 +571,8 @@ Expect<
 // Type test: left join with orderBy on both tables
 const leftJoinOrderByQuery = db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({
     username: Users.username,
     postTitle: posts.title,
@@ -550,7 +587,8 @@ Expect<
 // Type test: left join with enum column — enum column becomes nullable
 const leftJoinEnumQuery = db
   .from(Posts)
-  .leftJoin(Users, () => eq(Posts.userId, Users.id))
+  .leftJoin(Users)
+  .on(() => eq(Posts.userId, Users.id))
   .select(({ users }) => ({
     title: Posts.title,
     userType: users.type,
@@ -570,7 +608,8 @@ Expect<
 // Type test: left join with $type override column — preserves override and becomes nullable
 const leftJoinTypeOverrideQuery = db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({
     username: Users.username,
     metrics: posts.metrics,
@@ -589,7 +628,8 @@ Expect<
 
 // Type test: left join with $type override column in where clause
 db.from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({ metrics: posts.metrics }))
   .where(({ posts }) => eq(posts.metrics, { views: 10, likes: 5 }));
 
@@ -600,8 +640,10 @@ db.from(Users)
 // Type test: inner join then left join — inner columns not nullable, left columns nullable
 const mixedJoinQuery = db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .leftJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .leftJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select("*");
 
 type MixedJoin = Awaited<typeof mixedJoinQuery>;
@@ -633,8 +675,10 @@ Expect<
 // Type test: left join then inner join — left columns nullable, inner not
 const leftThenInnerQuery = db
   .from(Users)
-  .leftJoin(UserProfiles, () => eq(Users.id, UserProfiles.userId))
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(UserProfiles)
+  .on(() => eq(Users.id, UserProfiles.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ userProfiles }) => ({
     username: Users.username,
     bio: userProfiles.bio,
@@ -658,8 +702,10 @@ Expect<
 // the pair discriminates a promoted inner join from a nullable left join
 const leftThenInnerViewQuery = db
   .from(Users)
-  .leftJoin(UserProfiles, () => eq(Users.id, UserProfiles.userId))
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(UserProfiles)
+  .on(() => eq(Users.id, UserProfiles.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts, userProfiles }) => ({
     postUserId: posts.userId,
     profileUserId: userProfiles.userId,
@@ -679,7 +725,8 @@ Expect<
 // Type test: left join with SqlFn (e.g., lower, concat)
 const leftJoinSqlFnQuery = db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({
     username: Users.username,
     lowerPostTitle: lower(posts.title),
@@ -698,8 +745,10 @@ Expect<
 // Type test: left join then join on column from earlier left-joined table
 const leftThenJoinOnLeftColQuery = db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
-  .innerJoin(Comments, ({ posts }) => eq(posts.id, Comments.postId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(({ posts }) => eq(posts.id, Comments.postId))
   .select(({ posts }) => ({
     username: Users.username,
     postTitle: posts.title,
@@ -723,18 +772,21 @@ Expect<
 // ============================================================================
 
 db.from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   // @ts-expect-error - Using column from unjoined table
   .select(() => ({ commentBody: Comments.body }));
 
 db.from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select("*")
   // @ts-expect-error - Wrong type in where clause after left join
   .where(() => eq(Users.id, "not_a_number"));
 
 db.from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({ metrics: posts.metrics }))
   // @ts-expect-error - Mismatched $type override property in where should not compile
   .where(({ posts }) => eq(posts.metrics, { invalidKey: 123 }));

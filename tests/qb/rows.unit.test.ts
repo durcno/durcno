@@ -262,7 +262,8 @@ describe("select handleRows", () => {
   it("converts joined columns of a star result", () => {
     const rows = db
       .from(Users)
-      .innerJoin(Posts, () => eq(Posts.userId, Users.id))
+      .innerJoin(Posts)
+      .on(() => eq(Posts.userId, Users.id))
       .select("*")
       .handleRows([
         {

@@ -484,7 +484,8 @@ const adminsOnly = await db.from(Users).select(() => ({
 // Returning null on unmatched LEFT JOIN -> inferred as null | { id: bigint; username: string }
 const postsWithAuthor = await db
   .from(Posts)
-  .leftJoin(Users, () => eq(Users.id, Posts.userId))
+  .leftJoin(Users)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ users }) => ({
     title: Posts.title,
     author: caseWhen(isNull(users.id), null).else(
@@ -676,7 +677,8 @@ import { asc, coalesce, isNotNull, jsonAgg, jsonBuildObject } from "durcno";
 
 const postsWithComments = await db
   .from(Posts)
-  .leftJoin(Comments, () => eq(Comments.postId, Posts.id))
+  .leftJoin(Comments)
+  .on(() => eq(Comments.postId, Posts.id))
   .select(({ comments }) => ({
     id: Posts.id,
     comments: coalesce(

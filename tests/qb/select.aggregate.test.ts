@@ -717,7 +717,8 @@ describe("SELECT aggregate functions", () => {
 
       const results = await db
         .from(schema.Users)
-        .leftJoin(schema.Posts, () => eq(schema.Posts.userId, schema.Users.id))
+        .leftJoin(schema.Posts)
+        .on(() => eq(schema.Posts.userId, schema.Users.id))
         .select(({ posts }) => ({
           username: schema.Users.username,
           postCount: count(posts.id),

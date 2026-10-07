@@ -219,7 +219,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       // Left join matching user
       const [postWithAuthor] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Users, () => eq(schema.Users.id, schema.Posts.userId))
+        .leftJoin(schema.Users)
+        .on(() => eq(schema.Users.id, schema.Posts.userId))
         .select(({ users }) => ({
           title: schema.Posts.title,
           author: caseWhen(isNull(users.id), null).else(
@@ -238,7 +239,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       // Left join where join condition does not match (author should be null)
       const [postWithoutAuthor] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Users, () => eq(schema.Users.id, 999999n))
+        .leftJoin(schema.Users)
+        .on(() => eq(schema.Users.id, 999999n))
         .select(({ users }) => ({
           title: schema.Posts.title,
           author: caseWhen(isNull(users.id), null).else(
@@ -411,9 +413,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const [result] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Comments, () =>
-          eq(schema.Comments.postId, schema.Posts.id),
-        )
+        .leftJoin(schema.Comments)
+        .on(() => eq(schema.Comments.postId, schema.Posts.id))
         .select(({ comments }) => ({
           postId: schema.Posts.id,
           comments: coalesce(
@@ -454,9 +455,8 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       const [result] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Comments, () =>
-          eq(schema.Comments.postId, schema.Posts.id),
-        )
+        .leftJoin(schema.Comments)
+        .on(() => eq(schema.Comments.postId, schema.Posts.id))
         .select(({ comments }) => ({
           postId: schema.Posts.id,
           comments: coalesce(
@@ -623,10 +623,10 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       // Query without explicit .groupBy()
       const [row] = await db
         .from(schema.Posts)
-        .leftJoin(schema.Users, () => eq(schema.Users.id, schema.Posts.userId))
-        .leftJoin(schema.Comments, () =>
-          eq(schema.Comments.postId, schema.Posts.id),
-        )
+        .leftJoin(schema.Users)
+        .on(() => eq(schema.Users.id, schema.Posts.userId))
+        .leftJoin(schema.Comments)
+        .on(() => eq(schema.Comments.postId, schema.Posts.id))
         .select(({ users, comments }) => ({
           postId: schema.Posts.id,
           author: jsonBuildObject({

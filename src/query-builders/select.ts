@@ -200,12 +200,26 @@ type MergeJoinedColumns<
       : Record<never, never>)
 >;
 
+/** Join flavours. `left` is the only one that makes the joined columns nullable. */
+type JoinType = "inner" | "left";
+
 /** Shared shape for a single entry in the joins tuple. */
-type JoinEntry = {
-  type: "inner" | "left";
-  table: AnyTableWithColumns;
+type JoinEntryOf<TType extends JoinType, TTable> = {
+  type: TType;
+  table: TTable;
   on: StdCondition;
 };
+
+type JoinEntry = JoinEntryOf<JoinType, AnyTableWithColumns>;
+
+/** Appends a join entry, starting the tuple when nothing is joined yet. */
+type AppendJoin<
+  TJoins,
+  TType extends JoinType,
+  TTable,
+> = TJoins extends unknown[]
+  ? [...TJoins, JoinEntryOf<TType, TTable>]
+  : [JoinEntryOf<TType, TTable>];
 
 type TableColumns<
   TTSchema extends string,
@@ -322,6 +336,33 @@ export type InferSelectRow<TSelects> = {
   [K in keyof TSelects]: InferSelectValue<TSelects[K]>;
 };
 
+/**
+ * The intermediate builder returned by `.innerJoin(table)` / `.leftJoin(table)`.
+ *
+ * The join is not committed until `.on(...)` supplies its condition, so a
+ * pending join has no clause methods of its own and cannot reach SQL generation
+ * half-written. It carries a commit closure rather than the originating
+ * `SelectBuilder`, which is what lets it stay three generics wide.
+ *
+ * @typeParam TView - Columns view the `on` callback receives.
+ * @typeParam TScopeColumns - Columns the `on` condition may reference.
+ * @typeParam TResult - The `SelectBuilder` the join commits into.
+ */
+export class JoinBuilder<TView, TScopeColumns extends AnyColumn, TResult> {
+  readonly #view: TView;
+  readonly #commit: (on: StdCondition) => TResult;
+
+  constructor(view: TView, commit: (on: StdCondition) => TResult) {
+    this.#view = view;
+    this.#commit = commit;
+  }
+
+  /** Supplies the `ON` condition and commits the join. */
+  on(on: (view: TView) => FilterExpression<TScopeColumns>): TResult {
+    return this.#commit(on(this.#view));
+  }
+}
+
 export class SelectBuilder<
   TTSchema extends string,
   TTName extends string,
@@ -371,66 +412,74 @@ export class SelectBuilder<
     return this.#cachedView;
   }
 
+  /**
+   * Commits a join whose condition has already been resolved. `JoinBuilder.on`
+   * calls this; nothing else should.
+   */
+  #join(
+    type: JoinType,
+    table: AnyTableWithColumns,
+    on: StdCondition,
+  ): SelectBuilder<
+    TTSchema,
+    TTName,
+    TColumns,
+    TPrepare,
+    null | [JoinEntry, ...JoinEntry[]]
+  > {
+    const joins = this.#$joins;
+    return new SelectBuilder(
+      this.#table,
+      (joins
+        ? [...joins, { type, table, on }]
+        : [{ type, table, on }]) as never,
+      // DISTINCT ON was resolved against the previous projection.
+      undefined,
+      this.#executor,
+      this.#prepare,
+      this.#$ctes,
+      // `joins` changed, so the parent's cached view no longer matches.
+      null,
+    );
+  }
+
   innerJoin<
     TJoinTSchema extends string,
     TJoinTName extends string,
     TJoinColumns extends Record<string, AnyColumn>,
   >(
     table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
-    on: (
-      view: JoinOnView<
-        TTSchema,
-        TTName,
-        TColumns,
-        TJoins,
-        TJoinTSchema,
-        TJoinTName,
-        TJoinColumns
-      >,
-    ) => FilterExpression<
-      | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
-      | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+  ): JoinBuilder<
+    JoinOnView<
+      TTSchema,
+      TTName,
+      TColumns,
+      TJoins,
+      TJoinTSchema,
+      TJoinTName,
+      TJoinColumns
     >,
-  ): SelectBuilder<
-    TTSchema,
-    TTName,
-    TColumns,
-    TPrepare,
-    TJoins extends unknown[]
-      ? [
-          ...TJoins,
-          {
-            type: "inner";
-            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>;
-            on: StdCondition;
-          },
-        ]
-      : [
-          {
-            type: "inner";
-            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>;
-            on: StdCondition;
-          },
-        ]
+    | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
+    | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
+    SelectBuilder<
+      TTSchema,
+      TTName,
+      TColumns,
+      TPrepare,
+      AppendJoin<
+        TJoins,
+        "inner",
+        TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+      >
+    >
   > {
     const view = { ...this.#getView() };
-    // Add the joining table to the view
+    // The joining table is reachable in its own `on`, and not nullable there —
+    // a row that satisfies `ON` always has every column of the joined table.
     view[table._.name] = table._.columns as never;
-    const onResult = on(view as never);
-    return new SelectBuilder(
-      this.#table,
-      this.#$joins
-        ? ([
-            ...this.#$joins,
-            { type: "inner" as const, table, on: onResult },
-          ] as never)
-        : ([{ type: "inner" as const, table, on: onResult }] as never),
-      undefined,
-      this.#executor,
-      this.#prepare,
-      this.#$ctes,
-      // `joins` changed, so the parent's view no longer matches.
-      null,
+    return new JoinBuilder(
+      view as never,
+      (on) => this.#join("inner", table, on) as never,
     );
   }
 
@@ -440,61 +489,37 @@ export class SelectBuilder<
     TJoinColumns extends Record<string, AnyColumn>,
   >(
     table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
-    on: (
-      view: JoinOnView<
-        TTSchema,
-        TTName,
-        TColumns,
-        TJoins,
-        TJoinTSchema,
-        TJoinTName,
-        TJoinColumns
-      >,
-    ) => FilterExpression<
-      | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
-      | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+  ): JoinBuilder<
+    JoinOnView<
+      TTSchema,
+      TTName,
+      TColumns,
+      TJoins,
+      TJoinTSchema,
+      TJoinTName,
+      TJoinColumns
     >,
-  ): SelectBuilder<
-    TTSchema,
-    TTName,
-    TColumns,
-    TPrepare,
-    TJoins extends unknown[]
-      ? [
-          ...TJoins,
-          {
-            type: "left";
-            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>;
-            on: StdCondition;
-          },
-        ]
-      : [
-          {
-            type: "left";
-            table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>;
-            on: StdCondition;
-          },
-        ]
+    | AllViewColumns<TTSchema, TTName, TColumns, TJoins>
+    | TableColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
+    SelectBuilder<
+      TTSchema,
+      TTName,
+      TColumns,
+      TPrepare,
+      AppendJoin<
+        TJoins,
+        "left",
+        TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+      >
+    >
   > {
     const view = { ...this.#getView() };
-    // Add the joining table to the view (not nullable for `on` — using original columns)
+    // The joining table is reachable in its own `on`, and not nullable there —
+    // a row that satisfies `ON` always has every column of the joined table.
     view[table._.name] = table._.columns as never;
-    const onResult = on(view as never);
-    return new SelectBuilder(
-      this.#table,
-      this.#$joins
-        ? ([
-            ...this.#$joins,
-            { type: "left" as const, table, on: onResult },
-          ] as never)
-        : ([{ type: "left" as const, table, on: onResult }] as never),
-      undefined,
-      this.#executor,
-      this.#prepare,
-      this.#$ctes,
-      // `joins` changed — the joined table is only reachable through this
-      // method's own `on` view, so the parent's view must not be reused.
-      null,
+    return new JoinBuilder(
+      view as never,
+      (on) => this.#join("left", table, on) as never,
     );
   }
 

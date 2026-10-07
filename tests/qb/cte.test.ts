@@ -381,9 +381,8 @@ describe("CTE queries", () => {
     const rows = await db
       .with(activeUsersCte)
       .from(schema.Users)
-      .leftJoin(activeUsersCte, () =>
-        eq(schema.Users.username, activeUsersCte.username),
-      )
+      .leftJoin(activeUsersCte)
+      .on(() => eq(schema.Users.username, activeUsersCte.username))
       .select(({ activeUsers }) => ({
         username: schema.Users.username,
         activeUser: activeUsers.username,

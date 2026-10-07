@@ -4,14 +4,17 @@ sidebar_position: 1.1
 
 # Joins
 
-Use `.innerJoin()` and `.leftJoin()` to combine rows from related tables in a `SELECT` query. Both methods take a target table and a callback to produce an `ON` condition built from filter expressions such as `eq()`.
+Use `.innerJoin()` and `.leftJoin()` to combine rows from related tables in a `SELECT` query. Each takes a target table and returns a join builder; the returned builder's `.on()` takes the callback that produces the `ON` condition, built from filter expressions such as `eq()`.
+
+A join is only added to the query once `.on()` supplies the condition, so the builder has no clause methods of its own and a join cannot be left half-written.
 
 ## Join methods
 
-| Method                        | Description                                                                                                    |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `.innerJoin(table, callback)` | Return only rows where the join condition matches via `() => condition`                                        |
-| `.leftJoin(table, callback)`  | Return every row from the left table, with `null` values for unmatched rows on the right via `() => condition` |
+| Method              | Description                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| `.innerJoin(table)` | Start an inner join — returns only rows where the join condition matches                               |
+| `.leftJoin(table)`  | Start a left join — returns every row from the left table, with `null` on the right for unmatched rows |
+| `.on(callback)`     | Supplies the `ON` condition via `() => condition` and commits the join, returning the query builder    |
 
 ## Inner joins
 
@@ -23,7 +26,8 @@ import { Posts, Users } from "./db/schema.ts";
 
 const postsByAuthor = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,
@@ -32,12 +36,13 @@ const postsByAuthor = await db
 
 ## Left joins
 
-Use `.leftJoin()` when you want every row from the left table and nullable values from the right table for unmatched rows. Columns from the left-joined table are destructured from the callback parameter and inferred as nullable in the select result.
+Use `.leftJoin()` when you want every row from the left table and nullable values from the right table for unmatched rows. Columns from the left-joined table are destructured from the `.select()` callback parameter and inferred as nullable in the select result.
 
 ```typescript
 const authorsAndPosts = await db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({
     username: Users.username,
     postTitle: posts.title,
@@ -46,13 +51,15 @@ const authorsAndPosts = await db
 
 ## Multiple joins
 
-Chain joins in the same query to traverse more than one relationship:
+Chain joins in the same query to traverse more than one relationship. Each `.on()` hands back the query builder, so the next join follows it directly:
 
 ```typescript
 const data = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
-  .leftJoin(Comments, () => eq(Posts.id, Comments.postId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .leftJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
   .select(({ comments }) => ({
     username: Users.username,
     postTitle: Posts.title,
@@ -69,7 +76,8 @@ import { asc, eq } from "durcno";
 
 const recentPosts = await db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({
     username: Users.username,
     title: posts.title,
@@ -87,7 +95,8 @@ import { asc, coalesce, eq, isNotNull, jsonAgg, jsonBuildObject } from "durcno";
 
 const postsWithComments = await db
   .from(Posts)
-  .leftJoin(Comments, () => eq(Comments.postId, Posts.id))
+  .leftJoin(Comments)
+  .on(() => eq(Comments.postId, Posts.id))
   .select(({ comments }) => ({
     id: Posts.id,
     title: Posts.title,
@@ -123,7 +132,8 @@ import { caseWhen, eq, isNull, jsonBuildObject } from "durcno";
 
 const postsWithAuthor = await db
   .from(Posts)
-  .leftJoin(Users, () => eq(Users.id, Posts.userId))
+  .leftJoin(Users)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ users }) => ({
     id: Posts.id,
     title: Posts.title,

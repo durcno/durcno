@@ -179,13 +179,15 @@ Base and inner-joined tables are referenced directly. **Only left-joined tables*
 // innerJoin — direct column references
 const postsByAuthor = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({ name: Users.name, title: Posts.title }));
 
 // leftJoin — destructure the joined table, columns are `| null`
 const authorsAndPosts = await db
   .from(Users)
-  .leftJoin(Posts, () => eq(Users.id, Posts.userId))
+  .leftJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ posts }) => ({ name: Users.name, postTitle: posts.title }));
 // Type: { name: string; postTitle: string | null }[]
 ```
@@ -233,9 +235,10 @@ CTEs are declared with `db.with(name).as(query)` and then attached to the outer 
 
 ```typescript
 const activeUsers = db.with("activeUsers").as(
-  db.from(Users).select(() => ({ id: Users.id, name: Users.name })).where(() =>
-    eq(Users.type, "user")
-  ),
+  db
+    .from(Users)
+    .select(() => ({ id: Users.id, name: Users.name }))
+    .where(() => eq(Users.type, "user")),
 );
 
 const rows = await db.with(activeUsers).from(activeUsers).select("*");
@@ -246,13 +249,12 @@ const rows = await db.with(activeUsers).from(activeUsers).select("*");
 ```typescript
 import { prepare } from "durcno";
 
-const findByEmail = prepare(
-  { email: Users.email.arg() },
-  (args) =>
-    db.prepare().from(Users).select("*").where(() =>
-      eq(Users.email, args.email)
-    ),
-);
+const findByEmail = prepare({ email: Users.email.arg() }, (args) =>
+  db
+    .prepare()
+    .from(Users)
+    .select("*")
+    .where(() => eq(Users.email, args.email)));
 
 const rows = await findByEmail.run(db, { email: "jane@example.com" });
 ```

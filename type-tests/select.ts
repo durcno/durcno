@@ -258,7 +258,7 @@ _distinctOnOnce.distinctOn(() => Users.email);
 // Type test: innerJoin cannot be called after distinctOn (Omit removes it)
 const _distinctOnNoJoin = db.from(Users).distinctOn(() => Users.username);
 // @ts-expect-error - innerJoin should not be callable after distinctOn
-_distinctOnNoJoin.innerJoin(Posts, () => eq(Users.id, Posts.userId));
+_distinctOnNoJoin.innerJoin(Posts).on(() => eq(Users.id, Posts.userId));
 
 // ============================================================================
 // Negative DISTINCT ON type tests
