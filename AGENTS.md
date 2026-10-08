@@ -295,7 +295,7 @@ db.from(Users)
 
 ### Integration tests (tests/)
 
-Integration tests are run using Vitest and Docker.
+Integration tests are run using Vitest 5 and Docker.
 
 Purpose: Verify runtime behavior.
 

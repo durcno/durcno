@@ -11,6 +11,7 @@
     "dotenv": "^17.3.1",
     "durcno": "link:..",
     "get-port": "^7.1.0",
-    "vitest": "^4.0.18"
+    "vitest": "^5.0.3",
+    "vite": "^8.3.3"
   }
 }

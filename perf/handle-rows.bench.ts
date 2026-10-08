@@ -16,7 +16,7 @@
  */
 import { database, defineConfig, lower, sql } from "durcno";
 import { pg } from "durcno/connectors/pg";
-import { bench, describe } from "vitest";
+import { describe, test } from "vitest";
 import * as schema from "./schema";
 
 const db = database(
@@ -140,35 +140,49 @@ function buildInPlaceRows(): Record<string, unknown>[] {
 }
 
 describe("handleRows", () => {
-  bench(`select("*") — ${ROWS} rows x 12 cols`, () => {
-    db.from(schema.Users).select("*").handleRows(selectStarRows);
+  test(`select("*") — ${ROWS} rows x 12 cols`, async ({ bench, task }) => {
+    await bench(task.name, () => {
+      db.from(schema.Users).select("*").handleRows(selectStarRows);
+    }).run();
   });
 
-  bench(`select({...}) mixed — ${ROWS} rows x 8 cols`, () => {
-    db.from(schema.Users)
-      .select(() => ({
-        id: schema.Users.id,
-        userName: schema.Users.userName,
-        emailName: lower(schema.Users.email),
-        doubledAge: sql`${schema.Users.age} * 2`,
-        points: schema.Users.points,
-        isActive: schema.Users.isActive,
-        literal: 7,
-        constant: sql`1`,
-      }))
-      .handleRows(selectAliasedRows);
+  test(`select({...}) mixed — ${ROWS} rows x 8 cols`, async ({
+    bench,
+    task,
+  }) => {
+    await bench(task.name, () => {
+      db.from(schema.Users)
+        .select(() => ({
+          id: schema.Users.id,
+          userName: schema.Users.userName,
+          emailName: lower(schema.Users.email),
+          doubledAge: sql`${schema.Users.age} * 2`,
+          points: schema.Users.points,
+          isActive: schema.Users.isActive,
+          literal: 7,
+          constant: sql`1`,
+        }))
+        .handleRows(selectAliasedRows);
+    }).run();
   });
 
-  bench(
-    `relational nested — ${PARENTS} parents x ${CHILDREN} posts x 2 comments`,
-    () => {
+  test(`relational nested — ${PARENTS} parents x ${CHILDREN} posts x 2 comments`, async ({
+    bench,
+    task,
+  }) => {
+    await bench(task.name, () => {
       db.query(schema.Users)
         .findMany({ with: { posts: { with: { comments: {} } } } })
         .handleRows(relationalRows);
-    },
-  );
+    }).run();
+  });
 
-  bench(`select("*") in place — ${ROWS} rows x 5 cols`, () => {
-    db.from(schema.Tokens).select("*").handleRows(buildInPlaceRows());
+  test(`select("*") in place — ${ROWS} rows x 5 cols`, async ({
+    bench,
+    task,
+  }) => {
+    await bench(task.name, () => {
+      db.from(schema.Tokens).select("*").handleRows(buildInPlaceRows());
+    }).run();
   });
 });

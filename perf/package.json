@@ -2,11 +2,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench": "vitest bench --run",
+    "bench": "vitest bench --run --reporter=verbose",
     "tsclint": "tsc --noEmit"
   },
   "dependencies": {
     "durcno": "link:..",
-    "vitest": "^4.0.18"
+    "vitest": "^5.0.3",
+    "vite": "^8.3.3"
   }
 }

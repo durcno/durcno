@@ -12,7 +12,7 @@
  * `pnpm bench`. Reading the numbers: AGENTS.md (Performance).
  */
 import { asc, database, defineConfig, eq } from "durcno";
-import { bench, describe } from "vitest";
+import { describe, test } from "vitest";
 import * as schema from "./schema";
 import { createStubConnector } from "./stub-connector";
 
@@ -33,34 +33,40 @@ const db = database(
 );
 
 describe("query overhead", () => {
-  bench(`await select("*") — ${ROWS} row`, async () => {
-    await db.from(schema.Users).select("*");
+  test(`await select("*") — ${ROWS} row`, async ({ bench, task }) => {
+    await bench(task.name, async () => {
+      await db.from(schema.Users).select("*");
+    }).run();
   });
 
-  bench(
-    `await select("*") + where + orderBy + limit — ${ROWS} row`,
-    async () => {
+  test(`await select("*") + where + orderBy + limit — ${ROWS} row`, async ({
+    bench,
+    task,
+  }) => {
+    await bench(task.name, async () => {
       await db
         .from(schema.Users)
         .select("*")
         .where(() => eq(schema.Users.age, 30))
         .orderBy(() => asc(schema.Users.userName))
         .limit(100);
-    },
-  );
+    }).run();
+  });
 
-  bench(`await select(10 cols) — ${ROWS} row`, async () => {
-    await db.from(schema.Users).select(() => ({
-      id: schema.Users.id,
-      userName: schema.Users.userName,
-      email: schema.Users.email,
-      bio: schema.Users.bio,
-      age: schema.Users.age,
-      points: schema.Users.points,
-      balance: schema.Users.balance,
-      isActive: schema.Users.isActive,
-      isVerified: schema.Users.isVerified,
-      birthDate: schema.Users.birthDate,
-    }));
+  test(`await select(10 cols) — ${ROWS} row`, async ({ bench, task }) => {
+    await bench(task.name, async () => {
+      await db.from(schema.Users).select(() => ({
+        id: schema.Users.id,
+        userName: schema.Users.userName,
+        email: schema.Users.email,
+        bio: schema.Users.bio,
+        age: schema.Users.age,
+        points: schema.Users.points,
+        balance: schema.Users.balance,
+        isActive: schema.Users.isActive,
+        isVerified: schema.Users.isVerified,
+        birthDate: schema.Users.birthDate,
+      }));
+    }).run();
   });
 });
