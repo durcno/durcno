@@ -113,6 +113,35 @@ const results = await db.from(Users).select(() => ({
 // }[]
 ```
 
+### Defaults for Nullable Expressions
+
+The `.select()` callback runs when the query is **built**, so the values it produces are SQL expressions, not database values. A JavaScript default therefore has nothing to fall back on: `??` and `||` see an expression object, which is never `null` or `undefined`, so the default is dropped.
+
+```typescript
+import { coalesce, eq, jsonAgg } from "durcno";
+
+// The default is dropped — the SQL is `json_agg(...)` and the row value is null
+const posts = await db
+  .from(Posts)
+  .leftJoin(Comments)
+  .on(() => eq(Comments.postId, Posts.id))
+  .select(() => ({
+    comments: jsonAgg(Comments.body) ?? [],
+  }));
+
+// `coalesce` applies the default in SQL
+const posts = await db
+  .from(Posts)
+  .leftJoin(Comments)
+  .on(() => eq(Comments.postId, Posts.id))
+  .select(() => ({
+    comments: coalesce(jsonAgg(Comments.body), []),
+  }));
+// `comments` is never null
+```
+
+To default a value in JavaScript instead, apply the default after the query resolves.
+
 ## Filtering with WHERE
 
 Use `.where()` with a callback receiving the tables view to filter results. See [Filters](../Expressions/filters.md) for all available operators.

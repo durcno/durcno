@@ -458,6 +458,8 @@ Conditional functions evaluate expressions based on conditions or nullability. O
 
 Returns the first non-null expression among its arguments. Durcno evaluates argument nullability from left to right: if any argument is guaranteed non-null, `null` is automatically excluded from the inferred return type. When used with arrays (such as `coalesce(jsonAgg(...), [])`), `coalesce` narrows the type to a guaranteed non-null array `T[]`.
 
+JavaScript's `??` and `||` are not the equivalent here: inside a `.select()` callback they apply to the expression object, which is never nullish, so the default is dropped. See [Defaults for Nullable Expressions](../CRUD/select.md#defaults-for-nullable-expressions).
+
 ```typescript
 import { coalesce } from "durcno";
 
