@@ -1,13 +1,15 @@
 import { is, isTCol } from "../entity";
 import {
-  type AnyAggregateSqlFn,
-  type AnyScalarSqlFn,
   type AnySqlFn,
+  containsAggregate,
+  type HasAggregateOf,
+  type HasAggregateOfConditions,
+  type NonAggregateSqlFn,
   SqlFn,
 } from "../functions";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
-import { type Sql, toSqlValue } from "../sql";
+import { Sql, toSqlValue } from "../sql";
 import type { AnyColumn } from "../table";
 import type { BasicTypes, Or } from "../types";
 
@@ -20,11 +22,27 @@ import type { BasicTypes, Or } from "../types";
 export abstract class Filter<
   TColumns extends AnyColumn = AnyColumn,
   THasArg extends boolean = false,
+  THasAggregate extends boolean = false,
 > {
   /** Phantom field: the columns this filter is applied to. */
   readonly $Columns!: TColumns;
   /** Phantom field: `true` when this filter embeds at least one `Arg` placeholder. */
   readonly $HasArg!: THasArg;
+  /** Phantom field: `true` when this filter contains an aggregate. */
+  readonly $HasAggregate!: THasAggregate;
+
+  /** Runtime counterpart of `$HasAggregate`. */
+  readonly hasAggregate: boolean;
+
+  constructor(hasAggregate = false) {
+    this.hasAggregate = hasAggregate;
+  }
+
+  /** Columns this predicate reads, or `null` when they cannot be enumerated. */
+  get referencedColumns(): AnyColumn[] | null {
+    return null;
+  }
+
   abstract toQuery(query: Query, ctx?: QueryContext): void;
 }
 
@@ -36,6 +54,8 @@ export type AnyFilter = Filter<AnyColumn, boolean>;
  * Accepts either a `Filter` whose `$Columns` is assignable to `TScopeColumns`,
  * or a raw `Sql` snippet. When `TArg` is `true`, filters carrying `Arg`
  * placeholders are also accepted (prepared-query context).
+ *
+ * Aggregates are excluded; see `GroupedFilterExpression` for the `HAVING` shape.
  */
 export type FilterExpression<
   TScopeColumns extends AnyColumn,
@@ -47,38 +67,51 @@ export type StdCondition = FilterExpression<AnyColumn>;
 export type AnyFilterExpression = FilterExpression<AnyColumn, boolean>;
 
 /**
- * A HAVING clause expression. Structurally identical to `FilterExpression` but
- * signals intent — it is used in `.having()` rather than `.where()`.
- *
- * Note: TypeScript does not prevent aggregate `SqlFn` expressions from being
- * passed to `.where()` at the type level (the `$Columns` phantom traces back to
- * `AnyColumn` regardless of aggregate/scalar kind). PostgreSQL will reject such
- * queries at runtime. This is a known limitation.
+ * A `FilterExpression` that may contain an aggregate, for `HAVING` and grouped
+ * `CASE WHEN` conditions.
  */
+export type GroupedFilterExpression<
+  TScopeColumns extends AnyColumn,
+  TPrepare extends boolean = false,
+> =
+  | Filter<TScopeColumns, TPrepare extends true ? boolean : false, boolean>
+  | Sql;
+
+/** A `HAVING` expression; accepts aggregates. */
 export type HavingExpression<
   TScopeColumns extends AnyColumn,
   TPrepare extends boolean = false,
-> = FilterExpression<TScopeColumns, TPrepare>;
+> = GroupedFilterExpression<TScopeColumns, TPrepare>;
 
 type HasArg<T> = T extends { $HasArg: true } ? true : false;
+
+/** Right operand accepted by a comparison whose left side is a table column. */
+export type ColumnComparisonRight<TLeft extends AnyColumn> =
+  | TLeft["ValType"]
+  | Arg<TLeft["ValType"]>
+  | AnyColumn
+  | NonAggregateSqlFn;
+
+/** Right operand accepted by a comparison whose left side is a value expression. */
+export type SqlFnComparisonRight = BasicTypes | AnySqlFn;
 
 export class ComparisonLeftIsColumn<
   TLeft extends AnyColumn,
   TOp extends string,
-  TRight extends
-    | TLeft["ValType"]
-    | Arg<TLeft["ValType"]>
-    | AnyColumn
-    | AnyScalarSqlFn,
+  TRight extends ColumnComparisonRight<TLeft>,
 > extends Filter<TLeft, Or<IsArg<TRight>, HasArg<TRight>>> {
   readonly left: TLeft;
   readonly op: TOp;
   readonly right: TRight;
   constructor(field: TLeft, op: TOp, right: TRight) {
-    super();
+    super(SqlFn._hasAggregate(right));
     this.left = field;
     this.op = op;
     this.right = right;
+  }
+  get referencedColumns(): AnyColumn[] | null {
+    const right = operandColumns(this.right);
+    return right === null ? null : [this.left, ...right];
   }
   toQuery(query: Query, ctx?: QueryContext): void {
     this.left.toQuery(query, ctx);
@@ -98,20 +131,27 @@ export class ComparisonLeftIsColumn<
 export class ComparisonLeftIsSqlFn<
   TLeft extends AnySqlFn,
   TOp extends string,
-  TRight extends BasicTypes | AnySqlFn,
+  TRight extends SqlFnComparisonRight,
 > extends Filter<
   | TLeft["$Columns"]
-  | (TRight extends AnyScalarSqlFn ? TRight["$Columns"] : never),
-  HasArg<TLeft> extends true ? true : HasArg<TRight>
+  | (TRight extends NonAggregateSqlFn ? TRight["$Columns"] : never),
+  HasArg<TLeft> extends true ? true : HasArg<TRight>,
+  HasAggregateOf<TLeft | TRight>
 > {
   readonly left: TLeft;
   readonly op: TOp;
   readonly right: TRight;
   constructor(field: TLeft, op: TOp, right: TRight) {
-    super();
+    super(SqlFn._hasAggregate(field) || SqlFn._hasAggregate(right));
     this.left = field;
     this.op = op;
     this.right = right;
+  }
+  get referencedColumns(): AnyColumn[] | null {
+    const left = operandColumns(this.left);
+    if (left === null) return null;
+    const right = operandColumns(this.right);
+    return right === null ? null : [...left, ...right];
   }
   toQuery(query: Query, ctx?: QueryContext): void {
     this.left.toQuery(query, ctx);
@@ -130,24 +170,16 @@ export function eq<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
 ): ComparisonLeftIsColumn<TLeft, "=", TRight>;
 export function eq<
   TLeft extends AnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
+  TRight extends ColumnComparisonRight<TLeft>,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "=", TRight>;
-export function eq<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+export function eq<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
-export function eq<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
+export function eq<TLeft extends AnySqlFn, TRight extends SqlFnComparisonRight>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
-export function eq<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
-  left: TLeft,
-  right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
-export function eq<
-  TLeft extends AnyAggregateSqlFn,
-  TRight extends AnyAggregateSqlFn,
->(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
 export function eq(
   left: AnyColumn | AnySqlFn,
   right:
@@ -169,24 +201,16 @@ export function ne<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
 ): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
 export function ne<
   TLeft extends AnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
+  TRight extends ColumnComparisonRight<TLeft>,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
-export function ne<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+export function ne<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
-export function ne<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
+export function ne<TLeft extends AnySqlFn, TRight extends SqlFnComparisonRight>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
-export function ne<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
-  left: TLeft,
-  right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
-export function ne<
-  TLeft extends AnyAggregateSqlFn,
-  TRight extends AnyAggregateSqlFn,
->(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
 export function ne(
   left: AnyColumn | AnySqlFn,
   right:
@@ -208,24 +232,16 @@ export function gt<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
 ): ComparisonLeftIsColumn<TLeft, ">", TRight>;
 export function gt<
   TLeft extends AnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
+  TRight extends ColumnComparisonRight<TLeft>,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">", TRight>;
-export function gt<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+export function gt<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
-export function gt<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
+export function gt<TLeft extends AnySqlFn, TRight extends SqlFnComparisonRight>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
-export function gt<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
-  left: TLeft,
-  right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
-export function gt<
-  TLeft extends AnyAggregateSqlFn,
-  TRight extends AnyAggregateSqlFn,
->(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
 export function gt(
   left: AnyColumn | AnySqlFn,
   right:
@@ -247,23 +263,15 @@ export function gte<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
 ): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
 export function gte<
   TLeft extends AnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
+  TRight extends ColumnComparisonRight<TLeft>,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
-export function gte<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+export function gte<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
 export function gte<
-  TLeft extends AnyScalarSqlFn,
-  TRight extends AnyScalarSqlFn,
->(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
-export function gte<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
-  left: TLeft,
-  right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
-export function gte<
-  TLeft extends AnyAggregateSqlFn,
-  TRight extends AnyAggregateSqlFn,
+  TLeft extends AnySqlFn,
+  TRight extends SqlFnComparisonRight,
 >(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
 export function gte(
   left: AnyColumn | AnySqlFn,
@@ -286,24 +294,16 @@ export function lt<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
 ): ComparisonLeftIsColumn<TLeft, "<", TRight>;
 export function lt<
   TLeft extends AnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
+  TRight extends ColumnComparisonRight<TLeft>,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<", TRight>;
-export function lt<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+export function lt<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
-export function lt<TLeft extends AnyScalarSqlFn, TRight extends AnyScalarSqlFn>(
+export function lt<TLeft extends AnySqlFn, TRight extends SqlFnComparisonRight>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
-export function lt<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
-  left: TLeft,
-  right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
-export function lt<
-  TLeft extends AnyAggregateSqlFn,
-  TRight extends AnyAggregateSqlFn,
->(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
 export function lt(
   left: AnyColumn | AnySqlFn,
   right:
@@ -325,23 +325,15 @@ export function lte<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
 ): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
 export function lte<
   TLeft extends AnyColumn,
-  TRight extends Arg<TLeft["ValType"]> | AnyColumn | AnyScalarSqlFn,
+  TRight extends ColumnComparisonRight<TLeft>,
 >(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
-export function lte<TLeft extends AnyScalarSqlFn, TRight extends BasicTypes>(
+export function lte<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
 ): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
 export function lte<
-  TLeft extends AnyScalarSqlFn,
-  TRight extends AnyScalarSqlFn,
->(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
-export function lte<TLeft extends AnyAggregateSqlFn, TRight extends BasicTypes>(
-  left: TLeft,
-  right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
-export function lte<
-  TLeft extends AnyAggregateSqlFn,
-  TRight extends AnyAggregateSqlFn,
+  TLeft extends AnySqlFn,
+  TRight extends SqlFnComparisonRight,
 >(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
 export function lte(
   left: AnyColumn | AnySqlFn,
@@ -367,6 +359,9 @@ export class IsNullCondition<TCol extends AnyColumn> extends Filter<
     super();
     this.field = field;
   }
+  get referencedColumns(): AnyColumn[] {
+    return [this.field];
+  }
   toQuery(query: Query, ctx?: QueryContext): void {
     this.field.toQuery(query, ctx);
     query.sql += " IS NULL";
@@ -386,6 +381,9 @@ export class IsNotNullCondition<TCol extends AnyColumn> extends Filter<
     super();
     this.field = field;
   }
+  get referencedColumns(): AnyColumn[] {
+    return [this.field];
+  }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     this.field.toQuery(query, ctx);
@@ -397,28 +395,41 @@ export function isNotNull<TCol extends AnyColumn>(field: TCol) {
   return new IsNotNullCondition(field);
 }
 
-/** @internal Union of table columns from all Filter conditions in the array. */
-type Filters = AnyFilter | Sql | null | undefined;
+/** @internal Filter shape `and()`/`or()` accept, aggregate flag open. */
+type AnySqlFilter = Filter<AnyColumn, boolean, boolean>;
 
-type ExtractCols<T extends Filters> = T extends AnyFilter
-  ? T["$Columns"]
+/** @internal Union of table columns from all Filter conditions in the array. */
+type Filters = AnySqlFilter | Sql | null | undefined;
+
+type ExtractCols<T extends Filters> = T extends { $Columns: infer C }
+  ? C
   : never;
 
 /** @internal `true` when at least one Filter condition in the array carries an Arg placeholder. */
-type HasArgOf<T extends Filters[]> = [
-  T[number] extends Filter<infer _, infer H> ? H : false,
-] extends [false]
+type HasArgOf<T extends Filters[]> = [CondHasArg<T[number]>] extends [false]
   ? false
   : true;
 
+type CondHasArg<T> = T extends { $HasArg: infer H } ? H : false;
+
 export class AndCondition<TConditions extends Filters[]> extends Filter<
   ExtractCols<TConditions[number]>,
-  HasArgOf<TConditions>
+  HasArgOf<TConditions>,
+  HasAggregateOfConditions<TConditions>
 > {
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
-    super();
+    super(containsAggregate(conditions));
     this.conditions = conditions;
+  }
+  get referencedColumns(): AnyColumn[] | null {
+    const cols: AnyColumn[] = [];
+    for (const condition of this.conditions) {
+      const refs = filterReferencedColumns(condition);
+      if (refs === null) return null;
+      cols.push(...refs);
+    }
+    return cols;
   }
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "(";
@@ -441,12 +452,22 @@ export function and<TConditions extends Filters[]>(
 
 export class OrCondition<TConditions extends Filters[]> extends Filter<
   ExtractCols<TConditions[number]>,
-  HasArgOf<TConditions>
+  HasArgOf<TConditions>,
+  HasAggregateOfConditions<TConditions>
 > {
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
-    super();
+    super(containsAggregate(conditions));
     this.conditions = conditions;
+  }
+  get referencedColumns(): AnyColumn[] | null {
+    const cols: AnyColumn[] = [];
+    for (const condition of this.conditions) {
+      const refs = filterReferencedColumns(condition);
+      if (refs === null) return null;
+      cols.push(...refs);
+    }
+    return cols;
   }
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "(";
@@ -465,4 +486,22 @@ export function or<TConditions extends Filters[]>(
   ...conditions: TConditions
 ): OrCondition<TConditions> {
   return new OrCondition(...conditions);
+}
+
+/** Columns a condition reads, or `null` when it does not publish them. */
+export function filterReferencedColumns(filter: unknown): AnyColumn[] | null {
+  if (filter === null || typeof filter !== "object") return null;
+  const refs = (filter as { referencedColumns?: unknown }).referencedColumns;
+  return Array.isArray(refs) ? (refs as AnyColumn[]) : null;
+}
+
+/** Columns an operand contributes as a grouping key; `null` when unknown. */
+function operandColumns(operand: unknown): AnyColumn[] | null {
+  if (isTCol(operand)) return [operand];
+  if (operand instanceof SqlFn) {
+    const refs = (operand as { referencedColumns?: unknown }).referencedColumns;
+    return Array.isArray(refs) ? (refs as AnyColumn[]) : null;
+  }
+  if (operand instanceof Filter || operand instanceof Sql) return null;
+  return [];
 }

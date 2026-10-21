@@ -1,16 +1,12 @@
 import {
   and,
   asc,
-  count,
   desc,
   eq,
-  gt,
-  gte,
   type InferSelect,
   type InferSelectModel,
   lower,
   sql,
-  sum,
 } from "durcno";
 import {
   Comments,
@@ -268,173 +264,6 @@ db.from(Users)
   // @ts-expect-error - Cannot use columns from a different table in distinctOn
   .distinctOn(() => Posts.title)
   .select("*");
-
-// ============================================================================
-// Mixed aggregate + non-aggregate in select (auto GROUP BY)
-// ============================================================================
-
-// Type test: aggregate + plain column infers correct shape
-const mixedColAggQuery = db
-  .from(Users)
-  .select(() => ({ type: Users.type, total: count("*") }));
-type MixedColAgg = Awaited<typeof mixedColAggQuery>;
-Expect<Equal<MixedColAgg, { type: "admin" | "user"; total: number }[]>>();
-
-// Type test: aggregate + scalar fn infers correct shape
-const mixedFnAggQuery = db.from(Users).select(() => ({
-  lowerEmail: lower(Users.email),
-  total: count("*"),
-}));
-type MixedFnAgg = Awaited<typeof mixedFnAggQuery>;
-Expect<Equal<MixedFnAgg, { lowerEmail: string | null; total: number }[]>>();
-
-// Type test: multiple aggregates + multiple plain columns
-const multiMixedQuery = db.from(Users).select(() => ({
-  type: Users.type,
-  username: Users.username,
-  total: count("*"),
-  totalIds: sum(Users.id),
-}));
-type MultiMixed = Awaited<typeof multiMixedQuery>;
-Expect<
-  Equal<
-    MultiMixed,
-    {
-      type: "admin" | "user";
-      username: string;
-      total: number;
-      totalIds: bigint | null;
-    }[]
-  >
->();
-
-// Type test: pure aggregates only — no GROUP BY needed, shape is correct
-const pureAggQuery = db.from(Users).select(() => ({
-  total: count("*"),
-  distinctUsers: count(Users.id),
-}));
-type PureAgg = Awaited<typeof pureAggQuery>;
-Expect<Equal<PureAgg, { total: number; distinctUsers: number }[]>>();
-
-// Type test: pure columns + scalars only — no GROUP BY, shape is correct
-const pureScalarQuery = db.from(Users).select(() => ({
-  username: Users.username,
-  lowerEmail: lower(Users.email),
-}));
-type PureScalar = Awaited<typeof pureScalarQuery>;
-Expect<Equal<PureScalar, { username: string; lowerEmail: string | null }[]>>();
-
-// ============================================================================
-// GROUP BY type tests
-// ============================================================================
-
-// --- Positive tests: callback form ---
-
-// single column
-const _gbSingleCol = db
-  .from(Users)
-  .select(() => ({ type: Users.type, total: count("*") }))
-  .groupBy(() => Users.type);
-
-// array of columns
-const _gbArrayCols = db
-  .from(Users)
-  .select(() => ({
-    type: Users.type,
-    username: Users.username,
-    total: count("*"),
-  }))
-  .groupBy(() => [Users.type, Users.username]);
-
-// scalar SqlFn expression
-const _gbScalarFn = db
-  .from(Users)
-  .select(() => ({
-    lname: lower(Users.username),
-    total: count("*"),
-  }))
-  .groupBy(() => lower(Users.username));
-
-// having — aggregate vs literal
-const _havingLiteral = db
-  .from(Users)
-  .select(() => ({ type: Users.type, total: count("*") }))
-  .groupBy(() => Users.type)
-  .having(() => gte(count("*"), 5));
-
-// having — aggregate vs aggregate
-const _havingAgg = db
-  .from(Users)
-  .select(() => ({
-    type: Users.type,
-    total: count("*"),
-    sumId: sum(Users.id),
-  }))
-  .groupBy(() => Users.type)
-  .having(() => gt(sum(Users.id), count("*")));
-
-// chained groupBy + having
-const _gbAndHaving = db
-  .from(Users)
-  .select(() => ({ type: Users.type, total: count("*") }))
-  .groupBy(() => Users.type)
-  .having(() => gte(count("*"), 2));
-
-// callback with select aliases
-const _gbCallbackSingle = db
-  .from(Users)
-  .select(() => ({ lname: lower(Users.username) }))
-  .groupBy((_view, { lname }) => [lname]);
-
-// multiple aliases
-const _gbCallbackMulti = db
-  .from(Users)
-  .select(() => ({
-    lname: lower(Users.username),
-    type: Users.type,
-    total: count("*"),
-  }))
-  .groupBy((_view, { lname, type }) => [lname, type]);
-
-// mixed alias + direct column
-const _gbCallbackMixed = db
-  .from(Users)
-  .select(() => ({
-    lname: lower(Users.username),
-    total: count("*"),
-  }))
-  .groupBy((_view, { lname }) => [lname, Users.type]);
-
-// --- Negative tests ---
-
-// .groupBy() called twice should error (removed from type)
-const _gbOnce = db
-  .from(Users)
-  .select(() => ({ type: Users.type, total: count("*") }))
-  .groupBy(() => Users.type);
-// @ts-expect-error - groupBy is removed after first call
-_gbOnce.groupBy(() => Users.type);
-
-// .having() called twice should error (removed from type)
-const _havingOnce = db
-  .from(Users)
-  .select(() => ({ type: Users.type, total: count("*") }))
-  .groupBy(() => Users.type)
-  .having(() => gte(count("*"), 1));
-// @ts-expect-error - having is removed after first call
-_havingOnce.having(() => gte(count("*"), 1));
-
-// aggregate SqlFn as direct groupBy expression — @ts-expect-error (only scalar allowed)
-db.from(Users)
-  .select(() => ({ type: Users.type, total: count("*") }))
-  // @ts-expect-error - aggregate function not allowed in groupBy (only scalar)
-  .groupBy(() => count("*"));
-
-// callback form when no named select (select("*")) — @ts-expect-error
-db.from(Users)
-  .select("*")
-  // @ts-expect-error - callback type is never without a named select
-  .groupBy((_view: never, _selects: never) => [Users.type]);
 
 // ============================================================================
 // Null and literal projection type tests

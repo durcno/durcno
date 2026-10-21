@@ -28,7 +28,15 @@ export type Valueof<T> = T extends any ? T[keyof T] : never;
 
 export type SelfOrArray<T> = T | T[];
 export type SelfOrReadonly<T> = T | Readonly<T>;
-export type Or<T, U> = T extends true ? true : U extends true ? true : false;
+/** A single type-level flag as a boolean: `never` reads as `false`. */
+type OrFalse<T> = [T] extends [never] ? false : T extends true ? true : false;
+
+/** Boolean OR for type flags; `never` reads as `false`. */
+export type Or<T, U> = [T] extends [never]
+  ? OrFalse<U>
+  : T extends true
+    ? true
+    : OrFalse<U>;
 
 export type UnionToIntersection<U> =
   // biome-ignore lint/suspicious/noExplicitAny: <>

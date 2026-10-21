@@ -6,9 +6,9 @@ import type { Sql } from "../sql";
 import type { AnyColumn } from "../table";
 import type { Or } from "../types";
 import {
-  type AnyScalarSqlFn,
   type ExprColumns,
   type HasArg,
+  type NonAggregateSqlFn,
   SqlFn,
 } from "./index";
 
@@ -52,11 +52,17 @@ export type TupleOrderHasArg<TTuple extends readonly unknown[]> =
  */
 export abstract class AggregateSqlFn<
   TColumn extends AnyColumn,
-  THasArg extends boolean = false,
   TPgType extends string = string,
   TTsType = any,
-> extends SqlFn<TColumn, THasArg, "aggregate", TPgType, TTsType> {
-  override readonly isAggregate = true;
+  THasArg extends boolean = false,
+> extends SqlFn<TColumn, "aggregate", TPgType, TTsType, THasArg, true> {
+  /** This base *is* an aggregate function, as opposed to merely containing one. */
+  override readonly sqlFnType = "aggregate";
+
+  /** Unconditional: an aggregate function always aggregates. */
+  constructor() {
+    super(true);
+  }
 
   protected $filter?: AnyFilterExpression;
   protected $orderBy?: AnyOrder[];
@@ -127,12 +133,8 @@ export abstract class AggregateSqlFn<
   }
 }
 
-/**
- * Any expression that can be passed to an aggregate function.
- * Restricts nested expressions to scalars, preventing illegal
- * aggregate-in-aggregate nesting at the type level.
- */
-type AggregateInput = AnyColumn | AnyScalarSqlFn;
+/** Aggregate input: excludes anything containing an aggregate. */
+type AggregateInput = AnyColumn | NonAggregateSqlFn;
 
 // Numeric aggregate input: columns or scalar SqlFns returning numeric values.
 // Columns must be scalar (non-array): ValType is narrowed to exclude array types.
@@ -141,7 +143,7 @@ type NumericAggregateInput =
       $: { PgType: "numeric" | "float" };
       config: { dimension?: undefined };
     })
-  | (AnyScalarSqlFn & { $: { PgType: "numeric" | "float" } });
+  | (NonAggregateSqlFn & { $: { PgType: "numeric" | "float" } });
 
 // ============================================================================
 // count
@@ -154,15 +156,15 @@ type NumericAggregateInput =
  * Can be used in:
  * - `.select({ total: count(col) })` → `{ total: number }`
  * - `.orderBy(asc(count(col)))` — order by count
- * - `.where(gt(count(col), 0))` — filter by count
+ * - `.having(gt(count(col), 0))` — filter by count
  *
  * @template TExpr - The table column to count.
  */
 export class CountFn<TExpr extends AnyColumn> extends AggregateSqlFn<
   TExpr,
-  false,
   "numeric",
-  number
+  number,
+  false
 > {
   constructor(private readonly expr: TExpr) {
     super();
@@ -195,13 +197,13 @@ export class CountFn<TExpr extends AnyColumn> extends AggregateSqlFn<
  * Can be used in:
  * - `.select({ total: count("*") })` → `{ total: number }`
  * - `.orderBy(asc(count("*")))` — order by row count
- * - `.where(gt(count("*"), 0))` — filter by row count
+ * - `.having(gt(count("*"), 0))` — filter by row count
  */
 export class CountStarFn extends AggregateSqlFn<
   never,
-  false,
   "numeric",
-  number
+  number,
+  false
 > {
   toDriverValue(value: number | null): unknown {
     return value;
@@ -231,9 +233,9 @@ export class CountStarFn extends AggregateSqlFn<
  */
 export class CountDistinctFn<TExpr extends AnyColumn> extends AggregateSqlFn<
   TExpr,
-  false,
   "numeric",
-  number
+  number,
+  false
 > {
   constructor(private readonly expr: TExpr) {
     super();
@@ -309,15 +311,15 @@ export function countDistinct<TExpr extends AnyColumn>(
  * Can be used in:
  * - `.select({ total: sum(col) })` → `{ total: ColType | null }`
  * - `.orderBy(asc(sum(col)))` — order by sum
- * - `.where(gt(sum(col), 100))` — filter by sum
+ * - `.having(gt(sum(col), 100))` — filter by sum
  *
  * @template TExpr - The numeric column or scalar expression to sum.
  */
 export class SumFn<TExpr extends NumericAggregateInput> extends AggregateSqlFn<
   ExprColumns<TExpr>,
-  HasArg<TExpr>,
   "numeric",
-  TExpr["$"]["TsType"] | null
+  TExpr["$"]["TsType"] | null,
+  HasArg<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
     super();
@@ -372,15 +374,15 @@ export function sum<TExpr extends NumericAggregateInput>(
  * Can be used in:
  * - `.select({ average: avg(col) })` → `{ average: string | null }`
  * - `.orderBy(asc(avg(col)))` — order by average
- * - `.where(gt(avg(col), "10.5"))` — filter by average
+ * - `.having(gt(avg(col), "10.5"))` — filter by average
  *
  * @template TExpr - The numeric column or scalar expression to average.
  */
 export class AvgFn<TExpr extends NumericAggregateInput> extends AggregateSqlFn<
   ExprColumns<TExpr>,
-  HasArg<TExpr>,
   "numeric",
-  TExpr["$"]["TsType"] | null
+  TExpr["$"]["TsType"] | null,
+  HasArg<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
     super();
@@ -438,15 +440,15 @@ export function avg<TExpr extends NumericAggregateInput>(
  * Can be used in:
  * - `.select({ lowest: min(col) })` → `{ lowest: ColType | null }`
  * - `.orderBy(asc(min(col)))` — order by minimum
- * - `.where(gt(min(col), value))` — filter by minimum
+ * - `.having(gt(min(col), value))` — filter by minimum
  *
  * @template TExpr - The column or scalar expression to find the minimum of.
  */
 export class MinFn<TExpr extends AggregateInput> extends AggregateSqlFn<
   ExprColumns<TExpr>,
-  HasArg<TExpr>,
   string,
-  TExpr["$"]["TsType"] | null
+  TExpr["$"]["TsType"] | null,
+  HasArg<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
     super();
@@ -506,15 +508,15 @@ export function min<TExpr extends AggregateInput>(expr: TExpr): MinFn<TExpr> {
  * Can be used in:
  * - `.select({ highest: max(col) })` → `{ highest: ColType | null }`
  * - `.orderBy(desc(max(col)))` — order by maximum
- * - `.where(lt(max(col), value))` — filter by maximum
+ * - `.having(lt(max(col), value))` — filter by maximum
  *
  * @template TExpr - The column or scalar expression to find the maximum of.
  */
 export class MaxFn<TExpr extends AggregateInput> extends AggregateSqlFn<
   ExprColumns<TExpr>,
-  HasArg<TExpr>,
   string,
-  TExpr["$"]["TsType"] | null
+  TExpr["$"]["TsType"] | null,
+  HasArg<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
     super();

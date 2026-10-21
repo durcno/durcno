@@ -10,7 +10,7 @@ Functions can also be **composed**: you can pass the result of one function as t
 
 ## Aggregate Functions
 
-Aggregate functions collapse multiple rows into a single value. When you mix aggregate and non-aggregate expressions in a single `.select()` call, Durcno automatically generates the appropriate `GROUP BY` clause for the non-aggregate columns.
+Aggregate functions collapse multiple rows into a single value. When you mix aggregate and non-aggregate expressions in a single `.select()` call, Durcno automatically generates the appropriate `GROUP BY` clause for the non-aggregate columns. An expression that _contains_ an aggregate never becomes a grouping key, however deeply it is wrapped — `round(avg(col), 1)` is still a scalar function, but it is not groupable.
 
 | Function             | SQL                   | Returns           | Description                                                              |
 | -------------------- | --------------------- | ----------------- | ------------------------------------------------------------------------ |
@@ -106,9 +106,21 @@ const stats = await db.from(Orders).select(() => ({
 // Equivalent to: SELECT status, count(*), sum(amount) FROM orders GROUP BY status
 ```
 
+An expression counts as an aggregate if it _contains_ one, however deeply it is wrapped — so `round(avg(rating), 1)` and `coalesce(sum(amount), 0)` are not grouping keys, though `round` and `coalesce` are themselves scalar functions. PostgreSQL rejects an aggregate in `GROUP BY`, so a projection of nothing but wrapped aggregates emits no `GROUP BY` at all and returns one aggregate row:
+
+```typescript
+import { avg, count, round } from "durcno";
+
+const [stats] = await db.from(Reviews).select(() => ({
+  totalCount: count("*"),
+  averageRating: round(avg(Reviews.rating), 1),
+}));
+// Equivalent to: SELECT count(*), round(avg(rating), 1) FROM reviews
+```
+
 ### Aggregates with `HAVING` and `orderBy`
 
-Aggregate functions can be filtered in `.having()` clauses and sorted by alias in `.orderBy()`:
+Aggregate functions can be filtered in `.having()` clauses and sorted in `.orderBy()` — by an aggregate expression, or by a select alias:
 
 ```typescript
 import { count, desc, gt, sum } from "durcno";
@@ -125,6 +137,8 @@ await db
   .select(() => ({ status: Orders.status, total: count("*") }))
   .having(() => gt(count("*"), 5));
 ```
+
+`HAVING` and `ORDER BY` both accept an aggregate at any nesting depth, since PostgreSQL evaluates them over grouped rows — `round(avg(amount), 2)` works in either. `WHERE` is the opposite: it runs before grouping, so an aggregate in a `.where()` comparison is rejected at compile time, wrapped or not.
 
 ### Filter and OrderBy Modifiers (`FILTER (WHERE ...)` and `ORDER BY`)
 
@@ -752,7 +766,7 @@ Durcno SQL functions accurately model PostgreSQL strict function nullability sem
 
 ## Functions in `orderBy`
 
-All scalar functions can be used with `asc()` / `desc()` in `.orderBy()`:
+Any function can be used with `asc()` / `desc()` in `.orderBy()` — a scalar expression over a column, or an aggregate, since PostgreSQL reads `ORDER BY` after grouping:
 
 ```typescript
 import { asc, desc, length, lower } from "durcno";

@@ -1,5 +1,6 @@
 import {
   asc,
+  avg,
   caseWhen,
   coalesce,
   count,
@@ -13,6 +14,7 @@ import {
   jsonbAgg,
   jsonbBuildArray,
   jsonStripNulls,
+  round,
   toJson,
   toJsonb,
 } from "durcno";
@@ -352,9 +354,30 @@ db.from(Users)
     invalidAgg: jsonAgg(Comments.id),
   }));
 
+// Aggregate-in-aggregate is invalid through the JSON aggregates too.
+// @ts-expect-error - json_agg cannot take an aggregate operand
+jsonAgg(avg(Users.id));
+// @ts-expect-error - same for jsonb_agg
+jsonbAgg(count("*"));
+
+// A scalar wrapper over a column stays a valid operand.
+const _jsonAggScalar = jsonAgg(round(Users.id, 2));
+
+// An aggregate cannot be nested inside an aggregate's own ORDER BY.
+// @ts-expect-error - bare aggregate
+jsonAgg(Users.username).orderBy(asc(count("*")));
+// @ts-expect-error - wrapped aggregate
+jsonAgg(Users.username).orderBy(asc(round(avg(Users.id), 1)));
+
+// A scalar order item is still valid.
+jsonAgg(Users.username).orderBy(asc(Users.username));
+
 // Base aggregate .filter() works on count()
 const countFiltered = count(Users.id).filter(eq(Users.type, "admin"));
-Expect<Equal<typeof countFiltered.isAggregate, true>>();
+// The kind survives `Omit<this, "$Columns" | "$HasArg">`, which keeps `$` intact.
+// (`$["SqlFnType"]` is the precise static contract; `sqlFnType` itself is the
+// runtime value to branch on, declared as the `SqlFnType` union.)
+Expect<Equal<(typeof countFiltered.$)["SqlFnType"], "aggregate">>();
 Expect<Equal<typeof countFiltered.$HasArg, false>>();
 
 // Propagating THasArg in AggregateSqlFn.filter()

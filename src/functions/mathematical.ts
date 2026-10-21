@@ -7,6 +7,7 @@ import type { Or } from "../types";
 import {
   type AnySqlFn,
   type ExprColumns,
+  type HasAggregateOf,
   type HasArg,
   SqlFn,
   type StrictFnReturn,
@@ -49,13 +50,14 @@ export class AbsFn<
   TTsType = StrictFnReturn<[TExpr], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -92,16 +94,17 @@ export class ModFn<
   TTsType = StrictFnReturn<[TExpr, TN], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TN>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TN>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(
     private readonly expr: TExpr,
     private readonly n: TN,
   ) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -149,16 +152,17 @@ export class RoundFn<
     : StrictFnReturn<[TExpr, TDecimals], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TDecimals>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TDecimals>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(
     private readonly expr: TExpr,
     private readonly decimals?: TDecimals,
   ) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -224,13 +228,14 @@ export class CeilFn<
   TTsType = StrictFnReturn<[TExpr], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -266,13 +271,14 @@ export class FloorFn<
   TTsType = StrictFnReturn<[TExpr], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -311,16 +317,17 @@ export class TruncFn<
     : StrictFnReturn<[TExpr, TDecimals], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TDecimals>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TDecimals>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(
     private readonly expr: TExpr,
     private readonly decimals?: TDecimals,
   ) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -387,16 +394,17 @@ export class PowerFn<
   TTsType = StrictFnReturn<[TExpr, TN], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TN>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, IsArg<TN>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(
     private readonly expr: TExpr,
     private readonly exponent: TN,
   ) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {

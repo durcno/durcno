@@ -12,7 +12,7 @@ import {
 import { type Equal, Expect } from "./utils";
 
 // ============================================================================
-// Section 1: Column Insert Value Type Inference (Static Type Assertions)
+// Column insert value type inference (InferInsert)
 // ============================================================================
 
 type UsersInsert = InferInsert<typeof Users>;
@@ -50,7 +50,7 @@ Expect<Equal<UsersInsert["email"], string | null | undefined>>();
 Expect<Equal<LogsInsert["createdAt"], Date | undefined>>();
 
 // ============================================================================
-// Section 2: Values Input & Query Builder Types
+// Values input and query builder types
 // ============================================================================
 
 // Single row insert
@@ -130,7 +130,7 @@ db.insertInto(NetworkDevices).values({
 });
 
 // ============================================================================
-// Section 3: Returning Clause Selection
+// Returning clause selection
 // ============================================================================
 
 // Specific column selection returning
@@ -236,7 +236,7 @@ Expect<
 >();
 
 // ============================================================================
-// Section 4: OnConflict / Upsert Type Behavior
+// OnConflict / upsert type behavior
 // ============================================================================
 
 // doUpdateSet with set and where callbacks referencing excluded
@@ -316,8 +316,52 @@ const _doUpdateSetNoTarget = db
 type DoUpdateSetNoTarget = typeof _doUpdateSetNoTarget;
 Expect<Equal<DoUpdateSetNoTarget, never>>();
 
+// doUpdateSet rejects aggregate SQL function
+db.insertInto(Users)
+  .values({
+    username: "alice",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .onConflict(Users.externalId)
+  // @ts-expect-error - Aggregate SQL function cannot be used in doUpdateSet
+  .doUpdateSet(() => ({ username: count(Users.id) }));
+
+// doUpdateSet rejects column of another table
+db.insertInto(Users)
+  .values({
+    username: "alice",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .onConflict(Users.externalId)
+  // @ts-expect-error - Column of another table cannot be used in doUpdateSet
+  .doUpdateSet(() => ({ username: Posts.title }));
+
+// doUpdateSet rejects scalar function referencing another table
+db.insertInto(Users)
+  .values({
+    username: "alice",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .onConflict(Users.externalId)
+  // @ts-expect-error - Scalar function referencing another table cannot be used in doUpdateSet
+  .doUpdateSet(() => ({ username: lower(Posts.title) }));
+
+// doUpdateSet rejects type mismatch
+db.insertInto(Users)
+  .values({
+    username: "alice",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .onConflict(Users.externalId)
+  // @ts-expect-error - Numeric scalar function cannot be assigned to string column
+  .doUpdateSet(() => ({ username: add(1, 2) }));
+
 // ============================================================================
-// Section 5: Negative Type Safety Tests
+// Negative type safety tests
 // ============================================================================
 
 // Cannot pass generated ALWAYS column
@@ -414,47 +458,3 @@ db.insertInto(Users).values({
   type: "user",
   externalId: "550e8400-e29b-41d4-a716-446655440000",
 });
-
-// doUpdateSet rejects aggregate SQL function
-db.insertInto(Users)
-  .values({
-    username: "alice",
-    type: "user",
-    externalId: "550e8400-e29b-41d4-a716-446655440000",
-  })
-  .onConflict(Users.externalId)
-  // @ts-expect-error - Aggregate SQL function cannot be used in doUpdateSet
-  .doUpdateSet(() => ({ username: count(Users.id) }));
-
-// doUpdateSet rejects column of another table
-db.insertInto(Users)
-  .values({
-    username: "alice",
-    type: "user",
-    externalId: "550e8400-e29b-41d4-a716-446655440000",
-  })
-  .onConflict(Users.externalId)
-  // @ts-expect-error - Column of another table cannot be used in doUpdateSet
-  .doUpdateSet(() => ({ username: Posts.title }));
-
-// doUpdateSet rejects scalar function referencing another table
-db.insertInto(Users)
-  .values({
-    username: "alice",
-    type: "user",
-    externalId: "550e8400-e29b-41d4-a716-446655440000",
-  })
-  .onConflict(Users.externalId)
-  // @ts-expect-error - Scalar function referencing another table cannot be used in doUpdateSet
-  .doUpdateSet(() => ({ username: lower(Posts.title) }));
-
-// doUpdateSet rejects type mismatch
-db.insertInto(Users)
-  .values({
-    username: "alice",
-    type: "user",
-    externalId: "550e8400-e29b-41d4-a716-446655440000",
-  })
-  .onConflict(Users.externalId)
-  // @ts-expect-error - Numeric scalar function cannot be assigned to string column
-  .doUpdateSet(() => ({ username: add(1, 2) }));

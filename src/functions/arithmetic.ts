@@ -7,6 +7,7 @@ import type { Or } from "../types";
 import {
   type AnySqlFn,
   type ExprColumns,
+  type HasAggregateOf,
   type HasArg,
   SqlFn,
   type StrictFnReturn,
@@ -67,16 +68,17 @@ export class AddFn<
   TTsType = StrictFnReturn<[TLeft, TRight], number>,
 > extends SqlFn<
   ExprColumns<TLeft> | ExprColumns<TRight>,
-  BinaryOpHasArg<TLeft, TRight>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  BinaryOpHasArg<TLeft, TRight>,
+  HasAggregateOf<TLeft | TRight>
 > {
   constructor(
     private readonly left: TLeft,
     private readonly right: TRight,
   ) {
-    super();
+    super(SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -119,16 +121,17 @@ export class SubFn<
   TTsType = StrictFnReturn<[TLeft, TRight], number>,
 > extends SqlFn<
   ExprColumns<TLeft> | ExprColumns<TRight>,
-  BinaryOpHasArg<TLeft, TRight>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  BinaryOpHasArg<TLeft, TRight>,
+  HasAggregateOf<TLeft | TRight>
 > {
   constructor(
     private readonly left: TLeft,
     private readonly right: TRight,
   ) {
-    super();
+    super(SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -171,16 +174,17 @@ export class MulFn<
   TTsType = StrictFnReturn<[TLeft, TRight], number>,
 > extends SqlFn<
   ExprColumns<TLeft> | ExprColumns<TRight>,
-  BinaryOpHasArg<TLeft, TRight>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  BinaryOpHasArg<TLeft, TRight>,
+  HasAggregateOf<TLeft | TRight>
 > {
   constructor(
     private readonly left: TLeft,
     private readonly right: TRight,
   ) {
-    super();
+    super(SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -223,16 +227,17 @@ export class DivFn<
   TTsType = StrictFnReturn<[TLeft, TRight], number>,
 > extends SqlFn<
   ExprColumns<TLeft> | ExprColumns<TRight>,
-  BinaryOpHasArg<TLeft, TRight>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  BinaryOpHasArg<TLeft, TRight>,
+  HasAggregateOf<TLeft | TRight>
 > {
   constructor(
     private readonly left: TLeft,
     private readonly right: TRight,
   ) {
-    super();
+    super(SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right));
   }
 
   toDriverValue(value: TTsType | null): unknown {

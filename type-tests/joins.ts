@@ -1,4 +1,4 @@
-import { asc, desc, eq, lower } from "durcno";
+import { and, asc, desc, eq, lower } from "durcno";
 import {
   Articles,
   Categories,
@@ -497,6 +497,18 @@ Expect<
     }[]
   >
 >();
+
+// Type test: composite join key — column-to-column equality wrapped in and()
+const andJoinQuery = db
+  .from(Comments)
+  .leftJoin(Posts)
+  .on(() =>
+    and(eq(Comments.postId, Posts.id), eq(Comments.userId, Posts.userId)),
+  )
+  .select(({ posts }) => ({ title: posts.title }));
+
+type AndJoin = Awaited<typeof andJoinQuery>;
+Expect<Equal<AndJoin, { title: string | null }[]>>();
 
 // Type test: left join with callback select — notNull column (userId) becomes nullable
 const leftJoinNotNullQuery = db

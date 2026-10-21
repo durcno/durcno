@@ -8,8 +8,10 @@ import {
   type AnySqlFn,
   appendOperand,
   type ExprColumns,
+  type HasAggregateOf,
   type HasArg,
   type InferValueType,
+  type NonAggregateSqlFn,
   SqlFn,
 } from "./index";
 
@@ -20,6 +22,21 @@ import {
 export type JsonOperand =
   | AnyColumn
   | AnySqlFn
+  | Sql
+  | AnyArg
+  | string
+  | number
+  | bigint
+  | boolean
+  | Date
+  | readonly unknown[]
+  | Record<string, unknown>
+  | null;
+
+/** Operand a JSON aggregate accepts; excludes anything containing an aggregate. */
+export type JsonAggOperand =
+  | AnyColumn
+  | NonAggregateSqlFn
   | Sql
   | AnyArg
   | string
@@ -72,13 +89,14 @@ export class JsonBuildObjectFn<
   THasArg extends boolean = RecordHasArg<TFields>,
 > extends SqlFn<
   RecordExprColumns<TFields>,
-  THasArg,
   "scalar",
   "json",
-  { [K in keyof TFields]: InferValueType<TFields[K]> }
+  { [K in keyof TFields]: InferValueType<TFields[K]> },
+  THasArg,
+  HasAggregateOf<TFields[keyof TFields]>
 > {
   constructor(readonly fields: TFields) {
-    super();
+    super(SqlFn._hasAggregate(fields));
   }
 
   /** Returns all table columns directly referenced by fields of this JSON object. */
@@ -145,13 +163,14 @@ export class JsonbBuildObjectFn<
   THasArg extends boolean = RecordHasArg<TFields>,
 > extends SqlFn<
   RecordExprColumns<TFields>,
-  THasArg,
   "scalar",
   "jsonb",
-  { [K in keyof TFields]: InferValueType<TFields[K]> }
+  { [K in keyof TFields]: InferValueType<TFields[K]> },
+  THasArg,
+  HasAggregateOf<TFields[keyof TFields]>
 > {
   constructor(readonly fields: TFields) {
-    super();
+    super(SqlFn._hasAggregate(fields));
   }
 
   /** Returns all table columns directly referenced by fields of this JSON object. */
@@ -250,16 +269,16 @@ export function jsonbBuildObject<TFields extends Record<string, JsonOperand>>(
 
 /**
  * SQL aggregate expression: `json_agg(expr [ORDER BY ...]) [FILTER (WHERE ...)]`
- * Aggregates rows into a JSON array.
+ * Aggregates rows into a JSON array. Construct through `jsonAgg()`.
  */
 export class JsonAggFn<
   TExpr extends JsonOperand,
   THasArg extends boolean = HasArg<TExpr>,
 > extends AggregateSqlFn<
   ExprColumns<TExpr>,
-  THasArg,
   "json",
-  InferValueType<TExpr>[] | null
+  InferValueType<TExpr>[] | null,
+  THasArg
 > {
   protected isDistinct = false;
 
@@ -305,16 +324,16 @@ export class JsonAggFn<
 
 /**
  * SQL aggregate expression: `jsonb_agg(expr [ORDER BY ...]) [FILTER (WHERE ...)]`
- * Aggregates rows into a JSONB array.
+ * Aggregates rows into a JSONB array. Construct through `jsonbAgg()`.
  */
 export class JsonbAggFn<
   TExpr extends JsonOperand,
   THasArg extends boolean = HasArg<TExpr>,
 > extends AggregateSqlFn<
   ExprColumns<TExpr>,
-  THasArg,
   "jsonb",
-  InferValueType<TExpr>[] | null
+  InferValueType<TExpr>[] | null,
+  THasArg
 > {
   protected isDistinct = false;
 
@@ -366,7 +385,7 @@ export class JsonbAggFn<
  * jsonAgg(comments.content).orderBy(asc(comments.createdAt)).filter(isNotNull(comments.id))
  * coalesce(jsonAgg(jsonBuildObject({ id: comments.id, text: comments.text })), [])
  */
-export function jsonAgg<TExpr extends JsonOperand>(
+export function jsonAgg<TExpr extends JsonAggOperand>(
   expr: TExpr,
 ): JsonAggFn<TExpr> {
   return new JsonAggFn(expr);
@@ -380,7 +399,7 @@ export function jsonAgg<TExpr extends JsonOperand>(
  * jsonbAgg(comments.content).orderBy(asc(comments.createdAt)).filter(isNotNull(comments.id))
  * coalesce(jsonbAgg(jsonbBuildObject({ id: comments.id, text: comments.text })), [])
  */
-export function jsonbAgg<TExpr extends JsonOperand>(
+export function jsonbAgg<TExpr extends JsonAggOperand>(
   expr: TExpr,
 ): JsonbAggFn<TExpr> {
   return new JsonbAggFn(expr);
@@ -410,13 +429,14 @@ export class ToJsonFn<
   THasArg extends boolean = HasArg<TTarget>,
 > extends SqlFn<
   ExprColumns<TTarget>,
-  THasArg,
   "scalar",
   "json",
-  InferToJsonReturn<TTarget>
+  InferToJsonReturn<TTarget>,
+  THasArg,
+  HasAggregateOf<TTarget>
 > {
   constructor(readonly target: TTarget) {
-    super();
+    super(SqlFn._hasAggregate(target));
   }
 
   toDriverValue(value: InferToJsonReturn<TTarget> | null): unknown {
@@ -465,13 +485,14 @@ export class ToJsonbFn<
   THasArg extends boolean = HasArg<TTarget>,
 > extends SqlFn<
   ExprColumns<TTarget>,
-  THasArg,
   "scalar",
   "jsonb",
-  InferToJsonReturn<TTarget>
+  InferToJsonReturn<TTarget>,
+  THasArg,
+  HasAggregateOf<TTarget>
 > {
   constructor(readonly target: TTarget) {
-    super();
+    super(SqlFn._hasAggregate(target));
   }
 
   toDriverValue(value: InferToJsonReturn<TTarget> | null): unknown {
@@ -549,13 +570,14 @@ export class JsonBuildArrayFn<
   THasArg extends boolean = HasArgInTuple<TItems>,
 > extends SqlFn<
   ExprColumns<TItems[number]>,
-  THasArg,
   "scalar",
   "json",
-  { [K in keyof TItems]: InferValueType<TItems[K]> }
+  { [K in keyof TItems]: InferValueType<TItems[K]> },
+  THasArg,
+  HasAggregateOf<TItems[number]>
 > {
   constructor(readonly items: TItems) {
-    super();
+    super(SqlFn._hasAggregate(items));
   }
 
   toDriverValue(
@@ -601,13 +623,14 @@ export class JsonbBuildArrayFn<
   THasArg extends boolean = HasArgInTuple<TItems>,
 > extends SqlFn<
   ExprColumns<TItems[number]>,
-  THasArg,
   "scalar",
   "jsonb",
-  { [K in keyof TItems]: InferValueType<TItems[K]> }
+  { [K in keyof TItems]: InferValueType<TItems[K]> },
+  THasArg,
+  HasAggregateOf<TItems[number]>
 > {
   constructor(readonly items: TItems) {
-    super();
+    super(SqlFn._hasAggregate(items));
   }
 
   toDriverValue(
@@ -682,13 +705,14 @@ export class JsonStripNullsFn<
   THasArg extends boolean = HasArg<TExpr>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  THasArg,
   "scalar",
   "json",
-  InferValueType<TExpr>
+  InferValueType<TExpr>,
+  THasArg,
+  HasAggregateOf<TExpr>
 > {
   constructor(readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: unknown): unknown {
@@ -720,13 +744,14 @@ export class JsonbStripNullsFn<
   THasArg extends boolean = HasArg<TExpr>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  THasArg,
   "scalar",
   "jsonb",
-  InferValueType<TExpr>
+  InferValueType<TExpr>,
+  THasArg,
+  HasAggregateOf<TExpr>
 > {
   constructor(readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: unknown): unknown {

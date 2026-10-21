@@ -25,10 +25,11 @@ export class StDistanceFn<
   TTsType = StrictFnReturn<[TCol, TPoint], number>,
 > extends SqlFn<
   TCol,
-  Or<IsArg<TPoint>, IsArg<TSrid>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<IsArg<TPoint>, IsArg<TSrid>>,
+  false
 > {
   constructor(
     private readonly col: TCol,

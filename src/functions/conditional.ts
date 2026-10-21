@@ -9,6 +9,7 @@ import {
   appendOperand,
   detectJsonKind,
   type ExprColumns,
+  type HasAggregateOf,
   type HasArg,
   type InferValueType,
   SqlFn,
@@ -55,15 +56,6 @@ export type HasArgInTuple<TTuple extends readonly unknown[]> =
     ? Or<Or<IsArg<Head>, HasArg<Head>>, HasArgInTuple<Tail>>
     : false;
 
-export type IsAnyAggregateInTuple<TTuple extends readonly unknown[]> =
-  TTuple extends readonly [infer Head, ...infer Tail]
-    ? Head extends { isAggregate: true }
-      ? true
-      : Head extends { $: { FnType: "aggregate" } }
-        ? true
-        : IsAnyAggregateInTuple<Tail>
-    : false;
-
 function isJsonbOperand(e: unknown): boolean {
   return detectJsonKind(e) === "jsonb";
 }
@@ -103,30 +95,16 @@ export class CoalesceFn<
   TExprs extends readonly CoalesceOperand[],
   TTsType = CoalesceReturn<TExprs>,
   THasArg extends boolean = HasArgInTuple<TExprs>,
-  TFnType extends
-    | "aggregate"
-    | "scalar" = IsAnyAggregateInTuple<TExprs> extends true
-    ? "aggregate"
-    : "scalar",
 > extends SqlFn<
   ExprColumns<TExprs[number]>,
-  THasArg,
-  TFnType,
+  "scalar",
   string,
-  TTsType
+  TTsType,
+  THasArg,
+  HasAggregateOf<TExprs[number]>
 > {
-  override readonly isAggregate: boolean;
-
   constructor(private readonly exprs: TExprs) {
-    super();
-    this.isAggregate = this.exprs.some(
-      (e) =>
-        (e instanceof SqlFn && e.isAggregate) ||
-        (typeof e === "object" &&
-          e !== null &&
-          "isAggregate" in e &&
-          e.isAggregate === true),
-    );
+    super(SqlFn._hasAggregate(exprs));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -197,16 +175,17 @@ export class NullIfFn<
   >,
 > extends SqlFn<
   ExprColumns<TExpr> | ExprColumns<TVal>,
-  THasArg,
   "scalar",
   string,
-  TTsType
+  TTsType,
+  THasArg,
+  HasAggregateOf<TExpr | TVal>
 > {
   constructor(
     private readonly expr: TExpr,
     private readonly val: TVal,
   ) {
-    super();
+    super(SqlFn._hasAggregate(expr) || SqlFn._hasAggregate(val));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -260,13 +239,14 @@ export class GreatestFn<
   THasArg extends boolean = HasArgInTuple<TExprs>,
 > extends SqlFn<
   ExprColumns<TExprs[number]>,
-  THasArg,
   "scalar",
   string,
-  TTsType
+  TTsType,
+  THasArg,
+  HasAggregateOf<TExprs[number]>
 > {
   constructor(private readonly exprs: TExprs) {
-    super();
+    super(SqlFn._hasAggregate(exprs));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -329,13 +309,14 @@ export class LeastFn<
   THasArg extends boolean = HasArgInTuple<TExprs>,
 > extends SqlFn<
   ExprColumns<TExprs[number]>,
-  THasArg,
   "scalar",
   string,
-  TTsType
+  TTsType,
+  THasArg,
+  HasAggregateOf<TExprs[number]>
 > {
   constructor(private readonly exprs: TExprs) {
-    super();
+    super(SqlFn._hasAggregate(exprs));
   }
 
   toDriverValue(value: TTsType | null): unknown {

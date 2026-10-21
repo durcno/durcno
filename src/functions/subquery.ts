@@ -118,9 +118,17 @@ export abstract class SubquerySqlFn<
     TColumn extends AnyColumn = AnyColumn,
     THasArg extends boolean = false,
   >
-  extends SqlFn<TColumn, THasArg, "scalar", "boolean", boolean>
+  extends SqlFn<TColumn, "scalar", "boolean", boolean, THasArg, false>
   implements Filter<TColumn, THasArg>
 {
+  /** An aggregate inside the subquery does not make this filter an aggregate. */
+  readonly $HasAggregate!: false;
+
+  /** The subquery owns its columns; `InFn` overrides this. */
+  get referencedColumns(): AnyColumn[] | null {
+    return null;
+  }
+
   toDriverValue(value: boolean | null): unknown {
     return value;
   }

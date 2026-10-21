@@ -1,5 +1,5 @@
 import { isTCol } from "../entity";
-import type { AnyScalarSqlFn, SqlFn } from "../functions";
+import type { AnySqlFn, NonAggregateSqlFn, ScopedSqlFn } from "../functions";
 import { escIdentifier } from "../sql";
 import type { AnyTableWithColumns, TableAnyColumn } from "../table";
 import type { Valueof } from "../types";
@@ -38,14 +38,8 @@ export class Order<
 
 export type StdOrder = Order<string, OrderDirection>;
 
-/**
- * Order clause built from a `SqlFn` value expression (e.g. `ST_Distance(...)`).
- * Used via `asc(sqlFn)` or `desc(sqlFn)`.
- *
- * @template TSqlFn - The table column(s) the underlying expression references.
- * @template THasArg - `true` when the underlying expression embeds an `Arg` placeholder.
- */
-export class OrderSqlFn<TSqlFn extends AnyScalarSqlFn> {
+/** Order clause built from a `SqlFn`, via `asc()`/`desc()`. */
+export class OrderSqlFn<TSqlFn extends AnySqlFn> {
   /** Phantom field: the column(s) this order expression references — mirrors `Filter.$Columns`. */
   readonly $Columns!: TSqlFn["$Columns"];
   /** Phantom field: `true` when this order expression embeds an `Arg` placeholder. */
@@ -63,11 +57,18 @@ export class OrderSqlFn<TSqlFn extends AnyScalarSqlFn> {
   }
 }
 
-export type StdOrderSqlFn = OrderSqlFn<AnyScalarSqlFn>;
-export type AnyOrder = Order<any, any> | OrderSqlFn<any>;
+export type StdOrderSqlFn = OrderSqlFn<AnySqlFn>;
 
 /**
- * Valid orderBy item for a query.
+ * Order item an aggregate accepts inside its own `ORDER BY`; an aggregate is
+ * refused because it would nest.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: <>
+export type AnyOrder = Order<any, any> | OrderSqlFn<NonAggregateSqlFn>;
+
+/**
+ * Valid orderBy item for a query. An aggregate is allowed here; PostgreSQL
+ * reads `ORDER BY` after grouping.
  *
  * @template TTableOrCols - The table or column(s) being queried.
  * @template TPrepare - When `true`, `OrderSqlFn` items carrying `Arg` placeholders are allowed.
@@ -87,12 +88,11 @@ export type OrderExpression<
     >
   | Order<Extract<keyof TSelects, string>, "ASC" | "DESC">
   | OrderSqlFn<
-      SqlFn<
+      ScopedSqlFn<
         TTableOrCols extends AnyTableWithColumns
           ? Valueof<TTableOrCols["_"]["columns"]>
           : TTableOrCols,
-        TPrepare extends true ? boolean : false,
-        "scalar"
+        TPrepare extends true ? boolean : false
       >
     >;
 
@@ -108,14 +108,12 @@ export type OrderExpression<
 export function asc<TTableColumn extends TableAnyColumn | string>(
   field: TTableColumn,
 ): Order<TTableColumn, "ASC">;
-export function asc<TSqlFn extends AnyScalarSqlFn>(
-  fn: TSqlFn,
-): OrderSqlFn<TSqlFn>;
-export function asc(fieldOrFn: TableAnyColumn | AnyScalarSqlFn) {
+export function asc<TSqlFn extends AnySqlFn>(fn: TSqlFn): OrderSqlFn<TSqlFn>;
+export function asc(fieldOrFn: TableAnyColumn | AnySqlFn) {
   if (typeof fieldOrFn === "string" || isTCol(fieldOrFn)) {
     return new Order(fieldOrFn, "ASC");
   }
-  return new OrderSqlFn(fieldOrFn as AnyScalarSqlFn, "ASC");
+  return new OrderSqlFn(fieldOrFn as AnySqlFn, "ASC");
 }
 
 /**
@@ -130,12 +128,10 @@ export function asc(fieldOrFn: TableAnyColumn | AnyScalarSqlFn) {
 export function desc<TTableColumn extends TableAnyColumn | string>(
   field: TTableColumn,
 ): Order<TTableColumn, "DESC">;
-export function desc<TSqlFn extends AnyScalarSqlFn>(
-  fn: TSqlFn,
-): OrderSqlFn<TSqlFn>;
-export function desc(fieldOrFn: TableAnyColumn | AnyScalarSqlFn) {
+export function desc<TSqlFn extends AnySqlFn>(fn: TSqlFn): OrderSqlFn<TSqlFn>;
+export function desc(fieldOrFn: TableAnyColumn | AnySqlFn) {
   if (typeof fieldOrFn === "string" || isTCol(fieldOrFn)) {
     return new Order(fieldOrFn, "DESC");
   }
-  return new OrderSqlFn(fieldOrFn as AnyScalarSqlFn, "DESC");
+  return new OrderSqlFn(fieldOrFn as AnySqlFn, "DESC");
 }

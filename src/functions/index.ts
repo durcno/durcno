@@ -6,6 +6,53 @@ import type { AnyColumn, StdTableColumn } from "../table";
 
 export type SqlFnType = "aggregate" | "scalar";
 
+/** Whether `T` is, or wraps, an aggregate. */
+export type HasAggregateOf<T> = [
+  Extract<
+    T extends { $: { HasAggregate: infer H } }
+      ? H
+      : T extends { $HasAggregate: infer A }
+        ? A
+        : never,
+    true
+  >,
+] extends [never]
+  ? false
+  : true;
+
+/** Depth cap: a cyclic operand returns `false` instead of overflowing. */
+const MAX_OPERAND_DEPTH = 32;
+
+/** Runtime counterpart of `HasAggregateOf`; walks arrays and records, depth-bounded. */
+export function containsAggregate(operand: unknown): boolean {
+  return containsAggregateAt(operand, 0);
+}
+
+function containsAggregateAt(operand: unknown, depth: number): boolean {
+  if (operand === null || typeof operand !== "object") return false;
+  if (depth >= MAX_OPERAND_DEPTH) return false;
+  if (Array.isArray(operand)) {
+    for (let i = 0; i < operand.length; i++) {
+      if (containsAggregateAt(operand[i], depth + 1)) return true;
+    }
+    return false;
+  }
+  const proto = Object.getPrototypeOf(operand);
+  if (proto !== Object.prototype && proto !== null) {
+    const flag = (operand as { hasAggregate?: unknown }).hasAggregate;
+    return typeof flag === "boolean" ? flag : false;
+  }
+  const record = operand as Record<string, unknown>;
+  for (const key in record) {
+    if (containsAggregateAt(record[key], depth + 1)) return true;
+  }
+  return false;
+}
+
+/** `HasAggregateOf` for a tuple of conditions. */
+export type HasAggregateOfConditions<T extends readonly unknown[]> =
+  HasAggregateOf<T[number]>;
+
 /**
  * Abstract base class for typed SQL functions.
  *
@@ -14,10 +61,11 @@ export type SqlFnType = "aggregate" | "scalar";
  */
 export abstract class SqlFn<
   TColumn extends AnyColumn,
-  THasArg extends boolean = false,
-  TFnType extends "aggregate" | "scalar" = "aggregate" | "scalar",
+  TSqlFnType extends SqlFnType = SqlFnType,
   TPgType extends string = string,
   TTsType = any,
+  THasArg extends boolean = false,
+  THasAggregate extends boolean = false,
 > {
   readonly $!: {
     /** Discriminant id for this entity kind. */
@@ -26,8 +74,10 @@ export abstract class SqlFn<
     TsType: TTsType;
     /** The PostgreSQL type category this expression produces (e.g. `"string"`, `"numeric"`). */
     PgType: TPgType;
-    /** The kind of this SQL expression (`"aggregate"` or `"scalar"`). */
-    FnType: TFnType;
+    /** The kind of function: `"aggregate"` or `"scalar"`. */
+    SqlFnType: TSqlFnType;
+    /** Whether this expression is, or contains, an aggregate. */
+    HasAggregate: THasAggregate;
   };
 
   /** Phantom field used to enforce column scope — mirrors `Filter.$Columns`. */
@@ -36,13 +86,19 @@ export abstract class SqlFn<
   /** Phantom field: `true` when this expression embeds at least one `Arg` placeholder. */
   readonly $HasArg!: THasArg;
 
+  /** This function's kind; wrapping another function does not change it. */
+  readonly sqlFnType: SqlFnType = "scalar";
+
   /**
-   * Runtime flag: `true` for aggregate functions (e.g. `count`, `sum`, `avg`),
-   * `false` for scalar functions (e.g. `lower`, `abs`).
-   * Used by `SelectQuery.toQuery()` to auto-generate a `GROUP BY` clause when
-   * aggregates and non-aggregates are mixed in the same `.select()` call.
+   * Whether this expression is, or contains, an aggregate. Refused in `WHERE`,
+   * `ON`, `GROUP BY` and insert/set values; allowed in `HAVING` and `ORDER BY`.
    */
-  readonly isAggregate: boolean = false;
+  readonly hasAggregate: boolean;
+
+  /** @param hasAggregate - Whether this expression contains an aggregate. */
+  constructor(hasAggregate = false) {
+    this.hasAggregate = hasAggregate;
+  }
 
   /** Appends the SQL fragment for this expression to the query (no trailing semicolon). */
   abstract toQuery(query: Query, ctx?: QueryContext): void;
@@ -61,6 +117,14 @@ export abstract class SqlFn<
 
   /** Converts a raw PostgreSQL driver value to the TypeScript type `TTsType`. */
   abstract fromDriverValue(value: unknown): TTsType | null;
+
+  /**
+   * Whether an operand is, or contains, an aggregate. Accepts one operand, an
+   * array or a record; public so subclasses can call it.
+   */
+  static _hasAggregate(operand: unknown): boolean {
+    return containsAggregate(operand);
+  }
 
   // --- Protected shared helpers (DRY for subclasses) ---
 
@@ -239,17 +303,35 @@ export function appendOperand(
   }
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type StdSqlFn = SqlFn<StdTableColumn, boolean, SqlFnType, string, any>;
+// biome-ignore-start lint/suspicious/noExplicitAny: <>
+export type StdSqlFn = SqlFn<
+  StdTableColumn,
+  SqlFnType,
+  string,
+  any,
+  boolean,
+  boolean
+>;
+// biome-ignore-end lint/suspicious/noExplicitAny: <>
 
 // biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnySqlFn = SqlFn<any, any, any, any, any>;
+export type AnySqlFn = SqlFn<any, any, any, any, any, boolean>;
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnyScalarSqlFn = SqlFn<any, any, "scalar", any, any>;
+/** Any `SqlFn` scoped to `TColumn`, aggregate or not. */
+export type ScopedSqlFn<
+  TColumn extends AnyColumn,
+  THasArg extends boolean = boolean,
+> = SqlFn<TColumn, SqlFnType, string, unknown, THasArg, boolean>;
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnyAggregateSqlFn = SqlFn<any, any, "aggregate", any, any>;
+/**
+ * Any `SqlFn` that contains no aggregate, however deeply wrapped. Accepted
+ * where PostgreSQL refuses an aggregate.
+ */
+export type NonAggregateSqlFn<
+  TColumn extends AnyColumn = AnyColumn,
+  TTsType = unknown,
+  THasArg extends boolean = boolean,
+> = SqlFn<TColumn, SqlFnType, string, TTsType, THasArg, false>;
 
 /**
  * Extracts the table column(s) referenced by a scalar expression.
@@ -269,16 +351,18 @@ export type ExprColumns<TExpr> = TExpr extends {
     ? TExpr
     : never;
 
-/**
- * Extracts the `$HasArg` flag from an expression.
- */
-export type HasArg<TExpr> = TExpr extends {
-  $HasArg: infer H;
-}
-  ? H extends true
-    ? true
-    : false
-  : false;
+/** Extracts `$HasArg`; `never` reads as `false`. */
+export type HasArg<TExpr> = [TExpr] extends [never]
+  ? false
+  : TExpr extends {
+        $HasArg: infer H;
+      }
+    ? [H] extends [never]
+      ? false
+      : H extends true
+        ? true
+        : false
+    : false;
 
 /**
  * Resolves the runtime/select TypeScript type of any expression:

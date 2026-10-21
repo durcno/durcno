@@ -41,6 +41,10 @@ export class ArrayContainsFilter<
     this.values = values;
   }
 
+  get referencedColumns(): AnyColumn[] {
+    return [this.left];
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     this.left.toQuery(query, ctx);
     query.sql += " @> ";
@@ -91,6 +95,10 @@ export class ArrayContainedByFilter<
     this.values = values;
   }
 
+  get referencedColumns(): AnyColumn[] {
+    return [this.left];
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     this.left.toQuery(query, ctx);
     query.sql += " <@ ";
@@ -136,6 +144,10 @@ export class ArrayOverlapsFilter<
     super();
     this.left = column;
     this.right = values;
+  }
+
+  get referencedColumns(): AnyColumn[] {
+    return [this.left];
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -185,6 +197,10 @@ export class ArrayHasFilter<
     super();
     this.left = column;
     this.value = value;
+  }
+
+  get referencedColumns(): AnyColumn[] {
+    return [this.left];
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -237,6 +253,10 @@ export class ArrayAllFilter<
     super();
     this.left = column;
     this.value = value;
+  }
+
+  get referencedColumns(): AnyColumn[] {
+    return [this.left];
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {

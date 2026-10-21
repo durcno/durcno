@@ -2,7 +2,7 @@ import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
 import type { FilterExpression } from "../filters/index";
-import { SqlFn } from "../functions/index";
+import { type NonAggregateSqlFn, SqlFn } from "../functions/index";
 import { Sql } from "../sql";
 import type {
   AnyColumn,
@@ -43,12 +43,10 @@ export type UpdateableItem<
         ? TTableWC["_"]["columns"][K]
         : never;
     }[keyof TTableWC["_"]["columns"]]
-  | SqlFn<
+  | NonAggregateSqlFn<
       TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
-      TPrepare extends true ? boolean : false,
-      "scalar",
-      string,
-      Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+      Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>,
+      TPrepare extends true ? boolean : false
     >
   | Sql;
 

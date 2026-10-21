@@ -1,5 +1,4 @@
-import type { AnyScalarSqlFn } from "../functions";
-import { SqlFn } from "../functions";
+import type { NonAggregateSqlFn } from "../functions";
 import type {
   AnyColumn,
   AnyTableWithColumns,
@@ -10,11 +9,8 @@ import type {
 import type { Valueof } from "../types";
 
 /**
- * Valid group-by item for a query on `TTableWC`.
- * Accepts a direct table column, a scalar `SqlFn`, or a select alias name.
- *
- * Note: Aggregate `SqlFn` are intentionally excluded — PostgreSQL does not permit
- * aggregate expressions in GROUP BY. Use scalar expressions or column references instead.
+ * Valid `GROUP BY` item: a column, a non-aggregate `SqlFn`, or a select alias.
+ * PostgreSQL refuses an aggregate here, however deeply wrapped.
  */
 export type GroupByExpression<
   TTableOrCols extends AnyTableWithColumns | TableAnyColumn,
@@ -24,12 +20,12 @@ export type GroupByExpression<
   | (TTableOrCols extends AnyTableWithColumns
       ? Valueof<TTableOrCols["_"]["columns"]>
       : TTableOrCols)
-  | SqlFn<
+  | NonAggregateSqlFn<
       TTableOrCols extends AnyTableWithColumns
         ? Valueof<TTableOrCols["_"]["columns"]>
         : TTableOrCols,
-      TPrepare extends true ? boolean : false,
-      "scalar"
+      unknown,
+      TPrepare extends true ? boolean : false
     >
   | Extract<keyof TSelects, string>;
 
@@ -44,11 +40,3 @@ export type AnyGroupByExpression = GroupByExpression<
   boolean,
   Record<string, unknown>
 >;
-
-/**
- * Type guard: returns `true` if `value` is a scalar `SqlFn`.
- * Used inside `toQuery()` to distinguish scalar expressions from raw columns.
- */
-export function isScalarSqlFn(value: unknown): value is AnyScalarSqlFn {
-  return value instanceof SqlFn;
-}

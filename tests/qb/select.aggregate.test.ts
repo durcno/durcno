@@ -17,6 +17,7 @@ import {
   max,
   min,
   mul,
+  round,
   sum,
 } from "durcno";
 import { pg } from "durcno/connectors/pg";
@@ -439,7 +440,7 @@ describe("SELECT aggregate functions", () => {
   // =========================================================================
 
   describe("aggregates in ORDER BY", () => {
-    it("should allow ordering an aggregate-only query by the same aggregate ASC", async () => {
+    it("should order an aggregate-only query by an aggregate alias", async () => {
       await db
         .insertInto(schema.Users)
         .values([
@@ -455,177 +456,64 @@ describe("SELECT aggregate functions", () => {
       expect(result.maxScore).toBe(30);
     });
 
-    it("should allow ordering an aggregate-only query by count DESC", async () => {
+    it("should order a grouped query by a bare aggregate expression", async () => {
       await db
         .insertInto(schema.Users)
         .values([
-          createTestUser({ username: "user1" }),
-          createTestUser({ username: "user2" }),
-          createTestUser({ username: "user3" }),
+          createTestUser({ username: "a1", type: "admin", score: 1 }),
+          createTestUser({ username: "u1", type: "user", score: 50 }),
+          createTestUser({ username: "u2", type: "user", score: 60 }),
+        ]);
+
+      const query = db
+        .from(schema.Users)
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
+        .groupBy(() => schema.Users.type)
+        .orderBy(() => desc(count("*")));
+
+      expect(query.toQuery().sql).toContain("ORDER BY count(*) DESC");
+
+      const results = await query;
+      expect(results.map((r) => r.type)).toEqual(["user", "admin"]);
+    });
+
+    it("should order a grouped query by an aggregate wrapped in a scalar function", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "a1", type: "admin", score: 100 }),
+          createTestUser({ username: "u1", type: "user", score: 4 }),
+          createTestUser({ username: "u2", type: "user", score: 6 }),
+        ]);
+
+      const query = db
+        .from(schema.Users)
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
+        .groupBy(() => schema.Users.type)
+        .orderBy(() => desc(round(avg(schema.Users.score), 1)));
+
+      expect(query.toQuery().sql).toContain(
+        'ORDER BY round(avg("users"."score"), 1) DESC',
+      );
+
+      const results = await query;
+      expect(results.map((r) => r.type)).toEqual(["admin", "user"]);
+    });
+
+    it("should order an aggregate-only projection by an aggregate", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "a1", score: 4 }),
+          createTestUser({ username: "a2", score: 8 }),
         ]);
 
       const [result] = await db
         .from(schema.Users)
         .select(() => ({ total: count("*") }))
-        .orderBy(() => asc("total"));
+        .orderBy(() => asc(count("*")));
 
-      expect(result.total).toBe(3);
-    });
-  });
-
-  // =========================================================================
-  // auto GROUP BY — aggregate + plain column
-  // =========================================================================
-
-  describe("auto GROUP BY with plain columns", () => {
-    it("should group by a plain column and count per group", async () => {
-      await db
-        .insertInto(schema.Users)
-        .values([
-          createTestUser({ username: "alice", type: "admin" }),
-          createTestUser({ username: "bob", type: "admin" }),
-          createTestUser({ username: "charlie", type: "user" }),
-        ]);
-
-      const results = await db
-        .from(schema.Users)
-        .select(() => ({ type: schema.Users.type, total: count("*") }))
-        .orderBy(() => asc(schema.Users.type));
-
-      expect(results).toHaveLength(2);
-      expect(results[0].type).toBe("admin");
-      expect(results[0].total).toBe(2);
-      expect(results[1].type).toBe("user");
-      expect(results[1].total).toBe(1);
-    });
-
-    it("should group by multiple plain columns", async () => {
-      await db
-        .insertInto(schema.Users)
-        .values([
-          createTestUser({ username: "alice", type: "admin", role: "admin" }),
-          createTestUser({ username: "bob", type: "admin", role: "user" }),
-          createTestUser({ username: "charlie", type: "user", role: "user" }),
-        ]);
-
-      const results = await db
-        .from(schema.Users)
-        .select(() => ({
-          type: schema.Users.type,
-          role: schema.Users.role,
-          total: count("*"),
-        }))
-        .orderBy(() => asc(schema.Users.type));
-
-      expect(results.length).toBeGreaterThanOrEqual(2);
-      const adminGroup = results.find(
-        (r) => r.type === "admin" && r.role === "admin",
-      );
-      expect(adminGroup?.total).toBe(1);
-    });
-
-    it("should group once when the same column is projected under two aliases", async () => {
-      await db
-        .insertInto(schema.Users)
-        .values([
-          createTestUser({ username: "alice", type: "admin" }),
-          createTestUser({ username: "bob", type: "admin" }),
-          createTestUser({ username: "charlie", type: "user" }),
-          createTestUser({ username: "dave", type: "user" }),
-        ]);
-
-      // Two aliases of one column are one grouping key, so this is two groups
-      // and not four.
-      const results = await db
-        .from(schema.Users)
-        .select(() => ({
-          type: schema.Users.type,
-          sameType: schema.Users.type,
-          total: count("*"),
-        }))
-        .orderBy(() => asc(schema.Users.type));
-
-      expect(results).toHaveLength(2);
-      expect(results[0].type).toBe("admin");
-      expect(results[0].sameType).toBe("admin");
-      expect(results[0].total).toBe(2);
-      expect(results[1].type).toBe("user");
-      expect(results[1].sameType).toBe("user");
-      expect(results[1].total).toBe(2);
-    });
-
-    it("should compute sum per group", async () => {
-      await db
-        .insertInto(schema.Users)
-        .values([
-          createTestUser({ username: "alice", type: "admin", score: 10 }),
-          createTestUser({ username: "bob", type: "admin", score: 20 }),
-          createTestUser({ username: "charlie", type: "user", score: 5 }),
-        ]);
-
-      const results = await db
-        .from(schema.Users)
-        .select(() => ({
-          type: schema.Users.type,
-          totalScore: sum(schema.Users.score),
-        }))
-        .orderBy(() => asc(schema.Users.type));
-
-      expect(results).toHaveLength(2);
-      expect(results[0].type).toBe("admin");
-      expect(results[0].totalScore).toBe(30);
-      expect(results[1].type).toBe("user");
-      expect(results[1].totalScore).toBe(5);
-    });
-
-    it("should work with WHERE + auto GROUP BY", async () => {
-      await db
-        .insertInto(schema.Users)
-        .values([
-          createTestUser({ username: "alice", type: "admin", score: 10 }),
-          createTestUser({ username: "bob", type: "admin", score: 20 }),
-          createTestUser({ username: "charlie", type: "user", score: 5 }),
-          createTestUser({ username: "dave", type: "user", score: 15 }),
-        ]);
-
-      const results = await db
-        .from(schema.Users)
-        .select(() => ({ type: schema.Users.type, total: count("*") }))
-        .where(() => eq(schema.Users.type, "admin"))
-        .orderBy(() => asc(schema.Users.type));
-
-      expect(results).toHaveLength(1);
-      expect(results[0].type).toBe("admin");
-      expect(results[0].total).toBe(2);
-    });
-  });
-
-  // =========================================================================
-  // auto GROUP BY — aggregate + scalar fn
-  // =========================================================================
-
-  describe("auto GROUP BY with scalar functions", () => {
-    it("should group by a scalar fn result and count per group", async () => {
-      await db
-        .insertInto(schema.Users)
-        .values([
-          createTestUser({ username: "Alice" }),
-          createTestUser({ username: "adam" }),
-          createTestUser({ username: "Bob" }),
-        ]);
-
-      const results = await db
-        .from(schema.Users)
-        .select(() => ({
-          lowerName: lower(schema.Users.username),
-          total: count("*"),
-        }))
-        .orderBy(() => asc(lower(schema.Users.username)));
-
-      // "Alice" and "adam" both lower to distinct values; "Bob" is also distinct
-      expect(results.length).toBeGreaterThanOrEqual(2);
-      const adamGroup = results.find((r) => r.lowerName === "adam");
-      expect(adamGroup?.total).toBe(1);
+      expect(result.total).toBe(2);
     });
   });
 

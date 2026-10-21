@@ -210,6 +210,22 @@ const stats = await db
   .orderBy((_, { userCount }) => desc(userCount));
 ```
 
+### Sorting by an Aggregate Expression
+
+PostgreSQL reads `ORDER BY` after grouping, so an aggregate can sort directly — no alias needed, and wrapping it in a scalar function is fine:
+
+```typescript
+import { avg, count, desc, round } from "durcno";
+
+const byActivity = await db
+  .from(Users)
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type)
+  .orderBy(() => desc(round(avg(Users.points), 1)));
+```
+
+This requires the query to aggregate — through a `GROUP BY`, or through an aggregate in the projection. In a query that does neither, PostgreSQL rejects the query itself, because the selected columns are then ungrouped.
+
 ## Pagination with LIMIT and OFFSET
 
 Use `.limit()` and `.offset()` for pagination. Both accept `number` or `bigint`:
@@ -274,6 +290,19 @@ const rows = await db
 CTEs can also wrap DML queries with `.returning(...)`, such as `INSERT`, `UPDATE`, or `DELETE`, and then be queried by an outer `SELECT`.
 
 ## GROUP BY and HAVING
+
+### Automatic GROUP BY
+
+When a `.select()` projection mixes aggregates with other expressions, Durcno groups by the non-aggregate items on its own — no `.groupBy()` needed:
+
+```typescript
+import { count } from "durcno";
+
+const byType = await db
+  .from(Users)
+  .select(() => ({ type: Users.type, total: count("*") }));
+// SQL: SELECT type, count(*) FROM users GROUP BY type
+```
 
 ### Explicit GROUP BY
 
@@ -340,6 +369,10 @@ const results = await db
 // SQL: ... GROUP BY "lname", "users"."type"
 ```
 
+:::note
+PostgreSQL rejects an aggregate in `GROUP BY`, so `.groupBy()` rejects one at compile time — including a scalar function that merely wraps one (`round(avg(score), 1)`). Group by the column or scalar expression instead.
+:::
+
 ### HAVING
 
 Use `.having()` with a callback to filter grouped results. It supports aggregate-to-literal and aggregate-to-aggregate comparisons:
@@ -364,12 +397,27 @@ const results = await db
   .from(Users)
   .select(() => ({
     type: Users.type,
-    sumScore: sum(Users.score),
+    sumScore: sum(Users.points),
     total: count("*"),
   }))
   .groupBy(() => [Users.type])
-  .having(() => gt(sum(Users.score), count("*")));
+  .having(() => gt(sum(Users.points), count("*")));
 ```
+
+Unlike `WHERE`, `HAVING` is evaluated over grouped rows, so an aggregate is allowed here — including one wrapped in a scalar function, and however deeply nested:
+
+```typescript
+import { avg, gt, round } from "durcno";
+
+// SQL: ... GROUP BY "users"."type" HAVING round(avg("users"."score"), 1) > 2
+const aboveAverage = await db
+  .from(Users)
+  .select(() => ({ type: Users.type, avgScore: round(avg(Users.points), 1) }))
+  .groupBy(() => Users.type)
+  .having(() => gt(round(avg(Users.points), 1), 2));
+```
+
+`WHERE` is the opposite: it runs before grouping, so an aggregate there is a compile error, wrapped or not.
 
 :::note
 

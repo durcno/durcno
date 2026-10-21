@@ -2,7 +2,7 @@ import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
 import type { AnyFilterExpression, FilterExpression } from "../filters/index";
-import { SqlFn } from "../functions/index";
+import { type NonAggregateSqlFn, SqlFn } from "../functions/index";
 import { Sql } from "../sql";
 import {
   type AnyColumn,
@@ -70,12 +70,10 @@ export type ConflictUpdateableItem<
             | ToExcludeColumn<TTableWC["_"]["columns"][K]>
         : never;
     }[keyof TTableWC["_"]["columns"]]
-  | SqlFn<
+  | NonAggregateSqlFn<
       ConflictScopeColumns<TTableWC>,
-      TPrepare extends true ? boolean : false,
-      "scalar",
-      string,
-      Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
+      Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>,
+      TPrepare extends true ? boolean : false
     >
   | Sql;
 
@@ -213,12 +211,10 @@ export type InsertableItem<
 > =
   | Exclude<TColumn["ValTypeInsert"], undefined>
   | (TPrepare extends true ? Arg<TColumn["ValType"]> : never)
-  | SqlFn<
+  | NonAggregateSqlFn<
       never,
-      TPrepare extends true ? boolean : false,
-      "scalar",
-      string,
-      Exclude<TColumn["ValTypeInsert"], undefined>
+      Exclude<TColumn["ValTypeInsert"], undefined>,
+      TPrepare extends true ? boolean : false
     >
   | Sql;
 

@@ -4,7 +4,12 @@ import { fk } from "../constraints/foreign-key";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isTCol } from "../entity";
 import type { FilterExpression } from "../filters/index";
-import { type InferValueType, SqlFn } from "../functions/index";
+import {
+  type InferValueType,
+  type ScopedSqlFn,
+  SqlFn,
+  type SqlFnType,
+} from "../functions/index";
 import { escIdentifier, escLiteral } from "../sql";
 import type {
   AnyColumn,
@@ -62,7 +67,7 @@ type AliasedSelectItem<
   TPrepare extends boolean,
 > =
   | Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>
-  | SqlFn<
+  | ScopedSqlFn<
       Valueof<TableWithColumns<TTSchema, TTName, TTColumns>["_"]["columns"]>,
       TPrepare extends true ? boolean : false
     >;
@@ -720,7 +725,7 @@ function validateAliasExpr(
     return;
   }
   if (expr instanceof SqlFn) {
-    if (expr.isAggregate) {
+    if (expr.hasAggregate) {
       throw new Error(
         "Aggregate functions are not supported in relational `select`. Use scalar columns or scalar SqlFns (e.g. `lower(...)`).",
       );
@@ -748,7 +753,7 @@ function renderAliasedExpr(
       ctx,
     );
   } else {
-    (expr as SqlFn<AnyColumn, boolean>).toQuery(query, ctx);
+    (expr as SqlFn<AnyColumn, SqlFnType>).toQuery(query, ctx);
   }
   const fragment = query.sql.slice(marker);
   query.sql = query.sql.slice(0, marker);

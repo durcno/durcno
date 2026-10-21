@@ -7,7 +7,11 @@ import type {
   HavingExpression,
   StdCondition,
 } from "../filters/index";
-import { type InferValueType, SqlFn } from "../functions/index";
+import {
+  type InferValueType,
+  type ScopedSqlFn,
+  SqlFn,
+} from "../functions/index";
 import { SubquerySqlFn } from "../functions/subquery";
 import { escIdentifier, Sql, toSqlValue } from "../sql";
 import type {
@@ -26,11 +30,10 @@ import type {
   Valueof,
 } from "../types";
 import type { AnySelectableSource } from "../virtual-table";
-import {
-  type AnyGroupByExpression,
-  type GroupByExpression,
-  isScalarSqlFn,
-  type StdGroupByExpression,
+import type {
+  AnyGroupByExpression,
+  GroupByExpression,
+  StdGroupByExpression,
 } from "./groupby-clause";
 import {
   applyStarRowsPlan,
@@ -320,7 +323,7 @@ export type SelectableItem<
   TPrepare extends boolean = false,
 > =
   | TScopeColumns
-  | SqlFn<TScopeColumns, TPrepare extends true ? boolean : false>
+  | ScopedSqlFn<TScopeColumns, TPrepare extends true ? boolean : false>
   | Sql
   | null
   | string
@@ -1106,7 +1109,7 @@ export class SelectQuery<
         const expr = groupBy[i];
         if (typeof expr === "string") {
           query.sql += `"${escIdentifier(expr)}"`;
-        } else if (isScalarSqlFn(expr)) {
+        } else if (expr instanceof SqlFn) {
           expr.toQuery(query); // → floor(...)
         } else {
           query.sql += expr.fullName; // → "table"."col"
@@ -1116,7 +1119,7 @@ export class SelectQuery<
       let hasAggregate = false;
       for (const key of keys) {
         const item = select[key];
-        if (item instanceof SqlFn && item.isAggregate) {
+        if (item instanceof SqlFn && item.hasAggregate) {
           hasAggregate = true;
           break;
         }
@@ -1134,7 +1137,7 @@ export class SelectQuery<
               seenCols.add(col);
               nonAggItems.push(col);
             }
-          } else if (item instanceof SqlFn && !item.isAggregate) {
+          } else if (item instanceof SqlFn && !item.hasAggregate) {
             // `referencedColumns` is a rebuilding getter, so read it once.
             const refs =
               "referencedColumns" in item ? item.referencedColumns : undefined;

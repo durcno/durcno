@@ -22,7 +22,7 @@ export class DistanceFn<
     | Arg<TCol["ValType"]>
     | null,
   TTsType = StrictFnReturn<[TCol, TVal], number>,
-> extends SqlFn<TCol, IsArg<TVal>, "scalar", "numeric", TTsType> {
+> extends SqlFn<TCol, "scalar", "numeric", TTsType, IsArg<TVal>, false> {
   constructor(
     private readonly col: TCol,
     private readonly val: TVal,

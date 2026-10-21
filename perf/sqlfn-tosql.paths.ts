@@ -54,7 +54,7 @@ function shared(fn: Renderable): string {
  * render target has to survive, so it is the one to re-measure before shipping
  * any change to `toSQL()`.
  */
-class WrappingFn extends SqlFn<never, false, "scalar", string, string> {
+class WrappingFn extends SqlFn<never, "scalar", string, string, false, false> {
   /** An explicit field, not a parameter property — node strips types, it does not compile. */
   private readonly inner: Renderable;
 

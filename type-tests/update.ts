@@ -1,9 +1,11 @@
 import {
   add,
   and,
+  caseWhen,
   coalesce,
   count,
   eq,
+  gte,
   type InferUpdate,
   lower,
   sql,
@@ -266,3 +268,15 @@ db.update(Users).set({ username: lower(Posts.title) });
 
 // @ts-expect-error - Assigning number scalar function to bigint column should not compile
 db.update(CheckTest).set({ price: add(CheckTest.price, 100n) });
+
+// A CASE over plain columns is a scalar expression, so `.set()` accepts it —
+// `CaseFn` used to widen its kind to `"aggregate" | "scalar"` and be rejected.
+const _setCase = db
+  .update(Users)
+  .set({ email: caseWhen(eq(Users.type, "admin"), Users.email) });
+
+// @ts-expect-error - Assigning a CASE over an aggregate should not compile
+db.update(Users).set({ email: caseWhen(eq(Users.type, "admin"), count("*")) });
+
+// @ts-expect-error - an aggregate inside the CASE condition should not compile
+db.update(Users).set({ email: caseWhen(gte(count("*"), 2), Users.email) });

@@ -58,6 +58,10 @@ export class StDWithinFilter<
     super();
   }
 
+  get referencedColumns(): TCol[] {
+    return [this.col];
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "ST_DWithin(";
     this.col.toQuery(query, ctx);
@@ -117,6 +121,10 @@ export class StIntersectsFilter<
     super();
   }
 
+  get referencedColumns(): TCol[] {
+    return [this.col];
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "ST_Intersects(";
     this.col.toQuery(query, ctx);
@@ -160,6 +168,10 @@ export class StContainsFilter<
     super();
   }
 
+  get referencedColumns(): TCol[] {
+    return [this.col];
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "ST_Contains(";
     this.col.toQuery(query, ctx);
@@ -201,6 +213,10 @@ export class StWithinFilter<
     private readonly point: TPoint,
   ) {
     super();
+  }
+
+  get referencedColumns(): TCol[] {
+    return [this.col];
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {

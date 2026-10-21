@@ -183,10 +183,10 @@ src/
 
 type-tests/               # Inferred type safety checks
 tests/                    # Runtime integration tests
+├── cli/                  # CLI integration tests
 ├── columns/              # Column read/write tests
 ├── qb/                   # Query builders integration tests
-├── unit/                 # No-database unit tests of internal helpers
-├── cli/                  # CLI integration tests
+└── unit/                 # Pure internal helpers only
 perf/                     # Benchmarks of hot paths, plus A/B harnesses
 
 website/                  # Website
@@ -248,10 +248,13 @@ Durcno uses two clearly separated test suites — **Type tests** and **Integrati
 
 Quick rules:
 
-- Add/Update/Run **type tests** for type/API validation.
+- Add/Update/Run **type tests** for input/output type validation.
 - Add/Update/Run **integration tests** for runtime behavior validation.
-- Cover positive, negative, and edge cases
-- Separate concerns, and avoid redundancy in tests
+- Prefer practical and generic integration tests over extensive unit tests for each entity.
+- Separate concerns, but also avoid redundancy in tests.
+- Cover a family of entities with one parameterized test (`it.each`), not one `it` per member.
+- Use `tests/unit/` only for pure internal helpers.
+- Do not write units for behaviors that are covered by integration tests.
 - Always import from `durcno` in tests; use relative imports only if not exported.
 
 Commands:

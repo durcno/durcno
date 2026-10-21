@@ -7,6 +7,7 @@ import type { Or } from "../types";
 import {
   type AnySqlFn,
   type ExprColumns,
+  type HasAggregateOf,
   type HasArg,
   SqlFn,
   type StrictFnReturn,
@@ -62,13 +63,14 @@ export class LengthFn<
   TTsType = StrictFnReturn<[TExpr], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "numeric",
-  TTsType
+  TTsType,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -104,13 +106,14 @@ export class LowerFn<
   TTsType = StrictFnReturn<[TExpr], string>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "text",
-  TTsType
+  TTsType,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -146,13 +149,14 @@ export class UpperFn<
   TTsType = StrictFnReturn<[TExpr], string>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "text",
-  TTsType
+  TTsType,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -188,13 +192,14 @@ export class TrimFn<
   TTsType = StrictFnReturn<[TExpr], string>,
 > extends SqlFn<
   ExprColumns<TExpr>,
-  Or<IsArg<TExpr>, HasArg<TExpr>>,
   "scalar",
   "text",
-  TTsType
+  TTsType,
+  Or<IsArg<TExpr>, HasArg<TExpr>>,
+  HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -231,19 +236,20 @@ export class LeftFn<
   TTsType = StrictFnReturn<[TExpr, TN], string>,
 > extends SqlFn<
   ExprColumns<TExpr>,
+  "scalar",
+  "text",
+  TTsType,
   Or<
     TExpr extends string | Arg<string> ? IsArg<TExpr> : HasArg<TExpr>,
     IsArg<TN>
   >,
-  "scalar",
-  "text",
-  TTsType
+  HasAggregateOf<TExpr>
 > {
   constructor(
     private readonly expr: TExpr,
     private readonly n: TN,
   ) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -305,19 +311,20 @@ export class RightFn<
   TTsType = StrictFnReturn<[TExpr, TN], string>,
 > extends SqlFn<
   ExprColumns<TExpr>,
+  "scalar",
+  "text",
+  TTsType,
   Or<
     TExpr extends string | Arg<string> ? IsArg<TExpr> : HasArg<TExpr>,
     IsArg<TN>
   >,
-  "scalar",
-  "text",
-  TTsType
+  HasAggregateOf<TExpr>
 > {
   constructor(
     private readonly expr: TExpr,
     private readonly n: TN,
   ) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -379,19 +386,20 @@ export class PositionFn<
   TTsType = StrictFnReturn<[TExpr, TSearch], number>,
 > extends SqlFn<
   ExprColumns<TExpr>,
+  "scalar",
+  "numeric",
+  TTsType,
   Or<
     TExpr extends string | Arg<string> ? IsArg<TExpr> : HasArg<TExpr>,
     IsArg<TSearch>
   >,
-  "scalar",
-  "numeric",
-  TTsType
+  HasAggregateOf<TExpr>
 > {
   constructor(
     private readonly expr: TExpr,
     private readonly search: TSearch,
   ) {
-    super();
+    super(SqlFn._hasAggregate(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -439,13 +447,14 @@ export class ConcatFn<
   THasArg extends boolean = HasArgInTuple<TExprs>,
 > extends SqlFn<
   ExprColumns<TExprs[number]>,
-  THasArg,
   "scalar",
   "text",
-  string
+  string,
+  THasArg,
+  HasAggregateOf<TExprs[number]>
 > {
   constructor(private readonly exprs: TExprs) {
-    super();
+    super(SqlFn._hasAggregate(exprs));
   }
 
   toDriverValue(value: string | null): unknown {
@@ -490,16 +499,17 @@ export class ConcatWsFn<
   >,
 > extends SqlFn<
   ExprColumns<TSep> | ExprColumns<TExprs[number]>,
-  THasArg,
   "scalar",
   "text",
-  TTsType
+  TTsType,
+  THasArg,
+  HasAggregateOf<TSep | TExprs[number]>
 > {
   constructor(
     private readonly sep: TSep,
     private readonly exprs: TExprs,
   ) {
-    super();
+    super(SqlFn._hasAggregate(sep) || SqlFn._hasAggregate(exprs));
   }
 
   toDriverValue(value: TTsType | null): unknown {

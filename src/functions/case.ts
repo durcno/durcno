@@ -1,5 +1,8 @@
 import { isCol } from "../entity";
-import type { AnyFilterExpression, FilterExpression } from "../filters";
+import {
+  filterReferencedColumns,
+  type GroupedFilterExpression,
+} from "../filters";
 import type { AnyArg, Arg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import { type Sql, toSqlValue } from "../sql";
@@ -11,6 +14,7 @@ import {
   appendOperand,
   detectJsonKind,
   type ExprColumns,
+  type HasAggregateOf,
   type HasArg,
   SqlFn,
 } from "./index";
@@ -33,10 +37,10 @@ export type CaseOperand =
   | Record<string, unknown>
   | null;
 
-/** Single WHEN condition THEN result branch. */
-export interface CaseWhenBranch {
-  condition: AnyFilterExpression;
-  result: CaseOperand;
+/** One `WHEN ... THEN ...` branch. */
+export interface CaseWhenBranch<T = CaseOperand> {
+  condition: GroupedFilterExpression<AnyColumn, boolean>;
+  result: T;
 }
 
 /**
@@ -61,35 +65,38 @@ export type InferCaseValue<TExpr> = TExpr extends null
           ? A
           : TExpr;
 
+/** Columns a `WHEN` condition reads. */
+type ConditionColumns<TCondition> = TCondition extends { $Columns: infer C }
+  ? C
+  : never;
+
 /**
- * PostgreSQL `CASE` SQL function expression.
- * Evaluates conditions in order and returns the matching branch result.
+ * PostgreSQL `CASE` expression. The extra parameters carry the branch, `ELSE`
+ * and condition expressions so `HasAggregateOf` can inspect them.
  */
 export class CaseFn<
   TColumn extends AnyColumn = AnyColumn,
-  THasArg extends boolean = false,
   TResult = unknown,
-> extends SqlFn<TColumn, THasArg, "aggregate" | "scalar", string, TResult> {
-  override readonly isAggregate: boolean;
-
+  TBranchResult extends CaseOperand = CaseOperand,
+  TElse extends CaseOperand | undefined = CaseOperand | undefined,
+  TConditions = never,
+  THasArg extends boolean = false,
+> extends SqlFn<
+  TColumn,
+  "scalar",
+  string,
+  TResult,
+  THasArg,
+  HasAggregateOf<TBranchResult | TElse | TConditions>
+> {
   constructor(
-    readonly branches: readonly CaseWhenBranch[],
-    readonly elseExpr: CaseOperand | undefined,
+    readonly branches: readonly CaseWhenBranch<TBranchResult>[],
+    readonly elseExpr: TElse,
   ) {
-    super();
-    const hasAggBranch = branches.some(
-      (b) =>
-        (b.result instanceof SqlFn && b.result.isAggregate) ||
-        (b.condition instanceof SqlFn && b.condition.isAggregate),
-    );
-    const hasAggElse = elseExpr instanceof SqlFn && elseExpr.isAggregate;
-    this.isAggregate = hasAggBranch || hasAggElse;
+    super(SqlFn._hasAggregate(branches) || SqlFn._hasAggregate(elseExpr));
   }
 
-  /**
-   * Returns all table columns directly referenced by this CASE expression.
-   * Used by SelectQuery auto-GROUP BY to avoid grouping by unhashable expressions.
-   */
+  /** Columns the branches, `ELSE` and `WHEN` conditions read; `[]` when unknown. */
   get referencedColumns(): AnyColumn[] {
     const cols: AnyColumn[] = [];
     for (const b of this.branches) {
@@ -102,6 +109,9 @@ export class CaseFn<
       ) {
         cols.push(...b.result.referencedColumns);
       }
+      const conditionCols = filterReferencedColumns(b.condition);
+      if (conditionCols === null) return [];
+      cols.push(...conditionCols);
     }
     if (isCol(this.elseExpr)) {
       cols.push(this.elseExpr);
@@ -220,10 +230,19 @@ export class CaseFn<
  */
 export class CaseBuilder<
   TColumn extends AnyColumn = never,
-  THasArg extends boolean = false,
   TBranches = never,
-> extends CaseFn<TColumn, THasArg, TBranches | null> {
-  constructor(branches: readonly CaseWhenBranch[]) {
+  TBranchResult extends CaseOperand = CaseOperand,
+  TConditions = never,
+  THasArg extends boolean = false,
+> extends CaseFn<
+  TColumn,
+  TBranches | null,
+  TBranchResult,
+  undefined,
+  TConditions,
+  THasArg
+> {
+  constructor(branches: readonly CaseWhenBranch<TBranchResult>[]) {
     super(branches, undefined);
   }
 
@@ -233,18 +252,24 @@ export class CaseBuilder<
    * @param condition - Boolean filter predicate.
    * @param thenResult - Value expression to evaluate when the condition is true.
    */
-  when<TCondCol extends AnyColumn, TRes extends CaseOperand>(
-    condition: FilterExpression<TCondCol>,
+  when<
+    TCondition extends GroupedFilterExpression<AnyColumn>,
+    TRes extends CaseOperand,
+  >(
+    condition: TCondition,
     thenResult: TRes,
   ): CaseBuilder<
-    TColumn | TCondCol | ExprColumns<TRes>,
-    Or<Or<THasArg, HasArg<TRes>>, HasArg<TCondCol>>,
-    TBranches | InferCaseValue<TRes>
+    TColumn | ConditionColumns<TCondition> | ExprColumns<TRes>,
+    TBranches | InferCaseValue<TRes>,
+    TBranchResult | TRes,
+    TConditions | TCondition,
+    Or<Or<THasArg, HasArg<TRes>>, HasArg<TCondition>>
   > {
-    return new CaseBuilder([
+    const branches: CaseWhenBranch<TBranchResult | TRes>[] = [
       ...this.branches,
       { condition, result: thenResult },
-    ]);
+    ];
+    return new CaseBuilder(branches);
   }
 
   /**
@@ -256,8 +281,11 @@ export class CaseBuilder<
     elseResult: TElse,
   ): CaseFn<
     TColumn | ExprColumns<TElse>,
-    Or<THasArg, HasArg<TElse>>,
-    TBranches | InferCaseValue<TElse>
+    TBranches | InferCaseValue<TElse>,
+    TBranchResult,
+    TElse,
+    TConditions,
+    Or<THasArg, HasArg<TElse>>
   > {
     return new CaseFn(this.branches, elseResult);
   }
@@ -266,7 +294,14 @@ export class CaseBuilder<
    * Terminates the CASE statement without an explicit `ELSE`.
    * In PostgreSQL, when no WHEN condition matches and ELSE is omitted, NULL is returned.
    */
-  end(): CaseFn<TColumn, THasArg, TBranches | null> {
+  end(): CaseFn<
+    TColumn,
+    TBranches | null,
+    TBranchResult,
+    undefined,
+    TConditions,
+    THasArg
+  > {
     return new CaseFn(this.branches, undefined);
   }
 }
@@ -290,13 +325,18 @@ export class CaseBuilder<
  *   .when(eq(orders.status, "pending"), "In Progress")
  *   .else("Unknown") // "Complete" | "In Progress" | "Unknown"
  */
-export function caseWhen<TCondCol extends AnyColumn, TRes extends CaseOperand>(
-  condition: FilterExpression<TCondCol>,
+export function caseWhen<
+  TCondition extends GroupedFilterExpression<AnyColumn>,
+  TRes extends CaseOperand,
+>(
+  condition: TCondition,
   thenResult: TRes,
 ): CaseBuilder<
-  TCondCol | ExprColumns<TRes>,
-  Or<HasArg<TCondCol>, HasArg<TRes>>,
-  InferCaseValue<TRes>
+  ConditionColumns<TCondition> | ExprColumns<TRes>,
+  InferCaseValue<TRes>,
+  TRes,
+  TCondition,
+  Or<HasArg<TCondition>, HasArg<TRes>>
 > {
   return new CaseBuilder([{ condition, result: thenResult }]);
 }

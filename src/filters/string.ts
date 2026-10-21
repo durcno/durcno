@@ -23,6 +23,10 @@ export class StartsWithCondition<
     super();
   }
 
+  get referencedColumns(): TCol[] {
+    return [this.col];
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "starts_with(";
     this.col.toQuery(query, ctx);
@@ -56,6 +60,10 @@ export class EndsWithCondition<
     private readonly suffix: TSuffix,
   ) {
     super();
+  }
+
+  get referencedColumns(): TCol[] {
+    return [this.col];
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -92,6 +100,10 @@ export class ContainsCondition<
     super();
   }
 
+  get referencedColumns(): TCol[] {
+    return [this.col];
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     this.col.toQuery(query, ctx);
     query.sql += " LIKE ('%' || ";
@@ -126,6 +138,10 @@ export class LikeCondition<
     super();
   }
 
+  get referencedColumns(): TCol[] {
+    return [this.col];
+  }
+
   toQuery(query: Query, ctx?: QueryContext): void {
     this.col.toQuery(query, ctx);
     query.sql += " LIKE ";
@@ -157,6 +173,10 @@ export class ILikeCondition<
     private readonly pattern: TPattern,
   ) {
     super();
+  }
+
+  get referencedColumns(): TCol[] {
+    return [this.col];
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
