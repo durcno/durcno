@@ -62,7 +62,7 @@ export async function runSqlStatement(
   };
 }
 
-/** Prints a statement result using the interactive shell's table format. */
+/** Prints a statement result using the interactive REPL's table format. */
 export function printQueryResult(
   sql: string,
   result: SqlStatementResult,
@@ -157,7 +157,7 @@ export async function runMetaCommand(
   }
 }
 
-/** Prints rows returned by a meta command in the interactive shell's style. */
+/** Prints rows returned by a meta command in the interactive REPL's style. */
 export function printMetaRows(result: MetaRowsResult): void {
   console.log(bold(`\n${result.title}`));
   for (const row of result.rows) {

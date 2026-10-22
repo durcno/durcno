@@ -15,7 +15,7 @@ npm exec durcno <command> [options]
 | Command                | Description                                  |
 | ---------------------- | -------------------------------------------- |
 | `init`                 | Initialize a new Durcno project              |
-| `shell`                | Open an interactive SQL REPL shell           |
+| `repl`                 | Open an interactive SQL REPL                 |
 | `exec`                 | Execute SQL non-interactively                |
 | `generate`             | Generate a new migration from schema changes |
 | `migrate`              | Apply pending migrations                     |
@@ -92,12 +92,12 @@ In non-interactive environments (CI, piped input), `init` uses default values au
 
 ---
 
-## shell
+## repl
 
 Open an interactive SQL REPL connected to your database.
 
 ```bash npm2yarn
-npm exec durcno shell [--config path/to/durcno.config.ts]
+npm exec durcno repl [--config path/to/durcno.config.ts]
 ```
 
 ### Options
@@ -114,7 +114,7 @@ npm exec durcno shell [--config path/to/durcno.config.ts]
 
 ### Meta commands
 
-The shell supports psql-style meta commands:
+The REPL supports psql-style meta commands:
 
 | Command       | Description                  |
 | ------------- | ---------------------------- |
@@ -127,15 +127,15 @@ The shell supports psql-style meta commands:
 ### Example
 
 ```bash npm2yarn
-npm exec durcno shell
+npm exec durcno repl
 ```
 
 ```
 ✔ Connected to database
 
- DURCNO SHELL
+ DURCNO REPL
 Type SQL queries and press Enter to execute.
-Enter "exit" or "quit" to close the shell.
+Enter "exit" or "quit" to close the REPL.
 
 durcno> SELECT * FROM "public"."users";
 
@@ -155,7 +155,7 @@ durcno> exit
 ```
 
 :::tip
-Press `Ctrl+C` during multi-line input to cancel the current query. Press `Ctrl+C` at the prompt to close the shell.
+Press `Ctrl+C` during multi-line input to cancel the current query. Press `Ctrl+C` at the prompt to close the REPL.
 :::
 
 ---

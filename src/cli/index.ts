@@ -6,7 +6,7 @@ import { generate } from "./commands/generate";
 import { init } from "./commands/init";
 import { migrate } from "./commands/migrate";
 import { push } from "./commands/push";
-import { shell } from "./commands/shell";
+import { repl } from "./commands/repl";
 import { squash } from "./commands/squash";
 import { status } from "./commands/status";
 
@@ -31,12 +31,11 @@ program
   });
 
 program
-  .command("shell")
-  .alias("shel")
+  .command("repl")
   .option(...Options.config)
-  .description("open an interactive SQL REPL shell")
+  .description("open an interactive SQL REPL")
   .action(async (opts: Options) => {
-    await shell(opts);
+    await repl(opts);
   });
 
 program

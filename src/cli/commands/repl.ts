@@ -16,13 +16,13 @@ import {
 const { cyan, green, red, yellow, gray, bgCyan } = chalk;
 
 /**
- * Opens an interactive SQL REPL shell.
+ * Opens an interactive SQL REPL.
  *
  * Connects to the database using the config connector and allows
  * executing SQL queries interactively. Results are displayed in
  * a formatted table.
  */
-export async function shell(options: Options): Promise<void> {
+export async function repl(options: Options): Promise<void> {
   const configPath = resolveConfigPath(options.config);
   const { connector } = await loadConfig(configPath);
   connector.options.logger = undefined;
@@ -32,9 +32,9 @@ export async function shell(options: Options): Promise<void> {
   await client.connect();
   console.log(green("✔ Connected to database\n"));
 
-  console.log(bgCyan.black.bold(" DURCNO SHELL "));
+  console.log(bgCyan.black.bold(" DURCNO REPL "));
   console.log(gray("Type SQL queries and press Enter to execute."));
-  console.log(gray('Enter "exit" or "quit" to close the shell.\n'));
+  console.log(gray('Enter "exit" or "quit" to close the REPL.\n'));
 
   const rl = createInterface({
     input: process.stdin,

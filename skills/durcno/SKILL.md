@@ -319,7 +319,7 @@ cat db/seed.sql | durcno exec --json                             # piped script
 durcno exec -c '\dt' --json                                      # meta command
 ```
 
-Statements run sequentially and stop at the first error. Exit code is `0` on success and `1` on failure; data goes to stdout and errors to stderr. `--json` prints one JSON array for the whole run (64-bit integers as strings, `[]` for DDL-only), and `-q` suppresses timings and row counts. `durcno shell` opens an interactive REPL when a human is at the keyboard.
+Statements run sequentially and stop at the first error. Exit code is `0` on success and `1` on failure; data goes to stdout and errors to stderr. `--json` prints one JSON array for the whole run (64-bit integers as strings, `[]` for DDL-only), and `-q` suppresses timings and row counts. `durcno repl` opens an interactive REPL when a human is at the keyboard.
 
 ## Query Logging
 
