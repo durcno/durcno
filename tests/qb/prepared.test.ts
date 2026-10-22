@@ -11,9 +11,16 @@ import {
   defineConfig,
   eq,
   isIn,
+  jsonAgg,
+  jsonBuildArray,
+  jsonBuildObject,
+  jsonbAgg,
+  jsonbBuildObject,
   lower,
   prepare,
   sql,
+  toJson,
+  toJsonb,
 } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -111,6 +118,115 @@ describe("prepare", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].id).toBe(user1.id);
     expect(rows[0].username).toBe("alice");
+  });
+
+  it("should convert a prepared argument to JSON", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "json_prepared" }))
+      .returning({ id: true });
+
+    const selectPre = prepare({ id: schema.Users.id.arg() }, (args) =>
+      db
+        .prepare()
+        .from(schema.Users)
+        .select(() => ({ id: toJson(args.id), idb: toJsonb(args.id) }))
+        .where(() => eq(schema.Users.id, user.id)),
+    );
+
+    const rows = await selectPre.run(db, { id: user.id });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe(user.id);
+    expect(rows[0].idb).toBe(user.id);
+  });
+
+  it("should cast prepared arguments in JSON builders", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "json_builder_prepared" }))
+      .returning({ id: true });
+
+    const selectPre = prepare({ id: schema.Users.id.arg() }, (args) =>
+      db
+        .prepare()
+        .from(schema.Users)
+        .select(() => ({
+          obj: jsonBuildObject({ id: args.id }),
+          objb: jsonbBuildObject({ id: args.id }),
+          arr: jsonBuildArray(args.id),
+          rec: toJson({ id: args.id }),
+          recb: toJsonb({ id: args.id }),
+        }))
+        .where(() => eq(schema.Users.id, user.id)),
+    );
+
+    const rows = await selectPre.run(db, { id: user.id });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].obj).toEqual({ id: user.id });
+    expect(rows[0].objb).toEqual({ id: user.id });
+    expect(rows[0].arr).toEqual([user.id]);
+    expect(rows[0].rec).toEqual({ id: user.id });
+    expect(rows[0].recb).toEqual({ id: user.id });
+  });
+
+  it("should cast prepared arguments in JSON aggregates", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "json_agg_prepared" }))
+      .returning({ id: true });
+
+    const selectPre = prepare({ id: schema.Users.id.arg() }, (args) =>
+      db
+        .prepare()
+        .from(schema.Users)
+        .select(() => ({
+          ids: jsonAgg(args.id),
+          idsb: jsonbAgg(args.id),
+        }))
+        .where(() => eq(schema.Users.id, user.id)),
+    );
+
+    const rows = await selectPre.run(db, { id: user.id });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].ids).toEqual([user.id]);
+    expect(rows[0].idsb).toEqual([user.id]);
+  });
+
+  it("should cast untyped arguments as JSON numbers", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "json_untyped_prepared" }));
+
+    const selectPre = prepare(
+      { num: Arg.number(), big: Arg.bigint() },
+      (args) =>
+        db
+          .prepare()
+          .from(schema.Users)
+          .select(() => ({
+            obj: jsonBuildObject({ num: args.num, big: args.big }),
+            objb: jsonbBuildObject({ num: args.num, big: args.big }),
+          }))
+          .limit(1),
+    );
+
+    const rows = await selectPre.run(db, { num: 7, big: 8n });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].obj).toEqual({ num: 7, big: 8n });
+    expect(rows[0].objb).toEqual({ num: 7, big: 8n });
+  });
+
+  it("should cast untyped arguments with their JSON type", () => {
+    expect(jsonBuildObject({ num: Arg.number() }).toSQL()).toContain(
+      "$0::numeric",
+    );
+    expect(jsonBuildObject({ big: Arg.bigint() }).toSQL()).toContain(
+      "$0::int8",
+    );
   });
 
   // ── Arg binding ───────────────────────────────────────────────────────

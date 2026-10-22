@@ -12,6 +12,7 @@ import {
   type HasAggregateOf,
   type HasArg,
   type InferValueType,
+  restoreOperandValue,
   SqlFn,
 } from "./index";
 
@@ -60,33 +61,6 @@ function isJsonbOperand(e: unknown): boolean {
   return detectJsonKind(e) === "jsonb";
 }
 
-function deserializeOperandValue(
-  value: unknown,
-  expr: CoalesceOperand,
-): unknown {
-  if (value === null || value === undefined) return null;
-  if (isCol(expr)) return expr.fromDriverScalar(value);
-  if (expr instanceof SqlFn) return expr.fromDriverValue(value);
-  if (typeof expr === "number") return Number(value);
-  if (typeof expr === "bigint") return BigInt(value as string | number);
-  if (typeof expr === "boolean")
-    return value === true || value === "t" || value === "true";
-  if (expr instanceof Date) {
-    return value instanceof Date ? value : new Date(value as string | number);
-  }
-  if (Array.isArray(expr) || (typeof expr === "object" && expr !== null)) {
-    if (typeof value === "string") {
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    }
-    return value;
-  }
-  return value;
-}
-
 // ============================================================================
 // coalesce
 // ============================================================================
@@ -124,7 +98,7 @@ export class CoalesceFn<
         typeof expr === "boolean" ||
         Array.isArray(expr)
       ) {
-        return deserializeOperandValue(value, expr) as TTsType | null;
+        return restoreOperandValue(expr, value) as TTsType | null;
       }
     }
     return value as TTsType | null;
@@ -196,7 +170,7 @@ export class NullIfFn<
   }
   fromDriverValue(value: unknown): TTsType | null {
     if (value === null) return null;
-    return deserializeOperandValue(value, this.expr) as TTsType | null;
+    return restoreOperandValue(this.expr, value) as TTsType | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -265,7 +239,7 @@ export class GreatestFn<
         typeof expr === "bigint" ||
         typeof expr === "boolean"
       ) {
-        return deserializeOperandValue(value, expr) as TTsType | null;
+        return restoreOperandValue(expr, value) as TTsType | null;
       }
     }
     return value as TTsType | null;
@@ -335,7 +309,7 @@ export class LeastFn<
         typeof expr === "bigint" ||
         typeof expr === "boolean"
       ) {
-        return deserializeOperandValue(value, expr) as TTsType | null;
+        return restoreOperandValue(expr, value) as TTsType | null;
       }
     }
     return value as TTsType | null;

@@ -39,9 +39,13 @@ export class ByteaColumn<TConfig extends ByteaConfig> extends Column<
     return `'\\x${value.toString("hex")}'`;
   }
 
-  fromDriverScalar(value: Buffer | null): ByteaValType | null {
+  fromDriverScalar(value: Buffer | string | null): ByteaValType | null {
     if (value === null) return null;
-    // pg driver returns Buffer directly for bytea columns
+    if (typeof value === "string") {
+      return value.startsWith("\\x")
+        ? Buffer.from(value.slice(2), "hex")
+        : Buffer.from(value, "binary");
+    }
     return value;
   }
 }

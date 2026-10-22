@@ -18,22 +18,35 @@ export class Arg<TType> {
   readonly handler: (val: TType) => string | number | null;
   /** PostgreSQL cast type suffix (e.g. `"boolean"`, `"geography"`), or `null` if no cast needed. */
   readonly cast: string | null = null;
+  /** Converts a raw driver value back to `TType`, when the argument's type is known. */
+  readonly fromDriver?: (value: unknown) => unknown;
+  /** Cast used when the argument is serialized into JSON without a column cast. */
+  readonly jsonCast: string | null = null;
   constructor(
     handler: (val: TType) => string | number | null,
     cast: string | null = null,
+    fromDriver?: (value: unknown) => unknown,
+    jsonCast: string | null = null,
   ) {
     this.handler = handler;
     this.cast = cast;
+    this.fromDriver = fromDriver;
+    this.jsonCast = jsonCast;
   }
 
   /** Creates an Arg that accepts a JS `number`. */
   static number() {
-    return new Arg<number>((val) => val, null);
+    return new Arg<number>((val) => val, null, Number, "numeric");
   }
 
   /** Creates an Arg that accepts a JS `bigint`. */
   static bigint() {
-    return new Arg<bigint>((val) => val.toString(), null);
+    return new Arg<bigint>(
+      (val) => val.toString(),
+      null,
+      (value) => BigInt(value as string | number),
+      "int8",
+    );
   }
 }
 

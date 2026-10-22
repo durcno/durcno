@@ -424,6 +424,117 @@ Expect<
   >
 >();
 
+// toJson over a record of columns keeps the column types
+const toJsonRecord = toJson({ id: Users.id, username: Users.username });
+type ToJsonRecordType = ReturnType<typeof toJsonRecord.fromDriverValue>;
+Expect<
+  Equal<
+    ToJsonRecordType,
+    {
+      id: bigint;
+      username: string;
+    } | null
+  >
+>();
+
+// A literal operand keeps its own type
+const literalOperands = jsonBuildObject({
+  at: new Date(),
+  count: 5n,
+});
+type LiteralOperandsType = ReturnType<typeof literalOperands.fromDriverValue>;
+Expect<
+  Equal<
+    LiteralOperandsType,
+    {
+      at: Date;
+      count: bigint;
+    } | null
+  >
+>();
+
+// An array literal keeps its element types
+const arrayOperands = jsonBuildObject({
+  tags: [] as string[],
+  counts: [1n, 2n],
+  at: [new Date()],
+});
+type ArrayOperandsType = ReturnType<typeof arrayOperands.fromDriverValue>;
+Expect<
+  Equal<
+    ArrayOperandsType,
+    {
+      tags: string[];
+      counts: bigint[];
+      at: Date[];
+    } | null
+  >
+>();
+
+// toJson over a SQL function keeps the function's type
+const toJsonFn = toJson(jsonBuildObject({ id: Users.id }));
+type ToJsonFnType = ReturnType<typeof toJsonFn.fromDriverValue>;
+Expect<Equal<ToJsonFnType, { id: bigint } | null>>();
+
+// toJsonb over a SQL function keeps the function's type
+const toJsonbFn = toJsonb(jsonBuildObject({ id: Users.id }));
+type ToJsonbFnType = ReturnType<typeof toJsonbFn.fromDriverValue>;
+Expect<Equal<ToJsonbFnType, { id: bigint } | null>>();
+
+// toJson over a Date keeps the Date type
+const toJsonDate = toJson(new Date());
+type ToJsonDateType = ReturnType<typeof toJsonDate.fromDriverValue>;
+Expect<Equal<ToJsonDateType, Date | null>>();
+
+// toJson over an array of expressions maps every element
+const toJsonArray = toJson([Users.id, Users.username]);
+type ToJsonArrayType = ReturnType<typeof toJsonArray.fromDriverValue>;
+Expect<Equal<ToJsonArrayType, (bigint | string)[] | null>>();
+
+// toJsonb over an array of literals keeps the element types
+const toJsonbArray = toJsonb([1n, "a"]);
+type ToJsonbArrayType = ReturnType<typeof toJsonbArray.fromDriverValue>;
+Expect<Equal<ToJsonbArrayType, (bigint | string)[] | null>>();
+
+// toJson over a prepared argument keeps the argument's type
+const toJsonArg = toJson(Users.username.arg());
+type ToJsonArgType = ReturnType<typeof toJsonArg.fromDriverValue>;
+Expect<Equal<ToJsonArgType, string | null>>();
+
+// toJson over a record of literals and expressions maps every entry
+const toJsonLiteralRecord = toJson({
+  at: new Date(),
+  count: 5n,
+  nested: jsonBuildObject({ id: Users.id }),
+});
+type ToJsonLiteralRecordType = ReturnType<
+  typeof toJsonLiteralRecord.fromDriverValue
+>;
+Expect<
+  Equal<
+    ToJsonLiteralRecordType,
+    { at: Date; count: bigint; nested: { id: bigint } } | null
+  >
+>();
+
+// toJson over a record of prepared arguments keeps the argument type
+const toJsonArgRecord = toJson({ id: Users.id.arg() });
+type ToJsonArgRecordType = ReturnType<typeof toJsonArgRecord.fromDriverValue>;
+Expect<Equal<ToJsonArgRecordType, { id: bigint } | null>>();
+
+// JSON builders keep the type of a prepared argument
+const argJsonObject = jsonBuildObject({ id: Users.id.arg() });
+type ArgJsonObjectType = ReturnType<typeof argJsonObject.fromDriverValue>;
+Expect<Equal<ArgJsonObjectType, { id: bigint } | null>>();
+
+const argJsonArray = jsonBuildArray(Users.id.arg());
+type ArgJsonArrayType = ReturnType<typeof argJsonArray.fromDriverValue>;
+Expect<Equal<ArgJsonArrayType, [bigint] | null>>();
+
+const argJsonAgg = jsonAgg(Users.id.arg());
+type ArgJsonAggType = ReturnType<typeof argJsonAgg.fromDriverValue>;
+Expect<Equal<ArgJsonAggType, bigint[] | null>>();
+
 // Date handling in caseWhen and coalesce
 const caseDate = caseWhen(eq(Users.id, 1n), new Date()).else(new Date());
 type CaseDateFrom = ReturnType<typeof caseDate.fromDriverValue>;

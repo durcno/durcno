@@ -665,6 +665,54 @@ Durcno provides full type inference and runtime safety for PostgreSQL JSON and J
 | `jsonStripNulls`   | `json_strip_nulls(jsonObj)`       | Strips null values from a JSON object                   |
 | `jsonbStripNulls`  | `jsonb_strip_nulls(jsonbObj)`     | Strips null values from a JSONB object                  |
 
+### JSON value types
+
+A JSON document is read back through the expressions that built it, so a value keeps the type of its source column:
+
+```typescript
+const rows = await db.from(Users).select(() => ({
+  userCard: jsonBuildObject({
+    id: Users.id, // bigint column -> bigint
+    createdAt: Users.createdAt, // timestamptz column -> Date
+  }),
+}));
+// userCard is inferred as { id: bigint; createdAt: Date }
+```
+
+`jsonAgg`, `jsonBuildArray`, `toJson` and `jsonStripNulls` restore the types of their operands the same way, including literals — a `Date` operand comes back as a `Date` and a `bigint` as a `bigint`. Array literals are encoded as JSON arrays (`json_build_array`/`jsonb_build_array`) and their elements are restored too. `toJson`/`toJsonb` also accept scalar `string`, `null`, and array targets.
+
+`toJson` over a record builds a JSON object from the entries the record names, under the record's own keys. An entry may be a column, a literal, an array, or a scalar expression:
+
+```typescript
+const rows = await db.from(Users).select(() => ({
+  card: toJson({ userId: Users.id, name: Users.username }),
+  tags: toJson({ tags: [] as string[] }),
+}));
+// card is inferred as { userId: bigint; name: string }
+// tags is inferred as { tags: string[] }
+```
+
+:::caution
+A restored document may hold values JSON cannot represent — a `bigint` is not JSON-serializable — and the round trip through PostgreSQL's JSON encoding is not lossless:
+
+- a `bigint` or `numeric` beyond the exact range of a double is rounded by the driver's JSON parser before it is restored;
+- a timestamp comes back at millisecond precision.
+
+Cast to text when the exact value matters:
+
+```typescript
+import { jsonBuildObject, sql } from "durcno";
+
+const rows = await db.from(Users).select(() => ({
+  userCard: jsonBuildObject({
+    id: sql<string>`${Users.id}::text`, // "9007199254740993"
+  }),
+}));
+// userCard is inferred as { id: string }
+```
+
+:::
+
 ### `jsonBuildObject` / `jsonbBuildObject`
 
 Builds a typed JSON object by passing an object of fields. Fields can be columns, functions, literals, or nested `jsonBuildObject` calls:

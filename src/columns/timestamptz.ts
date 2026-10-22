@@ -48,7 +48,10 @@ export class TimestamptzColumn<
     return value instanceof Sql ? value.string : `'${value.toISOString()}'`;
   }
 
-  fromDriverScalar(value: Date | null): TimestamptzValType | null {
+  fromDriverScalar(value: Date | string | null): TimestamptzValType | null {
+    if (value === null) return null;
+    // A JSON document carries the timestamp as its ISO text.
+    if (typeof value === "string") return new Date(value);
     return value;
   }
 }

@@ -221,6 +221,35 @@ describe("Relational queries", () => {
       expect(users[0].posts.map((p) => p.title)).toContain("Post 1");
     });
 
+    it("should restore column types of JSON-encoded relation payloads", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      await db
+        .insertInto(schema.Posts)
+        .values([createTestPost(user.id, { title: "JSON Post" })]);
+
+      const users = await db.query(schema.Users).findMany({
+        columns: {
+          id: true,
+        },
+        with: {
+          posts: {
+            columns: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+      expect(typeof users[0].id).toBe("bigint");
+      expect(typeof users[0].posts[0].id).toBe("bigint");
+      expect(users[0].posts[0].id).toBe(user.id);
+    });
+
     it("should load nested relations", async () => {
       const [user] = await db
         .insertInto(schema.Users)

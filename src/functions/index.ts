@@ -155,16 +155,110 @@ export abstract class SqlFn<
 
   /** Default implementation for json-returning functions. */
   protected static _jsonFromDriver(value: unknown): unknown {
-    if (value === null || value === undefined) return null;
-    if (typeof value === "string") {
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    }
-    return value;
+    return parseJsonDriverValue(value);
   }
+}
+
+/**
+ * Parses a JSON driver value, returning it unchanged when it is already
+ * decoded.
+ */
+export function parseJsonDriverValue(value: unknown): unknown {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
+/**
+ * Whether a value is a plain record — an object literal or a null-prototype
+ * object — rather than an entity, array, or class instance.
+ */
+export function isPlainRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Defines an own data property, so a key such as `__proto__` cannot change the
+ * target's prototype.
+ */
+export function setOwn(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+): void {
+  Object.defineProperty(target, key, {
+    value,
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
+}
+
+/**
+ * Restores a driver value to the type of the expression that produced it.
+ *
+ * Columns restore their own driver type, functions delegate to their own
+ * conversion, and literals are rebuilt from their driver representation.
+ */
+export function restoreOperandValue(expr: unknown, value: unknown): unknown {
+  if (value === null || value === undefined) return null;
+  if (isCol(expr)) {
+    // A JSON value is already decoded when read from an outer JSON document.
+    if (detectJsonKind(expr) !== null) return value;
+    return expr.fromDriver(value);
+  }
+  if (is(expr, Arg)) {
+    return expr.fromDriver ? expr.fromDriver(value) : value;
+  }
+  if (expr instanceof SqlFn) return expr.fromDriverValue(value);
+
+  switch (typeof expr) {
+    case "number":
+      return Number(value);
+    case "bigint":
+      return BigInt(value as string | number);
+    case "boolean":
+      return value === true || value === "t" || value === "true";
+    case "string":
+      return value;
+  }
+
+  if (expr instanceof Date) {
+    return value instanceof Date ? value : new Date(value as string | number);
+  }
+  if (Array.isArray(expr)) {
+    const parsed = parseJsonDriverValue(value);
+    if (!Array.isArray(parsed)) return parsed;
+    for (let i = 0; i < parsed.length; i++) {
+      const source = expr[i];
+      if (source === undefined) continue;
+      parsed[i] = restoreOperandValue(source, parsed[i]);
+    }
+    return parsed;
+  }
+  if (isPlainRecord(expr)) {
+    const parsed = parseJsonDriverValue(value);
+    if (!isPlainRecord(parsed)) return parsed;
+    const restored: Record<string, unknown> = {};
+    for (const key in expr) {
+      if (!Object.hasOwn(expr, key) || !Object.hasOwn(parsed, key)) continue;
+      setOwn(restored, key, restoreOperandValue(expr[key], parsed[key]));
+    }
+    return restored;
+  }
+  return value;
 }
 
 export interface AppendOperandOptions {
@@ -174,6 +268,8 @@ export interface AppendOperandOptions {
   preferJson?: boolean;
   /** The leading or reference operand (used to inherit dimensions or jsonb/json type). */
   leadOperand?: unknown;
+  /** Cast applied to an `Arg` placeholder that has no cast of its own. */
+  argCastFallback?: string;
 }
 
 type FnClassWithJsonKind = { name: string };
@@ -230,6 +326,26 @@ export function detectJsonKind(e: unknown): "json" | "jsonb" | null {
 }
 
 /**
+ * Serializes a JavaScript value as JSON text.
+ *
+ * JSON has no bigint, so a bigint becomes a number the same way PostgreSQL's
+ * `to_json` does; the JSON parser rounds anything beyond the safe range.
+ */
+function stringifyJsonValue(value: unknown): string {
+  const json = JSON.stringify(value, (_key, item) =>
+    typeof item === "bigint" ? Number(item) : item,
+  );
+  return json === undefined ? "null" : json;
+}
+
+/**
+ * Serializes a JavaScript value as a PostgreSQL JSON or JSONB literal.
+ */
+export function jsonToSQLValue(value: unknown, kind: "json" | "jsonb"): string {
+  return `'${stringifyJsonValue(value).replace(/'/g, "''")}'::${kind}`;
+}
+
+/**
  * Shared serialization helper for SQL function operands (CASE, COALESCE, JSON, etc.).
  * Handles null, Arg placeholders, columns, SqlFns, raw Sql, arrays, primitives,
  * and plain objects (serialized as JSON/JSONB literals).
@@ -243,7 +359,10 @@ export function appendOperand(
   if (expr === null || expr === undefined) {
     query.sql += "NULL";
   } else if (is(expr, Arg)) {
-    query.addArg(expr);
+    query.addArg(
+      expr,
+      expr.cast ?? expr.jsonCast ?? options?.argCastFallback ?? null,
+    );
   } else if (isCol(expr)) {
     expr.toQuery(query, ctx);
   } else if (expr instanceof SqlFn) {
@@ -260,10 +379,21 @@ export function appendOperand(
         detectJsonKind(lead) ??
         (options?.preferJson ? "json" : null);
 
-      if (jsonKind === "jsonb") {
-        query.sql += `'${JSON.stringify(expr).replace(/'/g, "''")}'::jsonb`;
-      } else if (jsonKind === "json") {
-        query.sql += `'${JSON.stringify(expr).replace(/'/g, "''")}'::json`;
+      if (jsonKind === "jsonb" || jsonKind === "json") {
+        // `json_build_array` handles columns, expressions, nested arrays, and
+        // dates without serializing the operand to JSON text by hand.
+        query.sql +=
+          jsonKind === "jsonb" ? "jsonb_build_array(" : "json_build_array(";
+        const elementOptions: AppendOperandOptions = {
+          preferJsonb: jsonKind === "jsonb",
+          preferJson: jsonKind === "json",
+          argCastFallback: options?.argCastFallback,
+        };
+        for (let i = 0; i < expr.length; i++) {
+          if (i !== 0) query.sql += ", ";
+          appendOperand(query, expr[i], ctx, elementOptions);
+        }
+        query.sql += ")";
       } else if (expr.length === 0) {
         query.sql += "'{}'";
       } else {
@@ -297,7 +427,7 @@ export function appendOperand(
       detectJsonKind(lead) ??
       (options?.preferJson ? "json" : null) ??
       "json";
-    query.sql += `'${JSON.stringify(expr).replace(/'/g, "''")}'::${jsonKind}`;
+    query.sql += `'${stringifyJsonValue(expr).replace(/'/g, "''")}'::${jsonKind}`;
   } else {
     query.sql += toSqlValue(expr as never);
   }

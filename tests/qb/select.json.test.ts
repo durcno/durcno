@@ -17,7 +17,9 @@ import {
   jsonBuildArray,
   jsonBuildObject,
   jsonbAgg,
+  jsonbBuildArray,
   jsonbBuildObject,
+  jsonbStripNulls,
   jsonStripNulls,
   sum,
   toJson,
@@ -93,11 +95,12 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
   describe("jsonBuildObject & jsonbBuildObject", () => {
     it("should construct JSON and JSONB objects from columns and literals", async () => {
-      await db
+      const [user] = await db
         .insertInto(schema.Users)
         .values([
           createTestUser({ username: "alice", email: "alice@example.com" }),
-        ]);
+        ])
+        .returning({ id: true });
 
       const [row] = await db.from(schema.Users).select(() => ({
         userObj: jsonBuildObject({
@@ -112,7 +115,7 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       }));
 
       expect(row.userObj).toEqual({
-        id: expect.any(Number),
+        id: user.id,
         username: "alice",
         email: "alice@example.com",
       });
@@ -122,12 +125,154 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       });
     });
 
-    it("should support nested jsonBuildObject calls", async () => {
+    it("should restore the column types of the JSON values", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(
+          createTestUser({
+            username: "json_types_user",
+            points: 42n,
+            score: 7,
+          }),
+        )
+        .returning({ id: true });
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        userObj: jsonBuildObject({
+          id: schema.Users.id,
+          points: schema.Users.points,
+          score: schema.Users.score,
+          createdAt: schema.Users.createdAt,
+          type: schema.Users.type,
+        }),
+        pair: jsonBuildArray(schema.Users.id, schema.Users.score),
+      }));
+
+      // A `bigint` stays a `bigint`, a timestamp stays a `Date`.
+      expect(row.userObj.id).toBe(user.id);
+      expect(row.userObj.points).toBe(42n);
+      expect(row.userObj.score).toBe(7);
+      expect(row.userObj.createdAt).toBeInstanceOf(Date);
+      expect(row.userObj.type).toBe("user");
+      expect(row.pair).toEqual([user.id, 7]);
+    });
+
+    it("should restore literal operands to their declared type", async () => {
       await db
         .insertInto(schema.Users)
-        .values([
-          createTestUser({ username: "bob", email: "bob@example.com" }),
-        ]);
+        .values(createTestUser({ username: "literal_operand_user" }));
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        literal: jsonBuildObject({
+          at: new Date("2024-01-01T00:00:00.000Z"),
+          count: 5n,
+        }),
+      }));
+
+      expect(row.literal.at).toBeInstanceOf(Date);
+      expect((row.literal.at as Date).toISOString()).toBe(
+        "2024-01-01T00:00:00.000Z",
+      );
+      expect(row.literal.count).toBe(5n);
+    });
+
+    it("should restore nested record literals", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "nested_record_user" }))
+        .returning({ id: true });
+
+      const at = new Date("2024-01-01T00:00:00.000Z");
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          obj: jsonBuildObject({
+            nested: { count: 5n, at },
+            items: [{ count: 7n }],
+          }),
+          picked: toJson({ nested: { count: 11n, at } }),
+        }))
+        .where(() => eq(schema.Users.id, user.id));
+
+      const [aggRow] = await db
+        .from(schema.Users)
+        .select(() => ({ agg: jsonAgg({ count: 9n }) }))
+        .where(() => eq(schema.Users.id, user.id));
+
+      expect(row.obj.nested.count).toBe(5n);
+      expect(row.obj.nested.at).toBeInstanceOf(Date);
+      expect(row.obj.items).toEqual([{ count: 7n }]);
+      expect(aggRow.agg).toEqual([{ count: 9n }]);
+      expect(row.picked.nested.count).toBe(11n);
+      expect(row.picked.nested.at).toBeInstanceOf(Date);
+    });
+
+    it("should keep a JSON column string as a string", async () => {
+      await db.insertInto(schema.Users).values(
+        createTestUser({
+          username: "json_string_column_user",
+          meta: "123",
+        }),
+      );
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          obj: jsonBuildObject({ meta: schema.Users.meta }),
+          objb: jsonbBuildObject({ meta: schema.Users.meta }),
+          asJson: toJson(schema.Users.meta),
+          asJsonb: toJsonb(schema.Users.meta),
+        }))
+        .limit(1);
+
+      // The value is decoded from the outer document, not raw driver text.
+      expect(row.obj.meta).toBe("123");
+      expect(row.objb.meta).toBe("123");
+      expect(row.asJson).toBe("123");
+      expect(row.asJsonb).toBe("123");
+    });
+
+    it("should encode array literals as JSON arrays", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "array_literal_user" }))
+        .returning({ id: true });
+
+      const at = new Date("2024-01-01T00:00:00.000Z");
+      const fields = {
+        tags: [] as string[],
+        mixed: ["a", 1],
+        counts: [1n, 2n],
+        at: [at],
+      };
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          obj: jsonBuildObject(fields),
+          objb: jsonbBuildObject(fields),
+          arr: jsonBuildArray([], ["a", 1], [1n, 2n], [at]),
+          arrb: jsonbBuildArray([], ["a", 1], [1n, 2n], [at]),
+        }))
+        .where(() => eq(schema.Users.id, user.id));
+
+      const expected = {
+        tags: [],
+        mixed: ["a", 1],
+        counts: [1n, 2n],
+        at: [at],
+      };
+      expect(row.obj).toEqual(expected);
+      expect(row.objb).toEqual(expected);
+      expect(row.arr).toEqual([[], ["a", 1], [1n, 2n], [at]]);
+      expect(row.arrb).toEqual([[], ["a", 1], [1n, 2n], [at]]);
+    });
+
+    it("should support nested jsonBuildObject calls", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values([createTestUser({ username: "bob", email: "bob@example.com" })])
+        .returning({ id: true });
 
       const [row] = await db.from(schema.Users).select(() => ({
         nested: jsonBuildObject({
@@ -140,7 +285,7 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       }));
 
       expect(row.nested).toEqual({
-        id: expect.any(Number),
+        id: user.id,
         profile: {
           name: "bob",
           verified: true,
@@ -232,7 +377,7 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
         }));
 
       expect(postWithAuthor.author).toEqual({
-        id: Number(user.id),
+        id: user.id,
         username: "author",
       });
 
@@ -397,6 +542,26 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       expect(row.types?.sort()).toEqual(["admin", "user"]);
     });
+
+    it("should encode array operands as JSON arrays", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "array_agg_user" }))
+        .returning({ id: true });
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          counts: jsonAgg([1n, 2n]),
+          countsB: jsonbAgg([1n, 2n]),
+          tags: jsonbAgg([] as string[]),
+        }))
+        .where(() => eq(schema.Users.id, user.id));
+
+      expect(row.counts).toEqual([[1n, 2n]]);
+      expect(row.countsB).toEqual([[1n, 2n]]);
+      expect(row.tags).toEqual([[]]);
+    });
   });
 
   describe("coalesce with jsonAgg in LEFT JOIN queries", () => {
@@ -511,7 +676,11 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       const [user] = await db
         .insertInto(schema.Users)
         .values(
-          createTestUser({ username: "json_user", email: "ju@example.com" }),
+          createTestUser({
+            username: "json_user",
+            email: "ju@example.com",
+            meta: "123",
+          }),
         )
         .returning({ id: true });
 
@@ -523,19 +692,203 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
         username: "json_user",
         email: "ju@example.com",
       });
-      expect(Number((row.fullUser as any).id)).toBe(Number(user.id));
+      // The row is read back through the columns that produced it.
+      expect(row.fullUser.id).toBe(user.id);
+      expect(row.fullUser.createdAt).toBeInstanceOf(Date);
+      // A JSON column keeps its own JSON string value.
+      expect(row.fullUser.meta).toBe("123");
+    });
+
+    it("should convert a record of columns to a JSON object using toJson", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "record_user" }))
+        .returning({ id: true });
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        picked: toJson({
+          id: schema.Users.id,
+          username: schema.Users.username,
+        }),
+      }));
+
+      expect(row.picked).toEqual({
+        id: user.id,
+        username: "record_user",
+      });
+    });
+
+    it("should read a record of columns by its own keys", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "aliased_record_user" }))
+        .returning({ id: true });
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        picked: toJson({
+          userId: schema.Users.id,
+          label: schema.Users.username,
+        }),
+      }));
+
+      expect(row.picked).toEqual({
+        userId: user.id,
+        label: "aliased_record_user",
+      });
+    });
+
+    it("should convert a plain object target without throwing", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "plain_target_user" }));
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        picked: toJson({ a: null, b: 1 }),
+      }));
+
+      expect(row.picked).toEqual({ a: null, b: 1 });
+    });
+
+    it("should restore a __proto__ key as an own property", async () => {
+      await db.insertInto(schema.Users).values(
+        createTestUser({
+          username: "proto_key_user",
+          email: "proto@example.com",
+        }),
+      );
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          obj: jsonBuildObject({ ["__proto__"]: schema.Users.email }),
+          picked: toJson({ ["__proto__"]: { polluted: true } }),
+        }))
+        .limit(1);
+
+      const protoKey = "__proto__";
+      expect(Object.hasOwn(row.obj as object, protoKey)).toBe(true);
+      expect(Object.getOwnPropertyDescriptor(row.obj, protoKey)?.value).toBe(
+        "proto@example.com",
+      );
+      expect(Object.getPrototypeOf(row.obj)).toBe(Object.prototype);
+      expect(Object.hasOwn(row.picked as object, protoKey)).toBe(true);
+      expect(
+        Object.getOwnPropertyDescriptor(row.picked, protoKey)?.value,
+      ).toEqual({
+        polluted: true,
+      });
+      expect(Object.getPrototypeOf(row.picked)).toBe(Object.prototype);
+    });
+
+    it("should encode array entries of a toJson record as JSON arrays", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "tojson_array_user" }));
+
+      const at = new Date("2024-01-01T00:00:00.000Z");
+      const record = {
+        tags: [] as string[],
+        mixed: ["a", 1],
+        counts: [1n, 2n],
+        at: [at],
+      };
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          asJson: toJson(record),
+          asJsonb: toJsonb(record),
+        }))
+        .limit(1);
+
+      expect(row.asJson).toEqual(record);
+      expect(row.asJsonb).toEqual(record);
+    });
+
+    it("should convert scalar string, null, and array targets to JSON", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "scalar_target_user" }));
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          text: toJson("hello"),
+          numericText: toJson("123"),
+          nullish: toJson(null),
+          empty: toJson([] as string[]),
+          mixed: toJson(["a", 1]),
+          bad: toJson(new Date(Number.NaN)),
+          textB: toJsonb("hello"),
+          boolTextB: toJsonb("true"),
+          nullishB: toJsonb(null),
+          emptyB: toJsonb([] as string[]),
+          mixedB: toJsonb(["a", 1]),
+          badB: toJsonb(new Date(Number.NaN)),
+        }))
+        .limit(1);
+
+      expect(row.text).toBe("hello");
+      expect(row.numericText).toBe("123");
+      expect(row.nullish).toBeNull();
+      expect(row.empty).toEqual([]);
+      expect(row.mixed).toEqual(["a", 1]);
+      expect(row.bad).toBeNull();
+      expect(row.textB).toBe("hello");
+      expect(row.boolTextB).toBe("true");
+      expect(row.nullishB).toBeNull();
+      expect(row.emptyB).toEqual([]);
+      expect(row.mixedB).toEqual(["a", 1]);
+      expect(row.badB).toBeNull();
+    });
+
+    it("should restore literal and nested entries of a toJson record", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "tojson_literal_user" }))
+        .returning({ id: true });
+
+      const at = new Date("2024-01-01T00:00:00.000Z");
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          card: toJson({
+            at,
+            count: 5n,
+            nested: jsonBuildObject({ id: schema.Users.id }),
+          }),
+        }))
+        .where(() => eq(schema.Users.id, user.id));
+
+      expect(row.card.at).toBeInstanceOf(Date);
+      expect(row.card.at.toISOString()).toBe(at.toISOString());
+      expect(row.card.count).toBe(5n);
+      expect(row.card.nested).toEqual({ id: user.id });
+    });
+
+    it("should restore the column type of a single column converted to JSON", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "single_column_user" }))
+        .returning({ id: true });
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        id: toJson(schema.Users.id),
+      }));
+
+      expect(row.id).toBe(user.id);
     });
 
     it("should construct JSON array using jsonBuildArray", async () => {
-      await db
+      const [user] = await db
         .insertInto(schema.Users)
-        .values([createTestUser({ username: "coords_user" })]);
+        .values([createTestUser({ username: "coords_user" })])
+        .returning({ id: true });
 
       const [row] = await db.from(schema.Users).select(() => ({
         pair: jsonBuildArray(schema.Users.id, schema.Users.username),
       }));
 
-      expect(row.pair).toEqual([expect.any(Number), "coords_user"]);
+      expect(row.pair).toEqual([user.id, "coords_user"]);
     });
 
     it("should strip null keys using jsonStripNulls", async () => {
@@ -556,6 +909,38 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       expect(row.cleaned).toHaveProperty("id");
       expect(row.cleaned).toHaveProperty("username");
       expect(row.cleaned).not.toHaveProperty("email");
+    });
+
+    it("should encode an array operand as a JSON array", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "stripped_array_user" }));
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        values: jsonStripNulls([1n, 2n]),
+        valuesB: jsonbStripNulls([1n, 2n]),
+      }));
+
+      expect(row.values).toEqual([1n, 2n]);
+      expect(row.valuesB).toEqual([1n, 2n]);
+    });
+
+    it("should not read a stripped key that shadows an Object.prototype member", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "prototype_key_user", email: null }),
+        ]);
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        cleaned: jsonStripNulls(
+          jsonBuildObject({
+            constructor: schema.Users.email,
+          }),
+        ),
+      }));
+
+      expect(Object.keys(row.cleaned as object)).toEqual([]);
     });
 
     it("should convert Table reference to JSON and JSONB using toJson(schema.Users) and toJsonb(schema.Users)", async () => {
@@ -585,6 +970,43 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
         username: "table_ref_user",
         email: "tru@example.com",
       });
+    });
+
+    it("should convert a JSON function target to JSON", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "fn_target_user" }))
+        .returning({ id: true });
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          asJson: toJson(jsonBuildObject({ id: schema.Users.id })),
+          asJsonb: toJsonb(jsonBuildObject({ id: schema.Users.id })),
+        }))
+        .where(() => eq(schema.Users.id, user.id));
+
+      expect(row.asJson).toEqual({ id: user.id });
+      expect(row.asJsonb).toEqual({ id: user.id });
+    });
+
+    it("should convert a Date target to JSON", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "date_target_user" }));
+
+      const at = new Date("2024-01-01T00:00:00.000Z");
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          asJson: toJson(at),
+          asJsonb: toJsonb(at),
+        }))
+        .limit(1);
+
+      expect(row.asJson).toEqual(at);
+      expect(row.asJsonb).toEqual(at);
+      expect(row.asJson).toBeInstanceOf(Date);
     });
 
     it("should support plain objects in jsonBuildArray", async () => {
@@ -646,11 +1068,32 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
 
       expect(row.postId).toBe(post.id);
       expect(row.author).toEqual({
-        id: Number(user.id),
+        id: user.id,
         username: "author1",
       });
       expect(row.comments).toHaveLength(1);
       expect(row.comments[0].body).toBe("Great post!");
+    });
+  });
+
+  describe("JSON SQL literals", () => {
+    it("should serialize bigint and Date values in toSQLValue", () => {
+      expect(jsonBuildObject({ count: 5n }).toSQLValue({ count: 5n })).toBe(
+        `'{"count":5}'::json`,
+      );
+      expect(jsonbBuildObject({ count: 5n }).toSQLValue({ count: 5n })).toBe(
+        `'{"count":5}'::jsonb`,
+      );
+      expect(jsonBuildArray(1n, 2n).toSQLValue([1n, 2n])).toBe(`'[1,2]'::json`);
+      expect(jsonbBuildArray(1n, 2n).toSQLValue([1n, 2n])).toBe(
+        `'[1,2]'::jsonb`,
+      );
+      expect(toJson(5n).toSQLValue(5n)).toBe(`'5'::json`);
+      expect(
+        toJsonb(new Date("2024-01-01T00:00:00.000Z")).toSQLValue(
+          new Date("2024-01-01T00:00:00.000Z"),
+        ),
+      ).toBe(`'"2024-01-01T00:00:00.000Z"'::jsonb`);
     });
   });
 });

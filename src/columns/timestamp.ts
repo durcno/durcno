@@ -59,7 +59,10 @@ export class TimestampColumn<TConfig extends TimestampConfig> extends Column<
     return value instanceof Sql ? value.string : `'${value.toISOString()}'`;
   }
 
-  fromDriverScalar(value: Date | null): TimestampValType | null {
+  fromDriverScalar(value: Date | string | null): TimestampValType | null {
+    if (value === null) return null;
+    // A JSON document carries the timestamp as its ISO text.
+    if (typeof value === "string") return new Date(value);
     return value;
   }
 }

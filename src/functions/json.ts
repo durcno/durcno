@@ -1,18 +1,24 @@
-import { is, isCol, isTCol } from "../entity";
-import type { AnyArg } from "../query-builders/prepare";
+import { is, isCol } from "../entity";
+import { type AnyArg, Arg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
-import { escIdentifier, escLiteral, Sql } from "../sql";
+import { escIdentifier, escLiteral, type Sql } from "../sql";
 import { type AnyColumn, type AnyTableWithColumns, Table } from "../table";
 import { AggregateSqlFn } from "./aggregate";
 import {
   type AnySqlFn,
+  type AppendOperandOptions,
   appendOperand,
   type ExprColumns,
   type HasAggregateOf,
   type HasArg,
   type InferValueType,
+  isPlainRecord,
+  jsonToSQLValue,
   type NonAggregateSqlFn,
+  parseJsonDriverValue,
+  restoreOperandValue,
   SqlFn,
+  setOwn,
 } from "./index";
 
 /**
@@ -64,21 +70,150 @@ export type HasArgInTuple<TTuple extends readonly unknown[]> =
       : HasArgInTuple<Tail>
     : false;
 
+/**
+ * Whether a decoded JSON payload carries a key of its own.
+ *
+ * `in` would also find `Object.prototype` members, so a key the payload does
+ * not carry could still look present.
+ */
+function hasOwn(obj: Record<string, unknown>, key: string): boolean {
+  return Object.hasOwn(obj, key);
+}
+
+/** Whether a decoded JSON value is an object the restore helpers can read. */
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Restores every entry of a decoded JSON object with the converter of its
+ * source expression. Entries the payload does not carry are left untouched.
+ */
+function restoreJsonObject(
+  obj: Record<string, unknown>,
+  sources: Record<string, JsonOperand>,
+): Record<string, unknown> {
+  for (const key in sources) {
+    if (!hasOwn(obj, key)) continue;
+    setOwn(obj, key, restoreOperandValue(sources[key], obj[key]));
+  }
+  return obj;
+}
+
+/**
+ * Restores every element of a decoded JSON array.
+ *
+ * One `source` restores every element with it; `sources` restores each element
+ * with its own expression.
+ */
+function restoreJsonArray(
+  arr: unknown[],
+  source?: JsonOperand,
+  sources?: readonly JsonOperand[],
+): unknown[] {
+  if (sources !== undefined) {
+    for (let i = 0; i < arr.length; i++) {
+      const item = sources[i];
+      if (item === undefined) continue;
+      arr[i] = restoreOperandValue(item, arr[i]);
+    }
+    return arr;
+  }
+  for (let i = 0; i < arr.length; i++) {
+    arr[i] = restoreOperandValue(source, arr[i]);
+  }
+  return arr;
+}
+
+/**
+ * Reads a decoded JSON row through the columns that produced it.
+ *
+ * PostgreSQL names the keys of a row after its columns, so a value is read by
+ * the SQL name of its column and written under the column name.
+ */
+function restoreTableRow(
+  obj: Record<string, unknown>,
+  columns: Record<string, AnyColumn>,
+): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  for (const colName in columns) {
+    const column = columns[colName];
+    const sqlName = column.nameSql ?? colName;
+    if (!hasOwn(obj, sqlName)) continue;
+    setOwn(row, colName, restoreOperandValue(column, obj[sqlName]));
+  }
+  return row;
+}
+
+/**
+ * Reads a decoded JSON object through a record of expressions.
+ *
+ * A record names the entries it wants, so a value is read by the key the
+ * record was built with and restored through the expression that produced it.
+ */
+function restoreRecord(
+  obj: Record<string, unknown>,
+  record: Record<string, unknown>,
+): Record<string, unknown> {
+  const picked: Record<string, unknown> = {};
+  for (const key in record) {
+    if (!hasOwn(obj, key)) continue;
+    setOwn(picked, key, restoreOperandValue(record[key], obj[key]));
+  }
+  return picked;
+}
+
+/**
+ * Reads a decoded JSON value back through the expression that produced it.
+ *
+ * A table row is read through its columns, a record through the entries it
+ * names, and any other expression through itself.
+ */
+function restoreToJsonValue(target: unknown, parsed: unknown): unknown {
+  if (is(target, Table)) {
+    if (!isJsonObject(parsed)) return parsed;
+    return restoreTableRow(parsed, target._.columns);
+  }
+  if (isPlainRecord(target)) {
+    if (!isJsonObject(parsed)) return parsed;
+    return restoreRecord(parsed, target);
+  }
+  return restoreOperandValue(target, parsed);
+}
+
+/**
+ * Parses a JSON object driver value and restores its entries through `fields`.
+ */
+function restoreJsonObjectValue<TFields extends Record<string, JsonOperand>>(
+  value: unknown,
+  fields: TFields,
+): { [K in keyof TFields]: InferValueType<TFields[K]> } | null {
+  const parsed = parseJsonDriverValue(value);
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return parsed as
+      | {
+          [K in keyof TFields]: InferValueType<TFields[K]>;
+        }
+      | null;
+  }
+  return restoreJsonObject(parsed as Record<string, unknown>, fields) as {
+    [K in keyof TFields]: InferValueType<TFields[K]>;
+  };
+}
+
+/**
+ * Restores a stripped JSON document through the expression that built it.
+ */
+function restoreStrippedJsonValue<TExpr extends JsonOperand>(
+  value: unknown,
+  expr: TExpr,
+): InferValueType<TExpr> | null {
+  return restoreOperandValue(expr, value) as InferValueType<TExpr> | null;
+}
+
 // ============================================================================
 // json_build_object & jsonb_build_object
 // ============================================================================
-
-/**
- * Table name of the first column of a `to_json` / `toJsonb` target, or
- * `undefined` when the target is not a record of columns.
- */
-function firstColumnTableName(target: object): string | undefined {
-  for (const key in target) {
-    const value = (target as Record<string, unknown>)[key];
-    return isTCol(value) ? value.table?._.nameSql : undefined;
-  }
-  return undefined;
-}
 
 /**
  * SQL scalar expression: `json_build_object(...)`
@@ -126,29 +261,24 @@ export class JsonBuildObjectFn<
   toSQLValue(
     value: { [K in keyof TFields]: InferValueType<TFields[K]> } | null,
   ): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::json`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "json");
   }
 
   fromDriverValue(
     value: unknown,
   ): { [K in keyof TFields]: InferValueType<TFields[K]> } | null {
-    return SqlFn._jsonFromDriver(value) as
-      | {
-          [K in keyof TFields]: InferValueType<TFields[K]>;
-        }
-      | null;
+    return restoreJsonObjectValue(value, this.fields);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "json_build_object(";
     const fields = this.fields;
     const keys = Object.keys(fields);
+    const options = { preferJson: true, argCastFallback: "text" };
     for (let i = 0; i < keys.length; i++) {
       if (i !== 0) query.sql += ", ";
       query.sql += `'${escLiteral(keys[i])}', `;
-      appendOperand(query, fields[keys[i]], ctx);
+      appendOperand(query, fields[keys[i]], ctx, options);
     }
     query.sql += ")";
   }
@@ -200,26 +330,20 @@ export class JsonbBuildObjectFn<
   toSQLValue(
     value: { [K in keyof TFields]: InferValueType<TFields[K]> } | null,
   ): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::jsonb`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "jsonb");
   }
 
   fromDriverValue(
     value: unknown,
   ): { [K in keyof TFields]: InferValueType<TFields[K]> } | null {
-    return SqlFn._jsonFromDriver(value) as
-      | {
-          [K in keyof TFields]: InferValueType<TFields[K]>;
-        }
-      | null;
+    return restoreJsonObjectValue(value, this.fields);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "jsonb_build_object(";
     const fields = this.fields;
     const keys = Object.keys(fields);
-    const options = { preferJsonb: true };
+    const options = { preferJsonb: true, argCastFallback: "text" };
     for (let i = 0; i < keys.length; i++) {
       if (i !== 0) query.sql += ", ";
       query.sql += `'${escLiteral(keys[i])}', `;
@@ -301,13 +425,17 @@ export class JsonAggFn<
   }
 
   toSQLValue(value: InferValueType<TExpr>[] | null): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::json`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "json");
   }
 
   fromDriverValue(value: unknown): InferValueType<TExpr>[] | null {
-    return SqlFn._jsonFromDriver(value) as InferValueType<TExpr>[] | null;
+    const parsed = SqlFn._jsonFromDriver(value);
+    if (!Array.isArray(parsed)) {
+      return parsed as InferValueType<TExpr>[] | null;
+    }
+    return restoreJsonArray(parsed, this.expr) as
+      | InferValueType<TExpr>[]
+      | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -315,7 +443,10 @@ export class JsonAggFn<
     if (this.isDistinct) {
       query.sql += "DISTINCT ";
     }
-    appendOperand(query, this.expr, ctx);
+    appendOperand(query, this.expr, ctx, {
+      preferJson: true,
+      argCastFallback: "text",
+    });
     this.appendOrderBy(query, ctx);
     query.sql += ")";
     this.appendFilter(query, ctx);
@@ -356,13 +487,17 @@ export class JsonbAggFn<
   }
 
   toSQLValue(value: InferValueType<TExpr>[] | null): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::jsonb`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "jsonb");
   }
 
   fromDriverValue(value: unknown): InferValueType<TExpr>[] | null {
-    return SqlFn._jsonFromDriver(value) as InferValueType<TExpr>[] | null;
+    const parsed = SqlFn._jsonFromDriver(value);
+    if (!Array.isArray(parsed)) {
+      return parsed as InferValueType<TExpr>[] | null;
+    }
+    return restoreJsonArray(parsed, this.expr) as
+      | InferValueType<TExpr>[]
+      | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
@@ -370,7 +505,10 @@ export class JsonbAggFn<
     if (this.isDistinct) {
       query.sql += "DISTINCT ";
     }
-    appendOperand(query, this.expr, ctx, { preferJsonb: true });
+    appendOperand(query, this.expr, ctx, {
+      preferJsonb: true,
+      argCastFallback: "text",
+    });
     this.appendOrderBy(query, ctx);
     query.sql += ")";
     this.appendFilter(query, ctx);
@@ -414,11 +552,79 @@ type ToJsonTarget =
   | Record<string, AnyColumn>
   | JsonOperand;
 
+type InferToJsonRecord<TRecord> = {
+  [K in keyof TRecord]: InferValueType<TRecord[K]>;
+};
+
 type InferToJsonReturn<TTarget> = TTarget extends AnyTableWithColumns
   ? TTarget["$"]["inferSelect"]
   : TTarget extends Record<string, AnyColumn>
-    ? { [K in keyof TTarget]: InferValueType<TTarget[K]> }
-    : InferValueType<TTarget>;
+    ? InferToJsonRecord<TTarget>
+    : TTarget extends AnyColumn | AnySqlFn | Sql | AnyArg | Date
+      ? InferValueType<TTarget>
+      : TTarget extends readonly unknown[]
+        ? { [K in keyof TTarget]: InferValueType<TTarget[K]> }
+        : TTarget extends Record<string, unknown>
+          ? InferToJsonRecord<TTarget>
+          : InferValueType<TTarget>;
+
+/**
+ * Appends the `json_build_object(...)` arguments of a record target.
+ *
+ * A record names the entries it wants, so each entry becomes a key and its
+ * value.
+ */
+function appendRecordBuildObject(
+  query: Query,
+  builder: "json_build_object" | "jsonb_build_object",
+  record: Record<string, unknown>,
+  ctx?: QueryContext,
+  options?: AppendOperandOptions,
+): void {
+  query.sql += `${builder}(`;
+  let first = true;
+  for (const key in record) {
+    if (!first) query.sql += ", ";
+    first = false;
+    query.sql += `'${escLiteral(key)}', `;
+    appendOperand(query, record[key], ctx, options);
+  }
+  query.sql += ")";
+}
+
+/**
+ * Appends a scalar `to_json` / `to_jsonb` target.
+ *
+ * A `Date` and an `Arg` need an explicit type: `to_json` is polymorphic, so an
+ * untyped literal or placeholder cannot be resolved by PostgreSQL.
+ */
+function appendToJsonScalar(
+  query: Query,
+  target: unknown,
+  ctx?: QueryContext,
+  options?: AppendOperandOptions,
+): void {
+  if (target === null || target === undefined) {
+    // `to_json(NULL)` cannot resolve the polymorphic argument type.
+    query.sql += "NULL::text";
+    return;
+  }
+  if (typeof target === "string") {
+    query.sql += `'${escLiteral(target)}'::text`;
+    return;
+  }
+  if (target instanceof Date) {
+    query.sql += Number.isNaN(target.getTime())
+      ? "NULL::text"
+      : `'${target.toISOString()}'::text`;
+    return;
+  }
+  if (is(target, Arg)) {
+    query.addArg(target, target.cast ?? target.jsonCast ?? "text");
+    return;
+  }
+  appendOperand(query, target, ctx, options);
+}
 
 /**
  * SQL scalar expression: `to_json(target)`
@@ -444,33 +650,27 @@ export class ToJsonFn<
   }
 
   toSQLValue(value: InferToJsonReturn<TTarget> | null): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::json`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "json");
   }
 
   fromDriverValue(value: unknown): InferToJsonReturn<TTarget> | null {
-    return SqlFn._jsonFromDriver(value) as InferToJsonReturn<TTarget> | null;
+    return restoreToJsonValue(
+      this.target,
+      value,
+    ) as InferToJsonReturn<TTarget> | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "to_json(";
     if (is(this.target, Table)) {
       query.sql += `"${escIdentifier(this.target._.nameSql)}"`;
-    } else if (
-      typeof this.target === "object" &&
-      this.target !== null &&
-      !isCol(this.target) &&
-      !(this.target instanceof Sql)
-    ) {
-      const tableName = firstColumnTableName(this.target);
-      if (tableName) {
-        query.sql += `"${escIdentifier(tableName)}"`;
-      } else {
-        appendOperand(query, this.target, ctx);
-      }
+    } else if (isPlainRecord(this.target)) {
+      appendRecordBuildObject(query, "json_build_object", this.target, ctx, {
+        preferJson: true,
+        argCastFallback: "text",
+      });
     } else {
-      appendOperand(query, this.target, ctx);
+      appendToJsonScalar(query, this.target, ctx, { preferJson: true });
     }
     query.sql += ")";
   }
@@ -500,33 +700,27 @@ export class ToJsonbFn<
   }
 
   toSQLValue(value: InferToJsonReturn<TTarget> | null): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::jsonb`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "jsonb");
   }
 
   fromDriverValue(value: unknown): InferToJsonReturn<TTarget> | null {
-    return SqlFn._jsonFromDriver(value) as InferToJsonReturn<TTarget> | null;
+    return restoreToJsonValue(
+      this.target,
+      value,
+    ) as InferToJsonReturn<TTarget> | null;
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "to_jsonb(";
     if (is(this.target, Table)) {
       query.sql += `"${escIdentifier(this.target._.nameSql)}"`;
-    } else if (
-      typeof this.target === "object" &&
-      this.target !== null &&
-      !isCol(this.target) &&
-      !(this.target instanceof Sql)
-    ) {
-      const tableName = firstColumnTableName(this.target);
-      if (tableName) {
-        query.sql += `"${escIdentifier(tableName)}"`;
-      } else {
-        appendOperand(query, this.target, ctx, { preferJsonb: true });
-      }
+    } else if (isPlainRecord(this.target)) {
+      appendRecordBuildObject(query, "jsonb_build_object", this.target, ctx, {
+        preferJsonb: true,
+        argCastFallback: "text",
+      });
     } else {
-      appendOperand(query, this.target, ctx, { preferJsonb: true });
+      appendToJsonScalar(query, this.target, ctx, { preferJsonb: true });
     }
     query.sql += ")";
   }
@@ -589,15 +783,21 @@ export class JsonBuildArrayFn<
   toSQLValue(
     value: { [K in keyof TItems]: InferValueType<TItems[K]> } | null,
   ): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::json`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "json");
   }
 
   fromDriverValue(
     value: unknown,
   ): { [K in keyof TItems]: InferValueType<TItems[K]> } | null {
-    return SqlFn._jsonFromDriver(value) as
+    const parsed = SqlFn._jsonFromDriver(value);
+    if (!Array.isArray(parsed)) {
+      return parsed as
+        | {
+            [K in keyof TItems]: InferValueType<TItems[K]>;
+          }
+        | null;
+    }
+    return restoreJsonArray(parsed, undefined, this.items) as
       | {
           [K in keyof TItems]: InferValueType<TItems[K]>;
         }
@@ -607,9 +807,10 @@ export class JsonBuildArrayFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "json_build_array(";
     const items = this.items;
+    const options = { preferJson: true, argCastFallback: "text" };
     for (let i = 0; i < items.length; i++) {
       if (i !== 0) query.sql += ", ";
-      appendOperand(query, items[i], ctx);
+      appendOperand(query, items[i], ctx, options);
     }
     query.sql += ")";
   }
@@ -642,15 +843,21 @@ export class JsonbBuildArrayFn<
   toSQLValue(
     value: { [K in keyof TItems]: InferValueType<TItems[K]> } | null,
   ): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::jsonb`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "jsonb");
   }
 
   fromDriverValue(
     value: unknown,
   ): { [K in keyof TItems]: InferValueType<TItems[K]> } | null {
-    return SqlFn._jsonFromDriver(value) as
+    const parsed = SqlFn._jsonFromDriver(value);
+    if (!Array.isArray(parsed)) {
+      return parsed as
+        | {
+            [K in keyof TItems]: InferValueType<TItems[K]>;
+          }
+        | null;
+    }
+    return restoreJsonArray(parsed, undefined, this.items) as
       | {
           [K in keyof TItems]: InferValueType<TItems[K]>;
         }
@@ -660,7 +867,7 @@ export class JsonbBuildArrayFn<
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "jsonb_build_array(";
     const items = this.items;
-    const options = { preferJsonb: true };
+    const options = { preferJsonb: true, argCastFallback: "text" };
     for (let i = 0; i < items.length; i++) {
       if (i !== 0) query.sql += ", ";
       appendOperand(query, items[i], ctx, options);
@@ -720,18 +927,16 @@ export class JsonStripNullsFn<
   }
 
   toSQLValue(value: unknown): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::json`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "json");
   }
 
   fromDriverValue(value: unknown): InferValueType<TExpr> | null {
-    return SqlFn._jsonFromDriver(value) as InferValueType<TExpr> | null;
+    return restoreStrippedJsonValue(value, this.expr);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
     query.sql += "json_strip_nulls(";
-    appendOperand(query, this.expr, ctx);
+    appendOperand(query, this.expr, ctx, { preferJson: true });
     query.sql += ")";
   }
 }
@@ -759,13 +964,11 @@ export class JsonbStripNullsFn<
   }
 
   toSQLValue(value: unknown): string {
-    return value === null
-      ? "NULL"
-      : `'${JSON.stringify(value).replace(/'/g, "''")}'::jsonb`;
+    return value === null ? "NULL" : jsonToSQLValue(value, "jsonb");
   }
 
   fromDriverValue(value: unknown): InferValueType<TExpr> | null {
-    return SqlFn._jsonFromDriver(value) as InferValueType<TExpr> | null;
+    return restoreStrippedJsonValue(value, this.expr);
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {

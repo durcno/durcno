@@ -828,9 +828,11 @@ export abstract class Column<
    * @returns an `Arg` instance with the type of this column
    */
   arg() {
-    return new Arg(this.toDriver.bind(this), this.sqlCast) as Arg<
-      this["ValType"]
-    >;
+    return new Arg(
+      this.toDriver.bind(this),
+      this.sqlCast,
+      this.fromDriver.bind(this),
+    ) as Arg<this["ValType"]>;
   }
 
   /**

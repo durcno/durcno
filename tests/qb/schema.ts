@@ -5,6 +5,7 @@ import {
   enumtype,
   fk,
   integer,
+  jsonb,
   many,
   notNull,
   now,
@@ -42,6 +43,7 @@ export const Users = table("public", "users", {
   email: varchar({ length: 100 }),
   bio: text({}),
   description: text({}),
+  meta: jsonb({}),
 
   // Numeric types
   age: integer({}),

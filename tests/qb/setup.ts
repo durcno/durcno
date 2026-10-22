@@ -58,6 +58,7 @@ export function createTestUser(
     ...(overrides.description !== undefined && {
       description: overrides.description,
     }),
+    ...(overrides.meta !== undefined && { meta: overrides.meta }),
     ...(overrides.points !== undefined && { points: overrides.points }),
     ...(overrides.score !== undefined && { score: overrides.score }),
     ...(overrides.balance !== undefined && { balance: overrides.balance }),
