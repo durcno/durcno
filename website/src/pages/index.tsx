@@ -28,23 +28,22 @@ export default function Home(): ReactNode {
   );
 }
 
-const codeExample = `import { asc, eq } from "durcno";
+const codeExample = `import { asc, concat, eq, lower } from "durcno";
 import { db } from "./db/index.ts";
 import { Users } from "./db/schema.ts";
 
-// Fully typed result inferred from schema
 const admins = await db
   .from(Users)
   .select(() => ({
     id: Users.id,
-    name: Users.name,
-    email: Users.email,
+    email: lower(Users.email),
+    greeting: concat("Hi, ", Users.name),
   }))
   .where(() => eq(Users.type, "admin"))
   .orderBy(() => asc(Users.name))
   .limit(10);
 
-// admins: { id: bigint; name: string; email: string }[]
+// admins: { id: bigint; email: string; greeting: string }[]
 `;
 
 function HomepageHeader() {
