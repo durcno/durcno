@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { program } from "commander";
 import { down } from "./commands/down";
+import { type ExecOptions, exec } from "./commands/exec";
 import { generate } from "./commands/generate";
 import { init } from "./commands/init";
 import { migrate } from "./commands/migrate";
@@ -36,6 +37,18 @@ program
   .description("open an interactive SQL REPL shell")
   .action(async (opts: Options) => {
     await shell(opts);
+  });
+
+program
+  .command("exec")
+  .option(...Options.config)
+  .option("-c, --command <sql>", "execute SQL and exit")
+  .option("-f, --file <path>", "execute SQL from a file and exit")
+  .option("--json", "output returned rows as JSON")
+  .option("-q, --quiet", "suppress banners and row summaries")
+  .description("execute SQL non-interactively")
+  .action(async (opts: ExecOptions) => {
+    await exec(opts);
   });
 
 program

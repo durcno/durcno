@@ -4,8 +4,16 @@ import chalk from "chalk";
 import type { $Client } from "../../connectors/common";
 import type { Options } from "..";
 import { loadConfig, resolveConfigPath } from "../helpers";
+import {
+  formatError,
+  getMetaHelp,
+  printMetaRows,
+  printQueryResult,
+  runMetaCommand,
+  runSqlStatement,
+} from "../sql-runner";
 
-const { cyan, green, red, yellow, gray, bgCyan, bold } = chalk;
+const { cyan, green, red, yellow, gray, bgCyan } = chalk;
 
 /**
  * Opens an interactive SQL REPL shell.
@@ -109,44 +117,11 @@ export async function shell(options: Options): Promise<void> {
  * Execute a SQL query and display results.
  */
 async function executeQuery(query: string, client: $Client): Promise<void> {
-  const startTime = performance.now();
-
   try {
-    const response = await client.query(query);
-    const endTime = performance.now();
-    const duration = (endTime - startTime).toFixed(2);
-
-    const rows = client.getRows(response);
-
-    if (rows.length === 0) {
-      // Check if it's a non-SELECT query
-      const upperQuery = query.trim().toUpperCase();
-      if (
-        upperQuery.startsWith("INSERT") ||
-        upperQuery.startsWith("UPDATE") ||
-        upperQuery.startsWith("DELETE") ||
-        upperQuery.startsWith("CREATE") ||
-        upperQuery.startsWith("ALTER") ||
-        upperQuery.startsWith("DROP") ||
-        upperQuery.startsWith("TRUNCATE")
-      ) {
-        console.log(green(`✔ Query executed successfully (${duration}ms)\n`));
-      } else {
-        console.log(gray(`(0 rows) (${duration}ms)\n`));
-      }
-      return;
-    }
-
-    // Display results in a table format
-    printTable(rows);
-    console.log(
-      gray(
-        `\n(${rows.length} row${rows.length === 1 ? "" : "s"}) (${duration}ms)\n`,
-      ),
-    );
+    const result = await runSqlStatement(client, query);
+    printQueryResult(query, result);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.log(`${red("ERROR: ")}${errorMessage}\n`);
+    console.log(`${red("ERROR: ")}${formatError(error)}\n`);
   }
 }
 
@@ -157,173 +132,24 @@ async function handleMetaCommand(
   command: string,
   client: $Client,
 ): Promise<void> {
-  const cmd = command.toLowerCase();
-
-  switch (cmd) {
-    case "\\dt":
-    case "\\d": {
-      // List tables
-      const query = `
-        SELECT table_schema, table_name
-        FROM information_schema.tables 
-        WHERE (table_schema != 'pg_catalog') AND (table_schema != 'information_schema')
-        ORDER BY table_schema, table_name;
-      `;
-      try {
-        const response = await client.query(query);
-        const rows = client.getRows(response);
-        if (rows.length === 0) {
-          console.log(gray("No tables found.\n"));
-        } else {
-          console.log(bold("\nTables:"));
-          for (const row of rows) {
-            console.log(`  ${cyan("•")} ${row.table_schema}.${row.table_name}`);
-          }
-          console.log();
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        console.log(`${red("ERROR: ")}${errorMessage}\n`);
-      }
-      break;
+  try {
+    const result = await runMetaCommand(client, command);
+    switch (result.kind) {
+      case "rows":
+        printMetaRows(result);
+        break;
+      case "help":
+        console.log(getMetaHelp());
+        break;
+      case "clear":
+        console.clear();
+        break;
+      default:
+        console.log(
+          yellow(`Unknown command: ${command}. Type \\? for help.\n`),
+        );
     }
-
-    case "\\dn": {
-      // List schemas
-      const query = `
-        SELECT schema_name 
-        FROM information_schema.schemata 
-        ORDER BY schema_name;
-      `;
-      try {
-        const response = await client.query(query);
-        const rows = client.getRows(response);
-        console.log(bold("\nSchemas:"));
-        for (const row of rows) {
-          console.log(cyan("  • ") + row.schema_name);
-        }
-        console.log();
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        console.log(`${red("ERROR: ")}${errorMessage}\n`);
-      }
-      break;
-    }
-
-    case "\\du": {
-      // List users/roles
-      const query = `SELECT rolname FROM pg_roles ORDER BY rolname;`;
-      try {
-        const response = await client.query(query);
-        const rows = client.getRows(response);
-        console.log(bold("\nRoles:"));
-        for (const row of rows) {
-          console.log(cyan("  • ") + row.rolname);
-        }
-        console.log();
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        console.log(`${red("ERROR: ")}${errorMessage}\n`);
-      }
-      break;
-    }
-
-    case "\\?":
-    case "\\help": {
-      console.log(bold("\nMeta Commands:"));
-      console.log(cyan("  \\dt, \\d") + gray("  - List tables"));
-      console.log(cyan("  \\dn") + gray("      - List schemas"));
-      console.log(cyan("  \\du") + gray("      - List roles"));
-      console.log(cyan("  \\?, \\help") + gray(" - Show this help"));
-      console.log(cyan("  \\clear") + gray("   - Clear screen"));
-      console.log();
-      console.log(bold("Tips:"));
-      console.log(gray("  • End queries with ; to execute"));
-      console.log(gray("  • Multi-line input is supported"));
-      console.log(gray('  • Type "exit" or "quit" to close'));
-      console.log();
-      break;
-    }
-
-    case "\\clear": {
-      console.clear();
-      break;
-    }
-
-    default: {
-      console.log(yellow(`Unknown command: ${command}. Type \\? for help.\n`));
-    }
+  } catch (error) {
+    console.log(`${red("ERROR: ")}${formatError(error)}\n`);
   }
-}
-
-/**
- * Print query results as a formatted table.
- */
-function printTable(rows: Record<string, unknown>[]): void {
-  if (rows.length === 0) return;
-
-  const columns = Object.keys(rows[0]);
-
-  // Calculate column widths
-  const widths: Record<string, number> = {};
-  for (const col of columns) {
-    widths[col] = col.length;
-  }
-
-  for (const row of rows) {
-    for (const col of columns) {
-      const value = formatValue(row[col]);
-      widths[col] = Math.max(widths[col], value.length);
-    }
-  }
-
-  // Limit column width to 40 characters
-  for (const col of columns) {
-    widths[col] = Math.min(widths[col], 40);
-  }
-
-  // Print header
-  const headerRow = columns.map((col) => col.padEnd(widths[col])).join(" | ");
-  const separator = columns.map((col) => "-".repeat(widths[col])).join("-+-");
-
-  console.log();
-  console.log(bold(headerRow));
-  console.log(separator);
-
-  // Print rows
-  for (const row of rows) {
-    const rowStr = columns
-      .map((col) => {
-        const value = formatValue(row[col]);
-        const truncated =
-          value.length > widths[col]
-            ? `${value.slice(0, widths[col] - 1)}…`
-            : value;
-        return truncated.padEnd(widths[col]);
-      })
-      .join(" | ");
-    console.log(rowStr);
-  }
-}
-
-/**
- * Format a value for display.
- */
-function formatValue(value: unknown): string {
-  if (value === null) {
-    return gray("NULL");
-  }
-  if (value === undefined) {
-    return gray("undefined");
-  }
-  if (typeof value === "object") {
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
-    return JSON.stringify(value);
-  }
-  return String(value);
 }

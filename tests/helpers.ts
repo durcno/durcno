@@ -8,24 +8,44 @@ export function rmSync(folderPath: string) {
   }
 }
 
+export type RunDurcnoResult = {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+};
+
+export function runDurcnoRaw(
+  args: string[],
+  env: Record<string, string>,
+  cwd?: string,
+  input?: string,
+): RunDurcnoResult {
+  const result = spawnSync("pnpm", ["exec", "durcno", ...args], {
+    stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
+    encoding: "utf8",
+    env: env,
+    cwd: cwd ?? __dirname,
+    input,
+  });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  };
+}
+
 export function runDurcno(
   args: string[],
   env: Record<string, string>,
   cwd?: string,
 ): string {
-  const result = spawnSync("pnpm", ["exec", "durcno", ...args], {
-    stdio: ["ignore", "pipe", "pipe"],
-    encoding: "utf8",
-    env: env,
-    cwd: cwd ?? __dirname,
-  });
-  const output = (result.stdout ?? "") + (result.stderr ?? "");
+  const result = runDurcnoRaw(args, env, cwd);
   if (result.status !== 0) {
     throw new Error(
-      `durcno ${args.join(" ")} failed with exit code ${result.status}: ${result.stderr ?? ""}`,
+      `durcno ${args.join(" ")} failed with exit code ${result.status}: ${result.stderr}`,
     );
   }
-  return output;
+  return result.stdout + result.stderr;
 }
 
 /**

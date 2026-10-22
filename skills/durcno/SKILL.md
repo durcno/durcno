@@ -1,6 +1,6 @@
 ---
 name: durcno
-description: Durcno usage guide for its PostgreSQL query builder and migration manager. Use when defining schemas, tables, columns, enums, relations or indexes, writing CRUD or relational queries, using joins, filters, aggregates, transactions, CTEs or prepared statements, validating input with Zod, or generating and applying migrations. Read the relevant doc files before writing or reviewing Durcno code.
+description: Durcno usage guide for its PostgreSQL query builder and migration manager. Use when defining schemas, tables, columns, enums, relations or indexes, writing CRUD or relational queries, using joins, filters, aggregates, transactions, CTEs or prepared statements, validating input with Zod, generating and applying migrations, or running SQL through the Durcno CLI. Read the relevant doc files before writing or reviewing Durcno code.
 ---
 
 # Durcno
@@ -307,6 +307,19 @@ durcno squash <start> <end> # Squash a range into one
 ```
 
 Run `generate` after every schema change, then `migrate`. `push` skips migration files and applies the schema directly (see `docs/Migrations/push.md`).
+
+## Running SQL
+
+Use `durcno exec` to run SQL against the configured database without opening a REPL. Prefer it over `psql`: it uses the connector and credentials from `durcno.config.ts`.
+
+```sh
+durcno exec -c 'select * from "public"."users" limit 5' --json   # one-shot
+durcno exec -f db/seed.sql                                       # run a file
+cat db/seed.sql | durcno exec --json                             # piped script
+durcno exec -c '\dt' --json                                      # meta command
+```
+
+Statements run sequentially and stop at the first error. Exit code is `0` on success and `1` on failure; data goes to stdout and errors to stderr. `--json` prints one JSON array for the whole run (64-bit integers as strings, `[]` for DDL-only), and `-q` suppresses timings and row counts. `durcno shell` opens an interactive REPL when a human is at the keyboard.
 
 ## Query Logging
 
