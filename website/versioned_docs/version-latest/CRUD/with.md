@@ -124,13 +124,14 @@ These DML CTEs are useful when you need the inserted/updated/deleted rows availa
 
 ## CTEs in joins
 
-When a CTE is used in `.leftJoin()` (or `.innerJoin()`), access its columns from the callback view parameter — the joined table's columns are namespaced by CTE name (and nullable for left joins), just like normal tables:
+When a CTE is used in `.leftJoin()` (or `.innerJoin()`), its columns are available in the `.on()` callback and in the `.select()` callback view — namespaced by CTE name (and nullable for left joins), just like normal tables:
 
 ```typescript
 const rows = await db
   .with(activeUsers)
   .from(Users)
-  .leftJoin(activeUsers, () => eq(Users.username, activeUsers.username))
+  .leftJoin(activeUsers)
+  .on(() => eq(Users.username, activeUsers.username))
   .select(({ activeUsers }) => ({
     username: Users.username,
     activeUser: activeUsers.username,

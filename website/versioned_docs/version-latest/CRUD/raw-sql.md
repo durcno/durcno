@@ -98,7 +98,7 @@ const result = await db.raw<{ id: bigint; username: string; }[]>(
 db.raw<TReturn>(
   query: string,
   args?: (string | number | bigint | boolean | null)[],
-  rowsHandler?: (rows: any[]) => TReturn
+  rowsHandler?: (rows: RawRow[]) => TReturn
 ): Promise<TReturn>
 ```
 
@@ -106,7 +106,7 @@ db.raw<TReturn>(
 | ------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `query`       | `string`                                            | The raw SQL query string with `$1`, `$2`, etc. placeholders for parameters               |
 | `args`        | `(string \| number \| bigint \| boolean \| null)[]` | Array of parameter values to bind to query placeholders. Defaults to `[]`                |
-| `rowsHandler` | `(rows: any[]) => TReturn`                          | Optional function to transform the result rows. Defaults to returning the rows unchanged |
+| `rowsHandler` | `(rows: RawRow[]) => TReturn`                       | Optional function to transform the result rows. Defaults to returning the rows unchanged |
 
 ## Parameterized Queries
 
@@ -140,7 +140,7 @@ The third parameter allows you to transform query results:
 const usernames = await db.raw(
   "SELECT username FROM users",
   [],
-  (rows) => rows.map((r) => r.username.toUpperCase()),
+  (rows) => rows.map((r) => (r.username as string).toUpperCase()),
 );
 // Returns: ["ALICE", "BOB", "CHARLIE"]
 

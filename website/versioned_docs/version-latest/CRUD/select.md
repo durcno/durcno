@@ -10,13 +10,21 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 
 ### Builder methods (SelectBuilder)
 
-| Method                        | Description                                      |
-| ----------------------------- | ------------------------------------------------ |
-| `.innerJoin(table, callback)` | Add an inner join with `() => condition`         |
-| `.leftJoin(table, callback)`  | Add a left join with `() => condition`           |
-| `.distinctOn(callback)`       | Apply DISTINCT ON via `() => col` or `[...cols]` |
-| `.select("*")`                | Select all columns                               |
-| `.select(callback)`           | Select specific columns via `() => ({ ... })`    |
+| Method                  | Description                                      |
+| ----------------------- | ------------------------------------------------ |
+| `.innerJoin(table)`     | Start an inner join, returning a join builder    |
+| `.leftJoin(table)`      | Start a left join, returning a join builder      |
+| `.distinctOn(callback)` | Apply DISTINCT ON via `() => col` or `[...cols]` |
+| `.select("*")`          | Select all columns                               |
+| `.select(callback)`     | Select specific columns via `() => ({ ... })`    |
+
+### Join builder methods (JoinBuilder)
+
+Returned by `.innerJoin(table)` / `.leftJoin(table)`. The join is committed once `.on()` supplies its condition, which is what makes a half-written join unrepresentable.
+
+| Method          | Description                                  |
+| --------------- | -------------------------------------------- |
+| `.on(callback)` | Set the `ON` condition via `() => condition` |
 
 ### Query methods (SelectQuery)
 
@@ -105,6 +113,35 @@ const results = await db.from(Users).select(() => ({
 // }[]
 ```
 
+### Defaults for Nullable Expressions
+
+The `.select()` callback runs when the query is **built**, so the values it produces are SQL expressions, not database values. A JavaScript default therefore has nothing to fall back on: `??` and `||` see an expression object, which is never `null` or `undefined`, so the default is dropped.
+
+```typescript
+import { coalesce, eq, jsonAgg } from "durcno";
+
+// The default is dropped — the SQL is `json_agg(...)` and the row value is null
+const posts = await db
+  .from(Posts)
+  .leftJoin(Comments)
+  .on(() => eq(Comments.postId, Posts.id))
+  .select(() => ({
+    comments: jsonAgg(Comments.body) ?? [],
+  }));
+
+// `coalesce` applies the default in SQL
+const posts = await db
+  .from(Posts)
+  .leftJoin(Comments)
+  .on(() => eq(Comments.postId, Posts.id))
+  .select(() => ({
+    comments: coalesce(jsonAgg(Comments.body), []),
+  }));
+// `comments` is never null
+```
+
+To default a value in JavaScript instead, apply the default after the query resolves.
+
 ## Filtering with WHERE
 
 Use `.where()` with a callback receiving the tables view to filter results. See [Filters](../Expressions/filters.md) for all available operators.
@@ -176,7 +213,8 @@ import { Posts, Users } from "./db/schema.ts";
 // Sort by username (Users), then by post creation date (Posts)
 const usersWithPosts = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,
@@ -200,6 +238,22 @@ const stats = await db
   .groupBy(() => [Users.type])
   .orderBy((_, { userCount }) => desc(userCount));
 ```
+
+### Sorting by an Aggregate Expression
+
+PostgreSQL reads `ORDER BY` after grouping, so an aggregate can sort directly — no alias needed, and wrapping it in a scalar function is fine:
+
+```typescript
+import { avg, count, desc, round } from "durcno";
+
+const byActivity = await db
+  .from(Users)
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type)
+  .orderBy(() => desc(round(avg(Users.points), 1)));
+```
+
+This requires the query to aggregate — through a `GROUP BY`, or through an aggregate in the projection. In a query that does neither, PostgreSQL rejects the query itself, because the selected columns are then ungrouped.
 
 ## Pagination with LIMIT and OFFSET
 
@@ -227,7 +281,8 @@ import { Posts, Users } from "./db/schema.ts";
 // Join Users with Posts
 const usersWithPosts = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,
@@ -264,6 +319,19 @@ const rows = await db
 CTEs can also wrap DML queries with `.returning(...)`, such as `INSERT`, `UPDATE`, or `DELETE`, and then be queried by an outer `SELECT`.
 
 ## GROUP BY and HAVING
+
+### Automatic GROUP BY
+
+When a `.select()` projection mixes aggregates with other expressions, Durcno groups by the non-aggregate items on its own — no `.groupBy()` needed:
+
+```typescript
+import { count } from "durcno";
+
+const byType = await db
+  .from(Users)
+  .select(() => ({ type: Users.type, total: count("*") }));
+// SQL: SELECT type, count(*) FROM users GROUP BY type
+```
 
 ### Explicit GROUP BY
 
@@ -330,6 +398,10 @@ const results = await db
 // SQL: ... GROUP BY "lname", "users"."type"
 ```
 
+:::note
+PostgreSQL rejects an aggregate in `GROUP BY`, so `.groupBy()` rejects one at compile time — including a scalar function that merely wraps one (`round(avg(score), 1)`). Group by the column or scalar expression instead.
+:::
+
 ### HAVING
 
 Use `.having()` with a callback to filter grouped results. It supports aggregate-to-literal and aggregate-to-aggregate comparisons:
@@ -354,12 +426,27 @@ const results = await db
   .from(Users)
   .select(() => ({
     type: Users.type,
-    sumScore: sum(Users.score),
+    sumScore: sum(Users.points),
     total: count("*"),
   }))
   .groupBy(() => [Users.type])
-  .having(() => gt(sum(Users.score), count("*")));
+  .having(() => gt(sum(Users.points), count("*")));
 ```
+
+Unlike `WHERE`, `HAVING` is evaluated over grouped rows, so an aggregate is allowed here — including one wrapped in a scalar function, and however deeply nested:
+
+```typescript
+import { avg, gt, round } from "durcno";
+
+// SQL: ... GROUP BY "users"."type" HAVING round(avg("users"."score"), 1) > 2
+const aboveAverage = await db
+  .from(Users)
+  .select(() => ({ type: Users.type, avgScore: round(avg(Users.points), 1) }))
+  .groupBy(() => Users.type)
+  .having(() => gt(round(avg(Users.points), 1), 2));
+```
+
+`WHERE` is the opposite: it runs before grouping, so an aggregate there is a compile error, wrapped or not.
 
 :::note
 
@@ -442,7 +529,8 @@ All methods can be chained in a fluent API:
 ```typescript
 const results = await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select(() => ({
     username: Users.username,
     title: Posts.title,

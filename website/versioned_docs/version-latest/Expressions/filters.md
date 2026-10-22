@@ -53,7 +53,8 @@ await db
 // Compare two columns
 await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select("*");
 ```
 
@@ -465,7 +466,8 @@ import { eq, gte } from "durcno";
 // Join condition: compare columns from different tables
 await db
   .from(Users)
-  .innerJoin(Posts, () => eq(Users.id, Posts.userId))
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
   .select("*");
 
 // Compare columns from the same table

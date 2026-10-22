@@ -10,9 +10,9 @@ Relations define the relationships between tables in your database schema. Durcn
 
 While foreign keys enforce referential integrity at the database level, relations in Durcno provide:
 
-- **Type-safe queries**: Full TypeScript inference when joining tables
-- **Simplified queries**: Cleaner syntax for complex joins
-- **Better developer experience**: Auto-completion for related data
+- **Type-safe relation loading**: Full TypeScript inference when loading related rows with [`db.query()`](../CRUD/relational-query.md)
+- **Simpler nested queries**: Relation keys replace hand-written `ON` conditions and nested joins
+- **Compile-time safety**: Unknown relation names or options are type errors
 - **Documentation**: Self-documenting schema relationships
 
 ## Defining Relations
@@ -297,35 +297,36 @@ Both the table definition and its relations must be exported and included in the
 
 ## Using Relations in Queries
 
-Relations enable type-safe joins and nested queries:
-
-### Basic Join
+Relations are what make [`db.query()`](../CRUD/relational-query.md) type-safe. The builder looks up the relations registered for the table and derives the join from them, so you never write the `ON` condition yourself:
 
 ```typescript
-// Query posts with author information
-const postsWithAuthors = await db
-  .from(Posts)
-  .innerJoin(Users, () => eq(Posts.userId, Users.id))
-  .select(() => ({
-    postId: Posts.id,
-    title: Posts.title,
-    authorName: Users.username,
-  }));
+const usersWithPosts = await db.query(Users).findMany({
+  with: {
+    posts: {},
+  },
+});
+// Type: { id: bigint; username: string; ...; posts: { id: bigint; title: string; ... }[] }[]
 ```
 
-### Nested Queries (Future Feature)
-
-While Durcno's relations prepare your schema for advanced query capabilities, nested query syntax is a planned feature:
+Relations nest recursively, so related tables can be loaded to any depth:
 
 ```typescript
-// Planned future syntax
-const usersWithPosts = await db
-  .from(Users)
-  .with({
-    posts: PostsRelations,
-  })
-  .select("*");
+const usersWithPostsAndComments = await db.query(Users).findMany({
+  with: {
+    posts: {
+      with: {
+        comments: {},
+      },
+    },
+  },
+});
 ```
+
+Relation keys are checked against the schema — a typo or a relation that was never registered is a compile error, not a silently missing join. See [Relational Query](../CRUD/relational-query.md) for the full option set (column selection, filtering, ordering, and pagination inside `with`).
+
+:::note
+Relations are not required for plain SQL joins. [`innerJoin()` / `leftJoin()`](../CRUD/joins.md) are type-safe on their own and work off the foreign key columns you write in `.on()`; relations drive `db.query()` only.
+:::
 
 ## Common Relationship Patterns
 
@@ -545,20 +546,33 @@ export const Posts = table("public", "posts", {
 
 ## Type Safety
 
-Durcno provides full type inference for relations:
+Relation loading is inferred from the schema, column by column:
 
 ```typescript
-// TypeScript knows the shape of related data
+const users = await db.query(Users).findMany({
+  columns: { username: true },
+  with: {
+    posts: {
+      columns: { title: true },
+    },
+  },
+});
+// Type: { username: string; posts: { title: string }[] }[]
+```
+
+The same inference applies to explicit joins, which never read relations but still infer the projected types from the column definitions:
+
+```typescript
 const posts = await db
   .from(Posts)
-  .innerJoin(Users, () => eq(Posts.userId, Users.id))
+  .innerJoin(Users)
+  .on(() => eq(Posts.userId, Users.id))
   .select(() => ({
     postId: Posts.id, // bigint
-    title: Posts.title, // string | null
+    title: Posts.title, // string (notNull)
     authorName: Users.username, // string
   }));
-
-// Type: { postId: bigint; title: string | null; authorName: string }[]
+// Type: { postId: bigint; title: string; authorName: string }[]
 ```
 
 ## Migration Considerations
@@ -584,5 +598,6 @@ export const Posts = table("public", "posts", {
 
 ## Next Steps
 
+- Query relations with [Relational Query](../CRUD/relational-query.md)
 - Learn about [Columns](./columns.md) to define table structures
 - Explore [Indexes](./indexes.md) to optimize query performance

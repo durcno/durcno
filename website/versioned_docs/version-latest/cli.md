@@ -15,7 +15,8 @@ npm exec durcno <command> [options]
 | Command                | Description                                  |
 | ---------------------- | -------------------------------------------- |
 | `init`                 | Initialize a new Durcno project              |
-| `shell`                | Open an interactive SQL REPL shell           |
+| `repl`                 | Open an interactive SQL REPL                 |
+| `exec`                 | Execute SQL non-interactively                |
 | `generate`             | Generate a new migration from schema changes |
 | `migrate`              | Apply pending migrations                     |
 | `push`                 | Generate and apply a migration in one step   |
@@ -91,12 +92,12 @@ In non-interactive environments (CI, piped input), `init` uses default values au
 
 ---
 
-## shell
+## repl
 
 Open an interactive SQL REPL connected to your database.
 
 ```bash npm2yarn
-npm exec durcno shell [--config path/to/durcno.config.ts]
+npm exec durcno repl [--config path/to/durcno.config.ts]
 ```
 
 ### Options
@@ -113,7 +114,7 @@ npm exec durcno shell [--config path/to/durcno.config.ts]
 
 ### Meta commands
 
-The shell supports psql-style meta commands:
+The REPL supports psql-style meta commands:
 
 | Command       | Description                  |
 | ------------- | ---------------------------- |
@@ -126,15 +127,15 @@ The shell supports psql-style meta commands:
 ### Example
 
 ```bash npm2yarn
-npm exec durcno shell
+npm exec durcno repl
 ```
 
 ```
 ✔ Connected to database
 
- DURCNO SHELL
+ DURCNO REPL
 Type SQL queries and press Enter to execute.
-Enter "exit" or "quit" to close the shell.
+Enter "exit" or "quit" to close the REPL.
 
 durcno> SELECT * FROM "public"."users";
 
@@ -154,5 +155,49 @@ durcno> exit
 ```
 
 :::tip
-Press `Ctrl+C` during multi-line input to cancel the current query. Press `Ctrl+C` at the prompt to close the shell.
+Press `Ctrl+C` during multi-line input to cancel the current query. Press `Ctrl+C` at the prompt to close the REPL.
 :::
+
+---
+
+## exec
+
+Execute SQL without opening a REPL, using the connector and credentials from `durcno.config.ts`. Intended for scripts, CI, and AI agents.
+
+```bash npm2yarn
+npm exec durcno exec --command 'select * from "public"."users"' --json
+```
+
+### Options
+
+- `-c, --command <sql>` — SQL to execute.
+- `-f, --file <path>` — Read SQL from a file.
+- `--json` — Print returned rows as a single JSON array.
+- `-q, --quiet` — Suppress timings and row counts.
+- `--config <path>` — Path to the config file (defaults to `durcno.config.ts`).
+
+`--command` and `--file` cannot be combined. When neither is provided, SQL is read from piped stdin; `exec` never opens a REPL.
+
+### Behavior
+
+- Statements run sequentially and execution stops at the first error.
+- The command exits `0` on success and `1` on failure.
+- Query data is written to stdout; errors are written to stderr.
+- `--json` prints one valid JSON array for the whole run (`[]` for DDL-only input), with 64-bit integers serialized as strings.
+- Meta commands are supported when they make up the entire input, for example `durcno exec -c '\dt'`.
+
+### Examples
+
+```bash npm2yarn
+# One-shot query
+npm exec durcno exec -c 'select * from "public"."users" limit 5'
+
+# Machine-readable output
+npm exec durcno exec -c 'select * from "public"."users" limit 5' --json
+
+# Run a file
+npm exec durcno exec -f db/seed.sql
+
+# Pipe a script
+cat db/seed.sql | npm exec durcno exec --json
+```

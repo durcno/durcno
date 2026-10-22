@@ -10,7 +10,7 @@ Functions can also be **composed**: you can pass the result of one function as t
 
 ## Aggregate Functions
 
-Aggregate functions collapse multiple rows into a single value. When you mix aggregate and non-aggregate expressions in a single `.select()` call, Durcno automatically generates the appropriate `GROUP BY` clause for the non-aggregate columns.
+Aggregate functions collapse multiple rows into a single value. When you mix aggregate and non-aggregate expressions in a single `.select()` call, Durcno automatically generates the appropriate `GROUP BY` clause for the non-aggregate columns. An expression that _contains_ an aggregate never becomes a grouping key, however deeply it is wrapped — `round(avg(col), 1)` is still a scalar function, but it is not groupable.
 
 | Function             | SQL                   | Returns           | Description                                                              |
 | -------------------- | --------------------- | ----------------- | ------------------------------------------------------------------------ |
@@ -106,9 +106,21 @@ const stats = await db.from(Orders).select(() => ({
 // Equivalent to: SELECT status, count(*), sum(amount) FROM orders GROUP BY status
 ```
 
+An expression counts as an aggregate if it _contains_ one, however deeply it is wrapped — so `round(avg(rating), 1)` and `coalesce(sum(amount), 0)` are not grouping keys, though `round` and `coalesce` are themselves scalar functions. PostgreSQL rejects an aggregate in `GROUP BY`, so a projection of nothing but wrapped aggregates emits no `GROUP BY` at all and returns one aggregate row:
+
+```typescript
+import { avg, count, round } from "durcno";
+
+const [stats] = await db.from(Reviews).select(() => ({
+  totalCount: count("*"),
+  averageRating: round(avg(Reviews.rating), 1),
+}));
+// Equivalent to: SELECT count(*), round(avg(rating), 1) FROM reviews
+```
+
 ### Aggregates with `HAVING` and `orderBy`
 
-Aggregate functions can be filtered in `.having()` clauses and sorted by alias in `.orderBy()`:
+Aggregate functions can be filtered in `.having()` clauses and sorted in `.orderBy()` — by an aggregate expression, or by a select alias:
 
 ```typescript
 import { count, desc, gt, sum } from "durcno";
@@ -125,6 +137,8 @@ await db
   .select(() => ({ status: Orders.status, total: count("*") }))
   .having(() => gt(count("*"), 5));
 ```
+
+`HAVING` and `ORDER BY` both accept an aggregate at any nesting depth, since PostgreSQL evaluates them over grouped rows — `round(avg(amount), 2)` works in either. `WHERE` is the opposite: it runs before grouping, so an aggregate in a `.where()` comparison is rejected at compile time, wrapped or not.
 
 ### Filter and OrderBy Modifiers (`FILTER (WHERE ...)` and `ORDER BY`)
 
@@ -444,6 +458,8 @@ Conditional functions evaluate expressions based on conditions or nullability. O
 
 Returns the first non-null expression among its arguments. Durcno evaluates argument nullability from left to right: if any argument is guaranteed non-null, `null` is automatically excluded from the inferred return type. When used with arrays (such as `coalesce(jsonAgg(...), [])`), `coalesce` narrows the type to a guaranteed non-null array `T[]`.
 
+JavaScript's `??` and `||` are not the equivalent here: inside a `.select()` callback they apply to the expression object, which is never nullish, so the default is dropped. See [Defaults for Nullable Expressions](../CRUD/select.md#defaults-for-nullable-expressions).
+
 ```typescript
 import { coalesce } from "durcno";
 
@@ -463,6 +479,8 @@ const result = await db.from(Users).select(() => ({
 Constructs a type-safe `CASE WHEN ... THEN ... ELSE ... END` expression. Durcno infers the exact **union (`|`)** type across all branch cases, preserving string and numeric literals without widening them to broad primitives.
 
 Both `.else(...)` and `.end()` are **optional**: in PostgreSQL, omitting the `ELSE` clause implicitly returns `NULL` when no conditions match, so Durcno infers `Branches | null`.
+
+`Date` branches are rendered as `timestamptz` literals, so a CASE built only from `Date` values keeps a timestamp type instead of resolving to `text`.
 
 ```typescript
 import { caseWhen, eq, isNull, jsonBuildObject } from "durcno";
@@ -484,7 +502,8 @@ const adminsOnly = await db.from(Users).select(() => ({
 // Returning null on unmatched LEFT JOIN -> inferred as null | { id: bigint; username: string }
 const postsWithAuthor = await db
   .from(Posts)
-  .leftJoin(Users, () => eq(Users.id, Posts.userId))
+  .leftJoin(Users)
+  .on(() => eq(Users.id, Posts.userId))
   .select(({ users }) => ({
     title: Posts.title,
     author: caseWhen(isNull(users.id), null).else(
@@ -648,6 +667,54 @@ Durcno provides full type inference and runtime safety for PostgreSQL JSON and J
 | `jsonStripNulls`   | `json_strip_nulls(jsonObj)`       | Strips null values from a JSON object                   |
 | `jsonbStripNulls`  | `jsonb_strip_nulls(jsonbObj)`     | Strips null values from a JSONB object                  |
 
+### JSON value types
+
+A JSON document is read back through the expressions that built it, so a value keeps the type of its source column:
+
+```typescript
+const rows = await db.from(Users).select(() => ({
+  userCard: jsonBuildObject({
+    id: Users.id, // bigint column -> bigint
+    createdAt: Users.createdAt, // timestamptz column -> Date
+  }),
+}));
+// userCard is inferred as { id: bigint; createdAt: Date }
+```
+
+`jsonAgg`, `jsonBuildArray`, `toJson` and `jsonStripNulls` restore the types of their operands the same way, including literals — a `Date` operand comes back as a `Date` and a `bigint` as a `bigint`. Array literals are encoded as JSON arrays (`json_build_array`/`jsonb_build_array`) and their elements are restored too. `toJson`/`toJsonb` also accept scalar `string`, `null`, and array targets.
+
+`toJson` over a record builds a JSON object from the entries the record names, under the record's own keys. An entry may be a column, a literal, an array, or a scalar expression:
+
+```typescript
+const rows = await db.from(Users).select(() => ({
+  card: toJson({ userId: Users.id, name: Users.username }),
+  tags: toJson({ tags: [] as string[] }),
+}));
+// card is inferred as { userId: bigint; name: string }
+// tags is inferred as { tags: string[] }
+```
+
+:::caution
+A restored document may hold values JSON cannot represent — a `bigint` is not JSON-serializable — and the round trip through PostgreSQL's JSON encoding is not lossless:
+
+- a `bigint` or `numeric` beyond the exact range of a double is rounded by the driver's JSON parser before it is restored;
+- a timestamp comes back at millisecond precision.
+
+Cast to text when the exact value matters:
+
+```typescript
+import { jsonBuildObject, sql } from "durcno";
+
+const rows = await db.from(Users).select(() => ({
+  userCard: jsonBuildObject({
+    id: sql<string>`${Users.id}::text`, // "9007199254740993"
+  }),
+}));
+// userCard is inferred as { id: string }
+```
+
+:::
+
 ### `jsonBuildObject` / `jsonbBuildObject`
 
 Builds a typed JSON object by passing an object of fields. Fields can be columns, functions, literals, or nested `jsonBuildObject` calls:
@@ -676,7 +743,8 @@ import { asc, coalesce, isNotNull, jsonAgg, jsonBuildObject } from "durcno";
 
 const postsWithComments = await db
   .from(Posts)
-  .leftJoin(Comments, () => eq(Comments.postId, Posts.id))
+  .leftJoin(Comments)
+  .on(() => eq(Comments.postId, Posts.id))
   .select(({ comments }) => ({
     id: Posts.id,
     comments: coalesce(
@@ -750,7 +818,7 @@ Durcno SQL functions accurately model PostgreSQL strict function nullability sem
 
 ## Functions in `orderBy`
 
-All scalar functions can be used with `asc()` / `desc()` in `.orderBy()`:
+Any function can be used with `asc()` / `desc()` in `.orderBy()` — a scalar expression over a column, or an aggregate, since PostgreSQL reads `ORDER BY` after grouping:
 
 ```typescript
 import { asc, desc, length, lower } from "durcno";
