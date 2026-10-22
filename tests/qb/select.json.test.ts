@@ -455,6 +455,31 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       );
     });
 
+    it("should resolve a caseWhen of Date literals to a timestamp", async () => {
+      const targetDate = new Date("2025-01-01T00:00:00.000Z");
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values({
+          ...createTestUser({ username: "case_date_cast_user" }),
+          createdAt: targetDate,
+        })
+        .returning({ id: true });
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() =>
+          eq(
+            schema.Users.createdAt,
+            caseWhen(eq(schema.Users.id, user.id), targetDate).else(
+              new Date("2020-01-01T00:00:00.000Z"),
+            ),
+          ),
+        );
+
+      expect(row.id).toBe(user.id);
+    });
+
     it("should match jsonb types between branch and else when plain objects are used", async () => {
       const [user] = await db
         .insertInto(schema.Users)

@@ -270,6 +270,8 @@ export interface AppendOperandOptions {
   leadOperand?: unknown;
   /** Cast applied to an `Arg` placeholder that has no cast of its own. */
   argCastFallback?: string;
+  /** Cast applied to a `Date` literal that has no column lead. */
+  dateCastFallback?: string;
 }
 
 type FnClassWithJsonKind = { name: string };
@@ -415,10 +417,11 @@ export function appendOperand(
     const lead = options?.leadOperand;
     if (lead && isCol(lead)) {
       query.sql += lead.toSQL(expr);
+    } else if (Number.isNaN(expr.getTime())) {
+      query.sql += "NULL";
     } else {
-      query.sql += Number.isNaN(expr.getTime())
-        ? "NULL"
-        : `'${expr.toISOString()}'`;
+      const cast = options?.dateCastFallback;
+      query.sql += `'${expr.toISOString()}'${cast ? `::${cast}` : ""}`;
     }
   } else if (typeof expr === "object") {
     const lead = options?.leadOperand;

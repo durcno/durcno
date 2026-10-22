@@ -480,6 +480,8 @@ Constructs a type-safe `CASE WHEN ... THEN ... ELSE ... END` expression. Durcno 
 
 Both `.else(...)` and `.end()` are **optional**: in PostgreSQL, omitting the `ELSE` clause implicitly returns `NULL` when no conditions match, so Durcno infers `Branches | null`.
 
+`Date` branches are rendered as `timestamptz` literals, so a CASE built only from `Date` values keeps a timestamp type instead of resolving to `text`.
+
 ```typescript
 import { caseWhen, eq, isNull, jsonBuildObject } from "durcno";
 

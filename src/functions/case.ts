@@ -202,11 +202,23 @@ export class CaseFn<
       !preferJsonb &&
       (this.branches.some((b) => detectJsonKind(b.result) === "json") ||
         detectJsonKind(this.elseExpr) === "json");
+    let hasDate = false;
+    let hasOther = false;
+    for (const b of this.branches) {
+      if (b.result === null || b.result === undefined) continue;
+      if (b.result instanceof Date) hasDate = true;
+      else hasOther = true;
+    }
+    if (this.elseExpr !== null && this.elseExpr !== undefined) {
+      if (this.elseExpr instanceof Date) hasDate = true;
+      else hasOther = true;
+    }
 
     const appendOpts: AppendOperandOptions = {
       preferJsonb,
       preferJson,
       leadOperand,
+      dateCastFallback: hasDate && !hasOther ? "timestamptz" : undefined,
     };
 
     query.sql += "CASE";
