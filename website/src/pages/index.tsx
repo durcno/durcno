@@ -197,8 +197,7 @@ const runtimeList = [
         role="img"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
-        className={styles.runtimeIcon}
-        style={{ color: "#FBF0DF" }}
+        className={clsx(styles.runtimeIcon, styles.runtimeBunIcon)}
       >
         <title>Bun</title>
         <path
@@ -214,35 +213,16 @@ function SupportedRuntimes() {
   return (
     <section className={styles.supportedRuntimesSection}>
       <div className="container">
-        <p
-          style={{
-            textAlign: "center",
-            marginBottom: "1.5rem",
-            fontWeight: 600,
-            opacity: 0.8,
-          }}
-        >
-          Works with your favorite runtime
-        </p>
-        <div
-          className={styles.buttons}
-          style={{ justifyContent: "center", gap: "2rem", flexWrap: "wrap" }}
-        >
+        <p className={styles.runtimesIntro}>Works with your favorite runtime</p>
+        <div className={styles.runtimesList}>
           {runtimeList.map((runtime) => (
             <div
               key={runtime.name}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
+              className={styles.runtimeItem}
               title={runtime.name}
             >
               {runtime.icon}
-              <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>
-                {runtime.name}
-              </span>
+              <span className={styles.runtimeName}>{runtime.name}</span>
             </div>
           ))}
         </div>
