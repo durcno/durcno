@@ -68,6 +68,15 @@ export const Users = table(
         and(eq(t.status, "active"), isNull(t.deletedAt)),
       ),
 
+      // Mixed column types in one composite index
+      index([t.id, t.email]),
+      index("idx_users_id_email", [t.email, t.id]),
+      uniqueIndex([t.id, t.email]),
+      uniqueIndex("uidx_users_id_email", [t.email, t.id]),
+
+      // Mixed column types with an operator class key
+      index([t.id, t.email.opclass("text_pattern_ops")]),
+
       // Callback syntax for .where()
       index([t.email]).where(() => eq(t.status, "active")),
 
@@ -86,3 +95,6 @@ index([Users.email]).where(eq(Users.status, Users.status.arg()));
 
 // @ts-expect-error Invalid argument type to where
 index([Users.email]).where(123);
+
+// @ts-expect-error Index keys must be table columns, not plain strings
+index([Users.email, "status"]);

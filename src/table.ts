@@ -22,9 +22,7 @@ type TableExtra<
   TName extends string,
   TColumns extends Record<string, AnyColumn>,
 > = {
-  indexes?: (
-    ...args: [TableWithColumns<TSchema, TName, TColumns>]
-  ) => Index<TColumns[keyof TColumns]>[];
+  indexes?: (...args: [TableWithColumns<TSchema, TName, TColumns>]) => Index[];
   primaryKeyConstraint?: (
     table: TableWithColumns<TSchema, TName, TColumns>,
     primaryKey: PrimaryKeyConstraintFn,

@@ -150,7 +150,7 @@ describe("durcno generate - index changes (column + index ordering, partial inde
 
     // Users table indexes in PostgreSQL
     const uIndexes = await getUsersIndexes();
-    expect(uIndexes.length).toBe(2);
+    expect(uIndexes.length).toBe(3);
 
     const emailIdx = uIndexes.find(
       (i) => i.indexname === "users_active_email_idx",
@@ -158,6 +158,13 @@ describe("durcno generate - index changes (column + index ordering, partial inde
     expect(emailIdx).toBeDefined();
     expect(emailIdx?.indexdef).toContain("UNIQUE");
     expect(emailIdx?.indexdef).toContain("WHERE (deleted_at IS NULL)");
+
+    const emailIdIdx = uIndexes.find(
+      (i) => i.indexname === "users_email_id_idx",
+    );
+    expect(emailIdIdx).toBeDefined();
+    expect(emailIdIdx?.indexdef).toContain("UNIQUE");
+    expect(emailIdIdx?.indexdef).toContain("(email, id)");
 
     const statusIdx = uIndexes.find((i) => i.indexname === "users_status_idx");
     expect(statusIdx).toBeDefined();
@@ -241,7 +248,7 @@ describe("durcno generate - index changes (column + index ordering, partial inde
     expect(upFile).toContain('ddl.dropIndex("users_status_idx")');
 
     const uIndexes = await getUsersIndexes();
-    expect(uIndexes.length).toBe(1);
+    expect(uIndexes.length).toBe(2);
     expect(uIndexes[0].indexname).toBe("users_active_email_idx");
   });
 
@@ -260,7 +267,7 @@ describe("durcno generate - index changes (column + index ordering, partial inde
 
     // Users table checks (active email index remains)
     const uIndexes = await getUsersIndexes();
-    expect(uIndexes.length).toBe(1);
+    expect(uIndexes.length).toBe(2);
     expect(uIndexes[0].indexname).toBe("users_active_email_idx");
   });
 });

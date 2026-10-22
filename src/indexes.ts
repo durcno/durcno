@@ -20,15 +20,15 @@ export type IndexType =
  */
 export type IndexWhereExpression = Filter<AnyColumn, false> | Sql;
 
-export class Index<Col extends AnyColumn = AnyColumn> {
+export class Index {
   readonly #name?: string;
-  readonly #columns: (StdTableColumn<Col> | IndexOn<Col>)[];
+  readonly #columns: (StdTableColumn | IndexOn)[];
   #using: IndexType;
   #unique: boolean;
   #where?: IndexWhereExpression;
 
   constructor(
-    columns: (StdTableColumn<Col> | IndexOn<Col>)[],
+    columns: (StdTableColumn | IndexOn)[],
     using: IndexType,
     unique: boolean,
     name?: string,
@@ -96,29 +96,29 @@ export class Index<Col extends AnyColumn = AnyColumn> {
  * @param columns - Array of table columns to index.
  * @param using - Optional index type (default: `"btree"`).
  */
-export function index<Col extends AnyColumn>(
+export function index(
   name: string,
-  columns: (StdTableColumn<Col> | IndexOn<Col>)[],
+  columns: (StdTableColumn | IndexOn)[],
   using?: IndexType,
-): Index<Col>;
+): Index;
 /**
  * Creates an index on one or more columns with an auto-generated name.
  *
  * @param columns - Array of table columns to index.
  * @param using - Optional index type (default: `"btree"`).
  */
-export function index<Col extends AnyColumn>(
-  columns: (StdTableColumn<Col> | IndexOn<Col>)[],
+export function index(
+  columns: (StdTableColumn | IndexOn)[],
   using?: IndexType,
-): Index<Col>;
-export function index<Col extends AnyColumn>(
-  nameOrColumns: string | (StdTableColumn<Col> | IndexOn<Col>)[],
-  columnsOrUsing?: (StdTableColumn<Col> | IndexOn<Col>)[] | IndexType,
+): Index;
+export function index(
+  nameOrColumns: string | (StdTableColumn | IndexOn)[],
+  columnsOrUsing?: (StdTableColumn | IndexOn)[] | IndexType,
   using?: IndexType,
-): Index<Col> {
+): Index {
   if (typeof nameOrColumns === "string") {
     return new Index(
-      columnsOrUsing as (StdTableColumn<Col> | IndexOn<Col>)[],
+      columnsOrUsing as (StdTableColumn | IndexOn)[],
       using ?? "btree",
       false,
       nameOrColumns,
@@ -138,29 +138,29 @@ export function index<Col extends AnyColumn>(
  * @param columns - Array of table columns to index.
  * @param using - Optional index type (default: `"btree"`).
  */
-export function uniqueIndex<Col extends AnyColumn>(
+export function uniqueIndex(
   name: string,
-  columns: (StdTableColumn<Col> | IndexOn<Col>)[],
+  columns: (StdTableColumn | IndexOn)[],
   using?: IndexType,
-): Index<Col>;
+): Index;
 /**
  * Creates a unique index on one or more columns with an auto-generated name.
  *
  * @param columns - Array of table columns to index.
  * @param using - Optional index type (default: `"btree"`).
  */
-export function uniqueIndex<Col extends AnyColumn>(
-  columns: (StdTableColumn<Col> | IndexOn<Col>)[],
+export function uniqueIndex(
+  columns: (StdTableColumn | IndexOn)[],
   using?: IndexType,
-): Index<Col>;
-export function uniqueIndex<Col extends AnyColumn>(
-  nameOrColumns: string | (StdTableColumn<Col> | IndexOn<Col>)[],
-  columnsOrUsing?: (StdTableColumn<Col> | IndexOn<Col>)[] | IndexType,
+): Index;
+export function uniqueIndex(
+  nameOrColumns: string | (StdTableColumn | IndexOn)[],
+  columnsOrUsing?: (StdTableColumn | IndexOn)[] | IndexType,
   using?: IndexType,
-): Index<Col> {
+): Index {
   if (typeof nameOrColumns === "string") {
     return new Index(
-      columnsOrUsing as (StdTableColumn<Col> | IndexOn<Col>)[],
+      columnsOrUsing as (StdTableColumn | IndexOn)[],
       using ?? "btree",
       true,
       nameOrColumns,

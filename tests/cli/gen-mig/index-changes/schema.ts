@@ -76,6 +76,9 @@ export const Users = table(
         ),
       );
 
+      // Stage 1+: composite unique index mixing varchar and bigint keys
+      idxs.push(uniqueIndex("users_email_id_idx", [t.email, t.id]));
+
       // Stage 1: partial index where status = 'active'
       if (stage === 1) {
         idxs.push(
