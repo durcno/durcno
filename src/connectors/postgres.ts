@@ -12,8 +12,8 @@ import {
 /**
  * Connector implementation for the `postgres` (postgres.js) library.
  *
- * Postgres.js - The Fastest full featured PostgreSQL client for Node.js,
- * Deno, Bun and CloudFlare.
+ * Postgres.js - The Fastest full featured PostgreSQL client for Node.js and
+ * Bun.
  *
  * @see https://github.com/porsager/postgres
  * @see https://www.npmjs.com/package/postgres

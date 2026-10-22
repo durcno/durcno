@@ -7,7 +7,7 @@ import { DURCNO_CONFIG_NAME } from "../consts";
 
 const { bold, dim, magenta, green, yellow, cyan, gray } = chalk;
 
-const RUNTIMES = ["node", "bun", "deno", "unknown"] as const;
+const RUNTIMES = ["node", "bun", "unknown"] as const;
 type Runtime = (typeof RUNTIMES)[number];
 
 const CONNECTORS = ["postgres", "pg", "bun", "pglite"] as const;
@@ -58,18 +58,15 @@ const CONNECTOR_FUNCTION_NAMES: Record<Connector, string> = {
 const LOADER_PACKAGES: Record<Runtime, string[]> = {
   node: ["dotenv"],
   bun: [], // Built-in
-  deno: [], // Built-in
   unknown: ["dotenv"],
 };
 
 const runtime: Runtime =
   typeof Bun !== "undefined"
     ? "bun"
-    : typeof globalThis !== "undefined" && "Deno" in globalThis
-      ? "deno"
-      : typeof process !== "undefined" && process.versions?.node
-        ? "node"
-        : "unknown";
+    : typeof process !== "undefined" && process.versions?.node
+      ? "node"
+      : "unknown";
 
 const pm: PackageManager = (() => {
   const userAgent = process.env.npm_config_user_agent ?? "";
@@ -89,9 +86,7 @@ function generateConfigFile(config: InitConfig): string {
     connectionUrl === ""
       ? runtime === "bun"
         ? ""
-        : runtime === "deno"
-          ? `import "@std/dotenv/load";\n`
-          : `import "dotenv/config";\n`
+        : `import "dotenv/config";\n`
       : "";
 
   return `${envLoader}import { defineConfig } from "durcno";

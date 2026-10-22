@@ -8,12 +8,12 @@ Durcno supports multiple PostgreSQL drivers through connector modules. Each conn
 
 ## Available Connectors
 
-| Connector    | Import Path                  | Driver                                              | Best For                                                |
-| ------------ | ---------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
-| **postgres** | `durcno/connectors/postgres` | [postgres.js](https://github.com/porsager/postgres) | High-performance Node.js, Deno, Bun and CloudFlare apps |
-| **pg**       | `durcno/connectors/pg`       | [node-postgres](https://node-postgres.com/)         | Node.js applications                                    |
-| **bun**      | `durcno/connectors/bun`      | [Bun SQL](https://bun.sh/docs/api/sql)              | Bun runtime applications                                |
-| **pglite**   | `durcno/connectors/pglite`   | [@electric-sql/pglite](https://pglite.dev/)         | Embedded PostgreSQL, testing, local dev                 |
+| Connector    | Import Path                  | Driver                                              | Best For                                |
+| ------------ | ---------------------------- | --------------------------------------------------- | --------------------------------------- |
+| **postgres** | `durcno/connectors/postgres` | [postgres.js](https://github.com/porsager/postgres) | High-performance Node.js and Bun apps   |
+| **pg**       | `durcno/connectors/pg`       | [node-postgres](https://node-postgres.com/)         | Node.js applications                    |
+| **bun**      | `durcno/connectors/bun`      | [Bun SQL](https://bun.sh/docs/api/sql)              | Bun runtime applications                |
+| **pglite**   | `durcno/connectors/pglite`   | [@electric-sql/pglite](https://pglite.dev/)         | Embedded PostgreSQL, testing, local dev |
 
 ## postgres Connector
 
@@ -148,7 +148,6 @@ export default defineConfig({
 - **Unit Testing**: Run tests with a real PostgreSQL database without external dependencies
 - **Local Development**: Develop offline without needing a PostgreSQL server
 - **Embedded Applications**: Build desktop or Electron apps with embedded PostgreSQL
-- **Edge/Serverless**: Run PostgreSQL in edge environments or serverless functions
 - **Prototyping**: Quickly prototype database schemas without setup overhead
 
 ## Connector Options
