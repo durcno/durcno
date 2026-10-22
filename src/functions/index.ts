@@ -63,7 +63,7 @@ export abstract class SqlFn<
   TColumn extends AnyColumn,
   TSqlFnType extends SqlFnType = SqlFnType,
   TPgType extends string = string,
-  TTsType = any,
+  TTsType = unknown,
   THasArg extends boolean = false,
   THasAggregate extends boolean = false,
 > {
@@ -316,12 +316,12 @@ export function detectJsonKind(e: unknown): "json" | "jsonb" | null {
       jsonKindByClass.set(ctor, kind);
     }
     if (kind !== null) return kind;
-    const pgType = (e as any).pgType;
+    const pgType = (e as { pgType?: unknown }).pgType;
     if (pgType === "jsonb") return "jsonb";
     if (pgType === "json") return "json";
     return null;
   }
-  const pgType = (e as any)?.$?.PgType;
+  const pgType = (e as { $?: { PgType?: unknown } }).$?.PgType;
   if (pgType === "jsonb") return "jsonb";
   if (pgType === "json") return "json";
   return null;
@@ -436,19 +436,17 @@ export function appendOperand(
   }
 }
 
-// biome-ignore-start lint/suspicious/noExplicitAny: <>
 export type StdSqlFn = SqlFn<
   StdTableColumn,
   SqlFnType,
   string,
-  any,
+  unknown,
   boolean,
   boolean
 >;
-// biome-ignore-end lint/suspicious/noExplicitAny: <>
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnySqlFn = SqlFn<any, any, any, any, any, boolean>;
+// biome-ignore lint/suspicious/noExplicitAny: any column scope is the wildcard this alias exists for
+export type AnySqlFn = SqlFn<any, SqlFnType, string, unknown, boolean, boolean>;
 
 /** Any `SqlFn` scoped to `TColumn`, aggregate or not. */
 export type ScopedSqlFn<

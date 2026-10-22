@@ -1,12 +1,12 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { FilterExpression } from "../filters/index";
-import type { AnyColumn, TableWithColumns } from "../table";
-import type { Valueof } from "../types";
+import type { AnyTableWithColumns } from "../table";
+import type { RawRow, Valueof } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class ExistsQuery<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean = false,
 > extends QueryPromise<boolean> {
   readonly #$table: TTableWC;
@@ -52,7 +52,7 @@ export class ExistsQuery<
     return this.handleRows(rows);
   }
 
-  handleRows(rows: { exists: boolean }[]): boolean {
-    return rows[0].exists;
+  handleRows(rows: RawRow[]): boolean {
+    return rows[0].exists === true;
   }
 }

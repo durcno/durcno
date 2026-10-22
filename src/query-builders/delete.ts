@@ -1,12 +1,8 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import type { FilterExpression } from "../filters/index";
-import type {
-  AnyColumn,
-  StdTableWithColumns,
-  TableWithColumns,
-} from "../table";
-import type { Key, Valueof } from "../types";
+import type { AnyTableWithColumns, StdTableWithColumns } from "../table";
+import type { Key, RawRow, Valueof } from "../types";
 import {
   buildReturningClause,
   buildWithClause,
@@ -18,7 +14,7 @@ import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class DeleteQuery<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean,
   TReturning extends
     | "*"
@@ -148,7 +144,7 @@ export class DeleteQuery<
     return resolveReturningColumns(this.#$table._.columns, this.#$returning);
   }
 
-  handleRows(rows: Record<string, unknown>[]) {
+  handleRows(rows: RawRow[]) {
     return mapStarRows(
       rows,
       this.#$table as unknown as StdTableWithColumns,

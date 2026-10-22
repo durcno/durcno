@@ -295,10 +295,10 @@ export async function init(options: InitOptions): Promise<void> {
     try {
       execSync(installCmdStr, { stdio: ["ignore", "ignore", "inherit"] });
       console.log(cyan.bold(`\nInstalled (${toInstall.join(", ")})`));
-      // biome-ignore lint/suspicious/noExplicitAny: <>
-    } catch (err: any) {
+    } catch (err: unknown) {
       // execSync throws an error with status/code when the command exits non-zero
-      const exitCode = err.status ?? err.code ?? "unknown";
+      const { status, code } = err as { status?: unknown; code?: unknown };
+      const exitCode = status ?? code ?? "unknown";
       console.log(
         yellow.bold(`\nInstallation failed with exit code ${exitCode}`),
       );

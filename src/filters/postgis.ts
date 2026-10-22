@@ -11,7 +11,10 @@
  * When an `Arg` is passed the resulting filter carries `THasArg = true`
  * and is only accepted inside prepared queries (`db.prepare()`).
  */
-import type { PointColumn } from "../columns/postgis/geography/point";
+import type {
+  PointColumn,
+  PointConfig,
+} from "../columns/postgis/geography/point";
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
@@ -19,8 +22,7 @@ import type { Or } from "../types";
 import { Filter } from "./index";
 
 /** Constrains `TCol` to geography point columns only. */
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type GeographyPointCol = PointColumn<any>;
+export type GeographyPointCol = PointColumn<PointConfig>;
 
 /** Writes `ST_PointFromText(point)` into `query.sql`, supporting `Arg<string>` for point. */
 export function pointToQuery(

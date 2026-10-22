@@ -78,8 +78,6 @@ describe("Raw SQL queries", () => {
 
     const result = await db.raw<{ username: string }[]>(
       "SELECT username FROM users",
-      [],
-      (rows) => rows,
     );
 
     expect(result).toHaveLength(2);
@@ -98,7 +96,6 @@ describe("Raw SQL queries", () => {
     const result = await db.raw<{ username: string; age: number }[]>(
       "SELECT username, age FROM users WHERE age >= $1",
       [30],
-      (rows) => rows,
     );
 
     expect(result).toHaveLength(2);
@@ -157,8 +154,6 @@ describe("Raw SQL queries", () => {
 
     const result = await db.raw<{ count: string }[]>(
       "SELECT COUNT(*) as count FROM users",
-      [],
-      (rows) => rows,
     );
 
     expect(Number.parseInt(result[0].count, 10)).toBe(3);
@@ -180,8 +175,6 @@ describe("Raw SQL queries", () => {
       `SELECT u.username, p.title 
        FROM users u 
        JOIN posts p ON u.id = p."user_id"`,
-      [],
-      (rows) => rows,
     );
 
     expect(result).toHaveLength(1);
@@ -201,8 +194,6 @@ describe("Raw SQL queries", () => {
 
     const result = await db.raw<{ email: string | null }[]>(
       "SELECT email FROM users",
-      [],
-      (rows) => rows,
     );
 
     expect(result[0].email).toBeNull();
@@ -221,7 +212,6 @@ describe("Raw SQL queries", () => {
       `SELECT username FROM users 
        WHERE type = $1 AND age >= $2`,
       ["admin", 30],
-      (rows) => rows,
     );
 
     expect(result).toHaveLength(2);
@@ -231,7 +221,6 @@ describe("Raw SQL queries", () => {
     const result = await db.raw<{ username: string }[]>(
       "SELECT username FROM users WHERE username = $1",
       ["nonexistent"],
-      (rows) => rows,
     );
 
     expect(result).toEqual([]);
@@ -255,8 +244,6 @@ describe("Raw SQL queries", () => {
 
     const result = await db.raw<{ name: string }[]>(
       "SELECT name FROM temp_test",
-      [],
-      (rows) => rows,
     );
 
     expect(result).toHaveLength(1);
@@ -276,7 +263,6 @@ describe("Raw SQL queries", () => {
       `SELECT username FROM users 
        WHERE age > $1 AND "is_active" = $2`,
       [25, "true"],
-      (rows) => rows,
     );
 
     expect(result).toHaveLength(1);
@@ -292,7 +278,7 @@ describe("Raw SQL queries", () => {
       ]);
 
     const result = await db.raw("SELECT username FROM users", [], (rows) =>
-      rows.map((r) => r.username.toUpperCase()),
+      rows.map((r) => (r.username as string).toUpperCase()),
     );
 
     expect(result).toEqual(["USER1", "USER2"]);

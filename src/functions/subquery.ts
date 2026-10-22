@@ -2,7 +2,7 @@ import { is } from "../entity";
 import type { Filter } from "../filters";
 import { type AnyArg, Arg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
-import type { SelectQuery } from "../query-builders/select";
+import type { WidenedSelectQuery } from "../query-builders/select";
 import { Sql } from "../sql";
 import type { AnyColumn } from "../table";
 import type { AnySubquery } from "../virtual-table";
@@ -15,8 +15,7 @@ import { SqlFn } from "./index";
  * - A raw `Sql` instance (e.g. `sql\`SELECT 1 FROM ...\``)
  */
 export type SubqueryInput<TArg extends boolean = boolean> =
-  // biome-ignore lint/suspicious/noExplicitAny: subquery return and column types are arbitrary
-  | SelectQuery<any, any, any, TArg, any, any, any, any, any, any, any>
+  | WidenedSelectQuery<TArg>
   | AnySubquery
   | Sql;
 
@@ -30,57 +29,12 @@ export type ExistsSubquery<TArg extends boolean = boolean> =
  * Extracts the `TPrepare` argument flag from a subquery expression.
  */
 export type SubqueryHasArg<TSubquery> =
-  TSubquery extends SelectQuery<
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    infer TArg,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any,
-    // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters to extract TArg
-    any
-  >
-    ? TArg
-    : false;
+  TSubquery extends WidenedSelectQuery<infer TArg> ? TArg : false;
 
 export type InSelectQuery<
   TArg extends boolean = boolean,
   TReturn = unknown,
-> = SelectQuery<
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  TArg,
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: wildcard parameters
-  any,
-  Record<string, TReturn>[]
->;
+> = WidenedSelectQuery<TArg, Record<string, TReturn>[]>;
 
 export type InSubquery<TReturn = unknown, TArg extends boolean = boolean> =
   | InSelectQuery<TArg, TReturn>

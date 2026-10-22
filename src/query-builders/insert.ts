@@ -6,13 +6,13 @@ import { type NonAggregateSqlFn, SqlFn } from "../functions/index";
 import { Sql } from "../sql";
 import {
   type AnyColumn,
+  type AnyTableWithColumns,
   type StdTableWithColumns,
   Table,
   type TableAnyColumn,
   type TableColumn,
-  type TableWithColumns,
 } from "../table";
-import type { Key, Prettify, SelfOrArray, Valueof } from "../types";
+import type { Key, Prettify, RawRow, SelfOrArray, Valueof } from "../types";
 import {
   buildReturningClause,
   buildWithClause,
@@ -41,9 +41,7 @@ export type ToExcludeColumn<T extends TableAnyColumn> =
     : never;
 
 /** Columns in scope for conflict clauses, combining table columns and `EXCLUDED` columns. */
-export type ConflictScopeColumns<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
-> =
+export type ConflictScopeColumns<TTableWC extends AnyTableWithColumns> =
   | TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
   | ToExcludeColumn<TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]>;
 
@@ -52,7 +50,7 @@ export type ConflictScopeColumns<
  * Accepts literals, prepared args, compatible columns, scalar SQL functions, or raw SQL.
  */
 export type ConflictUpdateableItem<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   ColName extends keyof TTableWC["_"]["columns"],
   TPrepare extends boolean = false,
 > =
@@ -82,7 +80,7 @@ export type ConflictUpdateableItem<
  * Excludes primary key columns.
  */
 export type ConflictUpdateValues<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean = false,
 > = {
   [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
@@ -118,7 +116,7 @@ function insertColumnsOf(table: StdTableWithColumns): {
 
 /** Builder returned by `InsertQuery#onConflict()`. */
 export class ConflictBuilder<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean,
   TReturning extends
     | { [ColName in keyof TTableWC["_"]["columns"]]?: true }
@@ -223,7 +221,7 @@ export type InsertableItem<
  * Excludes generated-always columns; columns with defaults or nullable columns are optional.
  */
 export type InsertValues<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean = false,
 > = {
   [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeInsert"] extends never
@@ -244,7 +242,7 @@ export type InsertValues<
  * Provides `.values()` to specify rows to be inserted.
  */
 export class InsertBuilder<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean,
 > {
   readonly #table: TTableWC;
@@ -286,7 +284,7 @@ export class InsertBuilder<
  * Supports chaining `.returning()` and `.onConflict()` clauses.
  */
 export class InsertQuery<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean,
   TReturning extends
     | "*"
@@ -378,7 +376,7 @@ export class InsertQuery<
     ...columns: Valueof<TTableWC["_"]["columns"]>[]
   ): ConflictBuilder<TTableWC, TPrepare, TReturning, boolean> {
     const table = this.#table;
-    // biome-ignore lint/suspicious/noExplicitAny: <>
+    // biome-ignore lint/suspicious/noExplicitAny: factory return is narrowed by the caller cast
     const factory = (clause: ConflictClause): any =>
       new InsertQuery(
         table,
@@ -513,7 +511,7 @@ export class InsertQuery<
     return resolveReturningColumns(this.#table._.columns, this.#$returning);
   }
 
-  handleRows(rows: Record<string, unknown>[]) {
+  handleRows(rows: RawRow[]) {
     return mapStarRows(
       rows,
       this.#table as unknown as StdTableWithColumns,

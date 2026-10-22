@@ -20,6 +20,7 @@ export class ForeignKeyBuilder<TCol extends AnyColumn> {
    * Specify the referenced column.
    * The referenced column's value type must match the source column's value type.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: any config accepts every column config shape
   references<TRefCol extends Column<any, TCol["ValType"]>>(
     ref: StdTableColumn<TRefCol>,
   ): ForeignKey {

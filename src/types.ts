@@ -1,6 +1,9 @@
 export type BasicTypes = string | number | bigint | boolean | null;
 export type SqlArgType = string | number | bigint | boolean | null;
 
+/** A raw row as returned by a PostgreSQL driver: column name to driver value. */
+export type RawRow = Record<string, unknown>;
+
 declare const camelCaseBrand: unique symbol;
 declare const snakeCaseBrand: unique symbol;
 
@@ -23,8 +26,7 @@ export type CamelToSnake<S extends string> =
 
 export type Key = string | number | symbol;
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type Valueof<T> = T extends any ? T[keyof T] : never;
+export type Valueof<T> = T extends unknown ? T[keyof T] : never;
 
 export type SelfOrArray<T> = T | T[];
 export type SelfOrReadonly<T> = T | Readonly<T>;
@@ -38,11 +40,11 @@ export type Or<T, U> = [T] extends [never]
     ? true
     : OrFalse<U>;
 
+/** Turns a union of function parameter types into an intersection. */
+type Distribute<U> = U extends unknown ? (k: U) => void : never;
+
 export type UnionToIntersection<U> =
-  // biome-ignore lint/suspicious/noExplicitAny: <>
-  (U extends any ? (k: U) => void : never) extends (k: infer I) => void
-    ? I
-    : never;
+  Distribute<U> extends (k: infer I) => void ? I : never;
 
 export type Is<T, U> = T extends U ? true : false;
 

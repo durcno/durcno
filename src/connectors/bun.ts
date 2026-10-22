@@ -1,4 +1,5 @@
 import Bun from "bun";
+import type { RawRow } from "../types";
 import {
   $Client,
   $Pool,
@@ -57,8 +58,8 @@ class BunClient extends $Client {
   async connect(): Promise<void> {
     await this.#client.connect();
   }
-  getRows(response: any): any[] {
-    return response;
+  getRows(response: unknown): RawRow[] {
+    return response as RawRow[];
   }
   async close(): Promise<void> {
     await this.#client.end();
@@ -91,8 +92,8 @@ class BunPool extends $Pool {
   async connect(): Promise<void> {
     await this.#pool.connect();
   }
-  getRows(response: any): any[] {
-    return response;
+  getRows(response: unknown): RawRow[] {
+    return response as RawRow[];
   }
   async close(): Promise<void> {
     await this.#pool.end();
@@ -124,8 +125,8 @@ class BunPoolClient extends $Client {
     return this.#sql.unsafe(query, args);
   }
   async connect(): Promise<void> {}
-  getRows(response: any): any[] {
-    return response;
+  getRows(response: unknown): RawRow[] {
+    return response as RawRow[];
   }
   async close(): Promise<void> {
     this.#sql.release();

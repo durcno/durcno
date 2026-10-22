@@ -1,4 +1,5 @@
 import { Client, Pool, type PoolClient } from "pg";
+import type { RawRow } from "../types";
 import {
   $Client,
   $Pool,
@@ -55,8 +56,8 @@ class PgClient extends $Client {
   async connect(): Promise<void> {
     await this.#client.connect();
   }
-  getRows(response: any): any[] {
-    return response.rows;
+  getRows(response: unknown): RawRow[] {
+    return (response as { rows: RawRow[] }).rows;
   }
   async close(): Promise<void> {
     await this.#client.end();
@@ -90,8 +91,8 @@ class PgPool extends $Pool {
   async connect(): Promise<void> {
     await this.#pool.connect();
   }
-  getRows(response: any): any[] {
-    return response.rows;
+  getRows(response: unknown): RawRow[] {
+    return (response as { rows: RawRow[] }).rows;
   }
   async close(): Promise<void> {
     await this.#pool.end();
@@ -123,8 +124,8 @@ class PgPoolClient extends $Client {
     return this.#client.query(query, args);
   }
   async connect(): Promise<void> {}
-  getRows(response: any): any[] {
-    return response.rows;
+  getRows(response: unknown): RawRow[] {
+    return (response as { rows: RawRow[] }).rows;
   }
   async close(): Promise<void> {
     this.#client.release();

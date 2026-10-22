@@ -75,7 +75,7 @@ export async function cleanTestData(tables: any[] = []): Promise<void> {
   try {
     if (tables.length > 0) {
       for (const table of tables) {
-        const tableName = (table as any)._.nameSql;
+        const tableName = table._.nameSql;
         if (typeof tableName === "string") {
           await client.query(
             `TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`,

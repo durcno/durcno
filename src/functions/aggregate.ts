@@ -53,7 +53,7 @@ export type TupleOrderHasArg<TTuple extends readonly unknown[]> =
 export abstract class AggregateSqlFn<
   TColumn extends AnyColumn,
   TPgType extends string = string,
-  TTsType = any,
+  TTsType = unknown,
   THasArg extends boolean = false,
 > extends SqlFn<TColumn, "aggregate", TPgType, TTsType, THasArg, true> {
   /** This base *is* an aggregate function, as opposed to merely containing one. */

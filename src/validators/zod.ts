@@ -17,6 +17,7 @@ type InferColInsertZodType<
         ? z.ZodOptional<ZType>
         : ZType
       : z.ZodOptional<z.ZodNullable<ZType>>;
+// biome-ignore-start lint/suspicious/noExplicitAny: contravariant params need any[] to infer refine fns
 type InferInsertZodShape<
   TColumns extends Record<string, AnyColumn>,
   TRefine extends BuildZodRefine<TColumns> | undefined,
@@ -28,6 +29,7 @@ type InferInsertZodShape<
         : never
       : InferColInsertZodType<TColumns[K], TColumns[K]["zodType"]>
     : InferColInsertZodType<TColumns[K], TColumns[K]["zodType"]>;
+  // biome-ignore-end lint/suspicious/noExplicitAny: contravariant params need any[] to infer refine fns
 } extends infer U
   ? { [K in keyof U as U[K] extends never ? never : K]: U[K] }
   : never;
@@ -80,6 +82,7 @@ type InferColUpdateZodType<
     ? z.ZodOptional<ZType>
     : z.ZodOptional<z.ZodNullable<ZType>>;
 
+// biome-ignore-start lint/suspicious/noExplicitAny: contravariant params need any[] to infer refine fns
 type InferUpdateZodShape<
   TColumns extends Record<string, AnyColumn>,
   TRefine extends BuildZodRefine<TColumns> | undefined,
@@ -91,6 +94,7 @@ type InferUpdateZodShape<
         : never
       : InferColUpdateZodType<TColumns[K], TColumns[K]["zodType"]>
     : InferColUpdateZodType<TColumns[K], TColumns[K]["zodType"]>;
+  // biome-ignore-end lint/suspicious/noExplicitAny: contravariant params need any[] to infer refine fns
 } extends infer U
   ? { [K in keyof U as U[K] extends never ? never : K]: U[K] }
   : never;

@@ -63,8 +63,9 @@ export type StdOrderSqlFn = OrderSqlFn<AnySqlFn>;
  * Order item an aggregate accepts inside its own `ORDER BY`; an aggregate is
  * refused because it would nest.
  */
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnyOrder = Order<any, any> | OrderSqlFn<NonAggregateSqlFn>;
+export type AnyOrder =
+  | Order<TableAnyColumn | string, OrderDirection>
+  | OrderSqlFn<NonAggregateSqlFn>;
 
 /**
  * Valid orderBy item for a query. An aggregate is allowed here; PostgreSQL

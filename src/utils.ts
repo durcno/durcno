@@ -32,10 +32,10 @@ export function snakeToCamel(str: string): string {
 
 export async function tryCatch<T>(
   fn: () => T,
-): Promise<[T, null] | [null, any]> {
+): Promise<[T, null] | [null, unknown]> {
   try {
     return [await fn(), null];
-  } catch (error: any) {
+  } catch (error: unknown) {
     return [null, error];
   }
 }

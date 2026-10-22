@@ -5,12 +5,11 @@ import type { FilterExpression } from "../filters/index";
 import { type NonAggregateSqlFn, SqlFn } from "../functions/index";
 import { Sql } from "../sql";
 import type {
-  AnyColumn,
+  AnyTableWithColumns,
   StdTableColumn,
   StdTableWithColumns,
-  TableWithColumns,
 } from "../table";
-import type { Key } from "../types";
+import type { Key, RawRow } from "../types";
 import {
   buildReturningClause,
   buildWithClause,
@@ -27,7 +26,7 @@ import { QueryPromise } from "./query-promise";
  * Accepts literals, prepared args, compatible columns, scalar SQL functions, or raw SQL.
  */
 export type UpdateableItem<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   ColName extends keyof TTableWC["_"]["columns"],
   TPrepare extends boolean = false,
 > =
@@ -55,7 +54,7 @@ export type UpdateableItem<
  * Excludes primary key columns.
  */
 export type UpdateValues<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean = false,
 > = {
   [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
@@ -65,7 +64,7 @@ export type UpdateValues<
 
 /** Alias for `UpdateValues`. */
 export type UpdateSetValues<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean = false,
 > = UpdateValues<TTableWC, TPrepare>;
 
@@ -98,7 +97,7 @@ function updateFnColumnsOf(
  * Provides `.set()` to specify column updates.
  */
 export class UpdateBuilder<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean,
 > {
   readonly #table: TTableWC;
@@ -141,7 +140,7 @@ export class UpdateBuilder<
  * Supports chaining `.where()` and `.returning()` clauses.
  */
 export class UpdateQuery<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean,
   TValues extends UpdateValues<TTableWC, TPrepare>,
   TWhere extends
@@ -333,7 +332,7 @@ export class UpdateQuery<
     return resolveReturningColumns(this.#table._.columns, this.#$returning);
   }
 
-  handleRows(rows: Record<string, unknown>[]) {
+  handleRows(rows: RawRow[]) {
     return mapStarRows(
       rows,
       this.#table as unknown as StdTableWithColumns,

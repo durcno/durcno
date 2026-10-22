@@ -14,5 +14,6 @@ export type CteWithColumns<
   TColumns extends Record<string, AnyColumn>,
 > = Cte<TName, TColumns> & TColumns;
 
-// biome-ignore lint/suspicious/noExplicitAny: widened alias for constraint purposes
-export type AnyCteWithColumns = CteWithColumns<any, any>;
+/** A CTE widened for use as a constraint; `Cte` is invariant in its columns. */
+// biome-ignore lint/suspicious/noExplicitAny: Cte is invariant in its columns
+export type AnyCteWithColumns = Cte<any, any>;

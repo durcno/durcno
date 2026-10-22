@@ -25,6 +25,7 @@ import type {
 } from "../table";
 import type {
   Prettify,
+  RawRow,
   SelfOrArray,
   UnionToIntersection,
   Valueof,
@@ -287,7 +288,7 @@ function buildColumnsView(
     for (const join of joins) {
       view[join.table._.name] =
         join.type === "left"
-          ? buildNullableColumns(join.table)
+          ? buildNullableColumns(join.table as unknown as StdTableWithColumns)
           : join.table._.columns;
     }
   }
@@ -1236,7 +1237,7 @@ export class SelectQuery<
     >;
   }
 
-  handleRows(rows: Record<string, unknown>[]) {
+  handleRows(rows: RawRow[]) {
     if (this.#$select !== undefined) {
       if (rows.length === 0) return [] as TReturn;
       if (!this.#selectRowsPlan) {
@@ -1270,7 +1271,12 @@ export class SelectQuery<
   }
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
-type AnySQ = SelectQuery<any, any, any, any, any, any, any, any>;
+// biome-ignore-start lint/suspicious/noExplicitAny: table, join, select and filter slots are wildcards by design
+/** A `SelectQuery` with every slot widened except the prepare flag and the return type. */
+export type WidenedSelectQuery<
+  TPrepare extends boolean,
+  TReturn = unknown,
+> = SelectQuery<any, any, any, TPrepare, any, any, any, any, any, any, TReturn>;
+// biome-ignore-end lint/suspicious/noExplicitAny: table, join, select and filter slots are wildcards by design
 
-export type AnySelectQuery = AnySQ;
+export type AnySelectQuery = WidenedSelectQuery<boolean>;

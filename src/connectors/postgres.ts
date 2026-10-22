@@ -1,4 +1,5 @@
 import postgresLib, { type ReservedSql } from "postgres";
+import type { RawRow } from "../types";
 import {
   $Client,
   $Pool,
@@ -60,8 +61,8 @@ class PostgresClient extends $Client {
     );
   }
   async connect(): Promise<void> {}
-  getRows(response: any): any[] {
-    return response;
+  getRows(response: unknown): RawRow[] {
+    return response as RawRow[];
   }
   async close(): Promise<void> {
     await this.#sql.end();
@@ -97,8 +98,8 @@ class PostgresPool extends $Pool {
     );
   }
   async connect(): Promise<void> {}
-  getRows(response: any): any[] {
-    return response;
+  getRows(response: unknown): RawRow[] {
+    return response as RawRow[];
   }
   async close(): Promise<void> {
     await this.#sql.end();
@@ -135,8 +136,8 @@ class PostgresPoolClient extends $Client {
     );
   }
   async connect(): Promise<void> {}
-  getRows(response: any): any[] {
-    return response;
+  getRows(response: unknown): RawRow[] {
+    return response as RawRow[];
   }
   async close(): Promise<void> {
     this.#sql.release();

@@ -107,12 +107,8 @@ export type StdTableColumn<TCol extends AnyColumn = AnyColumn> = TableColumn<
   TCol
 >;
 
-export type TableAnyColumn<TCol extends AnyColumn = AnyColumn> = TableColumn<
-  any,
-  any,
-  any,
-  TCol
->;
+export type TableAnyColumn<TCol extends AnyColumn = AnyColumn> =
+  StdTableColumn<TCol>;
 
 export type AnyScalarColumn = AnyColumn & {
   config: { dimension?: undefined };
@@ -207,8 +203,11 @@ export type StdTableWithColumns = TableWithColumns<
   Record<string, AnyColumn>
 >;
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
-export type AnyTableWithColumns = TableWithColumns<any, any, any>;
+/**
+ * A table widened for use as a constraint. `Table` is invariant in its columns,
+ * so the slots stay `any`; the column accessors live on `_`.
+ */
+export type AnyTableWithColumns = AnyTable;
 
 export type TableWCorNever<T> =
   T extends TableWithColumns<infer TTSchema, infer TTName, infer TColumns>
@@ -217,9 +216,7 @@ export type TableWCorNever<T> =
       : never
     : never;
 
-export type IsTableWC<T> =
-  // biome-ignore lint/suspicious/noExplicitAny: <>
-  T extends TableWithColumns<any, any, any> ? true : false;
+export type IsTableWC<T> = T extends AnyTableWithColumns ? true : false;
 
 /**
  * Infers the select model shape of a table (all columns mapped to their select types).
@@ -424,13 +421,14 @@ export function fk<
   return new Fk(col, table);
 }
 
-export type AnyRelation =
-  // biome-ignore lint/suspicious/noExplicitAny: uses any for extends
-  | Many<any, any, any, TableAnyColumn>
-  // biome-ignore lint/suspicious/noExplicitAny: uses any for extends
-  | One<any, any, any, TableAnyColumn>
-  // biome-ignore lint/suspicious/noExplicitAny: uses any for extends
-  | Fk<any, any, any, TableAnyColumn>;
+/** Any relation, widened so concrete `Many`/`One`/`Fk` instances stay assignable. */
+export type AnyRelation = {
+  readonly [TRelation in "Many" | "One" | "Fk"]: {
+    readonly t: TRelation;
+    readonly table: AnyTableWithColumns;
+    readonly col: TableAnyColumn;
+  };
+}["Many" | "One" | "Fk"];
 
 export class Relations<
   TTSchema extends string,
@@ -463,7 +461,7 @@ export type StdRelations = Relations<
   >
 >;
 
-// biome-ignore lint/suspicious/noExplicitAny: <>
+// biome-ignore lint/suspicious/noExplicitAny: any relation map is the wildcard this alias exists for
 export type AnyRelations = Relations<any, any, any, any>;
 
 export type StdTableFullName = `"${string}"."${string}"`;

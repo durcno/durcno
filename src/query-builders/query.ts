@@ -1,4 +1,4 @@
-import type { SqlArgType } from "../types";
+import type { RawRow, SqlArgType } from "../types";
 import type { AnyArg } from "./prepare";
 
 /**
@@ -22,8 +22,8 @@ export class Query<TReturn = unknown> {
   readonly returnType!: TReturn;
   sql: string;
   arguments: SqlArgType[] = [];
-  rowsHandler: (rows: unknown[]) => TReturn;
-  constructor(sql: string, rowsHandler: (rows: any[]) => TReturn) {
+  rowsHandler: (rows: RawRow[]) => TReturn;
+  constructor(sql: string, rowsHandler: (rows: RawRow[]) => TReturn) {
     this.sql = sql;
     this.rowsHandler = rowsHandler;
   }
@@ -59,5 +59,4 @@ export class Query<TReturn = unknown> {
   }
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: widened alias for return type of QueryPromise.then()
-export type AnyQuery = Query<any>;
+export type AnyQuery = Query<unknown>;

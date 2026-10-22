@@ -51,7 +51,7 @@ export const Products = table(
       if (stage >= 2 && stage < 4 && "category" in t) {
         idxs.push(index([(t as any).category]));
       }
-      return idxs as any;
+      return idxs;
     },
   },
 );

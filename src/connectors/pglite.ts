@@ -1,4 +1,5 @@
 import { PGlite, type PGliteOptions } from "@electric-sql/pglite";
+import type { RawRow } from "../types";
 import {
   $Client,
   $Pool,
@@ -71,8 +72,8 @@ class PgLiteClient extends $Client {
     return this.#client.query(query, args);
   }
   async connect(): Promise<void> {}
-  getRows(response: any): any[] {
-    return response.rows;
+  getRows(response: unknown): RawRow[] {
+    return (response as { rows: RawRow[] }).rows;
   }
   async close(): Promise<void> {
     await this.#client.close();
@@ -104,8 +105,8 @@ class PgLitePool extends $Pool {
     return this.#pool.query(query, args);
   }
   async connect(): Promise<void> {}
-  getRows(response: any): any[] {
-    return response.rows;
+  getRows(response: unknown): RawRow[] {
+    return (response as { rows: RawRow[] }).rows;
   }
   async close(): Promise<void> {
     await this.#pool.close();
@@ -136,8 +137,8 @@ class PgLitePoolClient extends $Client {
     return this.#client.query(query, args);
   }
   async connect(): Promise<void> {}
-  getRows(response: any): any[] {
-    return response.rows;
+  getRows(response: unknown): RawRow[] {
+    return (response as { rows: RawRow[] }).rows;
   }
   async close(): Promise<void> {
     // No-op: Don't close the shared PGlite instance

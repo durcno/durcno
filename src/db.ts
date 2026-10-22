@@ -27,7 +27,7 @@ import {
   type TableWCorNever,
   type TableWithColumns,
 } from "./table";
-import type { SqlArgType, Valueof } from "./types";
+import type { RawRow, SqlArgType, Valueof } from "./types";
 import {
   type AnySubquery,
   bindVirtualTableColumns,
@@ -454,7 +454,7 @@ class Base<
   raw<TReturn = unknown>(
     query: string,
     args: SqlArgType[] = [],
-    rowsHandler?: (rows: any[]) => TReturn,
+    rowsHandler?: (rows: RawRow[]) => TReturn,
   ) {
     return new RawQuery(query, args, rowsHandler, this.#getExecutor());
   }
@@ -626,7 +626,7 @@ export function database<TEntities extends Record<string, unknown>>(
       continue;
     }
     if (is(relations, Relations)) {
-      allRelations[relations.table._.fullName] = relations;
+      allRelations[relations.table._.fullName] = relations as StdRelations;
     }
   }
   return new DB(

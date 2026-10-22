@@ -1,12 +1,12 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { FilterExpression } from "../filters/index";
-import type { AnyColumn, StdTableColumn, TableWithColumns } from "../table";
-import type { Valueof } from "../types";
+import type { AnyTableWithColumns, StdTableColumn } from "../table";
+import type { RawRow, Valueof } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class DistinctQuery<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TColumn extends StdTableColumn,
   TReturn = TColumn["ValTypeSelect"][],
   TPrepare extends boolean = false,
@@ -58,7 +58,7 @@ export class DistinctQuery<
     return this.handleRows(rows);
   }
 
-  handleRows(rows: { value: unknown }[]): TReturn {
+  handleRows(rows: RawRow[]): TReturn {
     return rows.map((row) => {
       return this.#$column.fromDriver(row.value as never);
     }) as TReturn;

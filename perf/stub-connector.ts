@@ -1,4 +1,4 @@
-import type { Config } from "durcno";
+import type { Config, RawRow } from "durcno";
 
 /**
  * A stub pool for benchmarks that must not talk to a database. Typed
@@ -12,7 +12,7 @@ import type { Config } from "durcno";
  *   silent mistake into a loud one.
  * @returns A stub connector to pass to `defineConfig`.
  */
-export function createStubConnector(rows?: unknown[]): Config["connector"] {
+export function createStubConnector(rows?: RawRow[]): Config["connector"] {
   const query = (): Promise<unknown> => {
     if (rows === undefined) {
       return Promise.reject(
@@ -30,7 +30,7 @@ export function createStubConnector(rows?: unknown[]): Config["connector"] {
     execStrArgs: query,
     execQuery: query,
     connect: (): Promise<void> => Promise.resolve(),
-    getRows: (response: unknown) => response,
+    getRows: (response: unknown) => response as RawRow[],
     close: (): Promise<void> => Promise.resolve(),
     acquireClient: (): Promise<never> =>
       Promise.reject(new Error("not used by these benchmarks")),

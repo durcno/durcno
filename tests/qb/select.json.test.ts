@@ -447,10 +447,10 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
         }))
         .where(() => eq(schema.Users.id, user.id));
 
-      expect(new Date(row.fallbackDate as any).toISOString()).toBe(
+      expect(new Date(row.fallbackDate).toISOString()).toBe(
         targetDate.toISOString(),
       );
-      expect(new Date(row.caseDate as any).toISOString()).toBe(
+      expect(new Date(row.caseDate).toISOString()).toBe(
         targetDate.toISOString(),
       );
     });

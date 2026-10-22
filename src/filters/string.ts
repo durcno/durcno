@@ -4,6 +4,7 @@ import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import { Filter } from "./index";
 
+// biome-ignore lint/suspicious/noExplicitAny: text columns are wildcards here
 export type TextScalarTableColumn = Column<any, any, "text"> & {
   config: { dimension?: undefined };
 };

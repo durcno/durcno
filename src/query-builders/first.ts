@@ -1,17 +1,13 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { FilterExpression } from "../filters/index";
-import type {
-  AnyColumn,
-  StdTableWithColumns,
-  TableWithColumns,
-} from "../table";
-import type { Valueof } from "../types";
+import type { AnyTableWithColumns, StdTableWithColumns } from "../table";
+import type { RawRow, Valueof } from "../types";
 import { mapStarRows } from "./helpers";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class FirstQuery<
-  TTableWC extends TableWithColumns<string, string, Record<string, AnyColumn>>,
+  TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean = false,
   TReturn =
     | {
@@ -59,7 +55,7 @@ export class FirstQuery<
     return this.handleRows(rows);
   }
 
-  handleRows(rows: Record<string, unknown>[]): TReturn {
+  handleRows(rows: RawRow[]): TReturn {
     if (rows.length === 0) return null as TReturn;
     return mapStarRows(
       rows,

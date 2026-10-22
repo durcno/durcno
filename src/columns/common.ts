@@ -200,12 +200,14 @@ type HasUpdateFn<C> = C & { hasUpdateFn: true };
  * Supports either a direct column resolver function or an object with
  * a resolver and optional `onDelete` action.
  */
+// biome-ignore-start lint/suspicious/noExplicitAny: any config accepts every column config shape
 type BuildRef<ValType> =
   | (() => StdTableColumn<Column<any, ValType>>)
   | {
       column: () => StdTableColumn<Column<any, ValType>>;
       onDelete?: OnDeleteAction;
     };
+// biome-ignore-end lint/suspicious/noExplicitAny: any config accepts every column config shape
 
 /**
  * Type that augments C with a `hasReferences` property set to true.
@@ -908,5 +910,4 @@ export class IndexOn<TCol extends AnyColumn = AnyColumn> {
   ) {}
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: A Column value can be anything
-export type StdColumn = Column<ColumnConfig, any, string>;
+export type StdColumn = Column<ColumnConfig, unknown, string>;

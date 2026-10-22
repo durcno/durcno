@@ -19,7 +19,7 @@ import type {
   StdTableWithColumns,
   TableWithColumns,
 } from "../table";
-import type { SelfOrArray, Valueof } from "../types";
+import type { RawRow, SelfOrArray, Valueof } from "../types";
 import { buildWithClause } from "./helpers";
 import type {
   OrderExpression,
@@ -165,6 +165,7 @@ type NestedOptions<
       columns?: never;
     });
 
+// biome-ignore-start lint/suspicious/noExplicitAny: every option flag stays open in the widened alias
 type StdOptions = Options<
   string,
   string,
@@ -172,6 +173,7 @@ type StdOptions = Options<
   Record<string, StdRelations>,
   any
 >;
+// biome-ignore-end lint/suspicious/noExplicitAny: every option flag stays open in the widened alias
 
 /**
  * Resolves the row shape for the boolean `columns` selection mode.
@@ -210,10 +212,10 @@ type Row<
   TTColumns extends Record<string, AnyColumn>,
   TAllRelations extends Record<
     string,
-    Relations<any, any, Record<any, any>, Record<any, AnyRelation>>
+    // biome-ignore lint/suspicious/noExplicitAny: widened relation slots
+    Relations<any, any, Record<any, any>, Record<PropertyKey, AnyRelation>>
   >,
-  // biome-ignore lint/suspicious/noExplicitAny: allows both top-level Options and NestedOptions unions
-  TOptions extends Record<string, any> = any,
+  TOptions extends Record<string, unknown> = Record<string, unknown>,
 > = (TOptions extends { select?: infer S }
   ? [S] extends [null | undefined]
     ? ColumnsRow<TTSchema, TTName, TTColumns, TOptions["columns"]>
@@ -227,7 +229,7 @@ type Row<
     ? Record<never, never>
     : {
         [TWith in keyof TOptions["with"]]: TOptions["with"][TWith] extends infer TNestedOptions
-          ? TNestedOptions extends Record<string, any>
+          ? TNestedOptions extends Record<string, unknown>
             ? RelationReturnType<
                 {
                   [K in keyof Row<
@@ -258,7 +260,7 @@ export class RelationQueryBuilder<
     TTSchema,
     TTName,
     TTColumns,
-    Record<any, AnyRelation>
+    Record<PropertyKey, AnyRelation>
   >,
   TAllRelations extends Record<string, StdRelations>,
   TPrepare extends boolean = false,
@@ -445,9 +447,10 @@ class RelationQuery<
     TTSchema,
     TTName,
     TTColumns,
-    Record<any, AnyRelation>
+    Record<PropertyKey, AnyRelation>
   >,
   TAllRelations extends Record<string, StdRelations>,
+  // biome-ignore-start lint/suspicious/noExplicitAny: the query builder is widened over every option flag
   TOptions extends Options<
     TTSchema,
     TTName,
@@ -456,6 +459,7 @@ class RelationQuery<
     any,
     any
   >,
+  // biome-ignore-end lint/suspicious/noExplicitAny: the query builder is widened over every option flag
   TReturn = {
     [K in keyof Row<TTSchema, TTName, TTColumns, TAllRelations, TOptions>]: Row<
       TTSchema,
@@ -602,7 +606,7 @@ class RelationQuery<
     return this.#convertLevel;
   }
 
-  handleRows(rows: Record<string, unknown>[]): TReturn {
+  handleRows(rows: RawRow[]): TReturn {
     if (rows.length === 0) return rows as TReturn;
     const level = this.#getConvertLevel();
     for (const row of rows) {
@@ -862,7 +866,7 @@ function buildRelationSubquery(
     query,
     aliasPath,
     options,
-    relation.table,
+    relation.table as unknown as StdTableWithColumns,
     allRelations,
   );
   if (relation.t === "Many") {
@@ -1176,7 +1180,7 @@ function buildLevelPlan(
  * every sibling row reuses the same key-to-converter resolution.
  */
 function convert(
-  object: Record<string, any>,
+  object: Record<string, unknown>,
   table: StdTableWithColumns,
   allRelations: Record<string, StdRelations>,
   level: ConvertLevel,

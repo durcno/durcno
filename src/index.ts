@@ -280,4 +280,4 @@ export type Config<T extends Connector = Connector> = {
   connector: T;
 };
 
-export type { Key, Prettify } from "./types";
+export type { Key, Prettify, RawRow } from "./types";

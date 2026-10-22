@@ -1,7 +1,7 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyDBorTX } from "../db";
 import { entityType } from "../symbols";
-import type { BasicTypes } from "../types";
+import type { BasicTypes, RawRow } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -117,7 +117,7 @@ export class PrepareQuery<TReturn> extends QueryPromise<TReturn> {
     return this.handleRows(rows);
   }
 
-  handleRows(rows: any[]) {
+  handleRows(rows: RawRow[]) {
     return this.query.rowsHandler(rows) as TReturn;
   }
 }

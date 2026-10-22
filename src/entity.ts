@@ -29,18 +29,17 @@ function brandsOf(ctor: object): ReadonlySet<string> {
 }
 
 export function is<T extends DurcnoEntity<any>>(
-  value: any,
+  value: unknown,
   type: T,
 ): value is InstanceType<T> {
   if (value === null || value === undefined) {
     return false;
   }
+  if (typeof value !== "object" && typeof value !== "function") {
+    return false;
+  }
   if (value instanceof type) {
     return true;
-  }
-  const valueType = typeof value;
-  if (valueType !== "object" && valueType !== "function") {
-    return false;
   }
 
   const proto = Object.getPrototypeOf(value);
@@ -57,7 +56,7 @@ export function is<T extends DurcnoEntity<any>>(
   return brands.has(type[entityType]);
 }
 
-export function isCol(value: any): value is AnyColumn {
+export function isCol(value: unknown): value is AnyColumn {
   return is(value, Column);
 }
 

@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: <> */
+import type { RawRow } from "../types";
 import type { AnyQuery, Query } from "./query";
 
 export abstract class QueryPromise<T> implements Promise<T> {
@@ -6,7 +6,7 @@ export abstract class QueryPromise<T> implements Promise<T> {
 
   catch<TResult = never>(
     onRejected?:
-      | ((reason: any) => TResult | PromiseLike<TResult>)
+      | ((reason: unknown) => TResult | PromiseLike<TResult>)
       | null
       | undefined,
   ): Promise<T | TResult> {
@@ -33,7 +33,7 @@ export abstract class QueryPromise<T> implements Promise<T> {
       | undefined
       | null,
     onRejected:
-      | ((reason: any) => TResult2 | PromiseLike<TResult2>)
+      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
       | undefined
       | null,
   ): Promise<TResult1 | TResult2> {
@@ -45,7 +45,7 @@ export abstract class QueryPromise<T> implements Promise<T> {
 
   abstract toQuery(parentQuery?: AnyQuery): Query<T>;
   abstract execute(): Promise<T>;
-  abstract handleRows(rows: any[]): T;
+  abstract handleRows(rows: RawRow[]): T;
 }
 
-export type AnyQueryPromise = QueryPromise<any>;
+export type AnyQueryPromise = QueryPromise<unknown>;

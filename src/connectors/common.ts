@@ -2,7 +2,7 @@ import type { ConnectionOptions } from "node:tls";
 import type { DurcnoLogger } from "../logger";
 import type { MigrationOptions } from "../migration/index";
 import type { Query } from "../query-builders/query";
-import type { SqlArgType } from "../types";
+import type { RawRow, SqlArgType } from "../types";
 
 /** Default maximum number of connections in the pool. */
 export const DEFAULT_POOL_MAX = 5;
@@ -269,7 +269,7 @@ export abstract class $Client extends $QueryExecutor {
    * @param response - The raw query response from the underlying client.
    * @returns An array of row objects.
    */
-  abstract getRows(response: any): any[];
+  abstract getRows(response: unknown): RawRow[];
 
   /**
    * Closes the database connection and releases resources.
@@ -308,7 +308,7 @@ export abstract class $Pool extends $QueryExecutor {
    * @param response - The raw query response from the underlying client.
    * @returns An array of row objects.
    */
-  abstract getRows(response: any): any[];
+  abstract getRows(response: unknown): RawRow[];
 
   /**
    * Closes all connections in the pool and releases resources.

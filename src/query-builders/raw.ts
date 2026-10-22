@@ -1,5 +1,5 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { SqlArgType } from "../types";
+import type { RawRow, SqlArgType } from "../types";
 import { Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
@@ -7,17 +7,17 @@ export class RawQuery<TReturn> extends QueryPromise<TReturn> {
   readonly #queryStr: string;
   readonly #args: SqlArgType[];
   readonly #executor: QueryExecutor;
-  readonly handleRows: (rows: unknown[]) => TReturn;
+  readonly handleRows: (rows: RawRow[]) => TReturn;
   constructor(
     query: string,
     args: SqlArgType[] = [],
-    rowsHandler: ((rows: unknown[]) => TReturn) | undefined,
+    rowsHandler: ((rows: RawRow[]) => TReturn) | undefined,
     executor: QueryExecutor,
   ) {
     super();
     this.#queryStr = query;
     this.#args = args;
-    this.handleRows = rowsHandler ?? ((rows: unknown[]) => rows as TReturn);
+    this.handleRows = rowsHandler ?? ((rows: RawRow[]) => rows as TReturn);
     this.#executor = executor;
   }
 
