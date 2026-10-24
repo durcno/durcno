@@ -587,8 +587,16 @@ export const statements: DDLStatement[] = [];
  * string suitable for embedding in a typescript migration file.
  */
 function stringifyMigrationOpts(opts: MigrationOptions): string {
-  if (opts.transaction === undefined) opts.transaction = true;
-  return JSON.stringify(opts, null, 2);
+  const options = { ...opts };
+  if (options.transaction === undefined) options.transaction = true;
+
+  const lines: string[] = [];
+  for (const [key, value] of Object.entries(options)) {
+    if (value === undefined) continue;
+    lines.push(`  ${key}: ${JSON.stringify(value)},`);
+  }
+
+  return `{\n${lines.join("\n")}\n}`;
 }
 
 /**
