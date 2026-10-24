@@ -55,7 +55,7 @@ function HomepageHeader() {
           <div className={styles.heroBadge}>CRUD, Not an ORM</div>
           <h1 className={styles.heroTitle}>
             Type-Safe SQL for <br />
-            Modern Codebases
+            Strict Codebases
           </h1>
           <p className={styles.heroSubtitle}>
             {siteConfig.tagline} Experience type safety and robust migration
