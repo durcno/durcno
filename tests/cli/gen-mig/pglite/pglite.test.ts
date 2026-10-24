@@ -49,6 +49,20 @@ describe("durcno generate/migrate - pglite connector", () => {
     expect(fs.existsSync(migrationsDir)).toBe(true);
     const migrations = fs.readdirSync(migrationsDir);
     expect(migrations.length).toBeGreaterThan(0);
+
+    const upSource = fs.readFileSync(
+      path.join(migrationsDir, [...migrations].sort()[0], "up.ts"),
+      "utf8",
+    );
+    expect(upSource).toContain("transaction: true");
+    expect(upSource).toContain('execution: "sequential"');
+  });
+
+  it("should record the applied migration", async () => {
+    const result = await db.query<{ name: string }>(
+      "SELECT name FROM durcno.migrations;",
+    );
+    expect(result.rows).toHaveLength(1);
   });
 
   it("should create the users table", async () => {
