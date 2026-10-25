@@ -2,7 +2,7 @@ import type { QueryExecutor } from "../connectors/common";
 import type { AnyDBorTX } from "../db";
 import { entityType } from "../symbols";
 import type { BasicTypes, RawRow } from "../types";
-import { Query } from "./query";
+import { type PreparedSlot, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 export class Arg<TType> {
@@ -10,7 +10,7 @@ export class Arg<TType> {
   $!: {
     TsType: TType;
   };
-  /** `$N` placeholder number of this argument, assigned by `prepare` (0 before). */
+  /** Last assigned `$N` placeholder number (0 before its first use in a query). */
   index: number = 0;
   /** Name of this argument in the `prepare` args object, assigned by `prepare`. */
   key: string = "";
@@ -55,16 +55,10 @@ export type AnyArg = Arg<any>;
 
 export type IsArg<T> = T extends AnyArg ? true : false;
 
-/** One resolved argument slot, in `$N` placeholder order, for a single `run()`. */
-type ArgSlot = {
-  readonly key: keyof Record<string, AnyArg>;
-  readonly handler: (val: never) => string | number | null;
-};
-
 export class PrepareStatement<TArgs extends Record<string, AnyArg>, TReturn> {
   readonly #query: Query<TReturn>;
-  readonly #slots: readonly ArgSlot[];
-  constructor(query: Query<TReturn>, slots: readonly ArgSlot[]) {
+  readonly #slots: readonly PreparedSlot[];
+  constructor(query: Query<TReturn>, slots: readonly PreparedSlot[]) {
     this.#query = query;
     this.#slots = slots;
   }
@@ -74,13 +68,13 @@ export class PrepareStatement<TArgs extends Record<string, AnyArg>, TReturn> {
     values: { [K in keyof TArgs]: TArgs[K]["$"]["TsType"] },
   ): PrepareQuery<TReturn> {
     const slots = this.#slots;
-    const count = slots.length;
-    const args = new Array<BasicTypes>(count);
-    for (let i = 0; i < count; i++) {
+    const args = new Array<BasicTypes>(slots.length);
+    for (let i = 0; i < slots.length; i++) {
       const slot = slots[i];
-      args[i] = (slot.handler as (val: unknown) => string | number | null)(
-        values[slot.key as keyof TArgs],
-      );
+      args[i] =
+        slot.kind === "arg"
+          ? slot.handler(values[slot.key as keyof TArgs])
+          : slot.value();
     }
     return new PrepareQuery(this.#query, args, db._.getExecutor());
   }
@@ -128,22 +122,10 @@ export function prepare<TArgs extends Record<string, AnyArg>, TReturn>(
     ...args: [{ [K in keyof TArgs]: TArgs[K] }]
   ) => Promise<TReturn> & { toQuery: () => Query },
 ) {
-  const keys = Object.keys(args).sort();
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    args[key].index = i + 1;
+  for (const key of Object.keys(args)) {
     args[key].key = key;
+    args[key].index = 0;
   }
   const query = statement(args).toQuery() as Query<TReturn>;
-  const argCount = query.arguments.length;
-  const slots: ArgSlot[] = [];
-  // Only the args the query actually emitted; `keys` may hold unused ones.
-  for (const key of keys) {
-    if (slots.length === argCount) break;
-    slots.push({
-      key: key as keyof TArgs & string,
-      handler: args[key].handler as (val: unknown) => string | number | null,
-    });
-  }
-  return new PrepareStatement<TArgs, TReturn>(query, slots);
+  return new PrepareStatement<TArgs, TReturn>(query, query.getPreparedSlots());
 }

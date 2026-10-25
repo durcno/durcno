@@ -13,6 +13,8 @@ import {
   text,
   timestamptz,
   tuple,
+  unique,
+  uuid,
   varchar,
 } from "durcno";
 
@@ -188,4 +190,17 @@ export const Sessions = table("public", "sessions", {
   startedAt: timestamptz({ notNull }),
   lastSeenAt: timestamptz({ notNull }).$updateFn(() => new Date()),
   rotatedAt: timestamptz({ notNull }).$updateFn(() => new Date()),
+});
+
+/**
+ * Carries `$insertFn` columns, so a prepared bulk `INSERT` compiles one
+ * generated-value placeholder per row. The hook bodies are never called while
+ * the statement is compiled — only per `run()` — so their cost is irrelevant
+ * here and the values themselves do not matter.
+ */
+export const GeneratedRows = table("public", "generated_rows", {
+  id: pk(),
+  label: varchar({ length: 100, notNull }),
+  createdAt: timestamptz({ notNull }).$insertFn(() => new Date()),
+  publicId: uuid({ unique }).$insertFn(() => crypto.randomUUID()),
 });

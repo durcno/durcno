@@ -16,6 +16,7 @@ import type { Key, Prettify, RawRow, SelfOrArray, Valueof } from "../types";
 import {
   buildReturningClause,
   buildWithClause,
+  generatedValueSQL,
   mapStarRows,
   type ReturningColumns,
   resolveReturningColumns,
@@ -408,6 +409,7 @@ export class InsertQuery<
     const valuesArray = Array.isArray(this.#values)
       ? this.#values
       : [this.#values];
+    const prepare = this.#prepare;
 
     const tableColumns = this.#table._.columns;
     const { fields, list } = insertColumnsOf(
@@ -426,7 +428,12 @@ export class InsertQuery<
         if (j !== 0) query.sql += ", ";
         if (value === undefined) {
           if (column.hasInsertFn) {
-            query.sql += column.toSQL(column.getInsertFnVal, { cast: true });
+            query.sql += generatedValueSQL(
+              query,
+              column,
+              () => column.getInsertFnVal,
+              prepare,
+            );
           } else {
             query.sql += "DEFAULT";
           }

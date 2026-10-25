@@ -1,5 +1,5 @@
 import { and, asc, count, eq, lower, or, prepare } from "durcno";
-import { Comments, db, Posts, Users } from "./schema";
+import { Comments, db, Logs, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
 // ============================================================================
@@ -320,7 +320,42 @@ Expect<
 >();
 
 // ============================================================================
-// Section 2: Prepared Update Queries
+// Section 2: Prepared Insert Queries
+// ============================================================================
+
+// Prepared insert into a table with `$insertFn` columns
+const _insertFnPreparedQuery = prepare(
+  { message: Logs.message.arg(), updatedAt: Logs.updatedAt.arg() },
+  (args) => {
+    return db
+      .prepare()
+      .insertInto(Logs)
+      .values({
+        message: args.message,
+        updatedAt: args.updatedAt,
+      })
+      .returning("*");
+  },
+);
+const _insertFnPreparedResult = _insertFnPreparedQuery.run(db, {
+  message: "insert",
+  updatedAt: new Date(),
+});
+type InsertFnPreparedResult = Awaited<typeof _insertFnPreparedResult>;
+Expect<
+  Equal<
+    InsertFnPreparedResult,
+    {
+      id: bigint;
+      message: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }[]
+  >
+>();
+
+// ============================================================================
+// Section 3: Prepared Update Queries
 // ============================================================================
 
 // Basic prepared update with single argument
@@ -402,8 +437,26 @@ const _updatePostsResult = _updatePostsQuery.run(db, {
 type UpdatePostsResult = Awaited<typeof _updatePostsResult>;
 Expect<Equal<UpdatePostsResult, null>>();
 
+// Prepared update on a table with `$updateFn` columns
+const _updateFnPreparedQuery = prepare({ id: Logs.id.arg() }, (args) => {
+  return db
+    .prepare()
+    .update(Logs)
+    .set({ message: "updated" })
+    .where(eq(Logs.id, args.id))
+    .returning({ id: true, message: true, updatedAt: true });
+});
+const _updateFnPreparedResult = _updateFnPreparedQuery.run(db, { id: 1n });
+type UpdateFnPreparedResult = Awaited<typeof _updateFnPreparedResult>;
+Expect<
+  Equal<
+    UpdateFnPreparedResult,
+    { id: bigint; message: string; updatedAt: Date }[]
+  >
+>();
+
 // ============================================================================
-// Section 3: Prepared Delete Queries
+// Section 4: Prepared Delete Queries
 // ============================================================================
 
 // Basic prepared delete with single argument
@@ -478,7 +531,7 @@ type DeletePostsResult = Awaited<typeof _deletePostsResult>;
 Expect<Equal<DeletePostsResult, null>>();
 
 // ============================================================================
-// Section 4: Prepared Shortcut ($) Queries
+// Section 5: Prepared Shortcut ($) Queries
 // ============================================================================
 
 // $count with Arg in WHERE
@@ -571,7 +624,7 @@ type DistinctPreparedResult = Awaited<typeof _distinctPreparedResult>;
 Expect<Equal<DistinctPreparedResult, (string | null)[]>>();
 
 // ============================================================================
-// Section 5: Negative Type Safety Tests
+// Section 6: Negative Type Safety Tests
 // ============================================================================
 
 // Wrong argument type at runtime for select

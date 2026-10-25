@@ -240,3 +240,22 @@ export function buildReturningClause(
     query.sql += `"${columns[key].nameSql}"`;
   }
 }
+
+/**
+ * Returns the SQL for a column's generated default: a deferred placeholder
+ * for prepared statements, or an inline literal otherwise.
+ */
+export function generatedValueSQL<TColumn extends AnyColumn>(
+  query: AnyQuery,
+  column: TColumn,
+  getValue: () => TColumn["ValType"] | null,
+  prepared: boolean,
+): string {
+  if (prepared) {
+    return query.addDeferredArg(
+      () => column.toDriver(getValue()),
+      column.sqlCast,
+    );
+  }
+  return column.toSQL(getValue(), { cast: true });
+}

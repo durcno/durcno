@@ -13,6 +13,7 @@ import type { Key, RawRow } from "../types";
 import {
   buildReturningClause,
   buildWithClause,
+  generatedValueSQL,
   mapStarRows,
   type ReturningColumns,
   resolveReturningColumns,
@@ -266,6 +267,7 @@ export class UpdateQuery<
     let hasSet = false;
     const values = this.#values as Record<string, unknown>;
     const columns = this.#table._.columns;
+    const prepare = this.#prepare;
 
     // Emit explicitly provided non-undefined values
     for (const field in values) {
@@ -300,7 +302,12 @@ export class UpdateQuery<
       hasSet = true;
 
       query.sql += `"${column.nameSql}" = `;
-      query.sql += column.toSQL(column.getUpdateFnVal, { cast: true });
+      query.sql += generatedValueSQL(
+        query,
+        column,
+        () => column.getUpdateFnVal,
+        prepare,
+      );
     }
 
     if (!hasSet) {
