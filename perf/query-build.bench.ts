@@ -10,11 +10,6 @@
  * query they build (see the `describe` titles), and no mechanism is benched
  * twice — a later change of a kind that already has a bench reuses that bench.
  *
- * Siblings: `handle-rows.bench.ts` and `query-overhead.bench.ts` (row
- * conversion, promise overhead), `query-build.ab.ts` (two builds of these
- * paths), `sql-loops.paths.ts` and `sqlfn-tosql.paths.ts` (loop-form questions a
- * bench cannot settle).
- *
  * `pnpm bench`. Reading the numbers: AGENTS.md (Performance).
  */
 import {

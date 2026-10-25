@@ -14,8 +14,7 @@
  * up to this repo's `node_modules` and resolving `zod` fails. They are not
  * gitignored, so delete them when you are done.
  *
- * For the two conversion *paths* rather than two builds, use
- * `handle-rows.paths.ts`. Reading the numbers: AGENTS.md (Performance).
+ * Reading the numbers: AGENTS.md (Performance).
  */
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";

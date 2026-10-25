@@ -325,7 +325,7 @@ How:
 - Keep one case per changed path, grouped by the **kind of optimization** it holds.
 - `*.bench.ts` is the regression guard for a hot path; `*.ab.ts` answers what a single bench run cannot — build two `dist` snapshots and alternate them in one process, so a difference this small is not read as machine noise. `*.paths.ts` does the same for two bodies inside one build.
 - Before shipping a micro-optimization with no measured gain, A/B both bodies in one process; revert what does not pay and keep the harness.
-- Every harness opens with a header of 10-15 lines at the top of the file: what it measures, why the number isolates that, the fixture constraint that would make a run wrong, how to run it, and the sibling harnesses.
+- Every harness opens with a header of 10-15 lines at the top of the file: what it measures, why the number isolates that, the fixture constraint that would make a run wrong, and how to run it.
 
 Utilities: `perf/schema.ts`, `perf/stub-connector.ts` — no database needed.
 

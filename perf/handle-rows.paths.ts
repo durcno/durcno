@@ -12,8 +12,7 @@
  * Usage (from the repo root): `node perf/handle-rows.paths.ts [inplace|alloc]`
  * With no argument it runs both, in that order.
  *
- * For two *builds* rather than two paths, use `handle-rows.ab.ts`. Reading the
- * numbers: AGENTS.md (Performance).
+ * Reading the numbers: AGENTS.md (Performance).
  */
 import {
   bigint,

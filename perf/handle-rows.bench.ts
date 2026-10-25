@@ -9,9 +9,6 @@
  * iteration; the shared fixtures only mean something against another run made
  * the same way.
  *
- * `handle-rows.paths.ts` compares the two conversion paths and
- * `handle-rows.ab.ts` two builds; `vitest bench` picks up neither.
- *
  * `pnpm bench`. Reading the numbers: AGENTS.md (Performance).
  */
 import { database, defineConfig, lower, sql } from "durcno";

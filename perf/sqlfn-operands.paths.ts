@@ -15,7 +15,7 @@
  *
  * Usage (from the repo root): `node perf/sqlfn-operands.paths.ts [case...]`
  * With no argument it runs every case. Reading the numbers: AGENTS.md
- * (Performance). Siblings: `sqlfn-tosql.paths.ts`, `sql-loops.paths.ts`.
+ * (Performance).
  */
 import { avg, coalesce, count, lower, SqlFn, sum } from "durcno";
 import * as schema from "./schema.ts";
