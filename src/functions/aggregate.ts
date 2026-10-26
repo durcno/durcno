@@ -1,5 +1,5 @@
 import { isCol } from "../entity";
-import type { AnyFilterExpression, Filter } from "../filters";
+import type { Filter } from "../filters";
 import type { AnyOrder } from "../query-builders/orderby-clause";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { Sql } from "../sql";
@@ -11,6 +11,7 @@ import {
   type NonAggregateSqlFn,
   SqlFn,
 } from "./index";
+import { WindowableSqlFn } from "./window";
 
 /** Helper to extract column type from an order item or array/tuple of order items. */
 export type OrderColumns<T> = T extends readonly (infer U)[]
@@ -55,17 +56,14 @@ export abstract class AggregateSqlFn<
   TPgType extends string = string,
   TTsType = unknown,
   THasArg extends boolean = false,
-> extends SqlFn<TColumn, "aggregate", TPgType, TTsType, THasArg, true> {
+> extends WindowableSqlFn<TColumn, "aggregate", TPgType, TTsType, THasArg> {
   /** This base *is* an aggregate function, as opposed to merely containing one. */
   override readonly sqlFnType = "aggregate";
 
   /** Unconditional: an aggregate function always aggregates. */
   constructor() {
-    super(true);
+    super(true, false);
   }
-
-  protected $filter?: AnyFilterExpression;
-  protected $orderBy?: AnyOrder[];
 
   /**
    * Appends a `FILTER (WHERE condition)` clause to this aggregate function.
@@ -134,7 +132,7 @@ export abstract class AggregateSqlFn<
 }
 
 /** Aggregate input: excludes anything containing an aggregate. */
-type AggregateInput = AnyColumn | NonAggregateSqlFn;
+export type AggregateInput = AnyColumn | NonAggregateSqlFn;
 
 // Numeric aggregate input: columns or scalar SqlFns returning numeric values.
 // Columns must be scalar (non-array): ValType is narrowed to exclude array types.

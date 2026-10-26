@@ -78,7 +78,7 @@ export class CoalesceFn<
   HasAggregateOf<TExprs[number]>
 > {
   constructor(private readonly exprs: TExprs) {
-    super(SqlFn._hasAggregate(exprs));
+    super(SqlFn._hasAggregate(exprs), SqlFn._hasWindow(exprs));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -159,7 +159,10 @@ export class NullIfFn<
     private readonly expr: TExpr,
     private readonly val: TVal,
   ) {
-    super(SqlFn._hasAggregate(expr) || SqlFn._hasAggregate(val));
+    super(
+      SqlFn._hasAggregate(expr) || SqlFn._hasAggregate(val),
+      SqlFn._hasWindow(expr) || SqlFn._hasWindow(val),
+    );
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -220,7 +223,7 @@ export class GreatestFn<
   HasAggregateOf<TExprs[number]>
 > {
   constructor(private readonly exprs: TExprs) {
-    super(SqlFn._hasAggregate(exprs));
+    super(SqlFn._hasAggregate(exprs), SqlFn._hasWindow(exprs));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -290,7 +293,7 @@ export class LeastFn<
   HasAggregateOf<TExprs[number]>
 > {
   constructor(private readonly exprs: TExprs) {
-    super(SqlFn._hasAggregate(exprs));
+    super(SqlFn._hasAggregate(exprs), SqlFn._hasWindow(exprs));
   }
 
   toDriverValue(value: TTsType | null): unknown {

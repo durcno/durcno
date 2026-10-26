@@ -231,7 +231,7 @@ export class JsonBuildObjectFn<
   HasAggregateOf<TFields[keyof TFields]>
 > {
   constructor(readonly fields: TFields) {
-    super(SqlFn._hasAggregate(fields));
+    super(SqlFn._hasAggregate(fields), SqlFn._hasWindow(fields));
   }
 
   /** Returns all table columns directly referenced by fields of this JSON object. */
@@ -300,7 +300,7 @@ export class JsonbBuildObjectFn<
   HasAggregateOf<TFields[keyof TFields]>
 > {
   constructor(readonly fields: TFields) {
-    super(SqlFn._hasAggregate(fields));
+    super(SqlFn._hasAggregate(fields), SqlFn._hasWindow(fields));
   }
 
   /** Returns all table columns directly referenced by fields of this JSON object. */
@@ -642,7 +642,7 @@ export class ToJsonFn<
   HasAggregateOf<TTarget>
 > {
   constructor(readonly target: TTarget) {
-    super(SqlFn._hasAggregate(target));
+    super(SqlFn._hasAggregate(target), SqlFn._hasWindow(target));
   }
 
   toDriverValue(value: InferToJsonReturn<TTarget> | null): unknown {
@@ -692,7 +692,7 @@ export class ToJsonbFn<
   HasAggregateOf<TTarget>
 > {
   constructor(readonly target: TTarget) {
-    super(SqlFn._hasAggregate(target));
+    super(SqlFn._hasAggregate(target), SqlFn._hasWindow(target));
   }
 
   toDriverValue(value: InferToJsonReturn<TTarget> | null): unknown {
@@ -771,7 +771,7 @@ export class JsonBuildArrayFn<
   HasAggregateOf<TItems[number]>
 > {
   constructor(readonly items: TItems) {
-    super(SqlFn._hasAggregate(items));
+    super(SqlFn._hasAggregate(items), SqlFn._hasWindow(items));
   }
 
   toDriverValue(
@@ -831,7 +831,7 @@ export class JsonbBuildArrayFn<
   HasAggregateOf<TItems[number]>
 > {
   constructor(readonly items: TItems) {
-    super(SqlFn._hasAggregate(items));
+    super(SqlFn._hasAggregate(items), SqlFn._hasWindow(items));
   }
 
   toDriverValue(
@@ -919,7 +919,7 @@ export class JsonStripNullsFn<
   HasAggregateOf<TExpr>
 > {
   constructor(readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: unknown): unknown {
@@ -956,7 +956,7 @@ export class JsonbStripNullsFn<
   HasAggregateOf<TExpr>
 > {
   constructor(readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: unknown): unknown {

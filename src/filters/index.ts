@@ -2,6 +2,7 @@ import { is, isTCol } from "../entity";
 import {
   type AnySqlFn,
   containsAggregate,
+  containsWindow,
   type HasAggregateOf,
   type HasAggregateOfConditions,
   type NonAggregateSqlFn,
@@ -34,8 +35,12 @@ export abstract class Filter<
   /** Runtime counterpart of `$HasAggregate`. */
   readonly hasAggregate: boolean;
 
-  constructor(hasAggregate = false) {
+  /** Runtime counterpart of window-function presence. */
+  readonly hasWindow: boolean;
+
+  constructor(hasAggregate = false, hasWindow = false) {
     this.hasAggregate = hasAggregate;
+    this.hasWindow = hasWindow;
   }
 
   /** Columns this predicate reads, or `null` when they cannot be enumerated. */
@@ -104,7 +109,7 @@ export class ComparisonLeftIsColumn<
   readonly op: TOp;
   readonly right: TRight;
   constructor(field: TLeft, op: TOp, right: TRight) {
-    super(SqlFn._hasAggregate(right));
+    super(SqlFn._hasAggregate(right), SqlFn._hasWindow(right));
     this.left = field;
     this.op = op;
     this.right = right;
@@ -142,7 +147,10 @@ export class ComparisonLeftIsSqlFn<
   readonly op: TOp;
   readonly right: TRight;
   constructor(field: TLeft, op: TOp, right: TRight) {
-    super(SqlFn._hasAggregate(field) || SqlFn._hasAggregate(right));
+    super(
+      SqlFn._hasAggregate(field) || SqlFn._hasAggregate(right),
+      SqlFn._hasWindow(field) || SqlFn._hasWindow(right),
+    );
     this.left = field;
     this.op = op;
     this.right = right;
@@ -419,7 +427,7 @@ export class AndCondition<TConditions extends Filters[]> extends Filter<
 > {
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
-    super(containsAggregate(conditions));
+    super(containsAggregate(conditions), containsWindow(conditions));
     this.conditions = conditions;
   }
   get referencedColumns(): AnyColumn[] | null {
@@ -457,7 +465,7 @@ export class OrCondition<TConditions extends Filters[]> extends Filter<
 > {
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
-    super(containsAggregate(conditions));
+    super(containsAggregate(conditions), containsWindow(conditions));
     this.conditions = conditions;
   }
   get referencedColumns(): AnyColumn[] | null {

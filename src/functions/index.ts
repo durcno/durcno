@@ -4,9 +4,9 @@ import { Query, type QueryContext } from "../query-builders/query";
 import { escLiteral, Sql, sql, toSqlValue } from "../sql";
 import type { AnyColumn, StdTableColumn } from "../table";
 
-export type SqlFnType = "aggregate" | "scalar";
+export type SqlFnType = "aggregate" | "scalar" | "window";
 
-/** Whether `T` is, or wraps, an aggregate. */
+/** Whether `T` is, or wraps, an aggregate or a window function. */
 export type HasAggregateOf<T> = [
   Extract<
     T extends { $: { HasAggregate: infer H } }
@@ -45,6 +45,32 @@ function containsAggregateAt(operand: unknown, depth: number): boolean {
   const record = operand as Record<string, unknown>;
   for (const key in record) {
     if (containsAggregateAt(record[key], depth + 1)) return true;
+  }
+  return false;
+}
+
+/** Runtime counterpart of window-function presence; same walk as aggregates. */
+export function containsWindow(operand: unknown): boolean {
+  return containsWindowAt(operand, 0);
+}
+
+function containsWindowAt(operand: unknown, depth: number): boolean {
+  if (operand === null || typeof operand !== "object") return false;
+  if (depth >= MAX_OPERAND_DEPTH) return false;
+  if (Array.isArray(operand)) {
+    for (let i = 0; i < operand.length; i++) {
+      if (containsWindowAt(operand[i], depth + 1)) return true;
+    }
+    return false;
+  }
+  const proto = Object.getPrototypeOf(operand);
+  if (proto !== Object.prototype && proto !== null) {
+    const flag = (operand as { hasWindow?: unknown }).hasWindow;
+    return typeof flag === "boolean" ? flag : false;
+  }
+  const record = operand as Record<string, unknown>;
+  for (const key in record) {
+    if (containsWindowAt(record[key], depth + 1)) return true;
   }
   return false;
 }
@@ -95,9 +121,17 @@ export abstract class SqlFn<
    */
   readonly hasAggregate: boolean;
 
+  /**
+   * Whether this expression is, or contains, a window function. Refused in the
+   * same clauses as an aggregate; unlike one, it never triggers grouping.
+   */
+  readonly hasWindow: boolean;
+
   /** @param hasAggregate - Whether this expression contains an aggregate. */
-  constructor(hasAggregate = false) {
+  /** @param hasWindow - Whether this expression contains a window function. */
+  constructor(hasAggregate = false, hasWindow = false) {
     this.hasAggregate = hasAggregate;
+    this.hasWindow = hasWindow;
   }
 
   /** Appends the SQL fragment for this expression to the query (no trailing semicolon). */
@@ -124,6 +158,14 @@ export abstract class SqlFn<
    */
   static _hasAggregate(operand: unknown): boolean {
     return containsAggregate(operand);
+  }
+
+  /**
+   * Whether an operand is, or contains, a window function. Same shape as
+   * `_hasAggregate`; public so subclasses can call it.
+   */
+  static _hasWindow(operand: unknown): boolean {
+    return containsWindow(operand);
   }
 
   // --- Protected shared helpers (DRY for subclasses) ---

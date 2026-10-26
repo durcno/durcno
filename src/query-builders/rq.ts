@@ -729,9 +729,9 @@ function validateAliasExpr(
     return;
   }
   if (expr instanceof SqlFn) {
-    if (expr.hasAggregate) {
+    if (expr.hasAggregate || expr.hasWindow) {
       throw new Error(
-        "Aggregate functions are not supported in relational `select`. Use scalar columns or scalar SqlFns (e.g. `lower(...)`).",
+        "Aggregate or window functions are not supported in relational `select`. Use scalar columns or scalar SqlFns (e.g. `lower(...)`).",
       );
     }
     return;

@@ -78,7 +78,10 @@ export class AddFn<
     private readonly left: TLeft,
     private readonly right: TRight,
   ) {
-    super(SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right));
+    super(
+      SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right),
+      SqlFn._hasWindow(left) || SqlFn._hasWindow(right),
+    );
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -131,7 +134,10 @@ export class SubFn<
     private readonly left: TLeft,
     private readonly right: TRight,
   ) {
-    super(SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right));
+    super(
+      SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right),
+      SqlFn._hasWindow(left) || SqlFn._hasWindow(right),
+    );
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -184,7 +190,10 @@ export class MulFn<
     private readonly left: TLeft,
     private readonly right: TRight,
   ) {
-    super(SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right));
+    super(
+      SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right),
+      SqlFn._hasWindow(left) || SqlFn._hasWindow(right),
+    );
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -237,7 +246,10 @@ export class DivFn<
     private readonly left: TLeft,
     private readonly right: TRight,
   ) {
-    super(SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right));
+    super(
+      SqlFn._hasAggregate(left) || SqlFn._hasAggregate(right),
+      SqlFn._hasWindow(left) || SqlFn._hasWindow(right),
+    );
   }
 
   toDriverValue(value: TTsType | null): unknown {

@@ -70,7 +70,7 @@ export class LengthFn<
   HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -113,7 +113,7 @@ export class LowerFn<
   HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -156,7 +156,7 @@ export class UpperFn<
   HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -199,7 +199,7 @@ export class TrimFn<
   HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -249,7 +249,7 @@ export class LeftFn<
     private readonly expr: TExpr,
     private readonly n: TN,
   ) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -324,7 +324,7 @@ export class RightFn<
     private readonly expr: TExpr,
     private readonly n: TN,
   ) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -399,7 +399,7 @@ export class PositionFn<
     private readonly expr: TExpr,
     private readonly search: TSearch,
   ) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -454,7 +454,7 @@ export class ConcatFn<
   HasAggregateOf<TExprs[number]>
 > {
   constructor(private readonly exprs: TExprs) {
-    super(SqlFn._hasAggregate(exprs));
+    super(SqlFn._hasAggregate(exprs), SqlFn._hasWindow(exprs));
   }
 
   toDriverValue(value: string | null): unknown {
@@ -509,7 +509,10 @@ export class ConcatWsFn<
     private readonly sep: TSep,
     private readonly exprs: TExprs,
   ) {
-    super(SqlFn._hasAggregate(sep) || SqlFn._hasAggregate(exprs));
+    super(
+      SqlFn._hasAggregate(sep) || SqlFn._hasAggregate(exprs),
+      SqlFn._hasWindow(sep) || SqlFn._hasWindow(exprs),
+    );
   }
 
   toDriverValue(value: TTsType | null): unknown {

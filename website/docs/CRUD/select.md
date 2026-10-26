@@ -334,6 +334,22 @@ const byType = await db
 // SQL: SELECT type, count(*) FROM users GROUP BY type
 ```
 
+Window functions (`.over()`) are the exception: they aggregate inside the window, not the query, so they never trigger a `GROUP BY`. That makes a page of rows plus a grand total a single query — see [Window Functions](../Expressions/functions.md#window-functions):
+
+```typescript
+import { sum } from "durcno";
+
+const page = await db
+  .from(Orders)
+  .select(() => ({
+    id: Orders.id,
+    total: Orders.total,
+    grandTotal: sum(Orders.total).over(),
+  }))
+  .limit(10);
+// SQL: SELECT id, total, sum(total) OVER () FROM orders LIMIT 10
+```
+
 ### Explicit GROUP BY
 
 Use `.groupBy()` with a callback receiving the tables view and select aliases to explicitly set the GROUP BY clause. Explicit GROUP BY **fully replaces** the auto GROUP BY that Durcno generates when aggregate functions are mixed with non-aggregate columns in `.select()`.

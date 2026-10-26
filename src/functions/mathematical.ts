@@ -57,7 +57,7 @@ export class AbsFn<
   HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -104,7 +104,7 @@ export class ModFn<
     private readonly expr: TExpr,
     private readonly n: TN,
   ) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -162,7 +162,7 @@ export class RoundFn<
     private readonly expr: TExpr,
     private readonly decimals?: TDecimals,
   ) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -235,7 +235,7 @@ export class CeilFn<
   HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -278,7 +278,7 @@ export class FloorFn<
   HasAggregateOf<TExpr>
 > {
   constructor(private readonly expr: TExpr) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -327,7 +327,7 @@ export class TruncFn<
     private readonly expr: TExpr,
     private readonly decimals?: TDecimals,
   ) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {
@@ -404,7 +404,7 @@ export class PowerFn<
     private readonly expr: TExpr,
     private readonly exponent: TN,
   ) {
-    super(SqlFn._hasAggregate(expr));
+    super(SqlFn._hasAggregate(expr), SqlFn._hasWindow(expr));
   }
 
   toDriverValue(value: TTsType | null): unknown {

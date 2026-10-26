@@ -1263,7 +1263,11 @@ export class SelectQuery<
               seenCols.add(col);
               nonAggItems.push(col);
             }
-          } else if (item instanceof SqlFn && !item.hasAggregate) {
+          } else if (
+            item instanceof SqlFn &&
+            !item.hasAggregate &&
+            !item.hasWindow
+          ) {
             // `referencedColumns` is a rebuilding getter, so read it once.
             const refs =
               "referencedColumns" in item ? item.referencedColumns : undefined;

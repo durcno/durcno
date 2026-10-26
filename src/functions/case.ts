@@ -93,7 +93,10 @@ export class CaseFn<
     readonly branches: readonly CaseWhenBranch<TBranchResult>[],
     readonly elseExpr: TElse,
   ) {
-    super(SqlFn._hasAggregate(branches) || SqlFn._hasAggregate(elseExpr));
+    super(
+      SqlFn._hasAggregate(branches) || SqlFn._hasAggregate(elseExpr),
+      SqlFn._hasWindow(branches) || SqlFn._hasWindow(elseExpr),
+    );
   }
 
   /** Columns the branches, `ELSE` and `WHEN` conditions read; `[]` when unknown. */
