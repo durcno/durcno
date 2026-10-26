@@ -611,6 +611,7 @@ export class SelectBuilder<
       undefined,
       undefined,
       undefined,
+      undefined,
       this.#executor,
       this.#prepare,
       this.#$ctes,
@@ -698,6 +699,61 @@ function buildSelectRowsPlan(
 }
 
 // ============================================================================
+// Row locking (FOR UPDATE & co.)
+// ============================================================================
+
+/** PostgreSQL row-level lock strengths, one per locking-clause flavour. */
+type LockStrength = "update" | "noKeyUpdate" | "share" | "keyShare";
+
+/** SQL emitted for each `LockStrength`. */
+const lockStrengthSql: Record<LockStrength, string> = {
+  update: "FOR UPDATE",
+  noKeyUpdate: "FOR NO KEY UPDATE",
+  share: "FOR SHARE",
+  keyShare: "FOR KEY SHARE",
+};
+
+/** Wait mode of a locking clause; `NOWAIT` and `SKIP LOCKED` cannot combine. */
+type LockWaitMode = "nowait" | "skip";
+
+/** Runtime state of a locking clause. Starts absent and never mutates. */
+type RowLockState = {
+  strength: LockStrength;
+  of: readonly StdTableWithColumns[] | undefined;
+  wait: LockWaitMode | undefined;
+};
+
+/**
+ * Options of `.forUpdate()`/`.forNoKeyUpdate()`/`.forShare()`/`.forKeyShare()`.
+ * `noWait` and `skipLocked` are mutually exclusive.
+ */
+export type LockOptions = {
+  /**
+   * Lock rows of only these tables. Each name must be part of the query's
+   * FROM or JOIN — PostgreSQL rejects the others.
+   */
+  of?: SelfOrArray<AnyTableWithColumns>;
+} & (
+  | {
+      /** Error out instead of waiting for the lock (`NOWAIT`). */
+      noWait?: never;
+      /** Skip rows another transaction already locked (`SKIP LOCKED`). */
+      skipLocked?: never;
+    }
+  | {
+      noWait: true;
+      skipLocked?: never;
+    }
+  | {
+      noWait?: never;
+      skipLocked: true;
+    }
+);
+
+/** Method names of the locking clause; a query holds at most one. */
+type LockMethods = "forUpdate" | "forNoKeyUpdate" | "forShare" | "forKeyShare";
+
+// ============================================================================
 // SelectQuery
 // ============================================================================
 
@@ -779,6 +835,7 @@ export class SelectQuery<
   readonly #$having: THaving;
   #$limit: number | bigint | AnyArg | undefined;
   #$offset: number | bigint | AnyArg | undefined;
+  readonly #$lock: RowLockState | undefined;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
@@ -803,6 +860,7 @@ export class SelectQuery<
     having: THaving,
     limit: number | bigint | AnyArg | undefined,
     offset: number | bigint | AnyArg | undefined,
+    lock: RowLockState | undefined,
     executor: QueryExecutor,
     prepare: TPrepare,
     ctes: readonly AnyCteWithColumns[] | null = null,
@@ -819,6 +877,7 @@ export class SelectQuery<
     this.#$having = having;
     this.#$limit = limit;
     this.#$offset = offset;
+    this.#$lock = lock;
     this.#executor = executor;
     this.#prepare = prepare;
     this.#$ctes = ctes;
@@ -871,6 +930,7 @@ export class SelectQuery<
       this.#$having,
       this.#$limit,
       this.#$offset,
+      this.#$lock,
       this.#executor,
       this.#prepare,
       this.#$ctes,
@@ -907,6 +967,7 @@ export class SelectQuery<
       this.#$having,
       this.#$limit,
       this.#$offset,
+      this.#$lock,
       this.#executor,
       this.#prepare,
       this.#$ctes,
@@ -935,7 +996,7 @@ export class SelectQuery<
       view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
       selects: SelectAliasesView<TSelects>,
     ) => TItems,
-  ): Omit<this, "groupBy"> {
+  ): Omit<this, "groupBy" | LockMethods> {
     const result = callback(
       this.#getView() as never,
       this.#getSelectAliases() as never,
@@ -952,11 +1013,12 @@ export class SelectQuery<
       this.#$having,
       this.#$limit,
       this.#$offset,
+      this.#$lock,
       this.#executor,
       this.#prepare,
       this.#$ctes,
       this.#cachedView,
-    ) as unknown as Omit<this, "groupBy">;
+    ) as unknown as Omit<this, "groupBy" | LockMethods>;
   }
 
   /**
@@ -975,7 +1037,7 @@ export class SelectQuery<
     >,
   >(
     callback: (view: ColumnsView<TTSchema, TTName, TColumns, TJoins>) => TH,
-  ): Omit<this, "having"> {
+  ): Omit<this, "having" | LockMethods> {
     const having = callback(this.#getView() as never);
     return new SelectQuery(
       this.#table,
@@ -988,11 +1050,12 @@ export class SelectQuery<
       having,
       this.#$limit,
       this.#$offset,
+      this.#$lock,
       this.#executor,
       this.#prepare,
       this.#$ctes,
       this.#cachedView,
-    ) as unknown as Omit<this, "having">;
+    ) as unknown as Omit<this, "having" | LockMethods>;
   }
 
   limit(
@@ -1011,6 +1074,7 @@ export class SelectQuery<
       this.#$having,
       limit,
       this.#$offset,
+      this.#$lock,
       this.#executor,
       this.#prepare,
       this.#$ctes,
@@ -1034,11 +1098,72 @@ export class SelectQuery<
       this.#$having,
       this.#$limit,
       offset,
+      this.#$lock,
       this.#executor,
       this.#prepare,
       this.#$ctes,
       this.#cachedView,
     ) as unknown as Omit<this, "offset">;
+  }
+
+  /** Adds `FOR UPDATE` — exclusive locks; conflicts with every other strength. */
+  forUpdate(options?: LockOptions): Omit<this, LockMethods> {
+    return this.#lock("update", options);
+  }
+
+  /**
+   * Adds `FOR NO KEY UPDATE` — like `FOR UPDATE`, but leaves the unique-key
+   * lock weak enough that concurrent `FOR SHARE`/`FOR KEY SHARE` queries stay
+   * allowed (an update that touches no unique keys).
+   */
+  forNoKeyUpdate(options?: LockOptions): Omit<this, LockMethods> {
+    return this.#lock("noKeyUpdate", options);
+  }
+
+  /** Adds `FOR SHARE` — shared locks; conflicts only with `FOR UPDATE`. */
+  forShare(options?: LockOptions): Omit<this, LockMethods> {
+    return this.#lock("share", options);
+  }
+
+  /** Adds `FOR KEY SHARE` — locks the key part only; conflicts only with `FOR UPDATE`. */
+  forKeyShare(options?: LockOptions): Omit<this, LockMethods> {
+    return this.#lock("keyShare", options);
+  }
+
+  #lock(strength: LockStrength, options: LockOptions | undefined) {
+    const of = options?.of;
+    const ofRows =
+      of === undefined
+        ? undefined
+        : Array.isArray(of)
+          ? (of as unknown as readonly StdTableWithColumns[])
+          : ([of] as unknown as readonly StdTableWithColumns[]);
+    return new SelectQuery(
+      this.#table,
+      this.#$joins,
+      this.#$select,
+      this.#$distinctOn,
+      this.#$where,
+      this.#$orderBy,
+      this.#$groupBy,
+      this.#$having,
+      this.#$limit,
+      this.#$offset,
+      {
+        strength,
+        of: ofRows,
+        wait:
+          options?.noWait === true
+            ? "nowait"
+            : options?.skipLocked === true
+              ? "skip"
+              : undefined,
+      },
+      this.#executor,
+      this.#prepare,
+      this.#$ctes,
+      this.#cachedView,
+    ) as unknown as Omit<this, LockMethods>;
   }
 
   toQuery(parentQuery?: AnyQuery): Query<TReturn> {
@@ -1196,6 +1321,24 @@ export class SelectQuery<
         query.addArg(this.#$offset);
       } else {
         query.sql += this.#$offset.toString();
+      }
+    }
+    if (this.#$lock) {
+      const lock = this.#$lock;
+      query.sql += " ";
+      query.sql += lockStrengthSql[lock.strength];
+      const of = lock.of;
+      if (of !== undefined) {
+        query.sql += " OF ";
+        for (let i = 0; i < of.length; i++) {
+          if (i !== 0) query.sql += ", ";
+          query.sql += `"${of[i]._.nameSql}"`;
+        }
+      }
+      if (lock.wait === "nowait") {
+        query.sql += " NOWAIT";
+      } else if (lock.wait === "skip") {
+        query.sql += " SKIP LOCKED";
       }
     }
     return query;

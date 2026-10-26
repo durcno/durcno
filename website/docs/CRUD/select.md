@@ -28,14 +28,15 @@ Returned by `.innerJoin(table)` / `.leftJoin(table)`. The join is committed once
 
 ### Query methods (SelectQuery)
 
-| Method               | Description                                                     |
-| -------------------- | --------------------------------------------------------------- |
-| `.where(callback)`   | Filter results via `() => condition`                            |
-| `.groupBy(callback)` | Explicit GROUP BY via `() => [cols]` or `(_, aliases) => [...]` |
-| `.having(callback)`  | Filter grouped results via `() => condition` (HAVING clause)    |
-| `.orderBy(callback)` | Sort results via `() => order` or `(_, aliases) => order`       |
-| `.limit(n)`          | Limit number of results (`n` can be `number` or `bigint`)       |
-| `.offset(n)`         | Skip n results (`n` can be `number` or `bigint`)                |
+| Method               | Description                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| `.where(callback)`   | Filter results via `() => condition`                               |
+| `.groupBy(callback)` | Explicit GROUP BY via `() => [cols]` or `(_, aliases) => [...]`    |
+| `.having(callback)`  | Filter grouped results via `() => condition` (HAVING clause)       |
+| `.orderBy(callback)` | Sort results via `() => order` or `(_, aliases) => order`          |
+| `.limit(n)`          | Limit number of results (`n` can be `number` or `bigint`)          |
+| `.offset(n)`         | Skip n results (`n` can be `number` or `bigint`)                   |
+| `.forUpdate()` etc.  | Row locking (`FOR UPDATE` & co.) — see [Row Locking](./locking.md) |
 
 ## Basic Usage
 
@@ -543,4 +544,5 @@ const results = await db
 
 ## Related
 
+- [Row Locking](./locking.md) — `FOR UPDATE` & co. on select queries.
 - [Filters](../Expressions/filters.md) — Complete list of filter operators for `.where()` conditions.

@@ -172,6 +172,7 @@ export { Query } from "./query-builders/query";
 export type {
   InferSelectRow,
   InferSelectValue,
+  LockOptions,
   SelectableItem,
 } from "./query-builders/select";
 export type {
