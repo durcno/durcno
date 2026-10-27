@@ -19,6 +19,8 @@ import {
   jsonbAgg,
   jsonbBuildObject,
   lower,
+  numNonNulls,
+  numNulls,
   prepare,
   type Query,
   sql,
@@ -230,6 +232,36 @@ describe("prepare", () => {
     expect(jsonBuildObject({ big: Arg.bigint() }).toSQL()).toContain(
       "$1::int8",
     );
+  });
+
+  it("should cast untyped arguments in numNonNulls and numNulls", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "null_count_prepared" }));
+
+    expect(numNonNulls(Arg.number(), null).toSQL()).toBe(
+      "num_nonnulls($1::numeric, NULL)",
+    );
+    expect(numNonNulls(new Arg<string>((val) => val), null).toSQL()).toBe(
+      "num_nonnulls($1::text, NULL)",
+    );
+
+    const selectPre = prepare({ a: Arg.number(), b: Arg.number() }, (args) =>
+      db
+        .prepare()
+        .from(schema.Users)
+        .select(() => ({
+          nonNulls: numNonNulls(args.a, args.b, null),
+          nulls: numNulls(args.a, args.b, null),
+        }))
+        .limit(1),
+    );
+
+    const rows = await selectPre.run(db, { a: 1, b: 2 });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].nonNulls).toBe(2);
+    expect(rows[0].nulls).toBe(1);
   });
 
   // ── Arg binding ───────────────────────────────────────────────────────

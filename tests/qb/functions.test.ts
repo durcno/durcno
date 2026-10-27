@@ -23,6 +23,8 @@ import {
   mod,
   mul,
   nullif,
+  numNonNulls,
+  numNulls,
   position,
   power,
   right,
@@ -291,6 +293,49 @@ describe("String and Numeric Functions", () => {
     expect(result[0].directBigInt).toBe(100n);
     expect(result[0].directBoolTrue).toBe(true);
     expect(result[0].directBoolFalse).toBe(false);
+  });
+
+  it("numNonNulls and numNulls count null and non-null operands", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({
+          username: "NullCountUser",
+          email: null,
+          age: 25,
+        }),
+      ])
+      .returning({ id: true });
+
+    const result = await db
+      .from(schema.Users)
+      .select(() => ({
+        nonNulls: numNonNulls(
+          schema.Users.username,
+          schema.Users.email,
+          schema.Users.age,
+          null,
+          42,
+          sql<number>`1`,
+        ),
+        nulls: numNulls(
+          schema.Users.username,
+          schema.Users.email,
+          schema.Users.age,
+          null,
+          42,
+          sql<number>`1`,
+        ),
+        allNull: numNonNulls(null, null),
+        noNull: numNulls("a", 1, true),
+      }))
+      .where(() => eq(schema.Users.id, user.id));
+
+    expect(result[0].nonNulls).toBe(4);
+    expect(result[0].nulls).toBe(2);
+    expect(typeof result[0].nonNulls).toBe("number");
+    expect(result[0].allNull).toBe(0);
+    expect(result[0].noNull).toBe(0);
   });
 
   it("should render an expression nested inside another expression at every nesting kind", async () => {

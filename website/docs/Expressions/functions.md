@@ -556,6 +556,33 @@ const result = await db.from(Users).select(() => ({
 
 ---
 
+## Comparison Functions
+
+Comparison functions inspect values and return a numeric result. For comparison predicates — `eq`, `ne`, `gt`, `isNull`, `isNotNull`, and the rest — see [Filters](./filters).
+
+| Function                | SQL                 | Returns  | Description                            |
+| ----------------------- | ------------------- | -------- | -------------------------------------- |
+| `numNonNulls(...exprs)` | `num_nonnulls(...)` | `number` | Counts the arguments that are not null |
+| `numNulls(...exprs)`    | `num_nulls(...)`    | `number` | Counts the arguments that are null     |
+
+### `numNonNulls` / `numNulls`
+
+Counts how many of the given arguments are non-null or null. Both accept one or more operands of any type and always return a `number` — `0` when appropriate, never `null`.
+
+```typescript
+import { numNonNulls, numNulls } from "durcno";
+
+const result = await db.from(Users).select(() => ({
+  filled: numNonNulls(Users.email, Users.username, Users.phone),
+  missing: numNulls(Users.email, Users.username, Users.phone),
+}));
+// filled: number, missing: number
+```
+
+Untyped prepared `Arg` operands are cast to `text`, because PostgreSQL cannot infer the type of an untyped parameter inside a variadic `"any"` call.
+
+---
+
 ## Conditional Functions
 
 Conditional functions evaluate expressions based on conditions or nullability. Operands can be columns, SQL functions, raw `sql` expressions, prepared `Arg`s, primitive literals (`string`, `number`, `bigint`, `boolean`), or `null`.

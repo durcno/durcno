@@ -96,6 +96,7 @@ export {
   caseWhen,
   type InferCaseValue,
 } from "./functions/case";
+export { numNonNulls, numNulls } from "./functions/comparison";
 export {
   coalesce,
   greatest,

@@ -13,6 +13,7 @@ import {
   lower,
   max,
   min,
+  numNonNulls,
   round,
   sum,
 } from "durcno";
@@ -336,6 +337,14 @@ Expect<Equal<(typeof _coalesceAgg)["$"]["HasAggregate"], true>>();
 const _coalescePlain = coalesce(Users.username, "x");
 Expect<Equal<(typeof _coalescePlain)["$"]["SqlFnType"], "scalar">>();
 Expect<Equal<(typeof _coalescePlain)["$"]["HasAggregate"], false>>();
+
+const _numNonNullsAgg = numNonNulls(sum(Users.id), 0);
+Expect<Equal<(typeof _numNonNullsAgg)["$"]["SqlFnType"], "scalar">>();
+Expect<Equal<(typeof _numNonNullsAgg)["$"]["HasAggregate"], true>>();
+
+const _numNonNullsPlain = numNonNulls(Users.username, "x");
+Expect<Equal<(typeof _numNonNullsPlain)["$"]["SqlFnType"], "scalar">>();
+Expect<Equal<(typeof _numNonNullsPlain)["$"]["HasAggregate"], false>>();
 
 const _caseAgg = caseWhen(eq(Users.type, "admin"), count("*")).end();
 Expect<Equal<(typeof _caseAgg)["$"]["SqlFnType"], "scalar">>();
