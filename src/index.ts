@@ -202,6 +202,7 @@ export type {
 } from "./query-builders/select";
 export type {
   UpdateableItem,
+  UpdateFromSource,
   UpdateSetValues,
   UpdateValues,
 } from "./query-builders/update";
@@ -238,6 +239,12 @@ export {
   type TableWithColumns,
   table,
 } from "./table";
+export type {
+  ValuesColumns,
+  ValuesRows,
+  ValuesWithColumns,
+} from "./values";
+export { ValuesSource } from "./values";
 export type {
   AnySelectableSource,
   AnySubquery,

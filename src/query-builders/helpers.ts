@@ -1,7 +1,9 @@
 import { resolveFromDriver } from "../columns/common";
 import type { AnyCteWithColumns } from "../cte";
-import type { AnyColumn } from "../table";
+import { is } from "../entity";
+import type { AnyColumn, AnyTableWithColumns } from "../table";
 import type { Key } from "../types";
+import { getValuesRows, ValuesSource } from "../values";
 import type { AnyQuery } from "./query";
 
 /**
@@ -23,6 +25,75 @@ export function buildWithClause(
     ctes[i].query.toQuery(query);
   }
   query.sql += ") ";
+}
+
+/**
+ * Appends the `FROM ...` clause of an `UPDATE` statement to `query.sql`.
+ * A values alias renders as `(VALUES ...) AS "name"("col", ...)`, every other
+ * source (table or CTE) by its full name.
+ */
+export function buildUpdateFromClause(
+  froms: readonly AnyTableWithColumns[],
+  query: AnyQuery,
+): void {
+  for (let i = 0; i < froms.length; i++) {
+    if (i !== 0) query.sql += ", ";
+    const source = froms[i];
+    if (is(source, ValuesSource)) {
+      appendValuesSource(source, query);
+    } else {
+      query.sql += source._.fullName;
+    }
+  }
+}
+
+/**
+ * Renders one values alias as `(VALUES ...) AS "name"("col", ...)`.
+ *
+ * Cell casts are hoisted out of the row loop. `undefined`/`null` cells render
+ * `NULL`, cast with the column's SQL type so a NULL cell never falls back to
+ * `text` in the VALUES list.
+ */
+function appendValuesSource(
+  source: ValuesSource<string, Record<string, AnyColumn>>,
+  query: AnyQuery,
+): void {
+  const rows = getValuesRows(source);
+  if (rows === undefined || rows.length === 0) {
+    throw new Error(`Values alias "${source._.name}" has no rows.`);
+  }
+  const columns = source._.columns as Record<string, AnyColumn>;
+  const names: string[] = [];
+  const cols: AnyColumn[] = [];
+  const casts: string[] = [];
+  for (const key in columns) {
+    names.push(key);
+    cols.push(columns[key]);
+    casts.push(columns[key].sqlType);
+  }
+
+  query.sql += "(VALUES";
+  for (let i = 0; i < rows.length; i++) {
+    if (i !== 0) query.sql += ",\n";
+    query.sql += " (";
+    const row = rows[i];
+    for (let j = 0; j < cols.length; j++) {
+      if (j !== 0) query.sql += ", ";
+      const value = row[names[j]];
+      if (value === undefined || value === null) {
+        query.sql += `NULL::${casts[j]}`;
+      } else {
+        query.sql += cols[j].toSQL(value as never, { cast: true });
+      }
+    }
+    query.sql += ")";
+  }
+  query.sql += `) AS "${source._.nameSql}"(`;
+  for (let j = 0; j < cols.length; j++) {
+    if (j !== 0) query.sql += ", ";
+    query.sql += `"${cols[j].nameSql}"`;
+  }
+  query.sql += ")";
 }
 
 /**
@@ -210,18 +281,19 @@ export function resolveReturningColumns<
 }
 
 /**
- * Appends the `RETURNING ...` SQL clause to `query.sql`.
- * Handles `"*"`, inclusion (`{col: true}`), and exclusion (`{col: false}`)
- * patterns, consistent with `resolveReturningColumns`.
+ * Appends `RETURNING ...` to `query.sql`. Accepts `"*"`, inclusion, and
+ * exclusion like `resolveReturningColumns`. `qualifier` renders qualified
+ * columns for statements with FROM sources.
  */
 export function buildReturningClause(
   columns: Record<string, AnyColumn>,
   returning: "*" | Record<string, boolean> | undefined,
   query: AnyQuery,
+  qualifier?: string | null,
 ): void {
   if (!returning) return;
   if (returning === "*") {
-    query.sql += " RETURNING *";
+    query.sql += qualifier ? ` RETURNING "${qualifier}".*` : " RETURNING *";
     return;
   }
   const hasTrue = Object.values(returning).some((v) => v === true);
@@ -237,7 +309,8 @@ export function buildReturningClause(
       query.sql += " RETURNING ";
       opened = true;
     }
-    query.sql += `"${columns[key].nameSql}"`;
+    const name = columns[key].nameSql;
+    query.sql += qualifier ? `"${qualifier}"."${name}"` : `"${name}"`;
   }
 }
 

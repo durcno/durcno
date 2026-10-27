@@ -280,3 +280,113 @@ db.update(Users).set({ email: caseWhen(eq(Users.type, "admin"), count("*")) });
 
 // @ts-expect-error - an aggregate inside the CASE condition should not compile
 db.update(Users).set({ email: caseWhen(gte(count("*"), 2), Users.email) });
+
+// ============================================================================
+// Section 6: UPDATE ... FROM (bulk per-row writes)
+// ============================================================================
+
+// A values alias declared from source columns; rows are bound with `.as()`
+const linkRows = db
+  .values("v", {
+    userId: UserProfiles.userId,
+    bio: UserProfiles.bio,
+  })
+  .as([
+    { userId: 1n, bio: "first" },
+    { userId: 2n, bio: null },
+    { userId: 3n, bio: undefined },
+  ]);
+
+// Bulk update assigning a distinct value per row
+const _bulkFromValuesQuery = db
+  .update(UserProfiles)
+  .from(linkRows)
+  .set({ bio: linkRows.bio })
+  .where(eq(UserProfiles.userId, linkRows.userId))
+  .returning({ userId: true, bio: true });
+type BulkFromValues = Awaited<typeof _bulkFromValuesQuery>;
+Expect<Equal<BulkFromValues, { userId: bigint; bio: string | null }[]>>();
+
+// Bulk update without returning resolves to null
+const _bulkFromValuesNoReturnQuery = db
+  .update(UserProfiles)
+  .from(linkRows)
+  .set({ bio: linkRows.bio })
+  .where(eq(UserProfiles.userId, linkRows.userId));
+Expect<Equal<Awaited<typeof _bulkFromValuesNoReturnQuery>, null>>();
+
+// The join key can sit on either side of the comparison
+db.update(UserProfiles)
+  .from(linkRows)
+  .set({ bio: linkRows.bio })
+  .where(eq(linkRows.userId, UserProfiles.id));
+
+// FROM-source columns type-check per column: `userId` (bigint) cannot set `bio`
+db.update(UserProfiles)
+  .from(linkRows)
+  // @ts-expect-error - bigint alias column cannot set a string column
+  .set({ bio: linkRows.userId });
+
+// An un-declared alias column cannot be referenced in `.set()`
+db.update(UserProfiles)
+  .from(linkRows)
+  // @ts-expect-error - `linkOnly` is not a column of the updated table
+  .set({ linkOnly: linkRows.userId });
+
+// A plain table can be a FROM source; its columns are referenceable in set/where
+const _tableFromQuery = db
+  .update(UserProfiles)
+  .from(Users)
+  .set({ bio: Users.username })
+  .where(eq(UserProfiles.userId, Users.id));
+
+// A CTE can be a FROM source when attached via db.with(...)
+const totalsCte = db
+  .with("totals")
+  .as(
+    db.from(Users).select(() => ({ userId: Users.id, name: Users.username })),
+  );
+const _cteFromQuery = db
+  .with(totalsCte)
+  .update(UserProfiles)
+  .from(totalsCte)
+  .set({ bio: totalsCte.name })
+  .where(eq(UserProfiles.userId, totalsCte.userId));
+
+// Repeated `.from()` calls append sources
+db.update(UserProfiles)
+  .from(linkRows)
+  .from(Users)
+  .set({ bio: linkRows.bio })
+  .where(eq(UserProfiles.userId, linkRows.userId));
+
+// `.from()` must precede `.set()`
+db.update(UserProfiles)
+  .set({ bio: "x" })
+  // @ts-expect-error - `.from()` is a builder method, not a query method
+  .from(linkRows);
+
+// Row payloads are checked against the declared alias columns
+db.values("v", { userId: UserProfiles.userId }).as([{ userId: 1n }]);
+db.values("v", { bio: UserProfiles.bio }).as([{ bio: undefined }]);
+db.values("v", { bio: UserProfiles.bio }).as([{ bio: null }]);
+db.values("v", { userId: UserProfiles.userId }).as([
+  // @ts-expect-error - a required (notNull) cell cannot be undefined
+  { userId: undefined },
+]);
+db.values("v", { userId: UserProfiles.userId }).as([
+  // @ts-expect-error - a wrong cell type should not compile
+  { userId: "not-a-bigint" },
+]);
+db.values("v", { userId: UserProfiles.userId }).as([
+  // @ts-expect-error - unknown row keys should not compile
+  { userId: 1n, extra: 2n },
+]);
+
+// Prepared mode keeps the same shape, with `Arg`s still accepted in set/where
+const _preparedFromValuesQuery = db
+  .prepare()
+  .update(UserProfiles)
+  .from(linkRows)
+  .set({ bio: linkRows.bio })
+  .where(eq(UserProfiles.userId, linkRows.userId));

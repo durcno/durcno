@@ -29,6 +29,12 @@ import {
 } from "./table";
 import type { RawRow, SqlArgType, Valueof } from "./types";
 import {
+  type ValuesColumns,
+  type ValuesRows,
+  ValuesSource,
+  type ValuesWithColumns,
+} from "./values";
+import {
   type AnySubquery,
   bindVirtualTableColumns,
   type InferQueryColumns,
@@ -507,6 +513,37 @@ class Base<
       this.#getExecutor(),
       this.$.pre,
     );
+  }
+
+  /**
+   * Create a typed values alias for an inline `(VALUES ...)` list, usable as an
+   * `UPDATE ... FROM` source.
+   * @param name The alias name used in SQL
+   * @param columns Column declarations for the alias — existing columns (any table) or fresh column definitions
+   * @returns An object with `.as()` to bind the row payloads
+   *
+   * @example
+   * const V = db.values("v", { id: Products.id, stock: Products.stock })
+   *   .as([{ id: 1n, stock: 10 }, { id: 2n, stock: 20 }]);
+   */
+  values<
+    const TName extends string,
+    TColumns extends Record<string, AnyColumn>,
+  >(
+    name: TName,
+    columns: TColumns,
+  ): {
+    as: (
+      rows: ValuesRows<TColumns>,
+    ) => ValuesWithColumns<TName, ValuesColumns<TName, TColumns>>;
+  } {
+    return {
+      as: (rows) =>
+        new ValuesSource(name, columns, rows) as unknown as ValuesWithColumns<
+          TName,
+          ValuesColumns<TName, TColumns>
+        >,
+    };
   }
 }
 

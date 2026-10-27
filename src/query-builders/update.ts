@@ -5,13 +5,16 @@ import type { FilterExpression } from "../filters/index";
 import { type NonAggregateSqlFn, SqlFn } from "../functions/index";
 import { Sql } from "../sql";
 import type {
+  AnyColumn,
   AnyTableWithColumns,
   StdTableColumn,
   StdTableWithColumns,
 } from "../table";
 import type { Key, RawRow } from "../types";
+import type { AnyValuesWithColumns } from "../values";
 import {
   buildReturningClause,
+  buildUpdateFromClause,
   buildWithClause,
   generatedValueSQL,
   mapStarRows,
@@ -23,26 +26,65 @@ import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
 
 /**
+ * Source accepted by `UpdateBuilder.from()`: a real table, a CTE, or a values alias.
+ */
+export type UpdateFromSource = AnyTableWithColumns | AnyValuesWithColumns;
+
+/** The columns record of a single `FROM` source. */
+export type UpdateSourceColumns<TSource> = TSource extends AnyTableWithColumns
+  ? TSource["_"]["columns"]
+  : never;
+
+/**
+ * Union of the accessor-typed columns referenceable through the `FROM` sources.
+ * Each source contributes its own column union so distinct keys never collapse.
+ */
+export type UpdateFromColumns<TFroms extends readonly unknown[]> = {
+  [S in keyof TFroms]: UpdateSourceColumns<TFroms[S]>[keyof UpdateSourceColumns<
+    TFroms[S]
+  >];
+}[number];
+
+/**
+ * Columns of `TColumns` whose select type is assignable to the update type of
+ * `ColName` on `TTableWC`; used for both the target table and the `FROM` sources.
+ */
+export type CompatibleColumns<
+  TTableWC extends AnyTableWithColumns,
+  ColName extends keyof TTableWC["_"]["columns"],
+  TColumns extends Record<string, AnyColumn>,
+> = {
+  [K in keyof TColumns]: TColumns[K]["ValTypeSelect"] extends Exclude<
+    TTableWC["_"]["columns"][ColName]["ValTypeUpdate"],
+    undefined
+  >
+    ? TColumns[K]
+    : never;
+}[keyof TColumns];
+
+/**
  * Allowed expression for an individual column in an `UPDATE .set()` payload.
- * Accepts literals, prepared args, compatible columns, scalar SQL functions, or raw SQL.
+ * Accepts literals, prepared args, compatible columns (target table or `FROM`
+ * sources), scalar SQL functions, or raw SQL.
  */
 export type UpdateableItem<
   TTableWC extends AnyTableWithColumns,
   ColName extends keyof TTableWC["_"]["columns"],
   TPrepare extends boolean = false,
+  TFroms extends readonly unknown[] = readonly [],
 > =
   | Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>
   | (TPrepare extends true
       ? Arg<TTableWC["_"]["columns"][ColName]["ValType"]>
       : never)
+  | CompatibleColumns<TTableWC, ColName, TTableWC["_"]["columns"]>
   | {
-      [K in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][K]["ValTypeSelect"] extends Exclude<
-        TTableWC["_"]["columns"][ColName]["ValTypeUpdate"],
-        undefined
-      >
-        ? TTableWC["_"]["columns"][K]
-        : never;
-    }[keyof TTableWC["_"]["columns"]]
+      [S in keyof TFroms]: CompatibleColumns<
+        TTableWC,
+        ColName,
+        UpdateSourceColumns<TFroms[S]>
+      >;
+    }[number]
   | NonAggregateSqlFn<
       TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
       Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>,
@@ -57,17 +99,19 @@ export type UpdateableItem<
 export type UpdateValues<
   TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean = false,
+  TFroms extends readonly unknown[] = readonly [],
 > = {
   [ColName in keyof TTableWC["_"]["columns"] as TTableWC["_"]["columns"][ColName]["ValTypeUpdate"] extends never
     ? never
-    : ColName]?: UpdateableItem<TTableWC, ColName, TPrepare>;
+    : ColName]?: UpdateableItem<TTableWC, ColName, TPrepare, TFroms>;
 };
 
 /** Alias for `UpdateValues`. */
 export type UpdateSetValues<
   TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean = false,
-> = UpdateValues<TTableWC, TPrepare>;
+  TFroms extends readonly unknown[] = readonly [],
+> = UpdateValues<TTableWC, TPrepare, TFroms>;
 
 /**
  * Columns carrying a `$updateFn`, resolved once per table.
@@ -95,26 +139,49 @@ function updateFnColumnsOf(
 
 /**
  * Intermediate builder for constructing an `UPDATE` statement.
- * Provides `.set()` to specify column updates.
+ * Provides `.from()` to declare joined sources and `.set()` to specify column updates.
  */
 export class UpdateBuilder<
   TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean,
+  TFroms extends readonly UpdateFromSource[] = readonly [],
 > {
   readonly #table: TTableWC;
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
+  readonly #$froms: TFroms;
   constructor(
     table: TTableWC,
     executor: QueryExecutor,
     prepare: TPrepare,
     ctes: readonly AnyCteWithColumns[] | null = null,
+    froms: TFroms = [] as unknown as TFroms,
   ) {
     this.#table = table;
     this.#executor = executor;
     this.#prepare = prepare;
     this.#$ctes = ctes;
+    this.#$froms = froms;
+  }
+
+  /**
+   * Adds `FROM` sources to the update: a real table, a CTE, or a values alias
+   * created via `db.values(name, columns).as(rows)`.
+   *
+   * @param sources One or more sources; repeated calls append.
+   * @returns An `UpdateBuilder` whose `.set()` accepts the sources' columns.
+   */
+  from<TNewFroms extends readonly [UpdateFromSource, ...UpdateFromSource[]]>(
+    ...sources: TNewFroms
+  ): UpdateBuilder<TTableWC, TPrepare, [...TFroms, ...TNewFroms]> {
+    return new UpdateBuilder(
+      this.#table,
+      this.#executor,
+      this.#prepare,
+      this.#$ctes,
+      [...this.#$froms, ...sources] as [...TFroms, ...TNewFroms],
+    );
   }
 
   /**
@@ -123,7 +190,9 @@ export class UpdateBuilder<
    * @param values An object mapping table column names to updated expressions (literals, columns, SQL functions, or raw SQL).
    * @returns An `UpdateQuery` instance to chain `.where()` and `.returning()` clauses.
    */
-  set<TValues extends UpdateValues<TTableWC, TPrepare>>(values: TValues) {
+  set<TValues extends UpdateValues<TTableWC, TPrepare, TFroms>>(
+    values: TValues,
+  ) {
     return new UpdateQuery(
       this.#table,
       values,
@@ -132,6 +201,7 @@ export class UpdateBuilder<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#$froms,
     );
   }
 }
@@ -146,7 +216,8 @@ export class UpdateQuery<
   TValues extends UpdateValues<TTableWC, TPrepare>,
   TWhere extends
     | FilterExpression<
-        TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
+        | TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
+        | UpdateFromColumns<TFroms>,
         TPrepare
       >
     | undefined,
@@ -155,6 +226,7 @@ export class UpdateQuery<
     | Partial<Record<keyof TTableWC["_"]["columns"], true>>
     | Partial<Record<keyof TTableWC["_"]["columns"], false>>
     | undefined,
+  TFroms extends readonly UpdateFromSource[] = readonly [],
   TReturn = TReturning extends "*"
     ? {
         [ColName in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
@@ -182,6 +254,7 @@ export class UpdateQuery<
   readonly #executor: QueryExecutor;
   readonly #prepare: TPrepare;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
+  readonly #$froms: TFroms;
 
   constructor(
     table: TTableWC,
@@ -191,6 +264,7 @@ export class UpdateQuery<
     executor: QueryExecutor,
     prepare: TPrepare,
     ctes: readonly AnyCteWithColumns[] | null = null,
+    froms: TFroms = [] as unknown as TFroms,
   ) {
     super();
     this.#table = table;
@@ -200,6 +274,7 @@ export class UpdateQuery<
     this.#executor = executor;
     this.#prepare = prepare;
     this.#$ctes = ctes;
+    this.#$froms = froms;
   }
 
   /**
@@ -209,7 +284,8 @@ export class UpdateQuery<
    */
   where<
     TWhere extends FilterExpression<
-      TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]],
+      | TTableWC["_"]["columns"][keyof TTableWC["_"]["columns"]]
+      | UpdateFromColumns<TFroms>,
       TPrepare
     >,
   >(where: TWhere) {
@@ -221,11 +297,14 @@ export class UpdateQuery<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#$froms,
     );
   }
 
   /** Return all columns using `RETURNING *`. */
-  returning(all: "*"): UpdateQuery<TTableWC, TPrepare, TValues, TWhere, "*">;
+  returning(
+    all: "*",
+  ): UpdateQuery<TTableWC, TPrepare, TValues, TWhere, "*", TFroms>;
   /** Return a subset of columns. */
   returning<
     TReturnings extends
@@ -233,7 +312,7 @@ export class UpdateQuery<
       | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
   >(
     returnings: TReturnings,
-  ): UpdateQuery<TTableWC, TPrepare, TValues, TWhere, TReturnings>;
+  ): UpdateQuery<TTableWC, TPrepare, TValues, TWhere, TReturnings, TFroms>;
   returning<
     TReturnings extends
       | "*"
@@ -248,6 +327,7 @@ export class UpdateQuery<
       this.#executor,
       this.#prepare,
       this.#$ctes,
+      this.#$froms,
     );
   }
 
@@ -314,6 +394,11 @@ export class UpdateQuery<
       throw new Error("No columns to set in UPDATE query.");
     }
 
+    if (this.#$froms.length) {
+      query.sql += " FROM ";
+      buildUpdateFromClause(this.#$froms, query);
+    }
+
     if (this.#$where) {
       query.sql += ` WHERE `;
       this.#$where.toQuery(query);
@@ -322,6 +407,8 @@ export class UpdateQuery<
       this.#table._.columns,
       this.#$returning as "*" | Record<string, boolean> | undefined,
       query,
+      // FROM sources can carry same-named columns; qualify the target's ones.
+      this.#table._.nameSql,
     );
     return query;
   }

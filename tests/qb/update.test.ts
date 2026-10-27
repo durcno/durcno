@@ -9,6 +9,7 @@ import {
   database,
   defineConfig,
   eq,
+  gte,
   lower,
   mul,
   sql,
@@ -654,5 +655,253 @@ describe("UPDATE queries", () => {
         .where(eq(schema.Users.id, user.id))
         .execute(),
     ).rejects.toThrow("No columns to set in UPDATE query.");
+  });
+
+  it("should update many rows to different values via UPDATE ... FROM (VALUES ...)", async () => {
+    const users = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "bulk_a", bio: "a_bio" }),
+        createTestUser({ username: "bulk_b", bio: "b_bio" }),
+        createTestUser({ username: "bulk_c", bio: "c_bio" }),
+      ])
+      .returning({ id: true, username: true });
+
+    const V = db
+      .values("v", { userId: schema.Users.id, bio: schema.Users.bio })
+      .as([
+        { userId: users[0].id, bio: "new_a" },
+        { userId: users[1].id, bio: "new_b" },
+        { userId: users[2].id, bio: "new_c" },
+      ]);
+
+    const updated = await db
+      .update(schema.Users)
+      .from(V)
+      .set({ bio: V.bio })
+      .where(eq(schema.Users.id, V.userId))
+      .returning({ id: true, bio: true });
+
+    expect(updated).toHaveLength(3);
+    const bioById = new Map(updated.map((row) => [row.id, row.bio]));
+    expect(bioById.get(users[0].id)).toBe("new_a");
+    expect(bioById.get(users[1].id)).toBe("new_b");
+    expect(bioById.get(users[2].id)).toBe("new_c");
+  });
+
+  it("should leave rows untouched when a values join key matches nothing", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "noop", bio: "keep" }))
+      .returning({ id: true });
+
+    const V = db
+      .values("v", { userId: schema.Users.id, bio: schema.Users.bio })
+      .as([{ userId: 999999n, bio: "changed" }]);
+
+    const updated = await db
+      .update(schema.Users)
+      .from(V)
+      .set({ bio: V.bio })
+      .where(eq(schema.Users.id, V.userId))
+      .returning({ id: true });
+
+    expect(updated).toHaveLength(0);
+
+    const [row] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(row.bio).toBe("keep");
+  });
+
+  it("should throw when a values alias has no rows", async () => {
+    const V = db.values("v", { userId: schema.Users.id }).as([]);
+    expect(() =>
+      db.update(schema.Users).from(V).set({ points: V.userId }).toQuery(),
+    ).toThrow('Values alias "v" has no rows.');
+  });
+
+  it("should update from a plain table join", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "join_src", bio: "user_bio" }))
+      .returning({ id: true, username: true });
+
+    await db
+      .insertInto(schema.UserProfiles)
+      .values({ userId: user.id, bio: "old_bio" });
+
+    await db
+      .update(schema.UserProfiles)
+      .from(schema.Users)
+      .set({ bio: schema.Users.username })
+      .where(eq(schema.UserProfiles.userId, schema.Users.id));
+
+    const [profile] = await db
+      .from(schema.UserProfiles)
+      .select("*")
+      .where(() => eq(schema.UserProfiles.userId, user.id));
+    expect(profile.bio).toBe("join_src");
+  });
+
+  it("should combine a WITH clause and an inline VALUES source in one statement", async () => {
+    const [rich, poor] = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "cte_a", score: 10 }),
+        createTestUser({ username: "cte_b", score: 0 }),
+      ])
+      .returning({ id: true, score: true });
+
+    const highScores = db.with("high_scores").as(
+      db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => gte(schema.Users.score, 10)),
+    );
+    const bonus = db
+      .values("bonus", { userId: schema.Users.id, extra: schema.Users.points })
+      .as([{ userId: rich.id, extra: 100n }]);
+
+    const updated = await db
+      .with(highScores)
+      .update(schema.Users)
+      .from(highScores, bonus)
+      .set({ points: bonus.extra })
+      .where(eq(schema.Users.id, highScores.id))
+      .returning({ id: true, points: true });
+
+    expect(updated).toHaveLength(1);
+    expect(updated[0].id).toEqual(rich.id);
+    expect(updated[0].points).toBe(100n);
+    expect(poor.id).not.toEqual(rich.id);
+  });
+
+  it("should return only the updated table's columns with RETURNING * and a FROM source", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "star_from", bio: "original" }))
+      .returning({ id: true });
+
+    const V = db
+      .values("v", { userId: schema.Users.id, bio: schema.Users.bio })
+      .as([{ userId: user.id, bio: "from_alias" }]);
+
+    const [updated] = await db
+      .update(schema.Users)
+      .from(V)
+      .set({ bio: "explicit" })
+      .where(eq(schema.Users.id, V.userId))
+      .returning("*");
+
+    expect(updated.id).toBe(user.id);
+    expect(updated.bio).toBe("explicit");
+    expect("userId" in updated).toBe(false);
+  });
+
+  it("should cast NULL cells with the full array column type", async () => {
+    const [doc] = await db
+      .insertInto(schema.Documents)
+      .values({
+        title: "array_doc",
+        stamps: [new Date("2024-01-01T00:00:00.000Z")],
+      })
+      .returning({ id: true });
+
+    const V = db
+      .values("v", { id: schema.Documents.id, stamps: schema.Documents.stamps })
+      .as([
+        { id: doc.id, stamps: [new Date("2025-01-01T00:00:00.000Z")] },
+        { id: 999999n, stamps: null },
+      ]);
+
+    await db
+      .update(schema.Documents)
+      .from(V)
+      .set({ stamps: V.stamps })
+      .where(eq(schema.Documents.id, V.id));
+
+    const [row] = await db
+      .from(schema.Documents)
+      .select("*")
+      .where(() => eq(schema.Documents.id, doc.id));
+    expect(row.stamps).toEqual([new Date("2025-01-01T00:00:00.000Z")]);
+  });
+
+  it("should quote a reserved-word values alias", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "reserved_alias", bio: "before" }))
+      .returning({ id: true });
+
+    const V = db
+      .values("user", { userId: schema.Users.id })
+      .as([{ userId: user.id }]);
+
+    const [updated] = await db
+      .update(schema.Users)
+      .from(V)
+      .set({ bio: "after" })
+      .where(eq(schema.Users.id, V.userId))
+      .returning({ id: true, bio: true });
+
+    expect(updated).toEqual({ id: user.id, bio: "after" });
+  });
+
+  it("should allow a values alias column named rows", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "rows_col", bio: "before" }))
+      .returning({ id: true });
+
+    const V = db
+      .values("v", { userId: schema.Users.id, rows: schema.Users.bio })
+      .as([{ userId: user.id, rows: "from_rows" }]);
+
+    await db
+      .update(schema.Users)
+      .from(V)
+      .set({ bio: V.rows })
+      .where(eq(schema.Users.id, V.userId));
+
+    const [row] = await db
+      .from(schema.Users)
+      .select("*")
+      .where(() => eq(schema.Users.id, user.id));
+    expect(row.bio).toBe("from_rows");
+  });
+
+  it("should reject a values alias column named underscore", () => {
+    expect(() =>
+      db.values("v", { _: schema.Users.id }).as([{ _: 1n }]),
+    ).toThrow('cannot declare a column named "_"');
+  });
+
+  it("should keep auto-generating updateFn values alongside a VALUES source", async () => {
+    const [log] = await db
+      .insertInto(schema.AuditLogs)
+      .values({ action: "bulk", modifiedAt: new Date() })
+      .returning({ id: true, modifiedAt: true });
+
+    const V = db
+      .values("v", {
+        id: schema.AuditLogs.id,
+        message: schema.AuditLogs.message,
+      })
+      .as([{ id: log.id, message: "from_values" }]);
+
+    await db
+      .update(schema.AuditLogs)
+      .from(V)
+      .set({ message: V.message })
+      .where(eq(schema.AuditLogs.id, V.id));
+
+    const [row] = await db
+      .from(schema.AuditLogs)
+      .select("*")
+      .where(() => eq(schema.AuditLogs.id, log.id));
+    expect(row.message).toBe("from_values");
+    expect(row.modifiedAt.getTime()).toBeGreaterThan(log.modifiedAt.getTime());
   });
 });

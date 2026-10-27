@@ -23,7 +23,7 @@ export type AnySubquery = AnyQueryPromise & {
   getResolvedColumns(): Record<string, AnySelectableSource>;
 };
 
-type VirtualizedColumn<
+export type VirtualizedColumn<
   TVirtualName extends string,
   TKey extends Key,
   TColumn extends AnyColumn,
@@ -154,7 +154,7 @@ function buildSourceFromDriver(
   return (value) => value;
 }
 
-class VirtualColumn<TColumn extends AnyColumn> extends Column<
+export class VirtualColumn<TColumn extends AnyColumn> extends Column<
   TColumn["config"],
   TColumn["$"]["TsType"],
   TColumn["$"]["PgType"]

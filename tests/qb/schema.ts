@@ -1,4 +1,5 @@
 import {
+  array,
   bigint,
   boolean,
   date,
@@ -179,6 +180,13 @@ export const ArticlesRelations = relations(Articles, () => ({
   // fk relation with nullable FK column - result should be nullable
   category: fk(Articles.categoryId, Categories),
 }));
+
+// Documents table for testing array columns in bulk updates
+export const Documents = table("public", "documents", {
+  id: pk(),
+  title: varchar({ length: 100 }),
+  stamps: timestamptz({ dimension: array() }),
+});
 
 // AuditLogs table for testing insertFn and updateFn
 export const AuditLogs = table("public", "auditLogs", {

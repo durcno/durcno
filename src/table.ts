@@ -127,7 +127,8 @@ export class Table<
   TName extends string,
   TColumns extends Record<string, AnyColumn>,
 > {
-  static readonly [entityType] = "Table";
+  /** Typed `string` so subclasses can declare their own brand. */
+  static readonly [entityType]: string = "Table";
   readonly $!: {
     /** Inferred select model shape (all columns mapped to their select types). */
     inferSelect: Prettify<{
