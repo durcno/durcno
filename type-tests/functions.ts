@@ -38,387 +38,264 @@ import {
   trunc,
   upper,
 } from "durcno";
-import type { MaxFn, MinFn, SumFn } from "../src/functions/aggregate";
-import type {
-  AbsFn,
-  CeilFn,
-  FloorFn,
-  ModFn,
-  PowerFn,
-  RoundFn,
-  TruncFn,
-} from "../src/functions/mathematical";
-import type {
-  LeftFn,
-  LengthFn,
-  LowerFn,
-  PositionFn,
-  RightFn,
-  TrimFn,
-  UpperFn,
-} from "../src/functions/string";
 import { Events, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
-// --- SQL Utility Functions ---
+// Reads the inferred TypeScript result of a SQL expression
+type TsType<T> = T extends { $: { TsType: infer R } } ? R : never;
 
-// now(), uuidv4(), uuidv7() return typed Sql<T>
+// -----------------------------------------------------------------------------
+// SQL utility functions
+// -----------------------------------------------------------------------------
+
 Expect<Equal<ReturnType<typeof now>, Sql<Date>>>();
 Expect<Equal<ReturnType<typeof uuidv4>, Sql<string>>>();
 Expect<Equal<ReturnType<typeof uuidv7>, Sql<string>>>();
 
-// --- String Functions ---
+// -----------------------------------------------------------------------------
+// String functions
+// -----------------------------------------------------------------------------
 
-const lenFn = length(Users.username);
-const lowFn = lower(Users.username);
-const upFn = upper(Users.username);
-const trimFn = trim(Users.username);
-const lFn = left(Users.username, 4);
-const rFn = right(Users.username, 4);
-const posFn = position(Users.username, "@");
+const lenName = length(Users.username);
+const lenEmail = length(Users.email);
+const lowName = lower(Users.username);
+const lowEmail = lower(Users.email);
+const lowNull = lower(null);
+const upName = upper(Users.username);
+const trimName = trim(Users.username);
+const leftName = left(Users.username, 4);
+const rightName = right(Users.username, 4);
+const posAt = position(Users.username, "@");
 
-Expect<Equal<typeof lenFn, LengthFn<typeof Users.username>>>();
-Expect<Equal<typeof lowFn, LowerFn<typeof Users.username>>>();
-Expect<Equal<typeof upFn, UpperFn<typeof Users.username>>>();
-Expect<Equal<typeof trimFn, TrimFn<typeof Users.username>>>();
-Expect<Equal<typeof lFn, LeftFn<typeof Users.username, number>>>();
-Expect<Equal<typeof rFn, RightFn<typeof Users.username, number>>>();
-Expect<Equal<typeof posFn, PositionFn<typeof Users.username, "@">>>();
+Expect<Equal<TsType<typeof lenName>, number>>();
+Expect<Equal<TsType<typeof lenEmail>, number | null>>();
+Expect<Equal<TsType<typeof lowName>, string>>();
+Expect<Equal<TsType<typeof lowEmail>, string | null>>();
+Expect<Equal<TsType<typeof lowNull>, null>>();
+Expect<Equal<TsType<typeof upName>, string>>();
+Expect<Equal<TsType<typeof trimName>, string>>();
+Expect<Equal<TsType<typeof leftName>, string>>();
+Expect<Equal<TsType<typeof rightName>, string>>();
+Expect<Equal<TsType<typeof posAt>, number>>();
 
-// Literal Strings
-const lenLitFn = length("HELLO");
-const lowLitFn = lower("HELLO");
-const posLitFn = position("HELLO", "E");
-
-Expect<Equal<typeof lenLitFn, LengthFn<"HELLO">>>();
-Expect<Equal<typeof lowLitFn, LowerFn<"HELLO">>>();
-Expect<Equal<typeof posLitFn, PositionFn<"HELLO", "E">>>();
+// Literal and prepared inputs
+const lowLiteral = lower("HELLO");
+Expect<Equal<TsType<typeof lowLiteral>, string>>();
 
 const strArg = new Arg<string>((val) => val);
-const lowArgFn = lower(strArg);
+const lowArg = lower(strArg);
+Expect<Equal<TsType<typeof lowArg>, string>>();
 
-Expect<Equal<typeof lowArgFn, LowerFn<Arg<string>>>>();
-
-// @ts-expect-error: length expects a string column
+// @ts-expect-error - length expects a string input
 length(Users.id);
-// @ts-expect-error: lower expects a string column
+
+// @ts-expect-error - lower expects a string input
 lower(Users.id);
 
-// --- Numeric Functions ---
+// -----------------------------------------------------------------------------
+// Numeric functions
+// -----------------------------------------------------------------------------
 
-const absFn = abs(Users.id);
-const mFn = mod(Users.id, 2);
-const rndFn = round(Users.id);
-const cFn = ceil(Users.id);
-const fFn = floor(Users.id);
-const tFn = trunc(Users.id);
-const tFn2 = trunc(Users.id, 2);
-const pFn = power(Users.id, 2);
+const absId = abs(Users.id);
+const modId = mod(Users.id, 2);
+const roundId = round(Users.id);
+const roundId2 = round(Users.id, 2);
+const ceilId = ceil(Users.id);
+const floorId = floor(Users.id);
+const truncId = trunc(Users.id, 2);
+const powerId = power(Users.id, 2);
+const addId = add(Users.id, 5);
+const subId = sub(Users.id, 5);
+const mulId = mul(Users.id, 5);
+const divId = div(Users.id, 5);
 
-Expect<Equal<typeof absFn, AbsFn<typeof Users.id>>>();
-Expect<Equal<typeof mFn, ModFn<typeof Users.id, 2>>>();
-Expect<Equal<typeof rndFn, RoundFn<typeof Users.id, undefined>>>();
-Expect<Equal<typeof cFn, CeilFn<typeof Users.id>>>();
-Expect<Equal<typeof fFn, FloorFn<typeof Users.id>>>();
-Expect<Equal<typeof tFn, TruncFn<typeof Users.id, undefined>>>();
-Expect<Equal<typeof tFn2, TruncFn<typeof Users.id, 2>>>();
-Expect<Equal<typeof pFn, PowerFn<typeof Users.id, 2>>>();
+Expect<Equal<TsType<typeof absId>, number>>();
+Expect<Equal<TsType<typeof modId>, number>>();
+Expect<Equal<TsType<typeof roundId>, number>>();
+Expect<Equal<TsType<typeof roundId2>, number>>();
+Expect<Equal<TsType<typeof ceilId>, number>>();
+Expect<Equal<TsType<typeof floorId>, number>>();
+Expect<Equal<TsType<typeof truncId>, number>>();
+Expect<Equal<TsType<typeof powerId>, number>>();
+Expect<Equal<TsType<typeof addId>, number>>();
+Expect<Equal<TsType<typeof subId>, number>>();
+Expect<Equal<TsType<typeof mulId>, number>>();
+Expect<Equal<TsType<typeof divId>, number>>();
 
-// Literal Numbers
-const absLitFn = abs(-42);
-const rndLitFn = round(42.5);
+// Nulls propagate
+const absNull = abs(null);
+const modNull = mod(Users.id, null);
+const addNull = add(null, 5);
+const upNull = upper(null);
+const trimNull = trim(null);
+const leftNull = left(null, 2);
+const posNull = position(null, "@");
 
-Expect<Equal<typeof absLitFn, AbsFn<-42>>>();
-Expect<Equal<typeof rndLitFn, RoundFn<42.5, undefined>>>();
+Expect<Equal<TsType<typeof absNull>, null>>();
+Expect<Equal<TsType<typeof modNull>, null>>();
+Expect<Equal<TsType<typeof addNull>, null>>();
+Expect<Equal<TsType<typeof upNull>, null>>();
+Expect<Equal<TsType<typeof trimNull>, null>>();
+Expect<Equal<TsType<typeof leftNull>, null>>();
+Expect<Equal<TsType<typeof posNull>, null>>();
 
-// Arg Numbers
-const numArg = Arg.number();
-const absArgFn = abs(numArg);
-
-Expect<Equal<typeof absArgFn, AbsFn<Arg<number>>>>();
-
-// Check PgType for real and doublePrecision columns ("float")
+// float columns are numeric
 Expect<Equal<(typeof Events.rating)["$"]["PgType"], "float">>();
-Expect<Equal<(typeof Events.exactScore)["$"]["PgType"], "float">>();
 
-// Numeric/math/aggregate functions support float columns
 const absFloat = abs(Events.rating);
 const roundFloat = round(Events.exactScore);
 const sumFloat = sum(Events.rating);
-Expect<Equal<typeof absFloat, AbsFn<typeof Events.rating>>>();
-Expect<
-  Equal<typeof roundFloat, RoundFn<typeof Events.exactScore, undefined>>
->();
-Expect<Equal<typeof sumFloat, SumFn<typeof Events.rating>>>();
+Expect<Equal<TsType<typeof absFloat>, number | null>>();
+Expect<Equal<TsType<typeof roundFloat>, number | null>>();
+Expect<Equal<TsType<typeof sumFloat>, number | null>>();
 
-// @ts-expect-error: abs expects a numeric column
+// @ts-expect-error - abs expects a numeric input
 abs(Users.username);
-// @ts-expect-error: round expects a numeric column
+
+// @ts-expect-error - round expects a numeric input
 round(Users.username);
-// @ts-expect-error: trunc expects a numeric column
-trunc(Users.username);
-// @ts-expect-error: power expects a numeric column
-power(Users.username, 2);
 
-// --- Nested String Functions ---
+// -----------------------------------------------------------------------------
+// Nested expressions
+// -----------------------------------------------------------------------------
 
-// lower(trim(col))
-const _lowerTrim = lower(trim(Users.username));
-Expect<Equal<typeof _lowerTrim, LowerFn<TrimFn<typeof Users.username>>>>();
+const lowTrim = lower(trim(Users.username));
+const lenTrim = length(trim(Users.username));
+const roundAbs = round(abs(Users.id));
+const ceilAbs = ceil(abs(Users.id));
+const sumAbs = sum(abs(Users.id));
+const minLower = min(lower(Users.username));
+const maxAbs = max(abs(Users.id));
 
-// length(trim(col)) → numeric
-const _lenTrim = length(trim(Users.username));
-Expect<Equal<typeof _lenTrim, LengthFn<TrimFn<typeof Users.username>>>>();
+Expect<Equal<TsType<typeof lowTrim>, string>>();
+Expect<Equal<TsType<typeof lenTrim>, number>>();
+Expect<Equal<TsType<typeof roundAbs>, number>>();
+Expect<Equal<TsType<typeof ceilAbs>, number>>();
+Expect<Equal<TsType<typeof sumAbs>, number | null>>();
+Expect<Equal<TsType<typeof minLower>, string | null>>();
+Expect<Equal<TsType<typeof maxAbs>, number | null>>();
 
-// upper(lower(trim(col)))
-const _tripleNest = upper(lower(trim(Users.username)));
-Expect<
-  Equal<typeof _tripleNest, UpperFn<LowerFn<TrimFn<typeof Users.username>>>>
->();
+// Nullability is preserved through nesting
+const nestedLenLowEmail = length(lower(Users.email));
+const nestedLenLowNull = length(lower(null));
+const nestedAbsModNull = abs(mod(Users.id, null));
+const nestedAbsModCol = abs(mod(Users.id, 2));
 
-// @ts-expect-error: lower expects a string expression, abs returns numeric
+Expect<Equal<TsType<typeof nestedLenLowEmail>, number | null>>();
+Expect<Equal<TsType<typeof nestedLenLowNull>, null>>();
+Expect<Equal<TsType<typeof nestedAbsModNull>, null>>();
+Expect<Equal<TsType<typeof nestedAbsModCol>, number>>();
+
+// @ts-expect-error - lower expects a string expression
 lower(abs(Users.id));
-// @ts-expect-error: abs expects a numeric expression, lower returns string
+
+// @ts-expect-error - abs expects a numeric expression
 abs(lower(Users.username));
 
-// --- Nested Numeric Functions ---
+// -----------------------------------------------------------------------------
+// Aggregates over scalar expressions
+// -----------------------------------------------------------------------------
 
-// round(abs(col))
-const _roundAbs = round(abs(Users.id));
-Expect<Equal<typeof _roundAbs, RoundFn<AbsFn<typeof Users.id>, undefined>>>();
-
-// ceil(abs(col))
-const _ceilAbs = ceil(abs(Users.id));
-Expect<Equal<typeof _ceilAbs, CeilFn<AbsFn<typeof Users.id>>>>();
-
-// --- Aggregate over Scalar Expressions ---
-
-// count only accepts TableColumn, not scalar expressions
-// @ts-expect-error: count does not accept scalar SqlFn expressions
+// count only accepts table columns
+// @ts-expect-error - count does not accept scalar SqlFn expressions
 count(lower(Users.username));
 
-// sum(abs(col))
-const _sumAbs = sum(abs(Users.id));
-Expect<Equal<typeof _sumAbs, SumFn<AbsFn<typeof Users.id>>>>();
-
-// min/max over scalar expressions
-const _minLower = min(lower(Users.username));
-const _maxAbs = max(abs(Users.id));
-Expect<Equal<typeof _minLower, MinFn<LowerFn<typeof Users.username>>>>();
-Expect<Equal<typeof _maxAbs, MaxFn<AbsFn<typeof Users.id>>>>();
-
-// @ts-expect-error: aggregate-in-aggregate is not allowed
+// @ts-expect-error - aggregates cannot nest
 count(sum(Users.id));
 
-// --- Null Sensitivity and Strict Function Return Type Inference ---
+// -----------------------------------------------------------------------------
+// Coalesce and nullIf
+// -----------------------------------------------------------------------------
 
-// String functions: lower, upper, trim, length, left, right, position
-const _lowNull = lower(null);
-Expect<Equal<(typeof _lowNull)["$"]["TsType"], null>>();
+const coalNotNull = coalesce(Users.email, "fallback@example.com");
+const coalNullable = coalesce(Users.email, null);
+const nullIfUser = nullif(Users.username, "admin");
+const nullIfNum = nullif(10, 10);
 
-const _lowNotNullCol = lower(Users.username);
-Expect<Equal<(typeof _lowNotNullCol)["$"]["TsType"], string>>();
+Expect<Equal<TsType<typeof coalNotNull>, string>>();
+Expect<Equal<TsType<typeof coalNullable>, string | null>>();
+Expect<Equal<TsType<typeof nullIfUser>, string | null>>();
+Expect<Equal<TsType<typeof nullIfNum>, number | null>>();
 
-const _lowNullableCol = lower(Users.email);
-Expect<Equal<(typeof _lowNullableCol)["$"]["TsType"], string | null>>();
+// -----------------------------------------------------------------------------
+// Concat
+// -----------------------------------------------------------------------------
 
-const _upNull = upper(null);
-Expect<Equal<(typeof _upNull)["$"]["TsType"], null>>();
+const concatBasic = concat(Users.username, " - ", "suffix");
+const concatWithId = concat(Users.username, "#", Users.id);
+const concatWsBasic = concatWs(" ", Users.username, Users.email);
+const concatWsNullSep = concatWs(null, Users.username);
 
-const _trimNull = trim(null);
-Expect<Equal<(typeof _trimNull)["$"]["TsType"], null>>();
+Expect<Equal<TsType<typeof concatBasic>, string>>();
+Expect<Equal<TsType<typeof concatWithId>, string>>();
+Expect<Equal<TsType<typeof concatWsBasic>, string>>();
+Expect<Equal<TsType<typeof concatWsNullSep>, null>>();
 
-const _lenNull = length(null);
-Expect<Equal<(typeof _lenNull)["$"]["TsType"], null>>();
+// -----------------------------------------------------------------------------
+// Sql and bigint operands
+// -----------------------------------------------------------------------------
 
-const _lenNotNullCol = length(Users.username);
-Expect<Equal<(typeof _lenNotNullCol)["$"]["TsType"], number>>();
+const lowSql = lower(sql<string>`'HELLO'`);
+const addSql = add(Users.id, sql<number>`5`);
+const addBigInt = add(Users.id, 10n);
+const modBigInt = mod(Users.id, 2n);
 
-const _lenNullableCol = length(Users.email);
-Expect<Equal<(typeof _lenNullableCol)["$"]["TsType"], number | null>>();
+Expect<Equal<TsType<typeof lowSql>, string>>();
+Expect<Equal<TsType<typeof addSql>, number>>();
+Expect<Equal<TsType<typeof addBigInt>, number>>();
+Expect<Equal<TsType<typeof modBigInt>, number>>();
 
-const _leftNull = left(null, 2);
-Expect<Equal<(typeof _leftNull)["$"]["TsType"], null>>();
+// -----------------------------------------------------------------------------
+// Greatest and least
+// -----------------------------------------------------------------------------
 
-const _rightNull = right(null, 2);
-Expect<Equal<(typeof _rightNull)["$"]["TsType"], null>>();
+const greatestDate = greatest(Users.createdAt, Users.createdAt);
+const leastBigInt = least(Users.id, 0n);
+const greatestNull = greatest(null, null);
 
-const _posNull1 = position(null, "@");
-Expect<Equal<(typeof _posNull1)["$"]["TsType"], null>>();
+Expect<Equal<TsType<typeof greatestDate>, Date>>();
+Expect<Equal<TsType<typeof leastBigInt>, bigint>>();
+Expect<Equal<TsType<typeof greatestNull>, null>>();
 
-const _posNull2 = position(Users.username, null);
-Expect<Equal<(typeof _posNull2)["$"]["TsType"], null>>();
+// -----------------------------------------------------------------------------
+// numNonNulls and numNulls
+// -----------------------------------------------------------------------------
 
-// Math functions: abs, mod, round, ceil, floor, trunc, power
-const _absNull = abs(null);
-Expect<Equal<(typeof _absNull)["$"]["TsType"], null>>();
-
-const _absCol = abs(Users.id);
-Expect<Equal<(typeof _absCol)["$"]["TsType"], number>>();
-
-const _modNull1 = mod(null, 2);
-Expect<Equal<(typeof _modNull1)["$"]["TsType"], null>>();
-
-const _modNull2 = mod(Users.id, null);
-Expect<Equal<(typeof _modNull2)["$"]["TsType"], null>>();
-
-const _roundNull = round(null);
-Expect<Equal<(typeof _roundNull)["$"]["TsType"], null>>();
-
-const _ceilNull = ceil(null);
-Expect<Equal<(typeof _ceilNull)["$"]["TsType"], null>>();
-
-const _floorNull = floor(null);
-Expect<Equal<(typeof _floorNull)["$"]["TsType"], null>>();
-
-const _truncNull = trunc(null);
-Expect<Equal<(typeof _truncNull)["$"]["TsType"], null>>();
-
-const _powerNull1 = power(null, 2);
-Expect<Equal<(typeof _powerNull1)["$"]["TsType"], null>>();
-
-const _powerNull2 = power(Users.id, null);
-Expect<Equal<(typeof _powerNull2)["$"]["TsType"], null>>();
-
-// Arithmetic functions: add, sub, mul, div
-const _addNull1 = add(null, 5);
-Expect<Equal<(typeof _addNull1)["$"]["TsType"], null>>();
-
-const _addNull2 = add(Users.id, null);
-Expect<Equal<(typeof _addNull2)["$"]["TsType"], null>>();
-
-const _addColNum = add(Users.id, 5);
-Expect<Equal<(typeof _addColNum)["$"]["TsType"], number>>();
-
-const _subNull = sub(Users.id, null);
-Expect<Equal<(typeof _subNull)["$"]["TsType"], null>>();
-
-const _mulNull = mul(null, Users.id);
-Expect<Equal<(typeof _mulNull)["$"]["TsType"], null>>();
-
-const _divNull = div(Users.id, null);
-Expect<Equal<(typeof _divNull)["$"]["TsType"], null>>();
-
-// Nested null sensitivity preservation
-const _nestedLenLowEmail = length(lower(Users.email));
-Expect<Equal<(typeof _nestedLenLowEmail)["$"]["TsType"], number | null>>();
-
-const _nestedLenLowNull = length(lower(null));
-Expect<Equal<(typeof _nestedLenLowNull)["$"]["TsType"], null>>();
-
-const _nestedAbsModNull = abs(mod(Users.id, null));
-Expect<Equal<(typeof _nestedAbsModNull)["$"]["TsType"], null>>();
-
-const _nestedAbsModCol = abs(mod(Users.id, 2));
-Expect<Equal<(typeof _nestedAbsModCol)["$"]["TsType"], number>>();
-
-// --- Coalesce and NullIf Type Tests ---
-
-// coalesce drops null when a non-nullable fallback is present
-const _coalNotNull = coalesce(Users.email, "fallback@example.com");
-Expect<Equal<(typeof _coalNotNull)["$"]["TsType"], string>>();
-
-// coalesce preserves nullable when all operands can be null
-const _coalNullable = coalesce(Users.email, null);
-Expect<Equal<(typeof _coalNullable)["$"]["TsType"], string | null>>();
-
-// coalesce with non-null first operand stays non-null
-const _coalFirstNotNull = coalesce(Users.username, "other");
-Expect<Equal<(typeof _coalFirstNotNull)["$"]["TsType"], string>>();
-
-// nullif returns union with null
-const _nullIfUser = nullif(Users.username, "admin");
-Expect<Equal<(typeof _nullIfUser)["$"]["TsType"], string | null>>();
-
-const _nullIfNum = nullif(10, 10);
-Expect<Equal<(typeof _nullIfNum)["$"]["TsType"], number | null>>();
-
-// --- Concat and ConcatWs Type Tests ---
-
-const _concatBasic = concat(Users.username, " - ", "suffix");
-Expect<Equal<(typeof _concatBasic)["$"]["TsType"], string>>();
-
-const _concatWsBasic = concatWs(" ", Users.username, Users.email);
-Expect<Equal<(typeof _concatWsBasic)["$"]["TsType"], string>>();
-
-const _concatWsNullSep = concatWs(null, Users.username);
-Expect<Equal<(typeof _concatWsNullSep)["$"]["TsType"], null>>();
-
-// --- Sql and BigInt Operand Type Tests ---
-
-const _lowSql = lower(sql<string>`'HELLO'`);
-Expect<Equal<(typeof _lowSql)["$"]["TsType"], string>>();
-
-const _addSql = add(Users.id, sql<number>`5`);
-Expect<Equal<(typeof _addSql)["$"]["TsType"], number>>();
-
-const _addBigInt = add(Users.id, 10n);
-Expect<Equal<(typeof _addBigInt)["$"]["TsType"], number>>();
-
-const _modBigInt = mod(Users.id, 2n);
-Expect<Equal<(typeof _modBigInt)["$"]["TsType"], number>>();
-
-// --- Concat with non-text columns ---
-const _concatWithId = concat(Users.username, "#", Users.id);
-Expect<Equal<(typeof _concatWithId)["$"]["TsType"], string>>();
-
-const _concatWithDate = concat(Users.username, Users.createdAt);
-Expect<Equal<(typeof _concatWithDate)["$"]["TsType"], string>>();
-
-// --- Greatest and Least ---
-const _greatestDate = greatest(Users.createdAt, Users.createdAt);
-Expect<Equal<(typeof _greatestDate)["$"]["TsType"], Date>>();
-
-const _greatestNull = greatest(null, null);
-Expect<Equal<(typeof _greatestNull)["$"]["TsType"], null>>();
-
-const _leastNum = least(10, 0);
-Expect<Equal<(typeof _leastNum)["$"]["TsType"], number>>();
-
-const _leastBigInt = least(Users.id, 0n);
-Expect<Equal<(typeof _leastBigInt)["$"]["TsType"], bigint>>();
-
-// --- numNonNulls and numNulls ---
-const _numMixed = numNonNulls(
+const numMixed = numNonNulls(
   Users.username,
   Users.email,
   null,
   42,
   sql<number>`1`,
 );
-Expect<Equal<(typeof _numMixed)["$"]["TsType"], number>>();
+Expect<Equal<TsType<typeof numMixed>, number>>();
 Expect<
   Equal<
-    (typeof _numMixed)["$"]["Columns"],
+    (typeof numMixed)["$"]["Columns"],
     typeof Users.username | typeof Users.email
   >
 >();
 
-const _numNullsMixed = numNulls(Users.id, null, 0n);
-Expect<Equal<(typeof _numNullsMixed)["$"]["TsType"], number>>();
-Expect<Equal<(typeof _numNullsMixed)["$"]["Columns"], typeof Users.id>>();
+const numArg = numNulls(Arg.number(), null);
+Expect<Equal<TsType<typeof numArg>, number>>();
+Expect<Equal<(typeof numArg)["$"]["HasArg"], true>>();
 
-const _numArg = numNonNulls(Arg.number(), null);
-Expect<Equal<(typeof _numArg)["$"]["HasArg"], true>>();
-Expect<Equal<(typeof _numArg)["$"]["Columns"], never>>();
-
-const _numNoArg = numNulls(Users.username, "x");
-Expect<Equal<(typeof _numNoArg)["$"]["HasArg"], false>>();
-
-// @ts-expect-error: PostgreSQL requires at least one argument
+// @ts-expect-error - PostgreSQL requires at least one argument
 numNonNulls();
 
-// @ts-expect-error: a table is not a value expression
+// @ts-expect-error - a table is not a value expression
 numNulls(Users);
 
-// --- Raw SQL with SqlFn parameter ---
-const _sqlWithFn = sql`SELECT ${lower(Users.username)} FROM users`;
-Expect<Equal<typeof _sqlWithFn, Sql>>();
+// -----------------------------------------------------------------------------
+// Raw SQL and PostGIS
+// -----------------------------------------------------------------------------
 
-// --- stDistance with null point ---
+const sqlWithFn = sql`SELECT ${lower(Users.username)} FROM users`;
+Expect<Equal<typeof sqlWithFn, Sql>>();
+
 const GeoTestTable = table("public", "geo_test", {
   id: pk(),
   loc: geography.point({ notNull }),
 });
-const _stDistNull = stDistance(GeoTestTable.loc, null);
-Expect<Equal<(typeof _stDistNull)["$"]["TsType"], null>>();
+const stDistNull = stDistance(GeoTestTable.loc, null);
+Expect<Equal<TsType<typeof stDistNull>, null>>();

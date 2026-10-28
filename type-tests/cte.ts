@@ -108,7 +108,6 @@ db.with(projectedUsers).deleteFrom(projectedUsers);
 db.with(projectedUsers).query(projectedUsers);
 // @ts-expect-error: Cannot query a CTE table directly with relational query builder
 db.query(projectedUsers);
-
 // -------------------------------------------------------------------------
 // Function-backed virtual columns: InferQueryColumns preserves SqlFn types
 // -------------------------------------------------------------------------
@@ -133,7 +132,7 @@ const countQuery = db.with(countCte).from(countCte).select("*");
 type CountRows = Awaited<typeof countQuery>;
 Expect<Equal<CountRows, { total: number }[]>>();
 
-// Test for cte.test.ts line 387
+// Join a CTE against its source table
 const activeUsersForJoin = db.with("activeUsers").as(
   db
     .from(Users)
@@ -143,49 +142,29 @@ const activeUsersForJoin = db.with("activeUsers").as(
     .where(() => eq(Users.username, "active")),
 );
 
-const testQuery = db
+const cteJoinQuery = db
   .with(activeUsersForJoin)
   .from(Users)
   .leftJoin(activeUsersForJoin)
-  .on(({ activeUsers }) => {
-    Expect<
-      Equal<typeof activeUsers.username, typeof activeUsersForJoin.username>
-    >();
-    return eq(Users.username, activeUsers.username);
-  })
-  .select(({ activeUsers }) => {
-    return {
-      username: Users.username,
-      activeUser: activeUsers.username,
-    };
-  })
-  .orderBy(() => {
-    return asc(Users.username);
-  });
+  .on(({ activeUsers }) => eq(Users.username, activeUsers.username))
+  .select(({ activeUsers }) => ({
+    username: Users.username,
+    activeUser: activeUsers.username,
+  }))
+  .orderBy(() => asc(Users.username));
+Expect<
+  Equal<
+    Awaited<typeof cteJoinQuery>,
+    { username: string; activeUser: string | null }[]
+  >
+>();
 
 const directCteQuery = db
   .with(activeUsersForJoin)
   .from(activeUsersForJoin)
-  .select(() => {
-    Expect<
-      Equal<
-        typeof activeUsersForJoin.username,
-        typeof activeUsersForJoin.username
-      >
-    >();
-    return {
-      username: activeUsersForJoin.username,
-    };
-  })
-  .orderBy(() => {
-    Expect<
-      Equal<
-        typeof activeUsersForJoin.username,
-        typeof activeUsersForJoin.username
-      >
-    >();
-    return asc(activeUsersForJoin.username);
-  });
+  .select(() => ({ username: activeUsersForJoin.username }))
+  .orderBy(() => asc(activeUsersForJoin.username));
+Expect<Equal<Awaited<typeof directCteQuery>, { username: string }[]>>();
 
 // -------------------------------------------------------------------------
 // Literal, Sql, and null projection CTEs: InferQueryColumns preserves types

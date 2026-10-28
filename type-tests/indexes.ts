@@ -12,7 +12,7 @@ import {
 } from "durcno";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test Schema
+// Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const Users = table(
@@ -87,7 +87,7 @@ export const Users = table(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Negative Type Tests
+// Rejected index inputs
 // ─────────────────────────────────────────────────────────────────────────────
 
 // @ts-expect-error Arg is not allowed in partial index where condition

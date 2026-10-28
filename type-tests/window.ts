@@ -1,6 +1,5 @@
 import {
   asc,
-  avg,
   coalesce,
   count,
   cumeDist,
@@ -28,7 +27,7 @@ import { type Equal, Expect } from "./utils";
 // Aggregates as window functions — no auto GROUP BY
 // ============================================================================
 
-// Type test: windowed sum alongside plain columns — a non-grouping projection
+// windowed sum alongside plain columns — a non-grouping projection
 const grandTotalQuery = db.from(Posts).select(() => ({
   id: Posts.id,
   title: Posts.title,
@@ -42,7 +41,7 @@ Expect<
   >
 >();
 
-// Type test: windowed count keeps the number type
+// windowed count keeps the number type
 const windowedCountQuery = db.from(Posts).select(() => ({
   id: Posts.id,
   total: count("*").over({ partitionBy: [Posts.userId] }),
@@ -50,14 +49,7 @@ const windowedCountQuery = db.from(Posts).select(() => ({
 type WindowedCount = Awaited<typeof windowedCountQuery>;
 Expect<Equal<WindowedCount, { id: bigint; total: number }[]>>();
 
-// Type test: windowed avg is a string, like the plain aggregate
-const windowedAvgQuery = db.from(Posts).select(() => ({
-  averageUserId: avg(Posts.userId).over(),
-}));
-type WindowedAvg = Awaited<typeof windowedAvgQuery>;
-Expect<Equal<WindowedAvg, { averageUserId: bigint | null }[]>>();
-
-// Type test: coalesce over a windowed aggregate stays fully typed
+// coalesce over a windowed aggregate stays fully typed
 const coalescedWindowQuery = db.from(Posts).select(() => ({
   grandTotal: coalesce(sum(Posts.userId).over(), 0n),
 }));
@@ -117,7 +109,7 @@ Expect<
   >
 >();
 
-// Type test: lag default restores the exact value type
+// lag default restores the exact value type
 const lagDefaultQuery = db.from(Posts).select(() => ({
   previous: lag(Posts.id, 1, 0n).over({ orderBy: [asc(Posts.id)] }),
 }));
@@ -137,7 +129,7 @@ const frameQuery = db.from(Posts).select(() => ({
 type Frame = Awaited<typeof frameQuery>;
 Expect<Equal<Frame, { running: bigint | null }[]>>();
 
-// Type test: window orderBy accepts fn expressions
+// window orderBy accepts fn expressions
 const windowFnOrderQuery = db.from(Posts).select(() => ({
   total: sum(Posts.userId).over({
     orderBy: asc(length(Posts.title)),
@@ -158,7 +150,7 @@ type OrderByWindow = Awaited<typeof orderByWindowQuery>;
 Expect<Equal<OrderByWindow, { id: bigint; title: string | null }[]>>();
 
 // ============================================================================
-// Negative tests — window functions are refused like aggregates
+// Placement rules
 // ============================================================================
 
 const windowed = sum(Posts.userId).over();

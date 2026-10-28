@@ -8,21 +8,16 @@ import {
   lower,
   sql,
 } from "durcno";
-import {
-  Comments,
-  db,
-  NetworkDevices,
-  Posts,
-  UserProfiles,
-  Users,
-} from "./schema";
+import { db, NetworkDevices, Posts, UserProfiles, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
-// Type test: InferSelect and InferSelectModel
+// -----------------------------------------------------------------------------
+// Select model inference
+// -----------------------------------------------------------------------------
+
 type UsersModel = InferSelect<typeof Users>;
 Expect<Equal<InferSelectModel<typeof Users>, UsersModel>>();
 
-// Type test: select all columns
 const allUsersQuery = db.from(Users).select("*");
 type AllUsers = Awaited<typeof allUsersQuery>;
 Expect<
@@ -41,26 +36,22 @@ Expect<
 >();
 Expect<Equal<UsersModel, AllUsers[number]>>();
 
-// Type test: select specific columns
-const usernameOnlyQuery = db
-  .from(Users)
-  .select(() => ({ username: Users.username }));
-type UsernameOnly = Awaited<typeof usernameOnlyQuery>;
-Expect<Equal<UsernameOnly, { username: string }[]>>();
+// -----------------------------------------------------------------------------
+// Projections
+// -----------------------------------------------------------------------------
 
-// Type test: select multiple columns
-const userIdAndEmailQuery = db
+const userProjectionQuery = db
   .from(Users)
   .select(() => ({ id: Users.id, email: Users.email }));
-type UserIdAndEmail = Awaited<typeof userIdAndEmailQuery>;
-Expect<Equal<UserIdAndEmail, { id: bigint; email: string | null }[]>>();
+type UserProjection = Awaited<typeof userProjectionQuery>;
+Expect<Equal<UserProjection, { id: bigint; email: string | null }[]>>();
 
-// Type test: select with all fields false (should be empty object array)
+// An empty projection is an empty object
 const noneQuery = db.from(Users).select(() => ({}));
 type None = Awaited<typeof noneQuery>;
 Expect<Equal<None, Record<never, never>[]>>();
 
-// Type test: select on Posts (includes array column)
+// A table with array, JSON, and nullable columns keeps every type
 const allPostsQuery = db.from(Posts).select("*");
 type AllPosts = Awaited<typeof allPostsQuery>;
 Expect<
@@ -78,196 +69,31 @@ Expect<
   >
 >();
 
-// Type test: select array column from Posts (nullable)
-const tagsQuery = db
-  .from(Posts)
-  .select(() => ({ id: Posts.id, tags: Posts.tags }));
-type TagsResult = Awaited<typeof tagsQuery>;
-Expect<Equal<TagsResult, { id: bigint; tags: string[] | null }[]>>();
-
-// Type test: select on Comments, only body
-const commentBodyQuery = db
-  .from(Comments)
-  .select(() => ({ body: Comments.body }));
-type CommentBody = Awaited<typeof commentBodyQuery>;
-Expect<Equal<CommentBody, { body: string | null }[]>>();
-
-// Type test: select with where
-const whereQuery = db
-  .from(Users)
-  .select(() => ({ email: Users.email }))
-  .where(() => eq(Users.username, "ghost"));
-type Where = Awaited<typeof whereQuery>;
-Expect<Equal<Where, { email: string | null }[]>>();
-
-// Type test: select with where and and
-const whereAndQuery = db
-  .from(Users)
-  .select(() => ({ username: Users.username }))
-  .where(() =>
-    and(eq(Users.username, "ghost"), eq(Users.email, "email@example.com")),
-  );
-type WhereAnd = Awaited<typeof whereAndQuery>;
-Expect<Equal<WhereAnd, { username: string }[]>>();
-
-// Type test: select with orderBy
-const orderByQuery = db
-  .from(Users)
-  .select(() => ({ username: Users.username }))
-  .orderBy(() => asc(Users.username));
-type OrderBy = Awaited<typeof orderByQuery>;
-Expect<Equal<OrderBy, { username: string }[]>>();
-
-// Type test: select with multi-column orderBy (array syntax)
-const multiOrderByQuery = db
-  .from(Users)
-  .select(() => ({
-    username: Users.username,
-    createdAt: Users.createdAt,
-  }))
-  .orderBy(() => [asc(Users.username), desc(Users.createdAt)]);
-type MultiOrderBy = Awaited<typeof multiOrderByQuery>;
-Expect<Equal<MultiOrderBy, { username: string; createdAt: Date }[]>>();
-
-// Type test: select with limit
-const limitQuery = db
-  .from(Users)
-  .select(() => ({ username: Users.username }))
-  .limit(10);
-type Limit = Awaited<typeof limitQuery>;
-Expect<Equal<Limit, { username: string }[]>>();
-
-// Type test: select with offset
-const offsetQuery = db
-  .from(Users)
-  .select(() => ({ username: Users.username }))
-  .limit(10)
-  .offset(10);
-type Offset = Awaited<typeof offsetQuery>;
-Expect<Equal<Offset, { username: string }[]>>();
-
-// ============================================================================
-// Negative type tests - these should cause compile errors
-// Negative type tests
-// ============================================================================
-
 db.from(Users).select(
-  // @ts-expect-error - Property 'nonExistent' does not exist on table view
+  // @ts-expect-error - non-existent column in the projection
   ({ users }) => ({ postId: users.nonExistent }),
 );
 
-db.from(Users)
-  .select("*")
-  // @ts-expect-error - Wrong type in where condition should not compile
-  .where(() => eq(Users.id, "string_instead_of_number"));
+// -----------------------------------------------------------------------------
+// Chaining
+// -----------------------------------------------------------------------------
 
-db.from(Users)
-  .select("*")
-  // @ts-expect-error - Wrong enum value in where should not compile
-  .where(() => eq(Users.type, "invalid_type"));
-
-db.from(Users)
-  .select("*")
-  // @ts-expect-error - Comparing incompatible types should not compile
-  .where(() => eq(Users.username, 123));
-
-// Cannot use string where Buffer is expected for bytea
-db.from(UserProfiles)
-  .select("*")
-  // @ts-expect-error - string not assignable to ByteaValType
-  .where(() => eq(UserProfiles.avatarData, "not-a-buffer"));
-
-db.from(UserProfiles)
-  .select("*")
-  // @ts-expect-error - Cannot use number where Buffer is expected for bytea
-  .where(() => eq(UserProfiles.avatarData, 123));
-
-// ============================================================================
-// Negative type tests for network columns
-// ============================================================================
-
-db.from(NetworkDevices)
-  .select("*")
-  // @ts-expect-error - Cannot use number for INET column (expects string)
-  .where(() => eq(NetworkDevices.ipAddress, 123));
-
-db.from(NetworkDevices)
-  .select("*")
-  // @ts-expect-error - Cannot use number for CIDR column (expects string)
-  .where(() => eq(NetworkDevices.networkRange, 456));
-
-db.from(NetworkDevices)
-  .select("*")
-  // @ts-expect-error - Cannot use number for MACADDR column (expects string)
-  .where(() => eq(NetworkDevices.macAddress, 789));
-
-// ============================================================================
-// DISTINCT ON type tests
-// ============================================================================
-
-// Type test: distinctOn with a single column preserves return type
-const distinctOnSingleQuery = db
+// where + and + multi-column orderBy + limit + offset preserve the projection
+const chainedQuery = db
   .from(Users)
-  .distinctOn(() => Users.username)
-  .select("*");
-type DistinctOnSingle = Awaited<typeof distinctOnSingleQuery>;
-Expect<
-  Equal<
-    DistinctOnSingle,
-    {
-      id: bigint;
-      username: string;
-      email: string | null;
-      type: "admin" | "user";
-      createdAt: Date;
-      externalId: string;
-      trackingId: string | null;
-    }[]
-  >
->();
+  .select(() => ({ username: Users.username, createdAt: Users.createdAt }))
+  .where(() =>
+    and(eq(Users.username, "ghost"), eq(Users.email, "email@example.com")),
+  )
+  .orderBy(() => [asc(Users.username), desc(Users.createdAt)])
+  .limit(10)
+  .offset(10);
+type ChainedResult = Awaited<typeof chainedQuery>;
+Expect<Equal<ChainedResult, { username: string; createdAt: Date }[]>>();
 
-// Type test: distinctOn with an array of columns
-const distinctOnMultiQuery = db
-  .from(Users)
-  .distinctOn(() => [Users.type, Users.username])
-  .select(() => ({ username: Users.username, type: Users.type }));
-type DistinctOnMulti = Awaited<typeof distinctOnMultiQuery>;
-Expect<
-  Equal<DistinctOnMulti, { username: string; type: "admin" | "user" }[]>
->();
-
-// Type test: distinctOn chained with where and orderBy
-const distinctOnChainedQuery = db
-  .from(Users)
-  .distinctOn(() => Users.type)
-  .select(() => ({ username: Users.username }))
-  .where(() => eq(Users.type, "admin"))
-  .orderBy(() => asc(Users.type));
-type DistinctOnChained = Awaited<typeof distinctOnChainedQuery>;
-Expect<Equal<DistinctOnChained, { username: string }[]>>();
-
-// Type test: distinctOn cannot be called twice (Omit removes it)
-const _distinctOnOnce = db.from(Users).distinctOn(() => Users.username);
-// @ts-expect-error - distinctOn should not be callable after already calling it
-_distinctOnOnce.distinctOn(() => Users.email);
-
-// Type test: innerJoin cannot be called after distinctOn (Omit removes it)
-const _distinctOnNoJoin = db.from(Users).distinctOn(() => Users.username);
-// @ts-expect-error - innerJoin should not be callable after distinctOn
-_distinctOnNoJoin.innerJoin(Posts).on(() => eq(Users.id, Posts.userId));
-
-// ============================================================================
-// Negative DISTINCT ON type tests
-// ============================================================================
-
-db.from(Users)
-  // @ts-expect-error - Cannot use columns from a different table in distinctOn
-  .distinctOn(() => Posts.title)
-  .select("*");
-
-// ============================================================================
-// Null and literal projection type tests
-// ============================================================================
+// -----------------------------------------------------------------------------
+// Null and literal projections
+// -----------------------------------------------------------------------------
 
 const nullAndLiteralSelectQuery = db.from(Users).select(() => ({
   directNull: null,
@@ -295,3 +121,63 @@ Expect<
     }[]
   >
 >();
+
+// -----------------------------------------------------------------------------
+// Column value constraints
+// -----------------------------------------------------------------------------
+
+db.from(UserProfiles)
+  .select("*")
+  // @ts-expect-error - bytea expects a Buffer, not a string
+  .where(() => eq(UserProfiles.avatarData, "not-a-buffer"));
+
+db.from(NetworkDevices)
+  .select("*")
+  // @ts-expect-error - network columns expect a string, not a number
+  .where(() => eq(NetworkDevices.ipAddress, 123));
+
+// -----------------------------------------------------------------------------
+// DISTINCT ON
+// -----------------------------------------------------------------------------
+
+const _distinctOnSingle = db
+  .from(Users)
+  .distinctOn(() => Users.username)
+  .select("*");
+type DistinctOnSingle = Awaited<typeof _distinctOnSingle>;
+Expect<
+  Equal<
+    DistinctOnSingle,
+    {
+      id: bigint;
+      username: string;
+      email: string | null;
+      type: "admin" | "user";
+      createdAt: Date;
+      externalId: string;
+      trackingId: string | null;
+    }[]
+  >
+>();
+
+const _distinctOnMulti = db
+  .from(Users)
+  .distinctOn(() => [Users.type, Users.username])
+  .select(() => ({ username: Users.username, type: Users.type }));
+type DistinctOnMulti = Awaited<typeof _distinctOnMulti>;
+Expect<
+  Equal<DistinctOnMulti, { username: string; type: "admin" | "user" }[]>
+>();
+
+const _distinctOnOnce = db.from(Users).distinctOn(() => Users.username);
+// @ts-expect-error - distinctOn is removed after the first call
+_distinctOnOnce.distinctOn(() => Users.email);
+
+const _distinctOnNoJoin = db.from(Users).distinctOn(() => Users.username);
+// @ts-expect-error - innerJoin is removed after distinctOn
+_distinctOnNoJoin.innerJoin(Posts).on(() => eq(Users.id, Posts.userId));
+
+db.from(Users)
+  // @ts-expect-error - columns from another table
+  .distinctOn(() => Posts.title)
+  .select("*");

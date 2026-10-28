@@ -150,38 +150,35 @@ Expect<Equal<RawDirectResult, { value: number }[]>>();
 // Other scalar expression contexts
 // ============================================================================
 
-const scoreQuery = db.from(Posts).select(() => ({ id: Posts.id }));
-const bigintQuery = db.from(Posts).select(() => ({ id: Posts.id }));
-
 // Comparisons accept queries on either side.
 db.from(Posts)
   .select("*")
-  .where(() => eq(Posts.id, scoreQuery));
+  .where(() => eq(Posts.id, numericQuery));
 db.from(Posts)
   .select("*")
-  .where(() => gt(scoreQuery, 1n));
+  .where(() => gt(numericQuery, 1n));
 
 // JSON builders normalize query values.
 db.from(Posts).select(() => ({
-  object: jsonBuildObject({ score: scoreQuery }),
-  array: jsonBuildArray(scoreQuery, 1),
+  object: jsonBuildObject({ score: numericQuery }),
+  array: jsonBuildArray(numericQuery, 1),
 }));
 
 // ORDER BY accepts a scalar query directly.
 db.from(Posts)
   .select("*")
-  .orderBy(() => asc(scoreQuery));
+  .orderBy(() => asc(numericQuery));
 
 // INSERT values accept queries; non-null targets need coalesce.
 db.insertInto(CheckTest).values({
-  price: coalesce(bigintQuery, 0n),
+  price: coalesce(numericQuery, 0n),
   quantity: 1,
   name: "scalar-insert",
 });
 
 db.insertInto(CheckTest).values({
   // @ts-expect-error - non-null price rejects the nullable scalar query
-  price: bigintQuery,
+  price: numericQuery,
   quantity: 1,
   name: "scalar-insert",
 });
