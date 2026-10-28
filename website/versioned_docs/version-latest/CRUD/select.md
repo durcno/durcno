@@ -28,14 +28,15 @@ Returned by `.innerJoin(table)` / `.leftJoin(table)`. The join is committed once
 
 ### Query methods (SelectQuery)
 
-| Method               | Description                                                     |
-| -------------------- | --------------------------------------------------------------- |
-| `.where(callback)`   | Filter results via `() => condition`                            |
-| `.groupBy(callback)` | Explicit GROUP BY via `() => [cols]` or `(_, aliases) => [...]` |
-| `.having(callback)`  | Filter grouped results via `() => condition` (HAVING clause)    |
-| `.orderBy(callback)` | Sort results via `() => order` or `(_, aliases) => order`       |
-| `.limit(n)`          | Limit number of results (`n` can be `number` or `bigint`)       |
-| `.offset(n)`         | Skip n results (`n` can be `number` or `bigint`)                |
+| Method               | Description                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| `.where(callback)`   | Filter results via `() => condition`                               |
+| `.groupBy(callback)` | Explicit GROUP BY via `() => [cols]` or `(_, aliases) => [...]`    |
+| `.having(callback)`  | Filter grouped results via `() => condition` (HAVING clause)       |
+| `.orderBy(callback)` | Sort results via `() => order` or `(_, aliases) => order`          |
+| `.limit(n)`          | Limit number of results (`n` can be `number` or `bigint`)          |
+| `.offset(n)`         | Skip n results (`n` can be `number` or `bigint`)                   |
+| `.forUpdate()` etc.  | Row locking (`FOR UPDATE` & co.) — see [Row Locking](./locking.md) |
 
 ## Basic Usage
 
@@ -86,6 +87,7 @@ const users = await db.from(Users).select(() => ({
 The `.select()` object projection can include more than just columns. You can project:
 
 - **SQL functions**: `lower(Users.username)`, `count("*")`, `coalesce(...)`, etc.
+- **Scalar subqueries**: a single-column `db.from(...).select(...)` query
 - **Literal constants**: strings, numbers, bigints, and booleans
 - **Literal null**: `null` or `sql.null`
 - **Raw SQL expressions**: `sql<T>` template fragments with typed return inference
@@ -112,6 +114,35 @@ const results = await db.from(Users).select(() => ({
 //   computedScore: number;
 // }[]
 ```
+
+### Scalar Subqueries
+
+A single-column query can be projected directly. The value is typed `T | null` because a scalar subquery returns `NULL` when it has no row:
+
+```typescript
+import { asc, count, eq } from "durcno";
+
+const users = await db.from(Users).select(() => ({
+  id: Users.id,
+  postCount: db
+    .from(Posts)
+    .select(() => ({ total: count("*") }))
+    .where(() => eq(Posts.userId, Users.id)),
+  firstPostTitle: db
+    .from(Posts)
+    .select(() => ({ title: Posts.title }))
+    .where(() => eq(Posts.userId, Users.id))
+    .orderBy(() => asc(Posts.id))
+    .limit(1),
+}));
+// Type: {
+//   id: bigint;
+//   postCount: number | null;
+//   firstPostTitle: string | null;
+// }[]
+```
+
+The subquery must select exactly one column. Use `.limit(1)` for non-aggregate row subqueries, and wrap the value in `coalesce(...)` when the projection must never be `null`.
 
 ### Defaults for Nullable Expressions
 
@@ -333,6 +364,22 @@ const byType = await db
 // SQL: SELECT type, count(*) FROM users GROUP BY type
 ```
 
+Window functions (`.over()`) are the exception: they aggregate inside the window, not the query, so they never trigger a `GROUP BY`. That makes a page of rows plus a grand total a single query — see [Window Functions](../Expressions/functions.md#window-functions):
+
+```typescript
+import { sum } from "durcno";
+
+const page = await db
+  .from(Orders)
+  .select(() => ({
+    id: Orders.id,
+    total: Orders.total,
+    grandTotal: sum(Orders.total).over(),
+  }))
+  .limit(10);
+// SQL: SELECT id, total, sum(total) OVER () FROM orders LIMIT 10
+```
+
 ### Explicit GROUP BY
 
 Use `.groupBy()` with a callback receiving the tables view and select aliases to explicitly set the GROUP BY clause. Explicit GROUP BY **fully replaces** the auto GROUP BY that Durcno generates when aggregate functions are mixed with non-aggregate columns in `.select()`.
@@ -543,4 +590,5 @@ const results = await db
 
 ## Related
 
+- [Row Locking](./locking.md) — `FOR UPDATE` & co. on select queries.
 - [Filters](../Expressions/filters.md) — Complete list of filter operators for `.where()` conditions.

@@ -10,9 +10,10 @@ Use `db.update()` to modify existing rows in a table. The update builder provide
 
 ### Builder methods (UpdateBuilder)
 
-| Method   | Description                     |
-| -------- | ------------------------------- |
-| `.set()` | Provide column values to update |
+| Method              | Description                                                       |
+| ------------------- | ----------------------------------------------------------------- |
+| `.set()`            | Provide column values to update                                   |
+| `.from(...sources)` | Add `FROM` sources (tables, CTEs, or values aliases) to update in |
 
 ### Query methods (UpdateQuery)
 
@@ -236,8 +237,102 @@ await db
   .where(eq(Users.id, 1n));
 ```
 
+### Scalar Subqueries
+
+A single-column `SelectQuery` can be assigned directly. The value is typed `T | null`, so use `coalesce(...)` for non-null columns:
+
+```typescript
+import { coalesce, count, eq } from "durcno";
+
+await db
+  .update(Users)
+  .set({
+    score: coalesce(
+      db
+        .from(Posts)
+        .select(() => ({ total: count("*") }))
+        .where(() => eq(Posts.userId, Users.id)),
+      0,
+    ),
+  })
+  .where(eq(Users.id, 1n));
+```
+
+The subquery must select exactly one column. An aggregate inside the subquery is scoped to that subquery and is allowed; a bare aggregate in `.set()` remains rejected.
+
 :::warning
-**No Aggregate Functions** — Aggregate functions (such as `count()`, `sum()`, or `avg()`) are not allowed in `UPDATE SET` and will produce a TypeScript compilation error.
+**No Aggregate Functions** — Aggregate functions (such as `count()`, `sum()`, or `avg()`) are not allowed directly in `UPDATE SET` and will produce a TypeScript compilation error. Wrapping the aggregate in a scalar subquery is allowed.
+:::
+
+## Bulk per-row Updates (`UPDATE ... FROM`)
+
+Use `.from()` to update many rows to _different_ values in one statement. A values alias is declared with `db.values(name, columns)` and its rows are bound with `.as()`:
+
+```typescript
+import { eq } from "durcno";
+
+const V = db.values("v", {
+  cartItemId: CartItems.id,
+  orderItemId: CartItems.orderItemId,
+}).as([
+  { cartItemId: 1n, orderItemId: 100n },
+  { cartItemId: 2n, orderItemId: 101n },
+]);
+
+await db
+  .update(CartItems)
+  .from(V)
+  .set({ orderItemId: V.orderItemId })
+  .where(eq(CartItems.id, V.cartItemId));
+```
+
+The values alias is a typed virtual table: each declared column wraps a source column (from any table, or a fresh column definition like `bigint({ notNull })`), so rows are type-checked per cell and values are encoded with the source column's SQL type. A column key names the alias column; reference it as `V.key` anywhere in `.set()` or `.where()`.
+
+:::note
+
+- `.from()` must be chained **before** `.set()` — mirroring how joins precede `.select()` — because the set payload type-checks against the sources' columns.
+- Repeated `.from()` calls append sources (`FROM a, b`).
+- `undefined` cells render `NULL`. An alias with no rows throws when the statement is built, since an empty `VALUES` list is not valid SQL.
+- `.returning()` returns rows of the **updated table** only.
+
+:::
+
+## Updating From a Table or CTE
+
+Any real table or CTE can also be a `FROM` source, which turns the update into a join. This is useful for syncing a table from its source of truth:
+
+```typescript
+await db
+  .update(UserProfiles)
+  .from(Users)
+  .set({ bio: Users.username })
+  .where(eq(UserProfiles.userId, Users.id));
+```
+
+A CTE joins by its instance after being attached with `db.with(...)`:
+
+```typescript
+import { eq, isNotNull } from "durcno";
+
+const verifiedCte = db
+  .with("verified")
+  .as(
+    db
+      .from(Users)
+      .select(() => ({ id: Users.id, email: Users.email }))
+      .where(() => isNotNull(Users.isVerified)),
+  );
+
+await db
+  .with(verifiedCte)
+  .update(UserProfiles)
+  .from(verifiedCte)
+  .set({ website: verifiedCte.email })
+  .where(eq(UserProfiles.userId, verifiedCte.id));
+```
+
+:::caution
+A `FROM` source is referenced by its own name — self-joining the updated table needs an SQL alias, which is not supported yet; use a values alias (or a CTE) for that shape.
 :::
 
 ## Primary Key Restriction

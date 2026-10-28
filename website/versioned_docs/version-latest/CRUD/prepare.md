@@ -207,6 +207,27 @@ const [updated] = await incrementScore.run(db, { id: 1n, inc: 25 });
 
 The same pattern also applies to `delete().where(...)` and relational queries created with `query().findMany({...})`.
 
+## Auto-generated Values
+
+`$insertFn` and `$updateFn` values are generated on every `.run()`, not when the prepared query is built. They are bound as query arguments, so the SQL text stays the same across runs and generated values remain unique:
+
+```typescript
+const createLog = prepare(
+  { action: AuditLogs.action.arg() },
+  (args) =>
+    db.prepare()
+      .insertInto(AuditLogs)
+      .values({ action: args.action })
+      .returning("*"),
+);
+
+// `createdAt` and `publicId` are generated separately for each run.
+const [first] = await createLog.run(db, { action: "first" });
+const [second] = await createLog.run(db, { action: "second" });
+```
+
+In a multi-row prepared insert, an omitted `$insertFn` cell is resolved once per row. Supplying a value explicitly still overrides the hook.
+
 ## Selective Column Selection
 
 You can select specific columns in your prepared query:

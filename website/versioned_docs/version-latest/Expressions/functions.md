@@ -175,6 +175,120 @@ const stats = await db.from(Orders).select(() => ({
 
 ---
 
+## Window Functions
+
+An aggregate or pure window function becomes a window function call by attaching `.over(spec)` — rendering `fn(...) OVER (...)` with an optional `PARTITION BY`, window `ORDER BY`, and frame clause.
+
+Window functions never trigger the [auto GROUP BY](../../CRUD/select.md#automatic-group-by): `SELECT sum(amount) OVER ()` still returns one row per record, with the window aggregate evaluated alongside the plain columns.
+
+### `OVER` spec
+
+```typescript
+import { asc, count, desc, rows, sum, unboundedPreceding } from "durcno";
+
+const orders = await db.from(Orders).select(() => ({
+  id: Orders.id,
+
+  // SQL: sum(amount) OVER ()
+  grandTotal: sum(Orders.amount).over(),
+
+  // SQL: sum(amount) OVER (PARTITION BY userId)
+  cartTotal: sum(Orders.amount).over({ partitionBy: [Orders.userId] }),
+
+  // SQL: sum(amount) OVER (PARTITION BY userId ORDER BY createdAt ASC)
+  runningTotal: sum(Orders.amount).over({
+    partitionBy: [Orders.userId],
+    orderBy: [asc(Orders.createdAt)],
+  }),
+
+  // SQL: sum(amount) OVER (ORDER BY id ASC ROWS UNBOUNDED PRECEDING)
+  rowFrameTotal: sum(Orders.amount).over({
+    orderBy: [asc(Orders.id)],
+    frame: rows(unboundedPreceding()),
+  }),
+}));
+```
+
+- `partitionBy` — a column, a non-aggregate function, raw SQL, or a list of them.
+- `orderBy` — one or more `asc()`/`desc()` expressions, ordered inside the `OVER` parens.
+- `frame` — a `rows(...)`, `range(...)`, or `groups(...)` clause (see below).
+
+:::note
+An aggregate's inline `.orderBy()` (the `ORDER BY` _inside_ the aggregate parens) cannot be combined with `OVER`; PostgreSQL rejects it. The build throws with the same message. Ordering rows within the window belongs in the `.over({ orderBy })` spec.
+:::
+
+### Frame clause
+
+Frame endpoints are `unboundedPreceding()`, `preceding(offset)`, `currentRow()`, `following(offset)` and `unboundedFollowing()`. Without an end, the frame runs up to `CURRENT ROW`; an optional third argument renders `EXCLUDE`.
+
+```typescript
+import { following, preceding, rows, sum } from "durcno";
+
+const totals = await db.from(Orders).select(() => ({
+  // SQL: sum(amount) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
+  twoRowSum: sum(Orders.amount).over({
+    orderBy: [asc(Orders.id)],
+    frame: rows(preceding(1)),
+  }),
+
+  // SQL: sum(amount) OVER (ORDER BY id ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING EXCLUDE NO OTHERS)
+  trailingSum: sum(Orders.amount).over({
+    orderBy: [asc(Orders.id)],
+    frame: rows(currentRow(), unboundedFollowing(), "noOthers"),
+  }),
+}));
+```
+
+### Numbering functions
+
+| Function        | SQL              | Returns  | Description                                   |
+| --------------- | ---------------- | -------- | --------------------------------------------- |
+| `rowNumber()`   | `row_number()`   | `number` | 1-based position within the partition         |
+| `rank()`        | `rank()`         | `number` | Rank with gaps for peer rows                  |
+| `denseRank()`   | `dense_rank()`   | `number` | Rank without gaps for peer rows               |
+| `percentRank()` | `percent_rank()` | `number` | Relative rank between 0 and 1                 |
+| `cumeDist()`    | `cume_dist()`    | `number` | Cumulative distribution between 0 and 1       |
+| `ntile(n)`      | `ntile(n)`       | `number` | Distributes rows into n roughly equal buckets |
+
+All of them require `.over(...)`:
+
+```typescript
+import { denseRank, desc, rowNumber } from "durcno";
+
+const ranked = await db.from(Users).select(() => ({
+  username: Users.username,
+  position: rowNumber().over({ orderBy: [desc(Users.createdAt)] }),
+  rank: denseRank().over({ orderBy: [desc(Users.createdAt)] }),
+}));
+```
+
+### Value navigation functions
+
+| Function                        | SQL                  | Returns             | Description                               |
+| ------------------------------- | -------------------- | ------------------- | ----------------------------------------- |
+| `lag(expr, offset?, default?)`  | `lag(...)`           | `expr type \| null` | Value from the row `offset` places before |
+| `lead(expr, offset?, default?)` | `lead(...)`          | `expr type \| null` | Value from the row `offset` places after  |
+| `firstValue(expr)`              | `first_value(expr)`  | `expr type \| null` | First row of the frame                    |
+| `lastValue(expr)`               | `last_value(expr)`   | `expr type \| null` | Last row of the frame                     |
+| `nthValue(expr, n)`             | `nth_value(expr, n)` | `expr type \| null` | n-th row of the frame, 1-based            |
+
+The result keeps the operand expression's TypeScript type (e.g. a `timestamptz` stays a `Date`):
+
+```typescript
+import { asc, firstValue, lag } from "durcno";
+
+const timeline = await db.from(Orders).select(() => ({
+  previousTotal: lag(Orders.total, 1, 0n).over({
+    orderBy: [asc(Orders.createdAt)],
+  }),
+  firstOrder: firstValue(Orders.createdAt).over({
+    partitionBy: [Orders.userId],
+  }),
+}));
+```
+
+---
+
 ## String Functions
 
 String functions accept any string column (`varchar`, `text`, `char`) or the result of another string-producing function.
@@ -442,6 +556,33 @@ const result = await db.from(Users).select(() => ({
 
 ---
 
+## Comparison Functions
+
+Comparison functions inspect values and return a numeric result. For comparison predicates — `eq`, `ne`, `gt`, `isNull`, `isNotNull`, and the rest — see [Filters](./filters).
+
+| Function                | SQL                 | Returns  | Description                            |
+| ----------------------- | ------------------- | -------- | -------------------------------------- |
+| `numNonNulls(...exprs)` | `num_nonnulls(...)` | `number` | Counts the arguments that are not null |
+| `numNulls(...exprs)`    | `num_nulls(...)`    | `number` | Counts the arguments that are null     |
+
+### `numNonNulls` / `numNulls`
+
+Counts how many of the given arguments are non-null or null. Both accept one or more operands of any type and always return a `number` — `0` when appropriate, never `null`.
+
+```typescript
+import { numNonNulls, numNulls } from "durcno";
+
+const result = await db.from(Users).select(() => ({
+  filled: numNonNulls(Users.email, Users.username, Users.phone),
+  missing: numNulls(Users.email, Users.username, Users.phone),
+}));
+// filled: number, missing: number
+```
+
+Untyped prepared `Arg` operands are cast to `text`, because PostgreSQL cannot infer the type of an untyped parameter inside a variadic `"any"` call.
+
+---
+
 ## Conditional Functions
 
 Conditional functions evaluate expressions based on conditions or nullability. Operands can be columns, SQL functions, raw `sql` expressions, prepared `Arg`s, primitive literals (`string`, `number`, `bigint`, `boolean`), or `null`.
@@ -545,9 +686,9 @@ const result = await db.from(Users).select(() => ({
 
 ## Subquery Functions
 
-Subquery functions implement PostgreSQL's subquery expressions ([Section 9.24](https://www.postgresql.org/docs/current/functions-subquery.html)). They evaluate subquery returns or membership checks and yield a typed boolean value (`true` or `false`).
+Subquery functions cover PostgreSQL's subquery expressions ([Section 9.24](https://www.postgresql.org/docs/current/functions-subquery.html)). Predicate forms evaluate subquery returns or membership checks and yield a typed boolean value (`true` or `false`). Scalar subqueries are written as ordinary single-column queries.
 
-All subquery functions can be used in:
+Predicate subquery functions can be used in:
 
 - `.select(...)` projections as boolean columns
 - `.where(...)` and `.having(...)` clauses to filter rows
@@ -647,6 +788,55 @@ When an empty array is passed:
 
 - `isIn(col, [])` automatically evaluates to `FALSE` in SQL.
 - `notIn(col, [])` automatically evaluates to `TRUE` in SQL.
+
+### Scalar Subqueries
+
+A single-column `SelectQuery` can be used directly wherever a scalar expression is accepted. Durcno wraps it in parentheses and types the result as `T | null`, because PostgreSQL returns `NULL` when a scalar subquery produces no row:
+
+```typescript
+import { coalesce, count, eq } from "durcno";
+
+// In a projection
+const users = await db.from(Users).select(() => ({
+  id: Users.id,
+  postCount: db
+    .from(Posts)
+    .select(() => ({ total: count("*") }))
+    .where(() => eq(Posts.userId, Users.id)),
+  firstPostTitle: db
+    .from(Posts)
+    .select(() => ({ title: Posts.title }))
+    .where(() => eq(Posts.userId, Users.id))
+    .orderBy(() => asc(Posts.id))
+    .limit(1),
+}));
+
+// In an assignment
+await db
+  .update(Users)
+  .set({
+    score: coalesce(
+      db
+        .from(Posts)
+        .select(() => ({ total: count("*") }))
+        .where(() => eq(Posts.userId, Users.id)),
+      0,
+    ),
+  })
+  .where(eq(Users.id, 1n));
+```
+
+The same rule applies inside scalar functions such as `coalesce`, `caseWhen`, arithmetic functions, JSON builders, and comparison filters.
+
+:::note
+
+- The subquery must select **exactly one column**. Multi-column queries are rejected at compile time when the projection is statically known, and throw when the query is built otherwise.
+- A row subquery should use `.limit(1)` unless it is an aggregate; PostgreSQL errors when a scalar subquery returns more than one row.
+- An aggregate **inside** the subquery is scoped to that subquery and does not turn the outer expression into an aggregate.
+- Use `coalesce(...)` when assigning to a non-null column.
+- For scalar positions that do not accept a `SelectQuery` directly, build the expression with `sql` and wrap the subquery in parentheses.
+
+:::
 
 ---
 
