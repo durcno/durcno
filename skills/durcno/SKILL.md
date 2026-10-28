@@ -1,6 +1,6 @@
 ---
 name: durcno
-description: Durcno usage guide for its PostgreSQL query builder and migration manager. Use when defining schemas, tables, columns, enums, relations or indexes, writing CRUD or relational queries, using joins, filters, aggregates, transactions, CTEs or prepared statements, validating input with Zod, generating and applying migrations, or running SQL through the Durcno CLI. Read the relevant doc files before writing or reviewing Durcno code.
+description: Durcno usage guide for its PostgreSQL query builder and migration manager. Use when defining schemas, tables, columns, enums, relations or indexes, writing CRUD or relational queries, using joins, filters, aggregates, window functions, row locking, bulk updates, scalar subqueries, transactions, CTEs or prepared statements, validating input with Zod, generating and applying migrations, or running SQL through the Durcno CLI. Read the relevant doc files before writing or reviewing Durcno code.
 ---
 
 # Durcno
@@ -17,28 +17,31 @@ Read `docs/intro.md` first for the mental model, then read **only the files matc
 
 ### Task → file routing
 
-| Working on                              | Read                                                                                  |
-| --------------------------------------- | ------------------------------------------------------------------------------------- |
-| Column types, custom columns, sequences | `docs/Schema/columns.md`, `docs/Schema/custom-columns.md`, `docs/Schema/sequences.md` |
-| Enums                                   | `docs/Schema/enums.md`                                                                |
-| Relations / eager loading               | `docs/Schema/relations.md`, `docs/CRUD/relational-query.md`                           |
-| Indexes, constraints                    | `docs/Schema/indexes.md`, `docs/Schema/constraints.md`                                |
-| SELECT, GROUP BY, HAVING, pagination    | `docs/CRUD/select.md`                                                                 |
-| Joins, left-join nullability            | `docs/CRUD/joins.md`                                                                  |
-| INSERT / UPDATE / DELETE, `returning`   | `docs/CRUD/insert.md`, `docs/CRUD/update.md`, `docs/CRUD/delete.md`                   |
-| Transactions                            | `docs/CRUD/transaction.md`                                                            |
-| CTEs (`db.with()`)                      | `docs/CRUD/with.md`                                                                   |
-| Prepared statements                     | `docs/CRUD/prepare.md`                                                                |
-| Raw SQL                                 | `docs/CRUD/raw-sql.md`                                                                |
-| `db.$count` / `$sum` / `$first` / etc.  | `docs/CRUD/query-shortcuts.md`                                                        |
-| Filters (`eq`, `like`, `and`, …)        | `docs/Expressions/filters.md`                                                         |
-| SQL functions, aggregates, `sql`        | `docs/Expressions/functions.md`                                                       |
-| Zod validation                          | `docs/Validation/zod.md`                                                              |
-| Config / connectors / logging           | `docs/configuration.md`, `docs/connectors.md`, `docs/Advanced/logger.md`              |
-| CLI and migrations                      | `docs/cli.md`, `docs/Migrations/`                                                     |
-| PostGIS / pgvector                      | `docs/Extensions/postgis.md`, `docs/Extensions/pgvector.md`                           |
-| Naming and casing conventions           | `docs/Conventions/casing.md`                                                          |
-| Type inference helpers                  | `docs/Advanced/types.md`                                                              |
+| Working on                                                              | Read                                                                                  |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Column types, custom columns, sequences                                 | `docs/Schema/columns.md`, `docs/Schema/custom-columns.md`, `docs/Schema/sequences.md` |
+| Enums                                                                   | `docs/Schema/enums.md`                                                                |
+| Relations / eager loading                                               | `docs/Schema/relations.md`, `docs/CRUD/relational-query.md`                           |
+| Indexes, constraints                                                    | `docs/Schema/indexes.md`, `docs/Schema/constraints.md`                                |
+| SELECT, GROUP BY, HAVING, pagination, scalar subqueries                 | `docs/CRUD/select.md`                                                                 |
+| Joins, left-join nullability                                            | `docs/CRUD/joins.md`                                                                  |
+| Row locking (`FOR UPDATE`, `NOWAIT`, `SKIP LOCKED`)                     | `docs/CRUD/locking.md`                                                                |
+| INSERT, conflict updates, `returning`                                   | `docs/CRUD/insert.md`                                                                 |
+| UPDATE, bulk `UPDATE ... FROM`, values aliases, `returning`             | `docs/CRUD/update.md`                                                                 |
+| DELETE, `returning`                                                     | `docs/CRUD/delete.md`                                                                 |
+| Transactions                                                            | `docs/CRUD/transaction.md`                                                            |
+| CTEs (`db.with()`)                                                      | `docs/CRUD/with.md`                                                                   |
+| Prepared statements                                                     | `docs/CRUD/prepare.md`                                                                |
+| Raw SQL                                                                 | `docs/CRUD/raw-sql.md`                                                                |
+| `db.$count` / `$sum` / `$first` / etc.                                  | `docs/CRUD/query-shortcuts.md`                                                        |
+| Filters (`eq`, `like`, `and`, …)                                        | `docs/Expressions/filters.md`                                                         |
+| SQL functions, aggregates, window functions, `numNonNulls` / `numNulls` | `docs/Expressions/functions.md`                                                       |
+| Zod validation                                                          | `docs/Validation/zod.md`                                                              |
+| Config / connectors / logging                                           | `docs/configuration.md`, `docs/connectors.md`, `docs/Advanced/logger.md`              |
+| CLI, migrations, migration options                                      | `docs/cli.md`, `docs/Migrations/`, `docs/Guides/concurrent-indexing.md`               |
+| PostGIS / pgvector                                                      | `docs/Extensions/postgis.md`, `docs/Extensions/pgvector.md`                           |
+| Naming and casing conventions                                           | `docs/Conventions/casing.md`                                                          |
+| Type inference helpers                                                  | `docs/Advanced/types.md`                                                              |
 
 ## Configuration
 
@@ -54,7 +57,7 @@ export default defineConfig({
 });
 ```
 
-Connector subpaths: `durcno/connectors/pg`, `durcno/connectors/postgres`, `durcno/connectors/bun`, `durcno/connectors/pglite`. Each accepts `dbCredentials` (or `url`/`host`/`port`/`user`/`password`), `pool`, `ssl`, and `logger` — see `docs/connectors.md`.
+Connector subpaths: `durcno/connectors/pg`, `durcno/connectors/postgres`, `durcno/connectors/bun`, `durcno/connectors/pglite`. Each accepts `dbCredentials` (or `url`/`host`/`port`/`user`/`password`), `pool`, `ssl`, and `logger` — see `docs/connectors.md`. PGlite v0.5 embeds PostgreSQL 18; data directories created by older PGlite versions must be recreated or dumped and restored.
 
 ## Schema Definition
 
@@ -215,6 +218,79 @@ const oneUser = await db.query(Users).findFirst({ where: eq(Users.id, 1n) });
 
 `where` / `orderBy` / `limit` / `offset` inside a `with` block are only available on `many` relations, not on `fk` or `one`. See `docs/CRUD/relational-query.md`.
 
+### Scalar subqueries
+
+A single-column `db.from(...).select(...)` query is a scalar expression: it can be projected, used in an insert `values()` or update `set()` payload, compared, or passed to a SQL function. The value is typed `T | null`, because a scalar subquery returns `NULL` when it has no row.
+
+```typescript
+const users = await db.from(Users).select(() => ({
+  id: Users.id,
+  postCount: db
+    .from(Posts)
+    .select(() => ({ total: count("*") }))
+    .where(() => eq(Posts.userId, Users.id)),
+}));
+// postCount: number | null
+```
+
+The subquery must select exactly one column. Use `.limit(1)` for non-aggregate row subqueries, and wrap the value in `coalesce(...)` when the target cannot be `null`. Aggregates inside a subquery stay scoped to it and out of the outer `GROUP BY`.
+
+### Window functions
+
+Aggregates and pure window functions accept `.over(spec)`. The spec carries `partitionBy`, `orderBy`, and a `frame`; window calls never trigger the automatic `GROUP BY`.
+
+```typescript
+import { asc, count, rowNumber, rows, unboundedPreceding } from "durcno";
+
+const posts = await db.from(Posts).select(() => ({
+  id: Posts.id,
+  grandTotal: count("*").over(),
+  authorTotal: count("*").over({ partitionBy: [Posts.userId] }),
+  position: rowNumber().over({
+    partitionBy: [Posts.userId],
+    orderBy: [asc(Posts.id)],
+    frame: rows(unboundedPreceding()),
+  }),
+}));
+```
+
+Pure window functions: `rowNumber`, `rank`, `denseRank`, `percentRank`, `cumeDist`, `ntile`, `lag`, `lead`, `firstValue`, `lastValue`, `nthValue`. Frames use `rows`/`range`/`groups` with `unboundedPreceding`, `preceding(n)`, `currentRow`, `following(n)`, `unboundedFollowing`. An aggregate's inline `.orderBy()` cannot be combined with `.over()`; move the ordering into the spec. Window expressions are rejected in `WHERE`, `ON`, `GROUP BY`, and insert/`set` values, like aggregates.
+
+### Bulk updates (`UPDATE ... FROM`)
+
+`update().from()` accepts tables, CTEs, and typed values aliases. `.from()` must be chained before `.set()`; repeated calls append sources.
+
+```typescript
+const V = db.values("v", { id: Users.id, email: Users.email }).as([
+  { id: 1n, email: "a@example.com" },
+  { id: 2n, email: "b@example.com" },
+]);
+
+await db
+  .update(Users)
+  .from(V)
+  .set({ email: V.email })
+  .where(eq(Users.id, V.id));
+```
+
+Each alias column wraps a source column (or a fresh column definition), so cells are type-checked and encoded with the source column's SQL type. `undefined` cells render `NULL`; an alias with no rows throws when the statement is built. `returning()` returns rows of the updated table only. A `FROM` source cannot alias the updated table; use a values alias or a CTE for self-joins.
+
+### Row locking
+
+`SELECT` supports `.forUpdate()`, `.forNoKeyUpdate()`, `.forShare()`, and `.forKeyShare()`. All accept `{ of, noWait, skipLocked }`; `noWait` and `skipLocked` are mutually exclusive. A query holds at most one locking clause, and the methods disappear after `groupBy`/`having`. The clause is emitted after `limit`/`offset` regardless of call order. Locks only matter inside a transaction.
+
+```typescript
+const [next] = await db.transaction(async (tx) => {
+  return await tx
+    .from(Users)
+    .select("*")
+    .forUpdate({ skipLocked: true })
+    .limit(1);
+});
+```
+
+Use `of` to lock only named `FROM`/`JOIN` tables, e.g. `.forUpdate({ of: [Posts] })`.
+
 ### Transactions, shortcuts, CTEs, prepared queries
 
 ```typescript
@@ -258,6 +334,8 @@ const findByEmail = prepare({ email: Users.email.arg() }, (args) =>
 
 const rows = await findByEmail.run(db, { email: "jane@example.com" });
 ```
+
+`$insertFn` / `$updateFn` generated values are produced on every `.run()` and bound as query arguments, so the SQL text stays stable while generated values stay unique.
 
 `db.raw(sql, args?, rowsHandler?)` executes literal SQL with `$1`-style placeholders, returning the rows unchanged when `rowsHandler` is omitted.
 
@@ -306,7 +384,9 @@ durcno down <migration>     # Roll back a specific migration
 durcno squash <start> <end> # Squash a range into one
 ```
 
-Run `generate` after every schema change, then `migrate`. `push` skips migration files and applies the schema directly (see `docs/Migrations/push.md`).
+Run `generate` after every schema change, then `migrate`.
+
+Each migration folder has a `up.ts` and `down.ts` file.
 
 ## Running SQL
 
