@@ -163,6 +163,15 @@ Expect<Equal<OrderByWindow, { id: bigint; title: string | null }[]>>();
 
 const windowed = sum(Posts.userId).over();
 
+// The static contract and the runtime flag agree: a windowed expression is
+// aggregate-like, while `hasWindow` keeps it out of auto GROUP BY.
+Expect<Equal<(typeof windowed)["_"]["sqlFnType"], "window">>();
+Expect<Equal<(typeof windowed)["_"]["hasAggregate"], true>>();
+
+const pureWindowed = rowNumber().over();
+Expect<Equal<(typeof pureWindowed)["_"]["sqlFnType"], "window">>();
+Expect<Equal<(typeof pureWindowed)["_"]["hasAggregate"], true>>();
+
 // Not allowed in WHERE
 db.from(Posts)
   .select(() => ({ id: Posts.id }))

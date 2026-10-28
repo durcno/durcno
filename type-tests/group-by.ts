@@ -237,7 +237,7 @@ db.from(Users)
   // @ts-expect-error - aggregate function not allowed in groupBy (only scalar)
   .groupBy(() => count("*"));
 
-// where — PostgreSQL rejects an aggregate, wrapped or not, and `$HasAggregate`
+// where — PostgreSQL rejects an aggregate, wrapped or not, and `_.hasAggregate`
 // is what carries that: `having()` reads it as `boolean`, `where()` as `false`.
 db.from(Users)
   .select("*")
@@ -275,7 +275,7 @@ const _orderAggOnlySelect = db
   .select(() => ({ total: count("*") }))
   .orderBy(() => asc(count("*")));
 
-// `$HasArg` still tracks the expression that carries it.
+// `$.HasArg` still tracks the expression that carries it.
 const _orderPrepared = db
   .from(Users)
   .select("*")
@@ -316,66 +316,66 @@ Expect<
   >
 >();
 
-// Two independent facts, and they do not agree: a wrapper is a *scalar
-// function* that *contains* an aggregate. Only `HasAggregate` drives the gates.
+// Two independent facts live on `_`: a wrapper is a *scalar function* that
+// *contains* an aggregate. Only `_.hasAggregate` drives the gates.
 const _roundWrappedAgg = round(avg(Users.id), 1);
-Expect<Equal<(typeof _roundWrappedAgg)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _roundWrappedAgg)["$"]["HasAggregate"], true>>();
+Expect<Equal<(typeof _roundWrappedAgg)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _roundWrappedAgg)["_"]["hasAggregate"], true>>();
 
 const _roundPlainCol = round(Users.id, 1);
-Expect<Equal<(typeof _roundPlainCol)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _roundPlainCol)["$"]["HasAggregate"], false>>();
+Expect<Equal<(typeof _roundPlainCol)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _roundPlainCol)["_"]["hasAggregate"], false>>();
 
 const _lowerPlain = lower(Users.username);
-Expect<Equal<(typeof _lowerPlain)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _lowerPlain)["$"]["HasAggregate"], false>>();
+Expect<Equal<(typeof _lowerPlain)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _lowerPlain)["_"]["hasAggregate"], false>>();
 
 const _coalesceAgg = coalesce(sum(Users.id), 0);
-Expect<Equal<(typeof _coalesceAgg)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _coalesceAgg)["$"]["HasAggregate"], true>>();
+Expect<Equal<(typeof _coalesceAgg)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _coalesceAgg)["_"]["hasAggregate"], true>>();
 
 const _coalescePlain = coalesce(Users.username, "x");
-Expect<Equal<(typeof _coalescePlain)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _coalescePlain)["$"]["HasAggregate"], false>>();
+Expect<Equal<(typeof _coalescePlain)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _coalescePlain)["_"]["hasAggregate"], false>>();
 
 const _numNonNullsAgg = numNonNulls(sum(Users.id), 0);
-Expect<Equal<(typeof _numNonNullsAgg)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _numNonNullsAgg)["$"]["HasAggregate"], true>>();
+Expect<Equal<(typeof _numNonNullsAgg)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _numNonNullsAgg)["_"]["hasAggregate"], true>>();
 
 const _numNonNullsPlain = numNonNulls(Users.username, "x");
-Expect<Equal<(typeof _numNonNullsPlain)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _numNonNullsPlain)["$"]["HasAggregate"], false>>();
+Expect<Equal<(typeof _numNonNullsPlain)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _numNonNullsPlain)["_"]["hasAggregate"], false>>();
 
 const _caseAgg = caseWhen(eq(Users.type, "admin"), count("*")).end();
-Expect<Equal<(typeof _caseAgg)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _caseAgg)["$"]["HasAggregate"], true>>();
+Expect<Equal<(typeof _caseAgg)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _caseAgg)["_"]["hasAggregate"], true>>();
 
 const _casePlain = caseWhen(eq(Users.type, "admin"), Users.username).end();
-Expect<Equal<(typeof _casePlain)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _casePlain)["$"]["HasAggregate"], false>>();
+Expect<Equal<(typeof _casePlain)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _casePlain)["_"]["hasAggregate"], false>>();
 
 // An aggregate in the CONDITION is the CASE's aggregate too — the condition is
 // a Filter, and filters carry the flag the same way functions do.
 const _caseAggCondition = caseWhen(gte(count("*"), 2), "many").end();
-Expect<Equal<(typeof _caseAggCondition)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _caseAggCondition)["$"]["HasAggregate"], true>>();
-Expect<Equal<(typeof _caseAggCondition)["$HasArg"], false>>();
+Expect<Equal<(typeof _caseAggCondition)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _caseAggCondition)["_"]["hasAggregate"], true>>();
+Expect<Equal<(typeof _caseAggCondition)["$"]["HasArg"], false>>();
 
 const _casePlainCondition = caseWhen(gte(Users.id, 2n), "many").end();
-Expect<Equal<(typeof _casePlainCondition)["$"]["HasAggregate"], false>>();
+Expect<Equal<(typeof _casePlainCondition)["_"]["hasAggregate"], false>>();
 
 // A comparison around that CASE reads the condition's aggregate, and does not
 // mistake an aggregate-only condition for an argument placeholder.
 const _caseAggComparison = eq(_caseAggCondition, "many");
-Expect<Equal<(typeof _caseAggComparison)["$HasAggregate"], true>>();
-Expect<Equal<(typeof _caseAggComparison)["$HasArg"], false>>();
+Expect<Equal<(typeof _caseAggComparison)["_"]["hasAggregate"], true>>();
+Expect<Equal<(typeof _caseAggComparison)["$"]["HasArg"], false>>();
 
 // and() re-emits a condition's aggregate through a CASE.
 const _caseAndCondition = caseWhen(
   and(gte(count("*"), 2), eq(Users.type, "admin")),
   "many",
 ).end();
-Expect<Equal<(typeof _caseAndCondition)["$"]["HasAggregate"], true>>();
+Expect<Equal<(typeof _caseAndCondition)["_"]["hasAggregate"], true>>();
 
 // having() accepts the aggregate-bearing CASE comparison, where() refuses it.
 db.from(Users)
@@ -390,18 +390,19 @@ db.from(Users)
 
 // Two wrappers deep still bubbles up.
 const _twiceWrapped = coalesce(round(avg(Users.id), 1), 0);
-Expect<Equal<(typeof _twiceWrapped)["$"]["SqlFnType"], "scalar">>();
-Expect<Equal<(typeof _twiceWrapped)["$"]["HasAggregate"], true>>();
+Expect<Equal<(typeof _twiceWrapped)["_"]["sqlFnType"], "scalar">>();
+Expect<Equal<(typeof _twiceWrapped)["_"]["hasAggregate"], true>>();
 
 // A bare aggregate function is the one case where both say the same thing.
 const _bareCount = count("*");
-Expect<Equal<(typeof _bareCount)["$"]["SqlFnType"], "aggregate">>();
-Expect<Equal<(typeof _bareCount)["$"]["HasAggregate"], true>>();
+Expect<Equal<(typeof _bareCount)["_"]["sqlFnType"], "aggregate">>();
+Expect<Equal<(typeof _bareCount)["_"]["hasAggregate"], true>>();
 
-// Both facts survive `.filter()`'s `Omit<this, "$Columns" | "$HasArg">`.
+// Both facts survive `.filter()`'s `Omit<this, "$">` and rebuilt `$`, which
+// leaves `_` intact.
 const _countFiltered = count(Users.id).filter(eq(Users.type, "admin"));
-Expect<Equal<(typeof _countFiltered)["$"]["SqlFnType"], "aggregate">>();
-Expect<Equal<(typeof _countFiltered)["$"]["HasAggregate"], true>>();
+Expect<Equal<(typeof _countFiltered)["_"]["sqlFnType"], "aggregate">>();
+Expect<Equal<(typeof _countFiltered)["_"]["hasAggregate"], true>>();
 
 // --- groupBy() rejects an aggregate, however it is wrapped ---
 

@@ -73,7 +73,9 @@ export type InferCaseValue<TExpr> = TExpr extends null
           : TExpr;
 
 /** Columns a `WHEN` condition reads. */
-type ConditionColumns<TCondition> = TCondition extends { $Columns: infer C }
+type ConditionColumns<TCondition> = TCondition extends {
+  $: { Columns: infer C };
+}
   ? C
   : never;
 

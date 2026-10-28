@@ -1280,7 +1280,7 @@ export class SelectQuery<
       let hasAggregate = false;
       for (const key of keys) {
         const item = select[key];
-        if (item instanceof SqlFn && item.hasAggregate) {
+        if (item instanceof SqlFn && item._.hasAggregate && !item._.hasWindow) {
           hasAggregate = true;
           break;
         }
@@ -1300,8 +1300,8 @@ export class SelectQuery<
             }
           } else if (
             item instanceof SqlFn &&
-            !item.hasAggregate &&
-            !item.hasWindow
+            !item._.hasAggregate &&
+            !item._.hasWindow
           ) {
             // `referencedColumns` is a rebuilding getter, so read it once.
             const refs =

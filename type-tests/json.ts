@@ -374,17 +374,18 @@ jsonAgg(Users.username).orderBy(asc(Users.username));
 
 // Base aggregate .filter() works on count()
 const countFiltered = count(Users.id).filter(eq(Users.type, "admin"));
-// The kind survives `Omit<this, "$Columns" | "$HasArg">`, which keeps `$` intact.
-// (`$["SqlFnType"]` is the precise static contract; `sqlFnType` itself is the
-// runtime value to branch on, declared as the `SqlFnType` union.)
-Expect<Equal<(typeof countFiltered.$)["SqlFnType"], "aggregate">>();
-Expect<Equal<typeof countFiltered.$HasArg, false>>();
+// The kind survives `.filter()`'s `Omit<this, "$">` and rebuilt `$`, which
+// keeps `_` intact.
+// (`_["sqlFnType"]` is the precise static contract and the runtime value to
+// branch on.)
+Expect<Equal<(typeof countFiltered._)["sqlFnType"], "aggregate">>();
+Expect<Equal<(typeof countFiltered.$)["HasArg"], false>>();
 
 // Propagating THasArg in AggregateSqlFn.filter()
 const countWithArg = count(Users.id).filter(
   eq(Users.username, Users.username.arg()),
 );
-Expect<Equal<typeof countWithArg.$HasArg, true>>();
+Expect<Equal<(typeof countWithArg.$)["HasArg"], true>>();
 
 // Strongly typed fromDriverValue without any in JsonBuildArrayFn and JsonbBuildArrayFn
 const jba = jsonBuildArray(Users.id, Users.username);
@@ -554,8 +555,8 @@ db.from(Users)
 const validOrder = jsonAgg(Users.username).orderBy(asc(Users.createdAt));
 Expect<
   Equal<
-    typeof validOrder.$Columns,
+    (typeof validOrder.$)["Columns"],
     typeof Users.username | typeof Users.createdAt
   >
 >();
-Expect<Equal<typeof validOrder.$HasArg, false>>();
+Expect<Equal<(typeof validOrder.$)["HasArg"], false>>();

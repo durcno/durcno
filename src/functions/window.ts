@@ -22,6 +22,7 @@ import {
   type HasArg,
   type NonAggregateSqlFn,
   SqlFn,
+  type SqlFnRuntime,
   type SqlFnType,
 } from "./index";
 
@@ -209,11 +210,10 @@ export function unboundedFollowing(): FrameEndpoint {
  * Value conversion is delegated to the wrapped function, so the result keeps
  * the wrapped function's types.
  *
- * The phantom `HasAggregate` is `true` on purpose: a windowed expression is
- * refused in the same clauses as an aggregate (`WHERE`, `ON`, `GROUP BY`,
- * insert/set values). At runtime it is the opposite — `hasAggregate` is
- * `false` (a window function never triggers grouping) while `hasWindow` is
- * `true`.
+ * `_.hasAggregate` is `true` on purpose: a windowed expression is refused in
+ * the same clauses as an aggregate (`WHERE`, `ON`, `GROUP BY`, insert/set
+ * values). `_.hasWindow` is `true` too, which keeps the auto-`GROUP BY` scan
+ * from treating it as a grouped projection.
  *
  * @template TFn - The wrapped aggregate or pure window function.
  * @template TPartitionCols - Columns referenced by `PARTITION BY`.
@@ -226,22 +226,20 @@ export class WindowedSqlFn<
   TOrderCols extends AnyColumn = never,
   THasArg extends boolean = false,
 > extends SqlFn<
-  TFn["$Columns"] | TPartitionCols | TOrderCols,
+  TFn["$"]["Columns"] | TPartitionCols | TOrderCols,
   "window",
   TFn["$"]["PgType"],
   TFn["$"]["TsType"],
   THasArg,
   true
 > {
-  override readonly sqlFnType = "window";
-
   constructor(
     private readonly fn: TFn,
     private readonly partition: readonly WindowPartitionItem[] | undefined,
     private readonly orders: readonly AnyOrder[] | undefined,
     private readonly frame: FrameClause | undefined,
   ) {
-    super(false, true);
+    super(true, true, "window");
   }
 
   /** Appends `fn(...) OVER (spec)` to the query SQL. */
@@ -296,8 +294,8 @@ export class WindowedSqlFn<
  * used as window functions and pure window functions. `.over()` wraps the
  * function in a `WindowedSqlFn`.
  *
- * The phantom `HasAggregate` is `true` so a windowed expression is refused
- * wherever an aggregate is.
+ * `_.hasAggregate` is `true` so a windowable expression is refused wherever an
+ * aggregate is; `_.hasWindow` is what keeps it out of auto `GROUP BY`.
  *
  * @template TSqlFnType - `"aggregate"` for aggregates, `"window"` for pure window functions.
  */
@@ -308,11 +306,15 @@ export abstract class WindowableSqlFn<
   TTsType = unknown,
   THasArg extends boolean = false,
 > extends SqlFn<TColumn, TSqlFnType, TPgType, TTsType, THasArg, true> {
-  protected $filter?: AnyFilterExpression;
-  protected $orderBy?: AnyOrder[];
+  declare readonly _: SqlFnRuntime<TSqlFnType, true> & {
+    /** Appended `FILTER (WHERE ...)` condition. */
+    filter?: AnyFilterExpression;
+    /** Appended aggregate `ORDER BY` items. */
+    orderBy?: AnyOrder[];
+  };
 
-  constructor(hasAggregate: boolean, hasWindow: boolean) {
-    super(hasAggregate, hasWindow);
+  constructor(hasAggregate: boolean, hasWindow: boolean, sqlFnType: SqlFnType) {
+    super(hasAggregate, hasWindow, sqlFnType);
   }
 
   /**
@@ -339,9 +341,9 @@ export abstract class WindowableSqlFn<
     this,
     WindowPartitionColumns<TPartitionItems>,
     WindowOrderColumns<TOrderItems>,
-    Or<this["$HasArg"], WindowOrderHasArg<TOrderItems>>
+    Or<this["$"]["HasArg"], WindowOrderHasArg<TOrderItems>>
   > {
-    if (this.$orderBy?.length) {
+    if (this._.orderBy?.length) {
       throw new Error(
         "Aggregate ORDER BY is not implemented for window functions. Move the ordering into the `.over({ orderBy })` spec.",
       );
@@ -378,10 +380,8 @@ export abstract class PureWindowSqlFn<
   TTsType,
   THasArg extends boolean = false,
 > extends WindowableSqlFn<TColumn, "window", TPgType, TTsType, THasArg> {
-  override readonly sqlFnType = "window";
-
   constructor() {
-    super(false, true);
+    super(true, true, "window");
   }
 }
 

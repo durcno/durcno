@@ -70,9 +70,6 @@ export abstract class SubqueryOwnedSqlFn<
   THasArg extends boolean = false,
   TPgType extends string = string,
 > extends SqlFn<TColumn, "scalar", TPgType, TTsType, THasArg, false> {
-  /** An aggregate inside the subquery does not make this expression an aggregate. */
-  readonly $HasAggregate!: false;
-
   /** The subquery owns its columns. */
   get referencedColumns(): AnyColumn[] | null {
     return null;

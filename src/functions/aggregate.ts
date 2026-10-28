@@ -6,6 +6,7 @@ import type { Sql } from "../sql";
 import type { AnyColumn } from "../table";
 import type { Or } from "../types";
 import {
+  type AnySqlFn,
   type ExprColumns,
   type HasArg,
   type NonAggregateSqlFn,
@@ -16,7 +17,7 @@ import { WindowableSqlFn } from "./window";
 /** Helper to extract column type from an order item or array/tuple of order items. */
 export type OrderColumns<T> = T extends readonly (infer U)[]
   ? OrderColumns<U>
-  : T extends { readonly $Columns: infer C }
+  : T extends { $: { Columns: infer C } }
     ? C extends AnyColumn
       ? C
       : never
@@ -25,7 +26,7 @@ export type OrderColumns<T> = T extends readonly (infer U)[]
 /** Helper to extract HasArg flag from an order item or array/tuple of order items. */
 export type OrderHasArg<T> = T extends readonly (infer U)[]
   ? OrderHasArg<U>
-  : T extends { readonly $HasArg: true }
+  : T extends { $: { HasArg: true } }
     ? true
     : false;
 
@@ -40,6 +41,18 @@ export type TupleOrderHasArg<TTuple extends readonly unknown[]> =
   TTuple extends readonly [infer Head, ...infer Tail]
     ? Or<OrderHasArg<Head>, TupleOrderHasArg<Tail>>
     : false;
+
+/** Widens an aggregate's `$` scope and `Arg` flag after `.filter()` / `.orderBy()`. */
+type ScopedAggregate<
+  TSelf extends AnySqlFn,
+  TColumns extends AnyColumn,
+  THasArg extends boolean,
+> = Omit<TSelf, "$"> & {
+  readonly $: Omit<TSelf["$"], "Columns" | "HasArg"> & {
+    readonly Columns: TColumns;
+    readonly HasArg: THasArg;
+  };
+};
 
 /**
  * Abstract base class for SQL aggregate functions.
@@ -57,12 +70,9 @@ export abstract class AggregateSqlFn<
   TTsType = unknown,
   THasArg extends boolean = false,
 > extends WindowableSqlFn<TColumn, "aggregate", TPgType, TTsType, THasArg> {
-  /** This base *is* an aggregate function, as opposed to merely containing one. */
-  override readonly sqlFnType = "aggregate";
-
   /** Unconditional: an aggregate function always aggregates. */
   constructor() {
-    super(true, false);
+    super(true, false, "aggregate");
   }
 
   /**
@@ -74,17 +84,15 @@ export abstract class AggregateSqlFn<
    */
   filter<TFilterCol extends AnyColumn, TCondHasArg extends boolean = false>(
     condition: Filter<TFilterCol, TCondHasArg> | Sql,
-  ): Omit<this, "$Columns" | "$HasArg"> & {
-    readonly $Columns: TColumn | TFilterCol;
-    readonly $HasArg: Or<THasArg, TCondHasArg>;
-  } {
+  ): ScopedAggregate<this, TColumn | TFilterCol, Or<THasArg, TCondHasArg>> {
     const clone = Object.create(Object.getPrototypeOf(this));
     Object.assign(clone, this);
-    clone.$filter = condition;
-    return clone as Omit<this, "$Columns" | "$HasArg"> & {
-      readonly $Columns: TColumn | TFilterCol;
-      readonly $HasArg: Or<THasArg, TCondHasArg>;
-    };
+    clone._ = { ...clone._, filter: condition };
+    return clone as ScopedAggregate<
+      this,
+      TColumn | TFilterCol,
+      Or<THasArg, TCondHasArg>
+    >;
   }
 
   /**
@@ -95,23 +103,28 @@ export abstract class AggregateSqlFn<
    */
   orderBy<TOrders extends readonly (AnyOrder | readonly AnyOrder[])[]>(
     ...orders: TOrders
-  ): Omit<this, "$Columns" | "$HasArg"> & {
-    readonly $Columns: TColumn | TupleOrderColumns<TOrders>;
-    readonly $HasArg: Or<THasArg, TupleOrderHasArg<TOrders>>;
-  } {
+  ): ScopedAggregate<
+    this,
+    TColumn | TupleOrderColumns<TOrders>,
+    Or<THasArg, TupleOrderHasArg<TOrders>>
+  > {
     const clone = Object.create(Object.getPrototypeOf(this));
     Object.assign(clone, this);
     const flat = (orders as unknown as (AnyOrder | AnyOrder[])[]).flat();
-    clone.$orderBy = clone.$orderBy ? [...clone.$orderBy, ...flat] : flat;
-    return clone as Omit<this, "$Columns" | "$HasArg"> & {
-      readonly $Columns: TColumn | TupleOrderColumns<TOrders>;
-      readonly $HasArg: Or<THasArg, TupleOrderHasArg<TOrders>>;
+    clone._ = {
+      ...clone._,
+      orderBy: clone._.orderBy ? [...clone._.orderBy, ...flat] : flat,
     };
+    return clone as ScopedAggregate<
+      this,
+      TColumn | TupleOrderColumns<TOrders>,
+      Or<THasArg, TupleOrderHasArg<TOrders>>
+    >;
   }
 
   /** Appends `ORDER BY ...` before the closing parenthesis if present. */
   protected appendOrderBy(query: Query, ctx?: QueryContext): void {
-    const orders = this.$orderBy;
+    const orders = this._.orderBy;
     if (orders?.length) {
       query.sql += " ORDER BY ";
       for (let i = 0; i < orders.length; i++) {
@@ -123,9 +136,10 @@ export abstract class AggregateSqlFn<
 
   /** Appends `FILTER (WHERE ...)` after the closing parenthesis if present. */
   protected appendFilter(query: Query, ctx?: QueryContext): void {
-    if (this.$filter) {
+    const filter = this._.filter;
+    if (filter) {
       query.sql += " FILTER (WHERE ";
-      this.$filter.toQuery(query, ctx);
+      filter.toQuery(query, ctx);
       query.sql += ")";
     }
   }

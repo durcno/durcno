@@ -8,14 +8,7 @@ export type SqlFnType = "aggregate" | "scalar" | "window";
 
 /** Whether `T` is, or wraps, an aggregate or a window function. */
 export type HasAggregateOf<T> = [
-  Extract<
-    T extends { $: { HasAggregate: infer H } }
-      ? H
-      : T extends { $HasAggregate: infer A }
-        ? A
-        : never,
-    true
-  >,
+  Extract<T extends { _: { hasAggregate: infer H } } ? H : never, true>,
 ] extends [never]
   ? false
   : true;
@@ -39,8 +32,10 @@ function containsAggregateAt(operand: unknown, depth: number): boolean {
   }
   const proto = Object.getPrototypeOf(operand);
   if (proto !== Object.prototype && proto !== null) {
-    const flag = (operand as { hasAggregate?: unknown }).hasAggregate;
-    return typeof flag === "boolean" ? flag : false;
+    const runtime = (operand as { _?: { hasAggregate?: unknown } })._;
+    return typeof runtime?.hasAggregate === "boolean"
+      ? runtime.hasAggregate
+      : false;
   }
   const record = operand as Record<string, unknown>;
   for (const key in record) {
@@ -65,8 +60,8 @@ function containsWindowAt(operand: unknown, depth: number): boolean {
   }
   const proto = Object.getPrototypeOf(operand);
   if (proto !== Object.prototype && proto !== null) {
-    const flag = (operand as { hasWindow?: unknown }).hasWindow;
-    return typeof flag === "boolean" ? flag : false;
+    const runtime = (operand as { _?: { hasWindow?: unknown } })._;
+    return typeof runtime?.hasWindow === "boolean" ? runtime.hasWindow : false;
   }
   const record = operand as Record<string, unknown>;
   for (const key in record) {
@@ -78,6 +73,23 @@ function containsWindowAt(operand: unknown, depth: number): boolean {
 /** `HasAggregateOf` for a tuple of conditions. */
 export type HasAggregateOfConditions<T extends readonly unknown[]> =
   HasAggregateOf<T[number]>;
+
+/** Runtime state shared by filters and functions, carrying the precise static flags too. */
+export interface RuntimeFlags<THasAggregate extends boolean = boolean> {
+  /** Whether the expression is, or contains, an aggregate or window function. */
+  readonly hasAggregate: THasAggregate;
+  /** Whether the expression is, or contains, a window function. */
+  readonly hasWindow: boolean;
+}
+
+/** Runtime state of a SQL function. */
+export interface SqlFnRuntime<
+  TSqlFnType extends SqlFnType = SqlFnType,
+  THasAggregate extends boolean = boolean,
+> extends RuntimeFlags<THasAggregate> {
+  /** The kind of function: `"aggregate"`, `"scalar"` or `"window"`. */
+  readonly sqlFnType: TSqlFnType;
+}
 
 /**
  * Abstract base class for typed SQL functions.
@@ -100,38 +112,33 @@ export abstract class SqlFn<
     TsType: TTsType;
     /** The PostgreSQL type category this expression produces (e.g. `"string"`, `"numeric"`). */
     PgType: TPgType;
-    /** The kind of function: `"aggregate"` or `"scalar"`. */
-    SqlFnType: TSqlFnType;
-    /** Whether this expression is, or contains, an aggregate. */
-    HasAggregate: THasAggregate;
+    /** The column(s) this expression references. */
+    Columns: TColumn;
+    /** `true` when this expression embeds at least one `Arg` placeholder. */
+    HasArg: THasArg;
   };
 
-  /** Phantom field used to enforce column scope — mirrors `Filter.$Columns`. */
-  readonly $Columns!: TColumn;
-
-  /** Phantom field: `true` when this expression embeds at least one `Arg` placeholder. */
-  readonly $HasArg!: THasArg;
-
-  /** This function's kind; wrapping another function does not change it. */
-  readonly sqlFnType: SqlFnType = "scalar";
+  /**
+   * Runtime state, including the precise static flags. A windowed expression
+   * reports both flags as `true`; `hasWindow` keeps auto `GROUP BY` off.
+   */
+  readonly _: SqlFnRuntime<TSqlFnType, THasAggregate>;
 
   /**
-   * Whether this expression is, or contains, an aggregate. Refused in `WHERE`,
-   * `ON`, `GROUP BY` and insert/set values; allowed in `HAVING` and `ORDER BY`.
+   * @param hasAggregate - Whether this expression is, or contains, an aggregate.
+   * @param hasWindow - Whether this expression is, or contains, a window function.
+   * @param sqlFnType - The function kind; defaults to `"scalar"`.
    */
-  readonly hasAggregate: boolean;
-
-  /**
-   * Whether this expression is, or contains, a window function. Refused in the
-   * same clauses as an aggregate; unlike one, it never triggers grouping.
-   */
-  readonly hasWindow: boolean;
-
-  /** @param hasAggregate - Whether this expression contains an aggregate. */
-  /** @param hasWindow - Whether this expression contains a window function. */
-  constructor(hasAggregate = false, hasWindow = false) {
-    this.hasAggregate = hasAggregate;
-    this.hasWindow = hasWindow;
+  constructor(
+    hasAggregate = false,
+    hasWindow = false,
+    sqlFnType: SqlFnType = "scalar",
+  ) {
+    this._ = {
+      sqlFnType: sqlFnType as TSqlFnType,
+      hasAggregate: hasAggregate as THasAggregate,
+      hasWindow,
+    };
   }
 
   /** Appends the SQL fragment for this expression to the query (no trailing semicolon). */
@@ -509,30 +516,27 @@ export type NonAggregateSqlFn<
 /**
  * Extracts the table column(s) referenced by a scalar expression.
  * For a raw column, returns the column itself.
- * For a `SqlFn`, reads `$Columns` via `$.id === "sqlFn"` rather than checking
- * `TExpr extends SqlFn<any, infer TCol, ...>`, which would cause infinite type
- * instantiation when used as a class default type parameter.
- * Uses `$.id === "column"` for raw columns to avoid instantiating the full
+ * For a `SqlFn`, reads `$.Columns` via `$.kind === "sqlFn"` rather than
+ * checking `TExpr extends SqlFn<any, infer TCol, ...>`, which would cause
+ * infinite type instantiation when used as a class default type parameter.
+ * Uses `$.kind === "column"` for raw columns to avoid instantiating the full
  * `Column<any, any>` generic, which also causes TS2589.
  */
 export type ExprColumns<TExpr> = TExpr extends {
-  $: { kind: "sqlFn" };
-  $Columns: infer TCol;
+  $: { kind: "sqlFn"; Columns: unknown };
 }
-  ? TCol
+  ? TExpr["$"]["Columns"]
   : TExpr extends { $: { kind: "column" } }
     ? TExpr
     : never;
 
-/** Extracts `$HasArg`; `never` reads as `false`. */
+/** Extracts `$.HasArg`; `never` reads as `false`. */
 export type HasArg<TExpr> = [TExpr] extends [never]
   ? false
-  : TExpr extends {
-        $HasArg: infer H;
-      }
-    ? [H] extends [never]
+  : TExpr extends { $: { HasArg: unknown } }
+    ? [TExpr["$"]["HasArg"]] extends [never]
       ? false
-      : H extends true
+      : TExpr["$"]["HasArg"] extends true
         ? true
         : false
     : false;

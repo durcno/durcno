@@ -6,6 +6,7 @@ import {
   type HasAggregateOf,
   type HasAggregateOfConditions,
   type NonAggregateSqlFn,
+  type RuntimeFlags,
   SqlFn,
 } from "../functions";
 import {
@@ -32,22 +33,21 @@ export abstract class Filter<
   THasArg extends boolean = false,
   THasAggregate extends boolean = false,
 > {
-  /** Phantom field: the columns this filter is applied to. */
-  readonly $Columns!: TColumns;
-  /** Phantom field: `true` when this filter embeds at least one `Arg` placeholder. */
-  readonly $HasArg!: THasArg;
-  /** Phantom field: `true` when this filter contains an aggregate. */
-  readonly $HasAggregate!: THasAggregate;
+  readonly $!: {
+    /** The columns this filter is applied to. */
+    Columns: TColumns;
+    /** `true` when this filter embeds at least one `Arg` placeholder. */
+    HasArg: THasArg;
+  };
 
-  /** Runtime counterpart of `$HasAggregate`. */
-  readonly hasAggregate: boolean;
-
-  /** Runtime counterpart of window-function presence. */
-  readonly hasWindow: boolean;
+  /** Runtime state, including the precise aggregate/window flags. */
+  readonly _: RuntimeFlags<THasAggregate>;
 
   constructor(hasAggregate = false, hasWindow = false) {
-    this.hasAggregate = hasAggregate;
-    this.hasWindow = hasWindow;
+    this._ = {
+      hasAggregate: hasAggregate as THasAggregate,
+      hasWindow,
+    };
   }
 
   /** Columns this predicate reads, or `null` when they cannot be enumerated. */
@@ -63,7 +63,7 @@ export type AnyFilter = Filter<AnyColumn, boolean>;
 
 /**
  * Constrains a filter expression to columns allowed in the current query scope.
- * Accepts either a `Filter` whose `$Columns` is assignable to `TScopeColumns`,
+ * Accepts either a `Filter` whose `$.Columns` is assignable to `TScopeColumns`,
  * or a raw `Sql` snippet. When `TArg` is `true`, filters carrying `Arg`
  * placeholders are also accepted (prepared-query context).
  *
@@ -95,7 +95,7 @@ export type HavingExpression<
   TPrepare extends boolean = false,
 > = GroupedFilterExpression<TScopeColumns, TPrepare>;
 
-type HasArg<T> = T extends { $HasArg: true } ? true : false;
+type HasArg<T> = T extends { $: { HasArg: true } } ? true : false;
 
 /** Right operand accepted by a comparison whose left side is a table column. */
 export type ColumnComparisonRight<TLeft extends AnyColumn> =
@@ -146,8 +146,8 @@ export class ComparisonLeftIsSqlFn<
   TOp extends string,
   TRight extends SqlFnComparisonRight,
 > extends Filter<
-  | TLeft["$Columns"]
-  | (TRight extends NonAggregateSqlFn ? TRight["$Columns"] : never),
+  | TLeft["$"]["Columns"]
+  | (TRight extends NonAggregateSqlFn ? TRight["$"]["Columns"] : never),
   HasArg<TLeft> extends true ? true : HasArg<TRight>,
   HasAggregateOf<TLeft | TRight>
 > {
@@ -645,7 +645,7 @@ type AnySqlFilter = Filter<AnyColumn, boolean, boolean>;
 /** @internal Union of table columns from all Filter conditions in the array. */
 type Filters = AnySqlFilter | Sql | null | undefined;
 
-type ExtractCols<T extends Filters> = T extends { $Columns: infer C }
+type ExtractCols<T extends Filters> = T extends { $: { Columns: infer C } }
   ? C
   : never;
 
@@ -654,7 +654,7 @@ type HasArgOf<T extends Filters[]> = [CondHasArg<T[number]>] extends [false]
   ? false
   : true;
 
-type CondHasArg<T> = T extends { $HasArg: infer H } ? H : false;
+type CondHasArg<T> = T extends { $: { HasArg: infer H } } ? H : false;
 
 export class AndCondition<TConditions extends Filters[]> extends Filter<
   ExtractCols<TConditions[number]>,

@@ -389,21 +389,21 @@ const _numMixed = numNonNulls(
 Expect<Equal<(typeof _numMixed)["$"]["TsType"], number>>();
 Expect<
   Equal<
-    (typeof _numMixed)["$Columns"],
+    (typeof _numMixed)["$"]["Columns"],
     typeof Users.username | typeof Users.email
   >
 >();
 
 const _numNullsMixed = numNulls(Users.id, null, 0n);
 Expect<Equal<(typeof _numNullsMixed)["$"]["TsType"], number>>();
-Expect<Equal<(typeof _numNullsMixed)["$Columns"], typeof Users.id>>();
+Expect<Equal<(typeof _numNullsMixed)["$"]["Columns"], typeof Users.id>>();
 
 const _numArg = numNonNulls(Arg.number(), null);
-Expect<Equal<(typeof _numArg)["$HasArg"], true>>();
-Expect<Equal<(typeof _numArg)["$Columns"], never>>();
+Expect<Equal<(typeof _numArg)["$"]["HasArg"], true>>();
+Expect<Equal<(typeof _numArg)["$"]["Columns"], never>>();
 
 const _numNoArg = numNulls(Users.username, "x");
-Expect<Equal<(typeof _numNoArg)["$HasArg"], false>>();
+Expect<Equal<(typeof _numNoArg)["$"]["HasArg"], false>>();
 
 // @ts-expect-error: PostgreSQL requires at least one argument
 numNonNulls();

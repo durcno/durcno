@@ -21,6 +21,7 @@ import {
   percentRank,
   preceding,
   rank,
+  round,
   rowNumber,
   rows,
   sum,
@@ -130,6 +131,24 @@ describe("SELECT window functions", () => {
       const results = await query;
       expect(results).toHaveLength(4);
       expect(results.map((r) => r.grandTotal)).toEqual([36, 36, 36, 36]);
+    });
+
+    it("should report windowed expressions as aggregate-like without grouping", async () => {
+      await seedUsers();
+
+      const windowed = sum(schema.Users.score).over();
+      expect(windowed._.sqlFnType).toBe("window");
+      expect(windowed._.hasAggregate).toBe(true);
+      expect(windowed._.hasWindow).toBe(true);
+
+      const query = db.from(schema.Users).select(() => ({
+        username: schema.Users.username,
+        roundedTotal: round(sum(schema.Users.score).over(), 1),
+      }));
+
+      // A scalar wrapper around a window expression must not start grouping.
+      expect(query.toQuery().sql).not.toContain("GROUP BY");
+      expect(await query).toHaveLength(4);
     });
 
     it("should partition totals per group", async () => {

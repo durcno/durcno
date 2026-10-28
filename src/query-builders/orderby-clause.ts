@@ -17,12 +17,11 @@ export class Order<
   TTableColumn extends TableAnyColumn | string,
   TOrder extends "ASC" | "DESC",
 > {
-  /** Phantom field: the column(s) this order expression references — mirrors `Filter.$Columns`. */
-  readonly $Columns!: TTableColumn extends TableAnyColumn
-    ? TTableColumn
-    : never;
-  /** Phantom field: `true` when this order expression embeds an `Arg` placeholder. */
-  readonly $HasArg!: false;
+  /** Phantom namespace: the column(s) this order expression references. */
+  readonly $!: {
+    Columns: TTableColumn extends TableAnyColumn ? TTableColumn : never;
+    HasArg: false;
+  };
 
   readonly field: TTableColumn;
   readonly dir: TOrder;
@@ -46,10 +45,11 @@ export type StdOrder = Order<string, OrderDirection>;
 
 /** Order clause built from a `SqlFn`, via `asc()`/`desc()`. */
 export class OrderSqlFn<TSqlFn extends AnySqlFn> {
-  /** Phantom field: the column(s) this order expression references — mirrors `Filter.$Columns`. */
-  readonly $Columns!: TSqlFn["$Columns"];
-  /** Phantom field: `true` when this order expression embeds an `Arg` placeholder. */
-  readonly $HasArg!: TSqlFn["$HasArg"];
+  /** Phantom namespace: the column scope and `Arg` flag of the ordered function. */
+  readonly $!: {
+    Columns: TSqlFn["$"]["Columns"];
+    HasArg: TSqlFn["$"]["HasArg"];
+  };
 
   constructor(
     private readonly fn: TSqlFn,
