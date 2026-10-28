@@ -386,6 +386,8 @@ durcno squash <start> <end> # Squash a range into one
 
 Run `generate` after every schema change, then `migrate`.
 
+When `generate` detects a dropped plus added table/column it may be a rename. Interactive terminals prompt; non-interactive runs (no TTY, `CI=true`, agents) exit `1` with the exact flags to use. Declare renames explicitly with repeatable `--rename-table old=new` / `--rename-column table.old=new` (schema defaults to `public`), or pass `--yes` to accept drop + create. `push` accepts the same flags.
+
 Each migration folder has a `up.ts` and `down.ts` file.
 
 ## Running SQL

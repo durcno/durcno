@@ -33,59 +33,303 @@ export interface RenamedColumns {
   [tableKey: string]: Record<string, string>;
 }
 
+export interface GenerateOptions extends Options {
+  /** Treat unresolved potential renames as drop + create instead of prompting. */
+  yes?: boolean;
+  /** Table renames in `schema.old=schema.new` form; the schema defaults to `public`. */
+  renameTable?: string[];
+  /** Column renames in `schema.table.old=new` form; the schema defaults to `public`. */
+  renameColumn?: string[];
+}
+
+interface TableRenameCandidate {
+  prevKey: string;
+  tableSchema: string;
+  tableName: string;
+  targets: string[];
+}
+
+interface ColumnRenameCandidate {
+  tableKey: string;
+  tableSchema: string;
+  tableName: string;
+  droppedColumn: string;
+  targets: string[];
+}
+
 function onCancel() {
   console.log(`${yellow("[QUIT]")} ${gray("Generation cancelled.")}`);
   process.exit(0);
 }
 
-/**
- * Detects tables that were potentially renamed by comparing dropped and added tables.
- * Prompts the user to confirm each rename.
- */
-async function promptTableRenames(
+function fail(message: string): never {
+  console.error(red(`Error: ${message}`));
+  process.exit(1);
+}
+
+/** Resolves a user-provided table name against snapshot keys, defaulting to `public`. */
+function resolveTableKey(
+  name: string,
+  tables: Record<string, SnapshotTable>,
+): string | undefined {
+  if (name in tables) return name;
+  const withDefaultSchema = `${POSTGRES_DEFAULT_SCHEMA}.${name}`;
+  return withDefaultSchema in tables ? withDefaultSchema : undefined;
+}
+
+/** Parses repeatable `--rename-table old=new` flags into a rename mapping. */
+function parseTableRenames(
+  mappings: string[],
   prev: Snapshot,
   curr: Snapshot,
-): Promise<RenamedTables> {
+): RenamedTables {
   const renames: RenamedTables = {};
 
-  const droppedTables: string[] = [];
-  for (const tableName of Object.keys(prev.tables)) {
-    if (!(tableName in curr.tables)) {
-      droppedTables.push(tableName);
+  for (const mapping of mappings) {
+    const separator = mapping.indexOf("=");
+    if (separator <= 0 || separator === mapping.length - 1) {
+      fail(
+        `Invalid --rename-table "${mapping}". Expected old=new, e.g. public.users=public.members.`,
+      );
+    }
+
+    const oldInput = mapping.slice(0, separator).trim();
+    const newInput = mapping.slice(separator + 1).trim();
+    if (!oldInput || !newInput) {
+      fail(
+        `Invalid --rename-table "${mapping}". Expected old=new, e.g. public.users=public.members.`,
+      );
+    }
+
+    const oldKey = resolveTableKey(oldInput, prev.tables);
+    const newKey = resolveTableKey(newInput, curr.tables);
+
+    if (!oldKey) {
+      fail(`Table "${oldInput}" does not exist in the previous snapshot.`);
+    }
+    if (!newKey) {
+      fail(`Table "${newInput}" does not exist in the current schema.`);
+    }
+    if (oldKey === newKey) {
+      fail(`Table rename "${mapping}" must use different old and new names.`);
+    }
+    if (oldKey in curr.tables) {
+      fail(`Table "${oldKey}" still exists in the current schema.`);
+    }
+    if (newKey in prev.tables) {
+      fail(`Table "${newKey}" already exists in the previous snapshot.`);
+    }
+    if (prev.tables[oldKey].schema !== curr.tables[newKey].schema) {
+      fail(`Table rename "${mapping}" must stay in the same schema.`);
+    }
+    if (oldKey in renames) {
+      fail(`Table "${oldKey}" already has a rename declared.`);
+    }
+    if (Object.values(renames).includes(newKey)) {
+      fail(`Table "${newKey}" is already the target of another rename.`);
+    }
+
+    renames[oldKey] = newKey;
+  }
+
+  return renames;
+}
+
+/** Parses repeatable `--rename-column table.old=new` flags into a rename mapping. */
+function parseColumnRenames(
+  mappings: string[],
+  prev: Snapshot,
+  curr: Snapshot,
+  renamedTables: RenamedTables,
+): RenamedColumns {
+  const renames: RenamedColumns = {};
+
+  for (const mapping of mappings) {
+    const separator = mapping.indexOf("=");
+    if (separator <= 0 || separator === mapping.length - 1) {
+      fail(
+        `Invalid --rename-column "${mapping}". Expected table.old=new, e.g. public.users.name=full_name.`,
+      );
+    }
+
+    const source = mapping.slice(0, separator).trim();
+    const newColumn = mapping.slice(separator + 1).trim();
+    const dot = source.lastIndexOf(".");
+    if (!newColumn || dot <= 0 || dot === source.length - 1) {
+      fail(
+        `Invalid --rename-column "${mapping}". Expected table.old=new, e.g. public.users.name=full_name.`,
+      );
+    }
+
+    const tableInput = source.slice(0, dot);
+    const oldColumn = source.slice(dot + 1);
+
+    let currKey = resolveTableKey(tableInput, curr.tables);
+    if (!currKey) {
+      const prevKey = resolveTableKey(tableInput, prev.tables);
+      if (prevKey && renamedTables[prevKey]) {
+        currKey = renamedTables[prevKey];
+      }
+    }
+    if (!currKey) {
+      fail(`Table "${tableInput}" does not exist in the current snapshot.`);
+    }
+
+    const prevKey =
+      Object.entries(renamedTables).find(
+        ([, target]) => target === currKey,
+      )?.[0] ?? currKey;
+    const prevTable = prev.tables[prevKey];
+    const currTable = curr.tables[currKey];
+
+    if (!prevTable) {
+      fail(`Table "${tableInput}" does not exist in the previous snapshot.`);
+    }
+    if (!(oldColumn in prevTable.columns)) {
+      fail(
+        `Column "${oldColumn}" does not exist in previous table "${prevKey}".`,
+      );
+    }
+    if (!(newColumn in currTable.columns)) {
+      fail(
+        `Column "${newColumn}" does not exist in current table "${currKey}".`,
+      );
+    }
+    if (oldColumn === newColumn) {
+      fail(`Column rename "${mapping}" must use different old and new names.`);
+    }
+    if (oldColumn in currTable.columns) {
+      fail(`Column "${oldColumn}" still exists in current table "${currKey}".`);
+    }
+    if (newColumn in prevTable.columns) {
+      fail(
+        `Column "${newColumn}" already exists in previous table "${prevKey}".`,
+      );
+    }
+
+    if (!renames[currKey]) renames[currKey] = {};
+    const tableRenames = renames[currKey];
+    if (oldColumn in tableRenames) {
+      fail(
+        `Column "${oldColumn}" in "${currKey}" already has a rename declared.`,
+      );
+    }
+    if (Object.values(tableRenames).includes(newColumn)) {
+      fail(
+        `Column "${newColumn}" in "${currKey}" is already the target of another rename.`,
+      );
+    }
+
+    tableRenames[oldColumn] = newColumn;
+  }
+
+  return renames;
+}
+
+/**
+ * Detects tables that were potentially renamed by comparing dropped and added tables.
+ * Explicit renames are excluded so only ambiguous pairs remain.
+ */
+function findTableRenameCandidates(
+  prev: Snapshot,
+  curr: Snapshot,
+  renamedTables: RenamedTables,
+): TableRenameCandidate[] {
+  const renamedFrom = new Set(Object.keys(renamedTables));
+  const renamedTo = new Set(Object.values(renamedTables));
+
+  const droppedTables = Object.keys(prev.tables).filter(
+    (key) => !(key in curr.tables) && !renamedFrom.has(key),
+  );
+  const addedTables = Object.keys(curr.tables).filter(
+    (key) => !(key in prev.tables) && !renamedTo.has(key),
+  );
+
+  const candidates: TableRenameCandidate[] = [];
+  for (const prevKey of droppedTables) {
+    const prevTable = prev.tables[prevKey];
+    const targets = addedTables.filter(
+      (key) => curr.tables[key].schema === prevTable.schema,
+    );
+    if (targets.length > 0) {
+      candidates.push({
+        prevKey,
+        tableSchema: prevTable.schema,
+        tableName: prevTable.name,
+        targets,
+      });
     }
   }
 
-  const addedTables: string[] = [];
-  for (const tableName of Object.keys(curr.tables)) {
-    if (!(tableName in prev.tables)) {
-      addedTables.push(tableName);
-    }
-  }
+  return candidates;
+}
 
-  if (droppedTables.length === 0 || addedTables.length === 0) {
-    return renames;
-  }
+/**
+ * Detects columns that were potentially renamed by comparing dropped and added columns
+ * within tables that exist in both snapshots (accounting for table renames).
+ */
+function findColumnRenameCandidates(
+  prev: Snapshot,
+  curr: Snapshot,
+  renamedTables: RenamedTables,
+  renamedColumns: RenamedColumns,
+): ColumnRenameCandidate[] {
+  const candidates: ColumnRenameCandidate[] = [];
 
-  const claimedAdded = new Set<string>();
+  for (const prevKey of Object.keys(prev.tables)) {
+    const currKey = renamedTables[prevKey] ?? prevKey;
+    const currTable = curr.tables[currKey];
+    if (!currTable) continue;
 
-  for (const droppedKey of droppedTables) {
-    const droppedTable = prev.tables[droppedKey];
-    const sameSchemaAdded = addedTables.filter(
-      (k) =>
-        curr.tables[k].schema === droppedTable.schema && !claimedAdded.has(k),
+    const prevTable = prev.tables[prevKey];
+    const columnRenames = renamedColumns[currKey] ?? {};
+    const renamedFrom = new Set(Object.keys(columnRenames));
+    const renamedTo = new Set(Object.values(columnRenames));
+
+    const droppedColumns = Object.keys(prevTable.columns).filter(
+      (name) => !(name in currTable.columns) && !renamedFrom.has(name),
+    );
+    const addedColumns = Object.keys(currTable.columns).filter(
+      (name) => !(name in prevTable.columns) && !renamedTo.has(name),
     );
 
-    if (sameSchemaAdded.length === 0) continue;
+    if (droppedColumns.length === 0 || addedColumns.length === 0) continue;
+
+    for (const droppedColumn of droppedColumns) {
+      candidates.push({
+        tableKey: currKey,
+        tableSchema: currTable.schema,
+        tableName: currTable.name,
+        droppedColumn,
+        targets: addedColumns,
+      });
+    }
+  }
+
+  return candidates;
+}
+
+/** Prompts the user to confirm each potential table rename. */
+async function promptTableRenames(
+  candidates: TableRenameCandidate[],
+  curr: Snapshot,
+  renames: RenamedTables,
+): Promise<RenamedTables> {
+  const claimed = new Set(Object.values(renames));
+
+  for (const candidate of candidates) {
+    const targets = candidate.targets.filter((key) => !claimed.has(key));
+    if (targets.length === 0) continue;
 
     const { choice } = await prompts(
       {
         type: "select",
         name: "choice",
-        message: `Is the table "${droppedTable.schema}"."${droppedTable.name}" renamed to?`,
+        message: `Is the table "${candidate.tableSchema}"."${candidate.tableName}" renamed to?`,
         choices: [
-          ...sameSchemaAdded.map((k) => ({
-            title: curr.tables[k].name,
-            value: k,
+          ...targets.map((key) => ({
+            title: curr.tables[key].name,
+            value: key,
           })),
           { title: "No, it was deleted", value: "" },
         ],
@@ -94,91 +338,149 @@ async function promptTableRenames(
     );
 
     if (choice) {
-      renames[droppedKey] = choice;
-      claimedAdded.add(choice);
+      renames[candidate.prevKey] = choice;
+      claimed.add(choice);
     }
   }
 
   return renames;
 }
 
-/**
- * Detects columns that were potentially renamed by comparing dropped and added columns
- * within tables that exist in both snapshots (accounting for table renames).
- * Prompts the user to confirm each rename.
- */
+/** Prompts the user to confirm each potential column rename. */
 async function promptColumnRenames(
+  candidates: ColumnRenameCandidate[],
+  renames: RenamedColumns,
+): Promise<RenamedColumns> {
+  const claimedByTable = new Map<string, Set<string>>();
+  for (const [tableKey, columnRenames] of Object.entries(renames)) {
+    claimedByTable.set(tableKey, new Set(Object.values(columnRenames)));
+  }
+
+  for (const candidate of candidates) {
+    const claimed = claimedByTable.get(candidate.tableKey) ?? new Set<string>();
+    const targets = candidate.targets.filter((name) => !claimed.has(name));
+    if (targets.length === 0) continue;
+
+    const tableName = `"${candidate.tableSchema}"."${candidate.tableName}"`;
+    const { choice } = await prompts(
+      {
+        type: "select",
+        name: "choice",
+        message: `Is the column "${candidate.droppedColumn}" in ${tableName} renamed to?`,
+        choices: [
+          ...targets.map((name) => ({ title: name, value: name })),
+          { title: "No, it was deleted", value: "" },
+        ],
+      },
+      { onCancel },
+    );
+
+    if (choice) {
+      if (!renames[candidate.tableKey]) renames[candidate.tableKey] = {};
+      renames[candidate.tableKey][candidate.droppedColumn] = choice;
+      claimed.add(choice);
+      claimedByTable.set(candidate.tableKey, claimed);
+    }
+  }
+
+  return renames;
+}
+
+/** Fails with actionable flags when renames cannot be confirmed non-interactively. */
+function failPendingRenames(
+  tableCandidates: TableRenameCandidate[],
+  columnCandidates: ColumnRenameCandidate[],
+): never {
+  const lines = ["Potential table/column renames need confirmation.", ""];
+
+  for (const candidate of tableCandidates) {
+    const table = `"${candidate.tableSchema}"."${candidate.tableName}"`;
+    lines.push(`  table ${table} may be renamed to:`);
+    for (const target of candidate.targets) {
+      lines.push(`    --rename-table ${candidate.prevKey}=${target}`);
+    }
+  }
+
+  for (const candidate of columnCandidates) {
+    const table = `"${candidate.tableSchema}"."${candidate.tableName}"`;
+    lines.push(
+      `  column "${candidate.droppedColumn}" in ${table} may be renamed to:`,
+    );
+    for (const target of candidate.targets) {
+      lines.push(
+        `    --rename-column ${candidate.tableKey}.${candidate.droppedColumn}=${target}`,
+      );
+    }
+  }
+
+  lines.push(
+    "",
+    "Re-run with the matching rename flag, or pass --yes to treat them as drop + create.",
+  );
+
+  console.error(red(`Error: ${lines[0]}`));
+  console.error(lines.slice(1).join("\n"));
+  process.exit(1);
+}
+
+async function resolveRenames(
   prev: Snapshot,
   curr: Snapshot,
-  renamedTables: RenamedTables,
-): Promise<RenamedColumns> {
-  const renames: RenamedColumns = {};
+  options: GenerateOptions,
+): Promise<{ renamedTables: RenamedTables; renamedColumns: RenamedColumns }> {
+  const renamedTables = parseTableRenames(
+    options.renameTable ?? [],
+    prev,
+    curr,
+  );
+  const renamedColumns = parseColumnRenames(
+    options.renameColumn ?? [],
+    prev,
+    curr,
+    renamedTables,
+  );
 
-  // Build a mapping from prev table key to curr table key
-  const tablePairs: { prevKey: string; currKey: string }[] = [];
+  const tableCandidates = findTableRenameCandidates(prev, curr, renamedTables);
+  const interactive =
+    !options.yes && process.stdin.isTTY && process.env.CI !== "true";
 
-  for (const prevKey of Object.keys(prev.tables)) {
-    if (prevKey in renamedTables) {
-      // Table was renamed
-      tablePairs.push({ prevKey, currKey: renamedTables[prevKey] });
-    } else if (prevKey in curr.tables) {
-      // Table still exists with the same name
-      tablePairs.push({ prevKey, currKey: prevKey });
-    }
+  if (interactive) {
+    await promptTableRenames(tableCandidates, curr, renamedTables);
+    const columnCandidates = findColumnRenameCandidates(
+      prev,
+      curr,
+      renamedTables,
+      renamedColumns,
+    );
+    await promptColumnRenames(columnCandidates, renamedColumns);
+    return { renamedTables, renamedColumns };
   }
 
-  for (const { prevKey, currKey } of tablePairs) {
-    const prevTable = prev.tables[prevKey];
-    const currTable = curr.tables[currKey];
-
-    const droppedCols: string[] = [];
-    for (const colName of Object.keys(prevTable.columns)) {
-      if (!(colName in currTable.columns)) {
-        droppedCols.push(colName);
-      }
-    }
-
-    const addedCols: string[] = [];
-    for (const colName of Object.keys(currTable.columns)) {
-      if (!(colName in prevTable.columns)) {
-        addedCols.push(colName);
-      }
-    }
-
-    if (droppedCols.length === 0 || addedCols.length === 0) continue;
-
-    const claimedAdded = new Set<string>();
-
-    for (const droppedCol of droppedCols) {
-      const availableAdded = addedCols.filter((c) => !claimedAdded.has(c));
-      if (availableAdded.length === 0) break;
-
-      const tableName = `"${currTable.schema}"."${currTable.name}"`;
-      const { choice } = await prompts(
-        {
-          type: "select",
-          name: "choice",
-          message: `Is the column "${droppedCol}" in ${tableName} renamed to?`,
-          choices: [
-            ...availableAdded.map((c) => ({ title: c, value: c })),
-            { title: "No, it was deleted", value: "" },
-          ],
-        },
-        { onCancel },
-      );
-
-      if (choice) {
-        if (!renames[currKey]) renames[currKey] = {};
-        renames[currKey][droppedCol] = choice;
-        claimedAdded.add(choice);
-      }
-    }
+  const columnCandidates = findColumnRenameCandidates(
+    prev,
+    curr,
+    renamedTables,
+    renamedColumns,
+  );
+  if (tableCandidates.length === 0 && columnCandidates.length === 0) {
+    return { renamedTables, renamedColumns };
   }
 
-  return renames;
+  if (!options.yes) {
+    failPendingRenames(tableCandidates, columnCandidates);
+  }
+
+  const count = tableCandidates.length + columnCandidates.length;
+  console.log(
+    yellow(
+      `[SKIP] Treating ${count} potential rename${count === 1 ? "" : "s"} as drop + create.`,
+    ),
+  );
+
+  return { renamedTables, renamedColumns };
 }
 
-export async function generate(options: Options) {
+export async function generate(options: GenerateOptions) {
   const configPath = resolveConfigPath(options.config);
   const config = await loadConfig(configPath);
 
@@ -222,12 +524,10 @@ export async function generate(options: Options) {
     process.exit(1);
   }
 
-  // Prompt for potential table and column renames
-  const renamedTables = await promptTableRenames(ssPrevious, ssCurrent);
-  const renamedColumns = await promptColumnRenames(
+  const { renamedTables, renamedColumns } = await resolveRenames(
     ssPrevious,
     ssCurrent,
-    renamedTables,
+    options,
   );
 
   // Read migration option defaults from the connector class (if any)

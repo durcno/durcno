@@ -2,7 +2,7 @@
 import { program } from "commander";
 import { down } from "./commands/down";
 import { type ExecOptions, exec } from "./commands/exec";
-import { generate } from "./commands/generate";
+import { type GenerateOptions, generate } from "./commands/generate";
 import { init } from "./commands/init";
 import { migrate } from "./commands/migrate";
 import { push } from "./commands/push";
@@ -20,6 +20,10 @@ export type Options = {
   /** Path to the config file */
   config?: string;
 };
+
+function collectRename(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
 
 program
   .command("init")
@@ -55,8 +59,21 @@ program
   .alias("generat")
   .alias("gen")
   .option(...Options.config)
+  .option("-y, --yes", "treat unconfirmed potential renames as drop + create")
+  .option(
+    "--rename-table <mapping>",
+    "declare a table rename as old=new (schema defaults to public); repeatable",
+    collectRename,
+    [],
+  )
+  .option(
+    "--rename-column <mapping>",
+    "declare a column rename as table.old=new (schema defaults to public); repeatable",
+    collectRename,
+    [],
+  )
   .description("generate a new migration")
-  .action(async (opts: Options) => {
+  .action(async (opts: GenerateOptions) => {
     await generate(opts);
   });
 
@@ -73,8 +90,21 @@ program
 program
   .command("push")
   .option(...Options.config)
+  .option("-y, --yes", "treat unconfirmed potential renames as drop + create")
+  .option(
+    "--rename-table <mapping>",
+    "declare a table rename as old=new (schema defaults to public); repeatable",
+    collectRename,
+    [],
+  )
+  .option(
+    "--rename-column <mapping>",
+    "declare a column rename as table.old=new (schema defaults to public); repeatable",
+    collectRename,
+    [],
+  )
   .description("generate migration and migrate all pending migrations")
-  .action(async (opts: Options) => {
+  .action(async (opts: GenerateOptions) => {
     await push(opts);
   });
 
