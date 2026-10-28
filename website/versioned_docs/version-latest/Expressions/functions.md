@@ -179,7 +179,7 @@ const stats = await db.from(Orders).select(() => ({
 
 An aggregate or pure window function becomes a window function call by attaching `.over(spec)` — rendering `fn(...) OVER (...)` with an optional `PARTITION BY`, window `ORDER BY`, and frame clause.
 
-Window functions never trigger the [auto GROUP BY](../../CRUD/select.md#automatic-group-by): `SELECT sum(amount) OVER ()` still returns one row per record, with the window aggregate evaluated alongside the plain columns.
+Window functions never trigger the [auto GROUP BY](../CRUD/select.md#automatic-group-by): `SELECT sum(amount) OVER ()` still returns one row per record, with the window aggregate evaluated alongside the plain columns.
 
 ### `OVER` spec
 
