@@ -20,6 +20,13 @@ import {
   SqlFn,
   setOwn,
 } from "./index";
+import {
+  type NormalizedScalar,
+  normalizeScalar,
+  normalizeScalarRecord,
+  normalizeScalars,
+  type ScalarQueryLike,
+} from "./subquery";
 
 /**
  * Valid operand for JSON functions:
@@ -28,6 +35,7 @@ import {
 export type JsonOperand =
   | AnyColumn
   | AnySqlFn
+  | ScalarQueryLike
   | Sql
   | AnyArg
   | string
@@ -43,6 +51,7 @@ export type JsonOperand =
 export type JsonAggOperand =
   | AnyColumn
   | NonAggregateSqlFn
+  | ScalarQueryLike
   | Sql
   | AnyArg
   | string
@@ -53,6 +62,14 @@ export type JsonAggOperand =
   | readonly unknown[]
   | Record<string, unknown>
   | null;
+
+type NormalizedJsonFields<TFields extends Record<string, JsonOperand>> = {
+  [K in keyof TFields]: NormalizedScalar<TFields[K]>;
+};
+
+type NormalizedJsonItems<TItems extends readonly JsonOperand[]> = {
+  [K in keyof TItems]: NormalizedScalar<TItems[K]>;
+};
 
 /** Helper to extract column union from all values of a record. */
 export type RecordExprColumns<TRecord extends Record<string, unknown>> =
@@ -366,8 +383,10 @@ export class JsonbBuildObjectFn<
  */
 export function jsonBuildObject<TFields extends Record<string, JsonOperand>>(
   fields: TFields,
-): JsonBuildObjectFn<TFields> {
-  return new JsonBuildObjectFn(fields);
+): JsonBuildObjectFn<NormalizedJsonFields<TFields>> {
+  return new JsonBuildObjectFn(
+    normalizeScalarRecord(fields) as NormalizedJsonFields<TFields>,
+  );
 }
 
 /**
@@ -383,8 +402,10 @@ export function jsonBuildObject<TFields extends Record<string, JsonOperand>>(
  */
 export function jsonbBuildObject<TFields extends Record<string, JsonOperand>>(
   fields: TFields,
-): JsonbBuildObjectFn<TFields> {
-  return new JsonbBuildObjectFn(fields);
+): JsonbBuildObjectFn<NormalizedJsonFields<TFields>> {
+  return new JsonbBuildObjectFn(
+    normalizeScalarRecord(fields) as NormalizedJsonFields<TFields>,
+  );
 }
 
 // ============================================================================
@@ -525,8 +546,8 @@ export class JsonbAggFn<
  */
 export function jsonAgg<TExpr extends JsonAggOperand>(
   expr: TExpr,
-): JsonAggFn<TExpr> {
-  return new JsonAggFn(expr);
+): JsonAggFn<NormalizedScalar<TExpr>> {
+  return new JsonAggFn(normalizeScalar(expr) as NormalizedScalar<TExpr>);
 }
 
 /**
@@ -539,8 +560,8 @@ export function jsonAgg<TExpr extends JsonAggOperand>(
  */
 export function jsonbAgg<TExpr extends JsonAggOperand>(
   expr: TExpr,
-): JsonbAggFn<TExpr> {
-  return new JsonbAggFn(expr);
+): JsonbAggFn<NormalizedScalar<TExpr>> {
+  return new JsonbAggFn(normalizeScalar(expr) as NormalizedScalar<TExpr>);
 }
 
 // ============================================================================
@@ -735,8 +756,8 @@ export class ToJsonbFn<
  */
 export function toJson<TTarget extends ToJsonTarget>(
   target: TTarget,
-): ToJsonFn<TTarget> {
-  return new ToJsonFn(target);
+): ToJsonFn<NormalizedScalar<TTarget>> {
+  return new ToJsonFn(normalizeScalar(target) as NormalizedScalar<TTarget>);
 }
 
 /**
@@ -748,8 +769,8 @@ export function toJson<TTarget extends ToJsonTarget>(
  */
 export function toJsonb<TTarget extends ToJsonTarget>(
   target: TTarget,
-): ToJsonbFn<TTarget> {
-  return new ToJsonbFn(target);
+): ToJsonbFn<NormalizedScalar<TTarget>> {
+  return new ToJsonbFn(normalizeScalar(target) as NormalizedScalar<TTarget>);
 }
 
 // ============================================================================
@@ -884,8 +905,10 @@ export class JsonbBuildArrayFn<
  */
 export function jsonBuildArray<TItems extends readonly JsonOperand[]>(
   ...items: TItems
-): JsonBuildArrayFn<TItems> {
-  return new JsonBuildArrayFn(items);
+): JsonBuildArrayFn<NormalizedJsonItems<TItems>> {
+  return new JsonBuildArrayFn(
+    normalizeScalars(items) as NormalizedJsonItems<TItems>,
+  );
 }
 
 /**
@@ -896,8 +919,10 @@ export function jsonBuildArray<TItems extends readonly JsonOperand[]>(
  */
 export function jsonbBuildArray<TItems extends readonly JsonOperand[]>(
   ...items: TItems
-): JsonbBuildArrayFn<TItems> {
-  return new JsonbBuildArrayFn(items);
+): JsonbBuildArrayFn<NormalizedJsonItems<TItems>> {
+  return new JsonbBuildArrayFn(
+    normalizeScalars(items) as NormalizedJsonItems<TItems>,
+  );
 }
 
 // ============================================================================
@@ -983,8 +1008,8 @@ export class JsonbStripNullsFn<
  */
 export function jsonStripNulls<TExpr extends JsonOperand>(
   expr: TExpr,
-): JsonStripNullsFn<TExpr> {
-  return new JsonStripNullsFn(expr);
+): JsonStripNullsFn<NormalizedScalar<TExpr>> {
+  return new JsonStripNullsFn(normalizeScalar(expr) as NormalizedScalar<TExpr>);
 }
 
 /**
@@ -992,6 +1017,8 @@ export function jsonStripNulls<TExpr extends JsonOperand>(
  */
 export function jsonbStripNulls<TExpr extends JsonOperand>(
   expr: TExpr,
-): JsonbStripNullsFn<TExpr> {
-  return new JsonbStripNullsFn(expr);
+): JsonbStripNullsFn<NormalizedScalar<TExpr>> {
+  return new JsonbStripNullsFn(
+    normalizeScalar(expr) as NormalizedScalar<TExpr>,
+  );
 }

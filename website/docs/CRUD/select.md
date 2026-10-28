@@ -87,6 +87,7 @@ const users = await db.from(Users).select(() => ({
 The `.select()` object projection can include more than just columns. You can project:
 
 - **SQL functions**: `lower(Users.username)`, `count("*")`, `coalesce(...)`, etc.
+- **Scalar subqueries**: a single-column `db.from(...).select(...)` query
 - **Literal constants**: strings, numbers, bigints, and booleans
 - **Literal null**: `null` or `sql.null`
 - **Raw SQL expressions**: `sql<T>` template fragments with typed return inference
@@ -113,6 +114,35 @@ const results = await db.from(Users).select(() => ({
 //   computedScore: number;
 // }[]
 ```
+
+### Scalar Subqueries
+
+A single-column query can be projected directly. The value is typed `T | null` because a scalar subquery returns `NULL` when it has no row:
+
+```typescript
+import { asc, count, eq } from "durcno";
+
+const users = await db.from(Users).select(() => ({
+  id: Users.id,
+  postCount: db
+    .from(Posts)
+    .select(() => ({ total: count("*") }))
+    .where(() => eq(Posts.userId, Users.id)),
+  firstPostTitle: db
+    .from(Posts)
+    .select(() => ({ title: Posts.title }))
+    .where(() => eq(Posts.userId, Users.id))
+    .orderBy(() => asc(Posts.id))
+    .limit(1),
+}));
+// Type: {
+//   id: bigint;
+//   postCount: number | null;
+//   firstPostTitle: string | null;
+// }[]
+```
+
+The subquery must select exactly one column. Use `.limit(1)` for non-aggregate row subqueries, and wrap the value in `coalesce(...)` when the projection must never be `null`.
 
 ### Defaults for Nullable Expressions
 

@@ -8,6 +8,13 @@ import {
   type NonAggregateSqlFn,
   SqlFn,
 } from "../functions";
+import {
+  type NormalizedOperand,
+  type NormalizedScalar,
+  normalizeScalar,
+  type ScalarArg,
+  type ScalarQueryLike,
+} from "../functions/subquery";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
 import { Sql, toSqlValue } from "../sql";
@@ -95,10 +102,11 @@ export type ColumnComparisonRight<TLeft extends AnyColumn> =
   | TLeft["ValType"]
   | Arg<TLeft["ValType"]>
   | AnyColumn
-  | NonAggregateSqlFn;
+  | NonAggregateSqlFn
+  | ScalarQueryLike;
 
 /** Right operand accepted by a comparison whose left side is a value expression. */
-export type SqlFnComparisonRight = BasicTypes | AnySqlFn;
+export type SqlFnComparisonRight = BasicTypes | AnySqlFn | ScalarQueryLike;
 
 export class ComparisonLeftIsColumn<
   TLeft extends AnyColumn,
@@ -167,7 +175,7 @@ export class ComparisonLeftIsSqlFn<
     if (this.right instanceof SqlFn) {
       this.right.toQuery(query, ctx);
     } else {
-      query.sql += toSqlValue(this.right);
+      query.sql += toSqlValue(this.right as never);
     }
   }
 }
@@ -175,186 +183,414 @@ export class ComparisonLeftIsSqlFn<
 export function eq<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsColumn<TLeft, "=", TRight>;
+): ComparisonLeftIsColumn<
+  TLeft,
+  "=",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function eq<
   TLeft extends AnyColumn,
   TRight extends ColumnComparisonRight<TLeft>,
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "=", TRight>;
+>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<
+  TLeft,
+  "=",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function eq<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, "=", NormalizedOperand<TRight, AnySqlFn>>;
 export function eq<TLeft extends AnySqlFn, TRight extends SqlFnComparisonRight>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "=", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, "=", NormalizedOperand<TRight, AnySqlFn>>;
+export function eq<TLeft extends ScalarQueryLike, TRight extends BasicTypes>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<NormalizedScalar<TLeft> & AnySqlFn, "=", TRight>;
+export function eq<
+  TLeft extends ScalarQueryLike,
+  TRight extends SqlFnComparisonRight,
+>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<
+  NormalizedScalar<TLeft> & AnySqlFn,
+  "=",
+  NormalizedOperand<TRight, AnySqlFn>
+>;
 export function eq(
-  left: AnyColumn | AnySqlFn,
+  left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnySqlFn,
-) {
-  if (isTCol(left)) {
-    return new ComparisonLeftIsColumn(left, "=", right);
+    | AnySqlFn
+    | ScalarQueryLike,
+): never {
+  const leftExpr = normalizeScalar(left);
+  const rightExpr = normalizeScalar(right);
+  if (isTCol(leftExpr)) {
+    return new ComparisonLeftIsColumn(
+      leftExpr as never,
+      "=",
+      rightExpr as never,
+    ) as never;
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnySqlFn, "=", right);
+    return new ComparisonLeftIsSqlFn(
+      leftExpr as AnySqlFn,
+      "=",
+      rightExpr as never,
+    ) as never;
   }
 }
 
 export function ne<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
+): ComparisonLeftIsColumn<
+  TLeft,
+  "!=",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function ne<
   TLeft extends AnyColumn,
   TRight extends ColumnComparisonRight<TLeft>,
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "!=", TRight>;
+>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<
+  TLeft,
+  "!=",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function ne<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, "!=", NormalizedOperand<TRight, AnySqlFn>>;
 export function ne<TLeft extends AnySqlFn, TRight extends SqlFnComparisonRight>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "!=", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, "!=", NormalizedOperand<TRight, AnySqlFn>>;
+export function ne<TLeft extends ScalarQueryLike, TRight extends BasicTypes>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<NormalizedScalar<TLeft> & AnySqlFn, "!=", TRight>;
+export function ne<
+  TLeft extends ScalarQueryLike,
+  TRight extends SqlFnComparisonRight,
+>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<
+  NormalizedScalar<TLeft> & AnySqlFn,
+  "!=",
+  NormalizedOperand<TRight, AnySqlFn>
+>;
 export function ne(
-  left: AnyColumn | AnySqlFn,
+  left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnySqlFn,
-) {
-  if (isTCol(left)) {
-    return new ComparisonLeftIsColumn(left, "!=", right);
+    | AnySqlFn
+    | ScalarQueryLike,
+): never {
+  const leftExpr = normalizeScalar(left);
+  const rightExpr = normalizeScalar(right);
+  if (isTCol(leftExpr)) {
+    return new ComparisonLeftIsColumn(
+      leftExpr as never,
+      "!=",
+      rightExpr as never,
+    ) as never;
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnySqlFn, "!=", right);
+    return new ComparisonLeftIsSqlFn(
+      leftExpr as AnySqlFn,
+      "!=",
+      rightExpr as never,
+    ) as never;
   }
 }
 
 export function gt<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsColumn<TLeft, ">", TRight>;
+): ComparisonLeftIsColumn<
+  TLeft,
+  ">",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function gt<
   TLeft extends AnyColumn,
   TRight extends ColumnComparisonRight<TLeft>,
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">", TRight>;
+>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<
+  TLeft,
+  ">",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function gt<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, ">", NormalizedOperand<TRight, AnySqlFn>>;
 export function gt<TLeft extends AnySqlFn, TRight extends SqlFnComparisonRight>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, ">", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, ">", NormalizedOperand<TRight, AnySqlFn>>;
+export function gt<TLeft extends ScalarQueryLike, TRight extends BasicTypes>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<NormalizedScalar<TLeft> & AnySqlFn, ">", TRight>;
+export function gt<
+  TLeft extends ScalarQueryLike,
+  TRight extends SqlFnComparisonRight,
+>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<
+  NormalizedScalar<TLeft> & AnySqlFn,
+  ">",
+  NormalizedOperand<TRight, AnySqlFn>
+>;
 export function gt(
-  left: AnyColumn | AnySqlFn,
+  left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnySqlFn,
-) {
-  if (isTCol(left)) {
-    return new ComparisonLeftIsColumn(left, ">", right);
+    | AnySqlFn
+    | ScalarQueryLike,
+): never {
+  const leftExpr = normalizeScalar(left);
+  const rightExpr = normalizeScalar(right);
+  if (isTCol(leftExpr)) {
+    return new ComparisonLeftIsColumn(
+      leftExpr as never,
+      ">",
+      rightExpr as never,
+    ) as never;
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnySqlFn, ">", right);
+    return new ComparisonLeftIsSqlFn(
+      leftExpr as AnySqlFn,
+      ">",
+      rightExpr as never,
+    ) as never;
   }
 }
 
 export function gte<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
+): ComparisonLeftIsColumn<
+  TLeft,
+  ">=",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function gte<
   TLeft extends AnyColumn,
   TRight extends ColumnComparisonRight<TLeft>,
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, ">=", TRight>;
+>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<
+  TLeft,
+  ">=",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function gte<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, ">=", NormalizedOperand<TRight, AnySqlFn>>;
 export function gte<
   TLeft extends AnySqlFn,
   TRight extends SqlFnComparisonRight,
->(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, ">=", TRight>;
+>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, ">=", NormalizedOperand<TRight, AnySqlFn>>;
+export function gte<TLeft extends ScalarQueryLike, TRight extends BasicTypes>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<NormalizedScalar<TLeft> & AnySqlFn, ">=", TRight>;
+export function gte<
+  TLeft extends ScalarQueryLike,
+  TRight extends SqlFnComparisonRight,
+>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<
+  NormalizedScalar<TLeft> & AnySqlFn,
+  ">=",
+  NormalizedOperand<TRight, AnySqlFn>
+>;
 export function gte(
-  left: AnyColumn | AnySqlFn,
+  left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnySqlFn,
-) {
-  if (isTCol(left)) {
-    return new ComparisonLeftIsColumn(left, ">=", right);
+    | AnySqlFn
+    | ScalarQueryLike,
+): never {
+  const leftExpr = normalizeScalar(left);
+  const rightExpr = normalizeScalar(right);
+  if (isTCol(leftExpr)) {
+    return new ComparisonLeftIsColumn(
+      leftExpr as never,
+      ">=",
+      rightExpr as never,
+    ) as never;
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnySqlFn, ">=", right);
+    return new ComparisonLeftIsSqlFn(
+      leftExpr as AnySqlFn,
+      ">=",
+      rightExpr as never,
+    ) as never;
   }
 }
 
 export function lt<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsColumn<TLeft, "<", TRight>;
+): ComparisonLeftIsColumn<
+  TLeft,
+  "<",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function lt<
   TLeft extends AnyColumn,
   TRight extends ColumnComparisonRight<TLeft>,
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<", TRight>;
+>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<
+  TLeft,
+  "<",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function lt<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, "<", NormalizedOperand<TRight, AnySqlFn>>;
 export function lt<TLeft extends AnySqlFn, TRight extends SqlFnComparisonRight>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "<", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, "<", NormalizedOperand<TRight, AnySqlFn>>;
+export function lt<TLeft extends ScalarQueryLike, TRight extends BasicTypes>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<NormalizedScalar<TLeft> & AnySqlFn, "<", TRight>;
+export function lt<
+  TLeft extends ScalarQueryLike,
+  TRight extends SqlFnComparisonRight,
+>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<
+  NormalizedScalar<TLeft> & AnySqlFn,
+  "<",
+  NormalizedOperand<TRight, AnySqlFn>
+>;
 export function lt(
-  left: AnyColumn | AnySqlFn,
+  left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnySqlFn,
-) {
-  if (isTCol(left)) {
-    return new ComparisonLeftIsColumn(left, "<", right);
+    | AnySqlFn
+    | ScalarQueryLike,
+): never {
+  const leftExpr = normalizeScalar(left);
+  const rightExpr = normalizeScalar(right);
+  if (isTCol(leftExpr)) {
+    return new ComparisonLeftIsColumn(
+      leftExpr as never,
+      "<",
+      rightExpr as never,
+    ) as never;
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnySqlFn, "<", right);
+    return new ComparisonLeftIsSqlFn(
+      leftExpr as AnySqlFn,
+      "<",
+      rightExpr as never,
+    ) as never;
   }
 }
 
 export function lte<TLeft extends AnyColumn, TRight extends TLeft["ValType"]>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
+): ComparisonLeftIsColumn<
+  TLeft,
+  "<=",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function lte<
   TLeft extends AnyColumn,
   TRight extends ColumnComparisonRight<TLeft>,
->(left: TLeft, right: TRight): ComparisonLeftIsColumn<TLeft, "<=", TRight>;
+>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsColumn<
+  TLeft,
+  "<=",
+  NormalizedOperand<TRight, NonAggregateSqlFn>
+>;
 export function lte<TLeft extends AnySqlFn, TRight extends BasicTypes>(
   left: TLeft,
   right: TRight,
-): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
+): ComparisonLeftIsSqlFn<TLeft, "<=", NormalizedOperand<TRight, AnySqlFn>>;
 export function lte<
   TLeft extends AnySqlFn,
   TRight extends SqlFnComparisonRight,
->(left: TLeft, right: TRight): ComparisonLeftIsSqlFn<TLeft, "<=", TRight>;
+>(
+  left: TLeft,
+  right: TRight,
+): ComparisonLeftIsSqlFn<TLeft, "<=", NormalizedOperand<TRight, AnySqlFn>>;
+export function lte<TLeft extends ScalarQueryLike, TRight extends BasicTypes>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<NormalizedScalar<TLeft> & AnySqlFn, "<=", TRight>;
+export function lte<
+  TLeft extends ScalarQueryLike,
+  TRight extends SqlFnComparisonRight,
+>(
+  left: ScalarArg<TLeft>,
+  right: TRight,
+): ComparisonLeftIsSqlFn<
+  NormalizedScalar<TLeft> & AnySqlFn,
+  "<=",
+  NormalizedOperand<TRight, AnySqlFn>
+>;
 export function lte(
-  left: AnyColumn | AnySqlFn,
+  left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
-    | AnySqlFn,
-) {
-  if (isTCol(left)) {
-    return new ComparisonLeftIsColumn(left, "<=", right);
+    | AnySqlFn
+    | ScalarQueryLike,
+): never {
+  const leftExpr = normalizeScalar(left);
+  const rightExpr = normalizeScalar(right);
+  if (isTCol(leftExpr)) {
+    return new ComparisonLeftIsColumn(
+      leftExpr as never,
+      "<=",
+      rightExpr as never,
+    ) as never;
   } else {
-    return new ComparisonLeftIsSqlFn(left as AnySqlFn, "<=", right);
+    return new ComparisonLeftIsSqlFn(
+      leftExpr as AnySqlFn,
+      "<=",
+      rightExpr as never,
+    ) as never;
   }
 }
 

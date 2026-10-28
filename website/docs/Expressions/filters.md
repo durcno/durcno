@@ -56,7 +56,24 @@ await db
   .innerJoin(Posts)
   .on(() => eq(Users.id, Posts.userId))
   .select("*");
+
+// Compare against a scalar subquery
+await db
+  .from(Users)
+  .select("*")
+  .where(() =>
+    gt(
+      Users.score,
+      db
+        .from(Users)
+        .select(() => ({ score: Users.score }))
+        .where(() => eq(Users.username, "benchmark"))
+        .limit(1),
+    )
+  );
 ```
+
+A single-column `SelectQuery` is accepted wherever a comparison operand is expected; the value is typed `T | null`.
 
 ### Not Equal (`ne`)
 

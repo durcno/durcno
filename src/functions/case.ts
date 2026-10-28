@@ -18,6 +18,12 @@ import {
   type HasArg,
   SqlFn,
 } from "./index";
+import {
+  type NormalizedScalar,
+  normalizeScalar,
+  type ScalarArg,
+  type ScalarQueryLike,
+} from "./subquery";
 
 /**
  * Valid operand for CASE branches and result clauses:
@@ -26,6 +32,7 @@ import {
 export type CaseOperand =
   | AnyColumn
   | AnySqlFn
+  | ScalarQueryLike
   | Sql
   | AnyArg
   | string
@@ -272,17 +279,20 @@ export class CaseBuilder<
     TRes extends CaseOperand,
   >(
     condition: TCondition,
-    thenResult: TRes,
+    thenResult: ScalarArg<TRes>,
   ): CaseBuilder<
-    TColumn | ConditionColumns<TCondition> | ExprColumns<TRes>,
-    TBranches | InferCaseValue<TRes>,
-    TBranchResult | TRes,
+    | TColumn
+    | ConditionColumns<TCondition>
+    | ExprColumns<NormalizedScalar<TRes>>,
+    TBranches | InferCaseValue<NormalizedScalar<TRes>>,
+    TBranchResult | NormalizedScalar<TRes>,
     TConditions | TCondition,
-    Or<Or<THasArg, HasArg<TRes>>, HasArg<TCondition>>
+    Or<Or<THasArg, HasArg<NormalizedScalar<TRes>>>, HasArg<TCondition>>
   > {
-    const branches: CaseWhenBranch<TBranchResult | TRes>[] = [
+    const result = normalizeScalar(thenResult) as NormalizedScalar<TRes>;
+    const branches: CaseWhenBranch<TBranchResult | NormalizedScalar<TRes>>[] = [
       ...this.branches,
-      { condition, result: thenResult },
+      { condition, result },
     ];
     return new CaseBuilder(branches);
   }
@@ -293,16 +303,19 @@ export class CaseBuilder<
    * @param elseResult - Default value expression when no WHEN condition matches.
    */
   else<TElse extends CaseOperand>(
-    elseResult: TElse,
+    elseResult: ScalarArg<TElse>,
   ): CaseFn<
-    TColumn | ExprColumns<TElse>,
-    TBranches | InferCaseValue<TElse>,
+    TColumn | ExprColumns<NormalizedScalar<TElse>>,
+    TBranches | InferCaseValue<NormalizedScalar<TElse>>,
     TBranchResult,
-    TElse,
+    NormalizedScalar<TElse>,
     TConditions,
-    Or<THasArg, HasArg<TElse>>
+    Or<THasArg, HasArg<NormalizedScalar<TElse>>>
   > {
-    return new CaseFn(this.branches, elseResult);
+    return new CaseFn(
+      this.branches,
+      normalizeScalar(elseResult) as NormalizedScalar<TElse>,
+    );
   }
 
   /**
@@ -345,13 +358,18 @@ export function caseWhen<
   TRes extends CaseOperand,
 >(
   condition: TCondition,
-  thenResult: TRes,
+  thenResult: ScalarArg<TRes>,
 ): CaseBuilder<
-  ConditionColumns<TCondition> | ExprColumns<TRes>,
-  InferCaseValue<TRes>,
-  TRes,
+  ConditionColumns<TCondition> | ExprColumns<NormalizedScalar<TRes>>,
+  InferCaseValue<NormalizedScalar<TRes>>,
+  NormalizedScalar<TRes>,
   TCondition,
-  Or<HasArg<TCondition>, HasArg<TRes>>
+  Or<HasArg<TCondition>, HasArg<NormalizedScalar<TRes>>>
 > {
-  return new CaseBuilder([{ condition, result: thenResult }]);
+  return new CaseBuilder([
+    {
+      condition,
+      result: normalizeScalar(thenResult) as NormalizedScalar<TRes>,
+    },
+  ]);
 }

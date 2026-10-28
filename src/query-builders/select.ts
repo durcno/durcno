@@ -11,8 +11,17 @@ import {
   type InferValueType,
   type ScopedSqlFn,
   SqlFn,
+  setOwn,
 } from "../functions/index";
-import { SubquerySqlFn } from "../functions/subquery";
+import {
+  isSelectQuery,
+  type NormalizedScalar,
+  type ScalarQueryLike,
+  ScalarSubqueryFn,
+  type ScalarSubqueryValue,
+  type SubqueryHasArg,
+  SubqueryOwnedSqlFn,
+} from "../functions/subquery";
 import { escIdentifier, Sql, toSqlValue } from "../sql";
 import type {
   AnyColumn,
@@ -38,6 +47,7 @@ import type {
 } from "./groupby-clause";
 import {
   applyStarRowsPlan,
+  buildSelectItemConverter,
   buildStarRowsPlan,
   buildWithClause,
   type SelectAliasesView,
@@ -299,6 +309,21 @@ function buildColumnsView(
 // SelectBuilder
 // ============================================================================
 
+/** Replaces scalar select queries in a projection with their expression form. */
+function normalizeSelects<TSelects extends Record<string, unknown>>(
+  selects: TSelects,
+): NormalizeSelects<TSelects> {
+  let normalized: Record<string, unknown> | null = null;
+  for (const key of Object.keys(selects)) {
+    const value = selects[key];
+    if (isSelectQuery(value)) {
+      if (normalized === null) normalized = { ...selects };
+      setOwn(normalized, key, new ScalarSubqueryFn(value));
+    }
+  }
+  return (normalized ?? selects) as NormalizeSelects<TSelects>;
+}
+
 /** Partial view available during join — base table + already-joined tables. */
 type JoinOnView<
   TTSchema extends string,
@@ -332,8 +357,52 @@ export type SelectableItem<
   | bigint
   | boolean;
 
+/** Any item accepted in a `.select(...)` projection, including scalar queries. */
+export type SelectProjectionItem<
+  TScopeColumns extends AnyColumn,
+  TPrepare extends boolean = false,
+> = SelectableItem<TScopeColumns, TPrepare> | ScalarQueryLike;
+
+/** Projection keys whose value is a scalar select query. */
+type QueryProjectionKeys<TSelects> = {
+  [K in keyof TSelects]: TSelects[K] extends ScalarQueryLike ? K : never;
+}[keyof TSelects];
+
+/** Rejects multi-column and unprepared subqueries in a projection. */
+type ValidSelectProjection<TSelects, TPrepare extends boolean> =
+  TSelects extends Record<string, unknown>
+    ? QueryProjectionKeys<TSelects> extends never
+      ? TSelects
+      : {
+          [K in QueryProjectionKeys<TSelects>]: TSelects[K] extends ScalarQueryLike
+            ? [ScalarSubqueryValue<TSelects[K]>] extends [never]
+              ? never
+              : TPrepare extends true
+                ? TSelects[K]
+                : SubqueryHasArg<TSelects[K]> extends true
+                  ? never
+                  : TSelects[K]
+            : never;
+        } & TSelects
+    : TSelects;
+
+/** Replaces accepted scalar queries with their expression form. */
+export type NormalizeSelectItem<T> = T extends ScalarQueryLike
+  ? NormalizedScalar<T>
+  : T;
+
+/** Normalized projection type stored by a `SelectQuery`. */
+export type NormalizeSelects<TSelects> =
+  TSelects extends Record<string, unknown>
+    ? { [K in keyof TSelects]: NormalizeSelectItem<TSelects[K]> }
+    : TSelects;
+
 /** Resolves the TypeScript inferred return type for a single selected projection entry. */
-export type InferSelectValue<T> = InferValueType<T>;
+export type InferSelectValue<T> = T extends {
+  $isSelectQuery: true;
+}
+  ? ScalarSubqueryValue<T> | null
+  : InferValueType<T>;
 
 /** Infers the full row object type for an object-mapping `.select(...)` callback. */
 export type InferSelectRow<TSelects> = {
@@ -562,7 +631,7 @@ export class SelectBuilder<
   select<
     TSelects extends Record<
       string,
-      SelectableItem<
+      SelectProjectionItem<
         AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
         TPrepare
       >
@@ -570,14 +639,14 @@ export class SelectBuilder<
   >(
     callback: (
       view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
-    ) => TSelects,
+    ) => TSelects & ValidSelectProjection<TSelects, TPrepare>,
   ): SelectQuery<
     TTSchema,
     TTName,
     TColumns,
     TPrepare,
     TJoins,
-    TSelects,
+    NormalizeSelects<TSelects>,
     undefined,
     undefined
   >;
@@ -585,7 +654,7 @@ export class SelectBuilder<
     TSelects extends
       | Record<
           string,
-          SelectableItem<
+          SelectProjectionItem<
             AllViewColumns<TTSchema, TTName, TColumns, TJoins>,
             TPrepare
           >
@@ -594,7 +663,9 @@ export class SelectBuilder<
   >(
     starOrCallback:
       | "*"
-      | ((view: ColumnsView<TTSchema, TTName, TColumns, TJoins>) => TSelects),
+      | ((
+          view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
+        ) => TSelects & ValidSelectProjection<TSelects, TPrepare>),
   ) {
     const selects =
       typeof starOrCallback === "function"
@@ -603,7 +674,7 @@ export class SelectBuilder<
     return new SelectQuery(
       this.#table,
       this.#$joins,
-      selects as never,
+      (selects === undefined ? undefined : normalizeSelects(selects)) as never,
       this.#$distinctOn,
       undefined,
       undefined,
@@ -634,53 +705,6 @@ type SelectRowsPlan = {
   keys: string[];
   converts: ((value: unknown) => unknown)[];
 };
-
-/** Replaces any driver value with `null` — used for `null` projections. */
-function toNull(): unknown {
-  return null;
-}
-
-/** Converts a driver value to `bigint`, mapping NULL to `null`. */
-function fromDriverBigInt(value: unknown): bigint | null {
-  return value === null || value === undefined
-    ? null
-    : BigInt(value as string | number);
-}
-
-/** Converts a driver value to `boolean`, mapping NULL to `null`. */
-function fromDriverBoolean(value: unknown): boolean | null {
-  if (value === null || value === undefined) return null;
-  return value === true || value === "t" || value === "true";
-}
-
-/** Converts a driver value to `number`, mapping NULL to `null`. */
-function fromDriverNumber(value: unknown): number | null {
-  return value === null || value === undefined ? null : Number(value);
-}
-
-/**
- * Returns the driver-to-JS converter for a single projection item, or null
- * when the value passes through untouched (raw `Sql`, string literals).
- */
-function buildSelectItemConverter(
-  item: unknown,
-): ((value: unknown) => unknown) | null {
-  if (item === null) return toNull;
-  if (isTCol(item)) {
-    const column = item as unknown as AnyColumn;
-    // Not `resolveFromDriver` — keeping the closure local to this function
-    // avoids polymorphism at the call site (~20% faster on mixed projections).
-    return (value) => column.fromDriver(value);
-  }
-  if (item instanceof SqlFn) {
-    return (value) => item.fromDriverValue(value);
-  }
-  const type = typeof item;
-  if (type === "bigint") return fromDriverBigInt;
-  if (type === "boolean") return fromDriverBoolean;
-  if (type === "number") return fromDriverNumber;
-  return null;
-}
 
 /** Builds the conversion plan of an explicit projection for the given keys. */
 function buildSelectRowsPlan(
@@ -825,6 +849,17 @@ export class SelectQuery<
             : Record<never, never>)
       >)[],
 > extends QueryPromise<TReturn> {
+  /** Marks a select query for scalar-expression normalization. */
+  readonly $isSelectQuery = true;
+
+  /** Phantom prepare flag used by scalar-expression operand checks. */
+  declare readonly $prepare: TPrepare;
+
+  /** Phantom scalar value, including the NULL a scalar subquery may return. */
+  declare readonly $scalarValue: TSelects extends Record<string, unknown>
+    ? InferSelectRow<TSelects>[keyof TSelects] | null
+    : unknown;
+
   readonly #table: TableWithColumns<TTSchema, TTName, TColumns>;
   readonly #$select: TSelects;
   readonly #$distinctOn: StdTableColumn[] | undefined;
@@ -1281,7 +1316,7 @@ export class SelectQuery<
                   }
                 }
               }
-            } else if (!(item instanceof SubquerySqlFn)) {
+            } else if (!(item instanceof SubqueryOwnedSqlFn)) {
               nonAggItems.push(item);
             }
           }

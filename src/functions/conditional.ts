@@ -15,6 +15,13 @@ import {
   restoreOperandValue,
   SqlFn,
 } from "./index";
+import {
+  type NormalizedScalar,
+  normalizeScalar,
+  normalizeScalars,
+  type ScalarArg,
+  type ScalarQueryLike,
+} from "./subquery";
 
 /**
  * Union of every valid operand for `coalesce` and `nullif`:
@@ -23,6 +30,7 @@ import {
 export type CoalesceOperand =
   | AnyColumn
   | AnySqlFn
+  | ScalarQueryLike
   | Sql
   | AnyArg
   | string
@@ -33,6 +41,14 @@ export type CoalesceOperand =
   | readonly unknown[]
   | Record<string, unknown>
   | null;
+
+type NormalizedOperands<TExprs extends readonly unknown[]> = {
+  [K in keyof TExprs]: NormalizedScalar<TExprs[K]>;
+};
+
+type ValidOperands<TExprs extends readonly unknown[]> = {
+  [K in keyof TExprs]: ScalarArg<TExprs[K]>;
+};
 
 /**
  * Resolves the TypeScript return type of `coalesce(...)`:
@@ -130,9 +146,14 @@ export class CoalesceFn<
 export function coalesce<
   TExprs extends readonly [CoalesceOperand, ...CoalesceOperand[]],
 >(
-  ...exprs: TExprs
-): CoalesceFn<TExprs, CoalesceReturn<TExprs>, HasArgInTuple<TExprs>> {
-  return new CoalesceFn(exprs);
+  ...exprs: TExprs & ValidOperands<TExprs>
+): CoalesceFn<
+  NormalizedOperands<TExprs>,
+  CoalesceReturn<NormalizedOperands<TExprs>>,
+  HasArgInTuple<NormalizedOperands<TExprs>>
+> {
+  const normalized = normalizeScalars(exprs) as NormalizedOperands<TExprs>;
+  return new CoalesceFn(normalized);
 }
 
 // ============================================================================
@@ -195,15 +216,21 @@ export function nullif<
   TExpr extends CoalesceOperand,
   TVal extends CoalesceOperand,
 >(
-  expr: TExpr,
-  val: TVal,
+  expr: ScalarArg<TExpr>,
+  val: ScalarArg<TVal>,
 ): NullIfFn<
-  TExpr,
-  TVal,
-  InferValueType<TExpr> | null,
-  Or<Or<IsArg<TExpr>, HasArg<TExpr>>, Or<IsArg<TVal>, HasArg<TVal>>>
+  NormalizedScalar<TExpr>,
+  NormalizedScalar<TVal>,
+  InferValueType<NormalizedScalar<TExpr>> | null,
+  Or<
+    Or<IsArg<TExpr>, HasArg<NormalizedScalar<TExpr>>>,
+    Or<IsArg<TVal>, HasArg<NormalizedScalar<TVal>>>
+  >
 > {
-  return new NullIfFn(expr, val);
+  return new NullIfFn(
+    normalizeScalar(expr) as NormalizedScalar<TExpr>,
+    normalizeScalar(val) as NormalizedScalar<TVal>,
+  );
 }
 
 // ============================================================================
@@ -271,9 +298,14 @@ export class GreatestFn<
 export function greatest<
   TExprs extends readonly [CoalesceOperand, ...CoalesceOperand[]],
 >(
-  ...exprs: TExprs
-): GreatestFn<TExprs, CoalesceReturn<TExprs>, HasArgInTuple<TExprs>> {
-  return new GreatestFn(exprs);
+  ...exprs: TExprs & ValidOperands<TExprs>
+): GreatestFn<
+  NormalizedOperands<TExprs>,
+  CoalesceReturn<NormalizedOperands<TExprs>>,
+  HasArgInTuple<NormalizedOperands<TExprs>>
+> {
+  const normalized = normalizeScalars(exprs) as NormalizedOperands<TExprs>;
+  return new GreatestFn(normalized);
 }
 
 // ============================================================================
@@ -341,7 +373,12 @@ export class LeastFn<
 export function least<
   TExprs extends readonly [CoalesceOperand, ...CoalesceOperand[]],
 >(
-  ...exprs: TExprs
-): LeastFn<TExprs, CoalesceReturn<TExprs>, HasArgInTuple<TExprs>> {
-  return new LeastFn(exprs);
+  ...exprs: TExprs & ValidOperands<TExprs>
+): LeastFn<
+  NormalizedOperands<TExprs>,
+  CoalesceReturn<NormalizedOperands<TExprs>>,
+  HasArgInTuple<NormalizedOperands<TExprs>>
+> {
+  const normalized = normalizeScalars(exprs) as NormalizedOperands<TExprs>;
+  return new LeastFn(normalized);
 }

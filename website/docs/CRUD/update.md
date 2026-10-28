@@ -237,8 +237,31 @@ await db
   .where(eq(Users.id, 1n));
 ```
 
+### Scalar Subqueries
+
+A single-column `SelectQuery` can be assigned directly. The value is typed `T | null`, so use `coalesce(...)` for non-null columns:
+
+```typescript
+import { coalesce, count, eq } from "durcno";
+
+await db
+  .update(Users)
+  .set({
+    score: coalesce(
+      db
+        .from(Posts)
+        .select(() => ({ total: count("*") }))
+        .where(() => eq(Posts.userId, Users.id)),
+      0,
+    ),
+  })
+  .where(eq(Users.id, 1n));
+```
+
+The subquery must select exactly one column. An aggregate inside the subquery is scoped to that subquery and is allowed; a bare aggregate in `.set()` remains rejected.
+
 :::warning
-**No Aggregate Functions** — Aggregate functions (such as `count()`, `sum()`, or `avg()`) are not allowed in `UPDATE SET` and will produce a TypeScript compilation error.
+**No Aggregate Functions** — Aggregate functions (such as `count()`, `sum()`, or `avg()`) are not allowed directly in `UPDATE SET` and will produce a TypeScript compilation error. Wrapping the aggregate in a scalar subquery is allowed.
 :::
 
 ## Bulk per-row Updates (`UPDATE ... FROM`)

@@ -2,7 +2,12 @@ import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
 import type { FilterExpression } from "../filters/index";
-import { type NonAggregateSqlFn, SqlFn } from "../functions/index";
+import { type NonAggregateSqlFn, SqlFn, setOwn } from "../functions/index";
+import {
+  isSelectQuery,
+  type ScalarQueryOf,
+  ScalarSubqueryFn,
+} from "../functions/subquery";
 import { Sql } from "../sql";
 import type {
   AnyColumn,
@@ -90,6 +95,10 @@ export type UpdateableItem<
       Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>,
       TPrepare extends true ? boolean : false
     >
+  | ScalarQueryOf<
+      Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>,
+      TPrepare
+    >
   | Sql;
 
 /**
@@ -112,6 +121,20 @@ export type UpdateSetValues<
   TPrepare extends boolean = false,
   TFroms extends readonly unknown[] = readonly [],
 > = UpdateValues<TTableWC, TPrepare, TFroms>;
+
+/** Wraps scalar select queries in an update payload. */
+function normalizeUpdateValues<TValues>(values: TValues): TValues {
+  const record = values as Record<string, unknown>;
+  let normalized: Record<string, unknown> | null = null;
+  for (const key of Object.keys(record)) {
+    const value = record[key];
+    if (isSelectQuery(value)) {
+      if (normalized === null) normalized = { ...record };
+      setOwn(normalized, key, new ScalarSubqueryFn(value));
+    }
+  }
+  return (normalized ?? values) as TValues;
+}
 
 /**
  * Columns carrying a `$updateFn`, resolved once per table.
@@ -195,7 +218,7 @@ export class UpdateBuilder<
   ) {
     return new UpdateQuery(
       this.#table,
-      values,
+      normalizeUpdateValues(values) as TValues,
       undefined,
       undefined,
       this.#executor,

@@ -3,15 +3,19 @@ import path from "node:path";
 import type Docker from "dockerode";
 import {
   type $Client,
+  add,
   and,
   asc,
   caseWhen,
+  coalesce,
   count,
   database,
   defineConfig,
   eq,
   exists,
+  gt,
   isIn,
+  jsonBuildObject,
   notExists,
   notIn,
   prepare,
@@ -613,6 +617,324 @@ describe("Subquery Functions (exists, notExists, isIn, notIn)", () => {
       const rows = await selectPre.run(db, { id1: u1.id, id2: u3.id });
       expect(rows).toHaveLength(2);
       expect(rows.map((r) => r.username)).toEqual(["prep-1", "prep-3"]);
+    });
+  });
+  // ==========================================================================
+  // Scalar subqueries
+  // ==========================================================================
+  describe("scalar subqueries", () => {
+    it("should project correlated aggregate and row subqueries", async () => {
+      const [alice, bob] = await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "scalar-alice" }),
+          createTestUser({ username: "scalar-bob" }),
+        ])
+        .returning("*");
+
+      await db.insertInto(schema.Posts).values([
+        { userId: alice.id, title: "First", slug: "scalar-first" },
+        { userId: alice.id, title: "Second", slug: "scalar-second" },
+      ]);
+
+      const rows = await db
+        .from(schema.Users)
+        .select(() => ({
+          id: schema.Users.id,
+          postCount: db
+            .from(schema.Posts)
+            .select(() => ({ total: count("*") }))
+            .where(() => eq(schema.Posts.userId, schema.Users.id)),
+          firstTitle: db
+            .from(schema.Posts)
+            .select(() => ({ title: schema.Posts.title }))
+            .where(() => eq(schema.Posts.userId, schema.Users.id))
+            .orderBy(() => asc(schema.Posts.id))
+            .limit(1),
+        }))
+        .orderBy(() => asc(schema.Users.id));
+
+      const aliceRow = rows.find((row) => row.id === alice.id);
+      const bobRow = rows.find((row) => row.id === bob.id);
+
+      expect(aliceRow?.postCount).toBe(2);
+      expect(aliceRow?.firstTitle).toBe("First");
+      expect(bobRow?.postCount).toBe(0);
+      expect(bobRow?.firstTitle).toBeNull();
+    });
+
+    it("should convert bigint, Date and JSON scalar subqueries", async () => {
+      const [alice] = await db
+        .insertInto(schema.Users)
+        .values(
+          createTestUser({
+            username: "scalar-types",
+            meta: { views: 3, likes: 5 },
+          }),
+        )
+        .returning("*");
+
+      const [post] = await db
+        .insertInto(schema.Posts)
+        .values({
+          userId: alice.id,
+          title: "Typed",
+          slug: "scalar-typed",
+        })
+        .returning("*");
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          postId: db
+            .from(schema.Posts)
+            .select(() => ({ id: schema.Posts.id }))
+            .where(() => eq(schema.Posts.userId, schema.Users.id))
+            .limit(1),
+          postCreatedAt: db
+            .from(schema.Posts)
+            .select(() => ({ createdAt: schema.Posts.createdAt }))
+            .where(() => eq(schema.Posts.userId, schema.Users.id))
+            .limit(1),
+          meta: db
+            .from(schema.Users)
+            .select(() => ({ meta: schema.Users.meta }))
+            .where(() => eq(schema.Users.id, alice.id))
+            .limit(1),
+        }))
+        .where(() => eq(schema.Users.id, alice.id));
+
+      expect(row.postId).toBe(post.id);
+      expect(typeof row.postId).toBe("bigint");
+      expect(row.postCreatedAt).toBeInstanceOf(Date);
+      expect(row.meta).toEqual({ views: 3, likes: 5 });
+    });
+
+    it("should assign a scalar subquery in .set()", async () => {
+      const [alice] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "scalar-set" }))
+        .returning("*");
+
+      await db.insertInto(schema.Posts).values({
+        userId: alice.id,
+        title: "Assigned",
+        slug: "scalar-assigned",
+        viewCount: 7,
+      });
+
+      const [updated] = await db
+        .update(schema.Users)
+        .set({
+          bio: db
+            .from(schema.Posts)
+            .select(() => ({ title: schema.Posts.title }))
+            .where(() => eq(schema.Posts.userId, schema.Users.id))
+            .orderBy(() => asc(schema.Posts.id))
+            .limit(1),
+          score: coalesce(
+            db
+              .from(schema.Posts)
+              .select(() => ({ total: count("*") }))
+              .where(() => eq(schema.Posts.userId, schema.Users.id)),
+            0,
+          ),
+        })
+        .where(eq(schema.Users.username, "scalar-set"))
+        .returning("*");
+
+      expect(updated.bio).toBe("Assigned");
+      expect(updated.score).toBe(1);
+    });
+
+    it("should compose scalar subqueries in arithmetic, case and comparisons", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "scalar-compose-a", score: 10 }),
+          createTestUser({ username: "scalar-compose-b", score: 3 }),
+        ])
+        .returning("*");
+
+      const rows = await db
+        .from(schema.Users)
+        .select(() => ({
+          username: schema.Users.username,
+          bumped: add(
+            db
+              .from(schema.Users)
+              .select(() => ({ score: schema.Users.score }))
+              .where(() => eq(schema.Users.username, "scalar-compose-b"))
+              .limit(1),
+            5,
+          ),
+          label: caseWhen(
+            eq(schema.Users.username, "scalar-compose-a"),
+            db
+              .from(schema.Users)
+              .select(() => ({ username: schema.Users.username }))
+              .where(() => eq(schema.Users.username, "scalar-compose-b"))
+              .limit(1),
+          ).else("other"),
+        }))
+        .where(() =>
+          gt(
+            schema.Users.score,
+            db
+              .from(schema.Users)
+              .select(() => ({ score: schema.Users.score }))
+              .where(() => eq(schema.Users.username, "scalar-compose-b"))
+              .limit(1),
+          ),
+        );
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0].username).toBe("scalar-compose-a");
+      expect(rows[0].bumped).toBe(8);
+      expect(rows[0].label).toBe("scalar-compose-b");
+    });
+
+    it("should bind prepared arguments inside a scalar subquery", async () => {
+      const [alice] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "scalar-prepared" }))
+        .returning("*");
+
+      await db.insertInto(schema.Posts).values({
+        userId: alice.id,
+        title: "Prepared Post",
+        slug: "scalar-prepared-post",
+      });
+
+      const prepared = prepare({ title: schema.Posts.title.arg() }, (args) =>
+        db
+          .prepare()
+          .from(schema.Users)
+          .select(() => ({
+            id: schema.Users.id,
+            matched: db
+              .prepare()
+              .from(schema.Posts)
+              .select(() => ({ id: schema.Posts.id }))
+              .where(() => eq(schema.Posts.title, args.title))
+              .limit(1),
+          })),
+      );
+
+      const rows = await prepared.run(db, { title: "Prepared Post" });
+      expect(rows).toHaveLength(1);
+      expect(rows[0].matched).not.toBeNull();
+    });
+
+    it("should support raw Sql scalar subqueries", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "scalar-raw" }));
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        value: sql<number>`(SELECT 42)`,
+      }));
+
+      expect(row.value).toBe(42);
+    });
+
+    it("should support scalar queries in JSON builders, ORDER BY and INSERT", async () => {
+      const [alice] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "scalar-extra" }))
+        .returning("*");
+
+      await db.insertInto(schema.Posts).values({
+        userId: alice.id,
+        title: "Extra",
+        slug: "scalar-extra-post",
+      });
+
+      const [row] = await db
+        .from(schema.Users)
+        .select(() => ({
+          username: schema.Users.username,
+          payload: jsonBuildObject({
+            postTotal: db
+              .from(schema.Posts)
+              .select(() => ({ total: count("*") })),
+          }),
+        }))
+        .orderBy(() =>
+          asc(
+            db
+              .from(schema.Posts)
+              .select(() => ({ id: schema.Posts.id }))
+              .limit(1),
+          ),
+        );
+
+      expect(row.payload).toEqual({ postTotal: 1 });
+
+      await db.insertInto(schema.Products).values({
+        sku: "scalar-insert-sku",
+        name: "Scalar Insert",
+        description: db
+          .from(schema.Posts)
+          .select(() => ({ title: schema.Posts.title }))
+          .limit(1),
+        price: coalesce(
+          db
+            .from(schema.Posts)
+            .select(() => ({ id: schema.Posts.id }))
+            .limit(1),
+          0n,
+        ),
+        createdDate: new Date("2026-01-01"),
+      });
+
+      const [product] = await db
+        .from(schema.Products)
+        .select("*")
+        .where(() => eq(schema.Products.sku, "scalar-insert-sku"));
+
+      expect(product.price).toBe(1n);
+      expect(product.description).toBe("Extra");
+    });
+    it("should reject a multi-column scalar query at build time", () => {
+      expect(() =>
+        db.from(schema.Users).select(() => ({
+          bad: db.from(schema.Users).select(() => ({
+            id: schema.Users.id,
+            username: schema.Users.username,
+          })) as never,
+        })),
+      ).toThrow(/exactly one column/);
+    });
+
+    it("should exclude scalar subqueries from automatic GROUP BY", async () => {
+      const [groupA] = await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "group-a", type: "admin" }),
+          createTestUser({ username: "group-b", type: "user" }),
+        ])
+        .returning("*");
+
+      await db.insertInto(schema.Posts).values({
+        userId: groupA.id,
+        title: "Grouped",
+        slug: "scalar-grouped",
+      });
+
+      const rows = await db
+        .from(schema.Users)
+        .select(() => ({
+          type: schema.Users.type,
+          total: count("*"),
+          postTotal: db
+            .from(schema.Posts)
+            .select(() => ({ total: count("*") })),
+        }))
+        .orderBy(() => asc(schema.Users.type));
+
+      expect(rows).toHaveLength(2);
+      expect(rows[0].postTotal).toBe(1);
     });
   });
 });

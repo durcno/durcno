@@ -258,8 +258,29 @@ await db.insertInto(Users).values({
 :::
 
 :::warning
-**No Aggregate Functions** — Aggregate functions (such as `count()`, `sum()`, or `avg()`) are not allowed in `INSERT VALUES` and will produce a TypeScript compilation error.
+**No Aggregate Functions** — Aggregate functions (such as `count()`, `sum()`, or `avg()`) are not allowed directly in `INSERT VALUES` and will produce a TypeScript compilation error. Aggregates inside a scalar subquery are scoped to that subquery and are allowed.
 :::
+
+### Scalar Subqueries
+
+A single-column `SelectQuery` can be used as a value. The result is typed `T | null`, so wrap non-null columns with `coalesce(...)`:
+
+```typescript
+import { coalesce, count } from "durcno";
+
+await db.insertInto(Users).values({
+  username: "john_doe",
+  type: "user",
+  bio: db
+    .from(Posts)
+    .select(() => ({ title: Posts.title }))
+    .limit(1),
+  score: coalesce(
+    db.from(Posts).select(() => ({ total: count("*") })),
+    0,
+  ),
+});
+```
 
 ## Using SQL Expressions
 

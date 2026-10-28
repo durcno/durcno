@@ -686,9 +686,9 @@ const result = await db.from(Users).select(() => ({
 
 ## Subquery Functions
 
-Subquery functions implement PostgreSQL's subquery expressions ([Section 9.24](https://www.postgresql.org/docs/current/functions-subquery.html)). They evaluate subquery returns or membership checks and yield a typed boolean value (`true` or `false`).
+Subquery functions cover PostgreSQL's subquery expressions ([Section 9.24](https://www.postgresql.org/docs/current/functions-subquery.html)). Predicate forms evaluate subquery returns or membership checks and yield a typed boolean value (`true` or `false`). Scalar subqueries are written as ordinary single-column queries.
 
-All subquery functions can be used in:
+Predicate subquery functions can be used in:
 
 - `.select(...)` projections as boolean columns
 - `.where(...)` and `.having(...)` clauses to filter rows
@@ -788,6 +788,55 @@ When an empty array is passed:
 
 - `isIn(col, [])` automatically evaluates to `FALSE` in SQL.
 - `notIn(col, [])` automatically evaluates to `TRUE` in SQL.
+
+### Scalar Subqueries
+
+A single-column `SelectQuery` can be used directly wherever a scalar expression is accepted. Durcno wraps it in parentheses and types the result as `T | null`, because PostgreSQL returns `NULL` when a scalar subquery produces no row:
+
+```typescript
+import { coalesce, count, eq } from "durcno";
+
+// In a projection
+const users = await db.from(Users).select(() => ({
+  id: Users.id,
+  postCount: db
+    .from(Posts)
+    .select(() => ({ total: count("*") }))
+    .where(() => eq(Posts.userId, Users.id)),
+  firstPostTitle: db
+    .from(Posts)
+    .select(() => ({ title: Posts.title }))
+    .where(() => eq(Posts.userId, Users.id))
+    .orderBy(() => asc(Posts.id))
+    .limit(1),
+}));
+
+// In an assignment
+await db
+  .update(Users)
+  .set({
+    score: coalesce(
+      db
+        .from(Posts)
+        .select(() => ({ total: count("*") }))
+        .where(() => eq(Posts.userId, Users.id)),
+      0,
+    ),
+  })
+  .where(eq(Users.id, 1n));
+```
+
+The same rule applies inside scalar functions such as `coalesce`, `caseWhen`, arithmetic functions, JSON builders, and comparison filters.
+
+:::note
+
+- The subquery must select **exactly one column**. Multi-column queries are rejected at compile time when the projection is statically known, and throw when the query is built otherwise.
+- A row subquery should use `.limit(1)` unless it is an aggregate; PostgreSQL errors when a scalar subquery returns more than one row.
+- An aggregate **inside** the subquery is scoped to that subquery and does not turn the outer expression into an aggregate.
+- Use `coalesce(...)` when assigning to a non-null column.
+- For scalar positions that do not accept a `SelectQuery` directly, build the expression with `sql` and wrap the subquery in parentheses.
+
+:::
 
 ---
 

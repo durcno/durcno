@@ -12,9 +12,17 @@ import {
   SqlFn,
   type StrictFnReturn,
 } from "./index";
+import {
+  type NormalizedTypedOperand,
+  normalizeTypedScalar,
+  type PgTypedOperand,
+  type ScalarQueryLike,
+  type TypedScalarArg,
+} from "./subquery";
 
 export type NumericExpr =
-  | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "numeric" | "float" } })
+  | PgTypedOperand<"numeric" | "float">
+  | ScalarQueryLike
   | number
   | bigint
   | Arg<number>
@@ -22,6 +30,16 @@ export type NumericExpr =
   | Sql<number>
   | Sql<bigint>
   | null;
+
+/** A numeric expression after scalar-query normalization. */
+type NormalizedNumeric<T> = NormalizedTypedOperand<T, "numeric" | "float">;
+
+/** Normalizes a numeric operand and narrows it to the numeric expression branch. */
+function normalizeNumeric<T extends NumericExpr>(
+  expr: TypedScalarArg<T, "numeric" | "float">,
+): NormalizedNumeric<T> {
+  return normalizeTypedScalar(expr);
+}
 
 function appendNumericExpr(
   query: Query,
@@ -79,9 +97,12 @@ export class AbsFn<
 
 /** Returns the absolute value of a numeric expression. */
 export function abs<TExpr extends NumericExpr>(
-  expr: TExpr,
-): AbsFn<TExpr, StrictFnReturn<[TExpr], number>> {
-  return new AbsFn(expr);
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
+): AbsFn<
+  NormalizedNumeric<TExpr>,
+  StrictFnReturn<[NormalizedNumeric<TExpr>], number>
+> {
+  return new AbsFn(normalizeNumeric(expr));
 }
 
 // ============================================================================
@@ -136,8 +157,15 @@ export class ModFn<
 export function mod<
   TExpr extends NumericExpr,
   TN extends number | bigint | Arg<number> | Arg<bigint> | null,
->(expr: TExpr, n: TN): ModFn<TExpr, TN, StrictFnReturn<[TExpr, TN], number>> {
-  return new ModFn(expr, n);
+>(
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
+  n: TN,
+): ModFn<
+  NormalizedNumeric<TExpr>,
+  TN,
+  StrictFnReturn<[NormalizedNumeric<TExpr>, TN], number>
+> {
+  return new ModFn(normalizeNumeric(expr), n);
 }
 
 // ============================================================================
@@ -194,29 +222,37 @@ export class RoundFn<
 
 /** Rounds a numeric expression to the nearest integer, or to `decimals` decimal places. */
 export function round<TExpr extends NumericExpr>(
-  expr: TExpr,
-): RoundFn<TExpr, undefined, StrictFnReturn<[TExpr], number>>;
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
+): RoundFn<
+  NormalizedNumeric<TExpr>,
+  undefined,
+  StrictFnReturn<[NormalizedNumeric<TExpr>], number>
+>;
 export function round<
   TExpr extends NumericExpr,
   TDecimals extends number | Arg<number> | null,
 >(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
   decimals: TDecimals,
-): RoundFn<TExpr, TDecimals, StrictFnReturn<[TExpr, TDecimals], number>>;
+): RoundFn<
+  NormalizedNumeric<TExpr>,
+  TDecimals,
+  StrictFnReturn<[NormalizedNumeric<TExpr>, TDecimals], number>
+>;
 export function round<
   TExpr extends NumericExpr,
   TDecimals extends number | Arg<number> | null | undefined = undefined,
 >(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
   decimals?: TDecimals,
 ): RoundFn<
-  TExpr,
+  NormalizedNumeric<TExpr>,
   TDecimals,
   TDecimals extends undefined
-    ? StrictFnReturn<[TExpr], number>
-    : StrictFnReturn<[TExpr, TDecimals], number>
+    ? StrictFnReturn<[NormalizedNumeric<TExpr>], number>
+    : StrictFnReturn<[NormalizedNumeric<TExpr>, TDecimals], number>
 > {
-  return new RoundFn(expr, decimals);
+  return new RoundFn(normalizeNumeric(expr), decimals);
 }
 
 // ============================================================================
@@ -257,9 +293,12 @@ export class CeilFn<
 
 /** Returns the smallest integer greater than or equal to the numeric expression. */
 export function ceil<TExpr extends NumericExpr>(
-  expr: TExpr,
-): CeilFn<TExpr, StrictFnReturn<[TExpr], number>> {
-  return new CeilFn(expr);
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
+): CeilFn<
+  NormalizedNumeric<TExpr>,
+  StrictFnReturn<[NormalizedNumeric<TExpr>], number>
+> {
+  return new CeilFn(normalizeNumeric(expr));
 }
 
 // ============================================================================
@@ -300,9 +339,12 @@ export class FloorFn<
 
 /** Returns the largest integer less than or equal to the numeric expression. */
 export function floor<TExpr extends NumericExpr>(
-  expr: TExpr,
-): FloorFn<TExpr, StrictFnReturn<[TExpr], number>> {
-  return new FloorFn(expr);
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
+): FloorFn<
+  NormalizedNumeric<TExpr>,
+  StrictFnReturn<[NormalizedNumeric<TExpr>], number>
+> {
+  return new FloorFn(normalizeNumeric(expr));
 }
 
 // ============================================================================
@@ -359,29 +401,37 @@ export class TruncFn<
 
 /** Truncates a numeric expression to the nearest integer, or to `decimals` decimal places. */
 export function trunc<TExpr extends NumericExpr>(
-  expr: TExpr,
-): TruncFn<TExpr, undefined, StrictFnReturn<[TExpr], number>>;
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
+): TruncFn<
+  NormalizedNumeric<TExpr>,
+  undefined,
+  StrictFnReturn<[NormalizedNumeric<TExpr>], number>
+>;
 export function trunc<
   TExpr extends NumericExpr,
   TDecimals extends number | Arg<number> | null,
 >(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
   decimals: TDecimals,
-): TruncFn<TExpr, TDecimals, StrictFnReturn<[TExpr, TDecimals], number>>;
+): TruncFn<
+  NormalizedNumeric<TExpr>,
+  TDecimals,
+  StrictFnReturn<[NormalizedNumeric<TExpr>, TDecimals], number>
+>;
 export function trunc<
   TExpr extends NumericExpr,
   TDecimals extends number | Arg<number> | null | undefined = undefined,
 >(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
   decimals?: TDecimals,
 ): TruncFn<
-  TExpr,
+  NormalizedNumeric<TExpr>,
   TDecimals,
   TDecimals extends undefined
-    ? StrictFnReturn<[TExpr], number>
-    : StrictFnReturn<[TExpr, TDecimals], number>
+    ? StrictFnReturn<[NormalizedNumeric<TExpr>], number>
+    : StrictFnReturn<[NormalizedNumeric<TExpr>, TDecimals], number>
 > {
-  return new TruncFn(expr, decimals);
+  return new TruncFn(normalizeNumeric(expr), decimals);
 }
 
 // ============================================================================
@@ -437,8 +487,12 @@ export function power<
   TExpr extends NumericExpr,
   TN extends number | bigint | Arg<number> | Arg<bigint> | null,
 >(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "numeric" | "float">,
   exponent: TN,
-): PowerFn<TExpr, TN, StrictFnReturn<[TExpr, TN], number>> {
-  return new PowerFn(expr, exponent);
+): PowerFn<
+  NormalizedNumeric<TExpr>,
+  TN,
+  StrictFnReturn<[NormalizedNumeric<TExpr>, TN], number>
+> {
+  return new PowerFn(normalizeNumeric(expr), exponent);
 }

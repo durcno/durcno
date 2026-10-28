@@ -12,13 +12,21 @@ import {
   SqlFn,
   type StrictFnReturn,
 } from "./index";
+import {
+  type NormalizedTypedOperand,
+  normalizeTypedScalar,
+  type PgTypedOperand,
+  type ScalarQueryLike,
+  type TypedScalarArg,
+} from "./subquery";
 
 /**
  * Union of every valid operand for arithmetic operators:
  * a numeric column or SqlFn, a plain number/bigint literal, an `Arg`, or a typed `Sql`.
  */
 export type NumericOperand =
-  | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "numeric" | "float" } })
+  | PgTypedOperand<"numeric" | "float">
+  | ScalarQueryLike
   | number
   | bigint
   | Arg<number>
@@ -26,6 +34,16 @@ export type NumericOperand =
   | Sql<number>
   | Sql<bigint>
   | null;
+
+/** A numeric operand after scalar-query normalization. */
+type NormalizedNumeric<T> = NormalizedTypedOperand<T, "numeric" | "float">;
+
+/** Normalizes an operand and narrows it to the numeric expression branch. */
+function normalizeNumeric<T extends NumericOperand>(
+  operand: TypedScalarArg<T, "numeric" | "float">,
+): NormalizedNumeric<T> {
+  return normalizeTypedScalar(operand);
+}
 
 /**
  * Computes the `THasArg` slot for a two-operand arithmetic expression.
@@ -108,10 +126,14 @@ export function add<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
 >(
-  left: TLeft,
-  right: TRight,
-): AddFn<TLeft, TRight, StrictFnReturn<[TLeft, TRight], number>> {
-  return new AddFn(left, right);
+  left: TypedScalarArg<TLeft, "numeric" | "float">,
+  right: TypedScalarArg<TRight, "numeric" | "float">,
+): AddFn<
+  NormalizedNumeric<TLeft>,
+  NormalizedNumeric<TRight>,
+  StrictFnReturn<[NormalizedNumeric<TLeft>, NormalizedNumeric<TRight>], number>
+> {
+  return new AddFn(normalizeNumeric(left), normalizeNumeric(right));
 }
 
 // ============================================================================
@@ -164,10 +186,14 @@ export function sub<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
 >(
-  left: TLeft,
-  right: TRight,
-): SubFn<TLeft, TRight, StrictFnReturn<[TLeft, TRight], number>> {
-  return new SubFn(left, right);
+  left: TypedScalarArg<TLeft, "numeric" | "float">,
+  right: TypedScalarArg<TRight, "numeric" | "float">,
+): SubFn<
+  NormalizedNumeric<TLeft>,
+  NormalizedNumeric<TRight>,
+  StrictFnReturn<[NormalizedNumeric<TLeft>, NormalizedNumeric<TRight>], number>
+> {
+  return new SubFn(normalizeNumeric(left), normalizeNumeric(right));
 }
 
 // ============================================================================
@@ -220,10 +246,14 @@ export function mul<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
 >(
-  left: TLeft,
-  right: TRight,
-): MulFn<TLeft, TRight, StrictFnReturn<[TLeft, TRight], number>> {
-  return new MulFn(left, right);
+  left: TypedScalarArg<TLeft, "numeric" | "float">,
+  right: TypedScalarArg<TRight, "numeric" | "float">,
+): MulFn<
+  NormalizedNumeric<TLeft>,
+  NormalizedNumeric<TRight>,
+  StrictFnReturn<[NormalizedNumeric<TLeft>, NormalizedNumeric<TRight>], number>
+> {
+  return new MulFn(normalizeNumeric(left), normalizeNumeric(right));
 }
 
 // ============================================================================
@@ -276,8 +306,12 @@ export function div<
   TLeft extends NumericOperand,
   TRight extends NumericOperand,
 >(
-  left: TLeft,
-  right: TRight,
-): DivFn<TLeft, TRight, StrictFnReturn<[TLeft, TRight], number>> {
-  return new DivFn(left, right);
+  left: TypedScalarArg<TLeft, "numeric" | "float">,
+  right: TypedScalarArg<TRight, "numeric" | "float">,
+): DivFn<
+  NormalizedNumeric<TLeft>,
+  NormalizedNumeric<TRight>,
+  StrictFnReturn<[NormalizedNumeric<TLeft>, NormalizedNumeric<TRight>], number>
+> {
+  return new DivFn(normalizeNumeric(left), normalizeNumeric(right));
 }

@@ -1,5 +1,11 @@
 import { isTCol } from "../entity";
 import type { AnySqlFn, NonAggregateSqlFn, ScopedSqlFn } from "../functions";
+import {
+  type NormalizedScalar,
+  normalizeScalar,
+  type ScalarArg,
+  type ScalarQueryLike,
+} from "../functions/subquery";
 import { escIdentifier } from "../sql";
 import type { AnyTableWithColumns, TableAnyColumn } from "../table";
 import type { Valueof } from "../types";
@@ -110,11 +116,14 @@ export function asc<TTableColumn extends TableAnyColumn | string>(
   field: TTableColumn,
 ): Order<TTableColumn, "ASC">;
 export function asc<TSqlFn extends AnySqlFn>(fn: TSqlFn): OrderSqlFn<TSqlFn>;
-export function asc(fieldOrFn: TableAnyColumn | AnySqlFn) {
+export function asc<TQuery extends ScalarQueryLike>(
+  query: ScalarArg<TQuery>,
+): OrderSqlFn<NormalizedScalar<TQuery> & NonAggregateSqlFn>;
+export function asc(fieldOrFn: TableAnyColumn | AnySqlFn | ScalarQueryLike) {
   if (typeof fieldOrFn === "string" || isTCol(fieldOrFn)) {
     return new Order(fieldOrFn, "ASC");
   }
-  return new OrderSqlFn(fieldOrFn as AnySqlFn, "ASC");
+  return new OrderSqlFn(normalizeScalar(fieldOrFn) as AnySqlFn, "ASC");
 }
 
 /**
@@ -130,9 +139,12 @@ export function desc<TTableColumn extends TableAnyColumn | string>(
   field: TTableColumn,
 ): Order<TTableColumn, "DESC">;
 export function desc<TSqlFn extends AnySqlFn>(fn: TSqlFn): OrderSqlFn<TSqlFn>;
-export function desc(fieldOrFn: TableAnyColumn | AnySqlFn) {
+export function desc<TQuery extends ScalarQueryLike>(
+  query: ScalarArg<TQuery>,
+): OrderSqlFn<NormalizedScalar<TQuery> & NonAggregateSqlFn>;
+export function desc(fieldOrFn: TableAnyColumn | AnySqlFn | ScalarQueryLike) {
   if (typeof fieldOrFn === "string" || isTCol(fieldOrFn)) {
     return new Order(fieldOrFn, "DESC");
   }
-  return new OrderSqlFn(fieldOrFn as AnySqlFn, "DESC");
+  return new OrderSqlFn(normalizeScalar(fieldOrFn) as AnySqlFn, "DESC");
 }

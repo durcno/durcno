@@ -2,7 +2,12 @@ import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
 import type { AnyFilterExpression, FilterExpression } from "../filters/index";
-import { type NonAggregateSqlFn, SqlFn } from "../functions/index";
+import { type NonAggregateSqlFn, SqlFn, setOwn } from "../functions/index";
+import {
+  isSelectQuery,
+  type ScalarQueryOf,
+  ScalarSubqueryFn,
+} from "../functions/subquery";
 import { Sql } from "../sql";
 import {
   type AnyColumn,
@@ -73,6 +78,10 @@ export type ConflictUpdateableItem<
       ConflictScopeColumns<TTableWC>,
       Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>,
       TPrepare extends true ? boolean : false
+    >
+  | ScalarQueryOf<
+      Exclude<TTableWC["_"]["columns"][ColName]["ValTypeUpdate"], undefined>,
+      TPrepare
     >
   | Sql;
 
@@ -174,7 +183,9 @@ export class ConflictBuilder<
     ? InsertQuery<TTableWC, TPrepare, TReturning>
     : never {
     const excluded = this.#buildExcludedTable();
-    const setValues = set({ excluded });
+    const setValues = normalizeInsertRow(
+      set({ excluded }) as Record<string, unknown>,
+    );
     return this.#factory({
       action: "update",
       columns: this.#columns,
@@ -215,6 +226,7 @@ export type InsertableItem<
       Exclude<TColumn["ValTypeInsert"], undefined>,
       TPrepare extends true ? boolean : false
     >
+  | ScalarQueryOf<Exclude<TColumn["ValTypeInsert"], undefined>, TPrepare>
   | Sql;
 
 /**
@@ -242,6 +254,26 @@ export type InsertValues<
  * Intermediate builder for constructing an `INSERT` statement.
  * Provides `.values()` to specify rows to be inserted.
  */
+/** Wraps scalar select queries in an insert row. */
+function normalizeInsertRow<T extends Record<string, unknown>>(row: T): T {
+  const out = { ...row } as Record<string, unknown>;
+  for (const key of Object.keys(out)) {
+    const value = out[key];
+    if (isSelectQuery(value)) setOwn(out, key, new ScalarSubqueryFn(value));
+  }
+  return out as T;
+}
+
+/** Wraps scalar select queries in one row or an array of rows. */
+function normalizeInsertRows<T>(values: T): T {
+  if (Array.isArray(values)) {
+    return values.map((row) =>
+      normalizeInsertRow(row as Record<string, unknown>),
+    ) as T;
+  }
+  return normalizeInsertRow(values as Record<string, unknown>) as T;
+}
+
 export class InsertBuilder<
   TTableWC extends AnyTableWithColumns,
   TPrepare extends boolean,
@@ -271,7 +303,7 @@ export class InsertBuilder<
   values(values: SelfOrArray<Prettify<InsertValues<TTableWC, TPrepare>>>) {
     return new InsertQuery(
       this.#table,
-      values,
+      normalizeInsertRows(values),
       undefined,
       this.#executor,
       this.#prepare,

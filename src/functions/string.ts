@@ -12,9 +12,21 @@ import {
   SqlFn,
   type StrictFnReturn,
 } from "./index";
+import {
+  type NormalizedOperand,
+  type NormalizedTypedOperand,
+  normalizeScalarFn,
+  normalizeScalars,
+  normalizeTypedScalar,
+  type PgTypedOperand,
+  type ScalarArg,
+  type ScalarQueryLike,
+  type TypedScalarArg,
+} from "./subquery";
 
 export type TextExpr =
-  | ((AnyScalarColumn | AnySqlFn) & { $: { PgType: "text" } })
+  | PgTypedOperand<"text">
+  | ScalarQueryLike
   | string
   | Arg<string>
   | Sql<string>
@@ -23,6 +35,7 @@ export type TextExpr =
 export type ConcatOperand =
   | AnyScalarColumn
   | AnySqlFn
+  | ScalarQueryLike
   | Sql
   | AnyArg
   | string
@@ -31,10 +44,42 @@ export type ConcatOperand =
   | boolean
   | null;
 
+/** A text operand after scalar-query normalization. */
+type NormalizedText<T> = NormalizedTypedOperand<T, "text">;
+
+/** A concat operand after scalar-query normalization. */
+type NormalizedConcatOperand<T> = NormalizedOperand<T, AnySqlFn>;
+
+/** A tuple of concat operands after scalar-query normalization. */
+type NormalizedConcatOperands<TExprs extends readonly ConcatOperand[]> = {
+  [K in keyof TExprs]: NormalizedConcatOperand<TExprs[K]>;
+};
+
 export type HasArgInTuple<TTuple extends readonly unknown[]> =
   TTuple extends readonly [infer Head, ...infer Tail]
     ? Or<Or<IsArg<Head>, HasArg<Head>>, HasArgInTuple<Tail>>
     : false;
+
+/** Normalizes a text operand and narrows it to the text expression branch. */
+function normalizeText<T extends TextExpr>(
+  expr: TypedScalarArg<T, "text">,
+): NormalizedText<T> {
+  return normalizeTypedScalar(expr);
+}
+
+/** Normalizes a concat operand. */
+function normalizeConcatOperand<T extends ConcatOperand>(
+  operand: ScalarArg<T>,
+): NormalizedConcatOperand<T> {
+  return normalizeScalarFn(operand);
+}
+
+/** Normalizes a concat operand tuple. */
+function normalizeConcatOperands<TExprs extends readonly ConcatOperand[]>(
+  exprs: TExprs,
+): NormalizedConcatOperands<TExprs> {
+  return normalizeScalars(exprs) as unknown as NormalizedConcatOperands<TExprs>;
+}
 
 function appendTextExpr(query: Query, expr: ConcatOperand, ctx?: QueryContext) {
   if (expr === null) {
@@ -92,9 +137,12 @@ export class LengthFn<
 
 /** Returns the number of characters in a string expression. */
 export function length<TExpr extends TextExpr>(
-  expr: TExpr,
-): LengthFn<TExpr, StrictFnReturn<[TExpr], number>> {
-  return new LengthFn(expr);
+  expr: TypedScalarArg<TExpr, "text">,
+): LengthFn<
+  NormalizedText<TExpr>,
+  StrictFnReturn<[NormalizedText<TExpr>], number>
+> {
+  return new LengthFn(normalizeText(expr));
 }
 
 // ============================================================================
@@ -135,9 +183,12 @@ export class LowerFn<
 
 /** Converts a string expression to lower case. */
 export function lower<TExpr extends TextExpr>(
-  expr: TExpr,
-): LowerFn<TExpr, StrictFnReturn<[TExpr], string>> {
-  return new LowerFn(expr);
+  expr: TypedScalarArg<TExpr, "text">,
+): LowerFn<
+  NormalizedText<TExpr>,
+  StrictFnReturn<[NormalizedText<TExpr>], string>
+> {
+  return new LowerFn(normalizeText(expr));
 }
 
 // ============================================================================
@@ -178,9 +229,12 @@ export class UpperFn<
 
 /** Converts a string expression to upper case. */
 export function upper<TExpr extends TextExpr>(
-  expr: TExpr,
-): UpperFn<TExpr, StrictFnReturn<[TExpr], string>> {
-  return new UpperFn(expr);
+  expr: TypedScalarArg<TExpr, "text">,
+): UpperFn<
+  NormalizedText<TExpr>,
+  StrictFnReturn<[NormalizedText<TExpr>], string>
+> {
+  return new UpperFn(normalizeText(expr));
 }
 
 // ============================================================================
@@ -221,9 +275,12 @@ export class TrimFn<
 
 /** Removes leading and trailing whitespace from a string expression. */
 export function trim<TExpr extends TextExpr>(
-  expr: TExpr,
-): TrimFn<TExpr, StrictFnReturn<[TExpr], string>> {
-  return new TrimFn(expr);
+  expr: TypedScalarArg<TExpr, "text">,
+): TrimFn<
+  NormalizedText<TExpr>,
+  StrictFnReturn<[NormalizedText<TExpr>], string>
+> {
+  return new TrimFn(normalizeText(expr));
 }
 
 // ============================================================================
@@ -279,26 +336,45 @@ export class LeftFn<
 
 /** Returns the first `n` characters of a string expression. */
 export function left<TExpr extends TextExpr>(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   n: number,
-): LeftFn<TExpr, number, StrictFnReturn<[TExpr, number], string>>;
+): LeftFn<
+  NormalizedText<TExpr>,
+  number,
+  StrictFnReturn<[NormalizedText<TExpr>, number], string>
+>;
 export function left<TExpr extends TextExpr>(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   n: Arg<number>,
-): LeftFn<TExpr, Arg<number>, StrictFnReturn<[TExpr, Arg<number>], string>>;
+): LeftFn<
+  NormalizedText<TExpr>,
+  Arg<number>,
+  StrictFnReturn<[NormalizedText<TExpr>, Arg<number>], string>
+>;
 export function left<TExpr extends TextExpr>(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   n: null,
-): LeftFn<TExpr, null, null>;
+): LeftFn<NormalizedText<TExpr>, null, null>;
 export function left<
   TExpr extends TextExpr,
   TN extends number | Arg<number> | null,
->(expr: TExpr, n: TN): LeftFn<TExpr, TN, StrictFnReturn<[TExpr, TN], string>>;
+>(
+  expr: TypedScalarArg<TExpr, "text">,
+  n: TN,
+): LeftFn<
+  NormalizedText<TExpr>,
+  TN,
+  StrictFnReturn<[NormalizedText<TExpr>, TN], string>
+>;
 export function left<TExpr extends TextExpr>(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   n: number | Arg<number> | null,
-): LeftFn<TExpr, typeof n, StrictFnReturn<[TExpr, typeof n], string>> {
-  return new LeftFn(expr, n);
+): LeftFn<
+  NormalizedText<TExpr>,
+  typeof n,
+  StrictFnReturn<[NormalizedText<TExpr>, typeof n], string>
+> {
+  return new LeftFn(normalizeText(expr), n);
 }
 
 // ============================================================================
@@ -354,26 +430,45 @@ export class RightFn<
 
 /** Returns the last `n` characters of a string expression. */
 export function right<TExpr extends TextExpr>(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   n: number,
-): RightFn<TExpr, number, StrictFnReturn<[TExpr, number], string>>;
+): RightFn<
+  NormalizedText<TExpr>,
+  number,
+  StrictFnReturn<[NormalizedText<TExpr>, number], string>
+>;
 export function right<TExpr extends TextExpr>(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   n: Arg<number>,
-): RightFn<TExpr, Arg<number>, StrictFnReturn<[TExpr, Arg<number>], string>>;
+): RightFn<
+  NormalizedText<TExpr>,
+  Arg<number>,
+  StrictFnReturn<[NormalizedText<TExpr>, Arg<number>], string>
+>;
 export function right<TExpr extends TextExpr>(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   n: null,
-): RightFn<TExpr, null, null>;
+): RightFn<NormalizedText<TExpr>, null, null>;
 export function right<
   TExpr extends TextExpr,
   TN extends number | Arg<number> | null,
->(expr: TExpr, n: TN): RightFn<TExpr, TN, StrictFnReturn<[TExpr, TN], string>>;
+>(
+  expr: TypedScalarArg<TExpr, "text">,
+  n: TN,
+): RightFn<
+  NormalizedText<TExpr>,
+  TN,
+  StrictFnReturn<[NormalizedText<TExpr>, TN], string>
+>;
 export function right<TExpr extends TextExpr>(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   n: number | Arg<number> | null,
-): RightFn<TExpr, typeof n, StrictFnReturn<[TExpr, typeof n], string>> {
-  return new RightFn(expr, n);
+): RightFn<
+  NormalizedText<TExpr>,
+  typeof n,
+  StrictFnReturn<[NormalizedText<TExpr>, typeof n], string>
+> {
+  return new RightFn(normalizeText(expr), n);
 }
 
 // ============================================================================
@@ -432,10 +527,14 @@ export function position<
   TExpr extends TextExpr,
   TSearch extends string | Arg<string> | null,
 >(
-  expr: TExpr,
+  expr: TypedScalarArg<TExpr, "text">,
   search: TSearch,
-): PositionFn<TExpr, TSearch, StrictFnReturn<[TExpr, TSearch], number>> {
-  return new PositionFn(expr, search);
+): PositionFn<
+  NormalizedText<TExpr>,
+  TSearch,
+  StrictFnReturn<[NormalizedText<TExpr>, TSearch], number>
+> {
+  return new PositionFn(normalizeText(expr), search);
 }
 
 // ============================================================================
@@ -481,8 +580,16 @@ export class ConcatFn<
 /** Concatenates the text representations of all arguments into a single string. NULL arguments are ignored. */
 export function concat<
   TExprs extends readonly [ConcatOperand, ...ConcatOperand[]],
->(...exprs: TExprs): ConcatFn<TExprs, HasArgInTuple<TExprs>> {
-  return new ConcatFn(exprs);
+>(
+  ...exprs: TExprs & { [K in keyof TExprs]: ScalarArg<TExprs[K]> }
+): ConcatFn<
+  NormalizedConcatOperands<TExprs>,
+  HasArgInTuple<NormalizedConcatOperands<TExprs>>
+> {
+  return new ConcatFn<
+    NormalizedConcatOperands<TExprs>,
+    HasArgInTuple<NormalizedConcatOperands<TExprs>>
+  >(normalizeConcatOperands<TExprs>(exprs));
 }
 
 // ============================================================================
@@ -545,13 +652,24 @@ export function concatWs<
   TSep extends ConcatOperand,
   TExprs extends readonly [ConcatOperand, ...ConcatOperand[]],
 >(
-  sep: TSep,
-  ...exprs: TExprs
+  sep: ScalarArg<TSep>,
+  ...exprs: TExprs & { [K in keyof TExprs]: ScalarArg<TExprs[K]> }
 ): ConcatWsFn<
-  TSep,
-  TExprs,
-  StrictFnReturn<[TSep], string>,
-  Or<Or<IsArg<TSep>, HasArg<TSep>>, HasArgInTuple<TExprs>>
+  NormalizedConcatOperand<TSep>,
+  NormalizedConcatOperands<TExprs>,
+  StrictFnReturn<[NormalizedConcatOperand<TSep>], string>,
+  Or<
+    Or<IsArg<TSep>, HasArg<NormalizedConcatOperand<TSep>>>,
+    HasArgInTuple<NormalizedConcatOperands<TExprs>>
+  >
 > {
-  return new ConcatWsFn(sep, exprs);
+  return new ConcatWsFn<
+    NormalizedConcatOperand<TSep>,
+    NormalizedConcatOperands<TExprs>,
+    StrictFnReturn<[NormalizedConcatOperand<TSep>], string>,
+    Or<
+      Or<IsArg<TSep>, HasArg<NormalizedConcatOperand<TSep>>>,
+      HasArgInTuple<NormalizedConcatOperands<TExprs>>
+    >
+  >(normalizeConcatOperand(sep), normalizeConcatOperands<TExprs>(exprs));
 }
