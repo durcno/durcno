@@ -77,14 +77,13 @@ Expect<
   >
 >();
 
-db.from(Users)
+db.from(Users).select(() => ({
   // @ts-expect-error - Comments is not joined in the query
-  .select(() => ({
-    invalidObj: jsonBuildObject({
-      commentId: Comments.id,
-      username: Users.username,
-    }),
-  }));
+  invalidObj: jsonBuildObject({
+    commentId: Comments.id,
+    username: Users.username,
+  }),
+}));
 
 // -----------------------------------------------------------------------------
 // JSON aggregates
@@ -159,11 +158,10 @@ db.from(Users)
   // @ts-expect-error - Comments is not joined in the query
   .select(() => ({ invalidAgg: jsonAgg(Comments.id) }));
 
-db.from(Users)
+db.from(Users).select(() => ({
   // @ts-expect-error - ORDER BY column must be in the query scope
-  .select(() => ({
-    invalidOrder: jsonAgg(Users.username).orderBy(asc(Comments.id)),
-  }));
+  invalidOrder: jsonAgg(Users.username).orderBy(asc(Comments.id)),
+}));
 
 // -----------------------------------------------------------------------------
 // caseWhen

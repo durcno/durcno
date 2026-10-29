@@ -144,8 +144,8 @@ Expect<
   >
 >();
 
-// @ts-expect-error - `select` and `columns` are mutually exclusive
 db.query(Users).findMany({
+  // @ts-expect-error - `select` and `columns` are mutually exclusive
   columns: { id: true },
   select: { userId: Users.id },
 });

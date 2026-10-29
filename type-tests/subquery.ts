@@ -52,14 +52,14 @@ const multiColumnQuery = db
   .from(Posts)
   .select(() => ({ id: Posts.id, title: Posts.title }));
 
-// @ts-expect-error - a scalar subquery must select exactly one column
 db.from(Users).select(() => ({
+  // @ts-expect-error - a scalar subquery must select exactly one column
   bad: multiColumnQuery,
 }));
 
 // A SELECT * over a multi-column table is rejected.
-// @ts-expect-error - SELECT * resolves to many columns
 db.from(Users).select(() => ({
+  // @ts-expect-error - SELECT * resolves to many columns
   bad: db.from(Users).select("*"),
 }));
 
@@ -122,8 +122,8 @@ const preparedSubquery = db
   .from(Posts)
   .select(() => ({ title: Posts.title }));
 
-// @ts-expect-error - prepared subquery requires a prepared outer query
 db.from(Users).select(() => ({
+  // @ts-expect-error - prepared subquery requires a prepared outer query
   title: preparedSubquery,
 }));
 

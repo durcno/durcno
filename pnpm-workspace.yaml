@@ -3,6 +3,9 @@ packages:
   - tests
   - website
 
+overrides:
+  rolldown-plugin-dts: ^0.29.0
+
 allowBuilds:
   "@swc/core": true
   core-js: true
@@ -15,3 +18,11 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - cngpac
   - lucide-react@1.31.0
+  - "@yuku-toolchain/darwin-arm64@0.25.0"
+  - "@yuku-toolchain/darwin-x64@0.25.0"
+  - "@yuku-toolchain/linux-arm64@0.25.0"
+  - "@yuku-toolchain/linux-x64@0.25.0"
+  - "@yuku-toolchain/win32-arm64@0.25.0"
+  - "@yuku-toolchain/win32-x64@0.25.0"
+  - rolldown-plugin-dts@0.29.0
+  - yuku@0.25.0
