@@ -27,6 +27,7 @@ Durcno provides a set of type-safe filter operators for building WHERE and CHECK
 | `contains(col, val)`          | Contains (case-sensitive)                      | `contains(Users.bio, "typescript")`          |
 | `like(col, pattern)`          | Case-sensitive LIKE pattern                    | `like(Users.code, "US%")`                    |
 | `ilike(col, pattern)`         | Case-insensitive ILIKE pattern                 | `ilike(Users.code, "us%")`                   |
+| `tsMatch(vector, query)`      | Full-text match (`@@`)                         | `tsMatch(Articles.search, term)`             |
 | `and(...conditions)`          | AND logic; ignores `null`, `undefined` entries | `and(eq(...), gte(...))`                     |
 | `or(...conditions)`           | OR logic; ignores `null`, `undefined` entries  | `or(eq(...), eq(...))`                       |
 | `arrayContains(col, values)`  | Array contains all values (`@>`)               | `arrayContains(Posts.tags, ["ts", "pg"])`    |
@@ -342,6 +343,30 @@ await db
 **Case sensitivity** — `like`, `startsWith`, `endsWith`, and `contains` are case-sensitive matching functions. For case-insensitive pattern matching, use `ilike`.
 
 :::
+
+### Full-Text Search (`tsMatch`)
+
+`tsMatch(vector, query)` renders the PostgreSQL `@@` operator. It accepts a `tsvector` expression on the left and a `tsquery` expression on the right, so a document vector cannot be compared against another vector by mistake.
+
+```typescript
+import { toTsvector, tsMatch, websearchToTsquery } from "durcno";
+
+const term = websearchToTsquery("postgres full text");
+
+// Match the stored search vector
+await db
+  .from(Articles)
+  .select("*")
+  .where(() => tsMatch(Articles.search, term));
+
+// Match a vector computed from a text column
+await db
+  .from(Articles)
+  .select("*")
+  .where(() => tsMatch(toTsvector(Articles.body, "english"), term));
+```
+
+Use `websearchToTsquery` for untrusted input, and `toTsquery` when you control the query syntax. See [Full-Text Search Functions](./functions#full-text-search-functions) for ranking, highlighting, and vector utilities.
 
 ## Logical Operators
 

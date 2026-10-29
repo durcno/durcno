@@ -24,21 +24,36 @@ import {
   nullif,
   numNonNulls,
   numNulls,
+  numnode,
+  phrasetoTsquery,
   pk,
+  plaintoTsquery,
   position,
   power,
+  querytree,
   right,
   round,
+  setweight,
   sql,
   stDistance,
+  strip,
   sub,
   sum,
   table,
+  text,
+  toTsquery,
+  toTsvector,
   trim,
   trunc,
+  tsHeadline,
+  tsMatch,
+  tsRank,
+  tsRankCd,
+  tsvector,
   upper,
+  websearchToTsquery,
 } from "durcno";
-import { Events, Users } from "./schema";
+import { db, Events, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
 // Reads the inferred TypeScript result of a SQL expression
@@ -299,3 +314,127 @@ const GeoTestTable = table("public", "geo_test", {
 });
 const stDistNull = stDistance(GeoTestTable.loc, null);
 Expect<Equal<TsType<typeof stDistNull>, null>>();
+
+// -----------------------------------------------------------------------------
+// Full-text search
+// -----------------------------------------------------------------------------
+
+const SearchDocs = table("public", "search_docs", {
+  id: pk(),
+  body: text({ notNull }),
+  optionalBody: text({}),
+  vector: tsvector({ notNull }),
+  optionalVector: tsvector({}),
+});
+
+Expect<Equal<(typeof SearchDocs.vector)["ValTypeSelect"], string>>();
+Expect<
+  Equal<(typeof SearchDocs.optionalVector)["ValTypeSelect"], string | null>
+>();
+
+const searchVector = toTsvector(SearchDocs.body);
+const optionalSearchVector = toTsvector(SearchDocs.optionalBody);
+const nullSearchVector = toTsvector(null);
+const configuredSearchVector = toTsvector(SearchDocs.body, "english");
+const argSearchVector = toTsvector(SearchDocs.body.arg());
+
+Expect<Equal<TsType<typeof searchVector>, string>>();
+Expect<Equal<TsType<typeof optionalSearchVector>, string | null>>();
+Expect<Equal<TsType<typeof nullSearchVector>, null>>();
+Expect<Equal<TsType<typeof configuredSearchVector>, string>>();
+Expect<Equal<(typeof argSearchVector)["$"]["HasArg"], true>>();
+
+const searchQuery = toTsquery("fat & rat");
+const plainQuery = plaintoTsquery("fat rat");
+const phraseQuery = phrasetoTsquery("fat rat");
+const webQuery = websearchToTsquery("fat rat");
+const argQuery = toTsquery(Users.username.arg());
+
+Expect<Equal<TsType<typeof searchQuery>, string>>();
+Expect<Equal<TsType<typeof plainQuery>, string>>();
+Expect<Equal<TsType<typeof phraseQuery>, string>>();
+Expect<Equal<TsType<typeof webQuery>, string>>();
+Expect<Equal<(typeof argQuery)["$"]["HasArg"], true>>();
+
+const headline = tsHeadline(SearchDocs.body, searchQuery);
+const optionalHeadline = tsHeadline(SearchDocs.optionalBody, searchQuery);
+const configuredHeadline = tsHeadline(SearchDocs.body, searchQuery, {
+  config: "simple",
+  options: "StartSel=<mark>, StopSel=</mark>",
+});
+
+Expect<Equal<TsType<typeof headline>, string>>();
+Expect<Equal<TsType<typeof optionalHeadline>, string | null>>();
+Expect<Equal<TsType<typeof configuredHeadline>, string>>();
+
+const rank = tsRank(SearchDocs.vector, searchQuery);
+const optionalRank = tsRank(SearchDocs.optionalVector, searchQuery);
+const normalizedRank = tsRank(SearchDocs.vector, searchQuery, 32);
+const rankCd = tsRankCd(SearchDocs.vector, searchQuery);
+
+Expect<Equal<TsType<typeof rank>, number>>();
+Expect<Equal<TsType<typeof optionalRank>, number | null>>();
+Expect<Equal<TsType<typeof normalizedRank>, number>>();
+Expect<Equal<TsType<typeof rankCd>, number>>();
+
+const weightedVector = setweight(SearchDocs.vector, "A");
+const strippedVector = strip(SearchDocs.vector);
+const queryTree = querytree(searchQuery);
+const nodeCount = numnode(searchQuery);
+
+Expect<Equal<TsType<typeof weightedVector>, string>>();
+Expect<Equal<TsType<typeof strippedVector>, string>>();
+Expect<Equal<TsType<typeof queryTree>, string>>();
+Expect<Equal<TsType<typeof nodeCount>, number>>();
+
+const match = tsMatch(SearchDocs.vector, searchQuery);
+const matchArg = tsMatch(SearchDocs.vector, argQuery);
+const matchVectorArg = tsMatch(new Arg<string>((value) => value), searchQuery);
+const matchQueryArg = tsMatch(
+  SearchDocs.vector,
+  new Arg<string>((value) => value),
+);
+
+Expect<Equal<(typeof match)["$"]["HasArg"], false>>();
+Expect<Equal<(typeof matchArg)["$"]["HasArg"], true>>();
+Expect<Equal<(typeof matchVectorArg)["$"]["HasArg"], true>>();
+Expect<Equal<(typeof matchQueryArg)["$"]["HasArg"], true>>();
+
+db.from(SearchDocs)
+  .select("*")
+  // @ts-expect-error - a direct Arg requires a prepared query
+  .where(() => tsMatch(SearchDocs.vector, new Arg<string>((value) => value)));
+
+db.from(SearchDocs)
+  .select("*")
+  // @ts-expect-error - a direct Arg requires a prepared query
+  .where(() => tsMatch(new Arg<string>((value) => value), searchQuery));
+
+db.prepare()
+  .from(SearchDocs)
+  .select("*")
+  .where(() => tsMatch(SearchDocs.vector, new Arg<string>((value) => value)));
+
+db.from(Users)
+  .select("*")
+  .where(() =>
+    tsMatch(toTsvector(Users.email), websearchToTsquery("postgres")),
+  );
+
+// @ts-expect-error - a tsvector is not text
+toTsvector(SearchDocs.vector);
+
+// @ts-expect-error - a text expression is not a tsvector
+tsMatch(SearchDocs.body, searchQuery);
+
+// @ts-expect-error - a text expression is not a tsquery
+tsMatch(SearchDocs.vector, SearchDocs.body);
+
+// @ts-expect-error - only A-D are valid weights
+setweight(SearchDocs.vector, "E");
+
+// @ts-expect-error - tsRank requires a tsvector
+tsRank(SearchDocs.body, searchQuery);
+
+// @ts-expect-error - tsHeadline requires a tsquery
+tsHeadline(SearchDocs.body, SearchDocs.body);

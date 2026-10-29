@@ -28,6 +28,7 @@ import {
   timestamp,
   timestamptz,
   timetz,
+  tsvector,
   tuple,
   uuid,
   varchar,
@@ -85,6 +86,21 @@ export const CharTests = table("public", "charTests", {
   code: char({ length: 5 }),
   // Nullable char with default
   codeWithDefault: char({ length: 2 }).default("XX"),
+});
+
+// ============================================================================
+// Full-Text Search Column Types
+// ============================================================================
+
+/**
+ * Test table for tsvector column type
+ */
+export const TsvectorTests = table("public", "tsvectorTests", {
+  id: pk(),
+  // Nullable full-text search vector
+  search: tsvector({}),
+  // Non-null full-text search vector
+  requiredSearch: tsvector({ notNull }),
 });
 
 // ============================================================================

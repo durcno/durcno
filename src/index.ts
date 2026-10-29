@@ -37,6 +37,7 @@ export { time } from "./columns/time";
 export { timestamp } from "./columns/timestamp";
 export { timestamptz } from "./columns/timestamptz";
 export { timetz } from "./columns/timetz";
+export { tsvector } from "./columns/tsvector";
 export { type UuidVersion, uuid } from "./columns/uuid";
 export { varchar } from "./columns/varchar";
 export type { $Client, ConnectorOptions } from "./connectors/common";
@@ -74,6 +75,7 @@ export {
   stWithin,
 } from "./filters/postgis";
 export { contains, endsWith, ilike, like, startsWith } from "./filters/string";
+export { tsMatch } from "./filters/textsearch";
 export {
   type InferValueType,
   now,
@@ -150,6 +152,25 @@ export {
   notExists,
   notIn,
 } from "./functions/subquery";
+export {
+  numnode,
+  phrasetoTsquery,
+  plaintoTsquery,
+  querytree,
+  setweight,
+  strip,
+  type TsConfig,
+  type TsHeadlineOptions,
+  type TsQueryExpr,
+  type TsVectorExpr,
+  type TsWeight,
+  toTsquery,
+  toTsvector,
+  tsHeadline,
+  tsRank,
+  tsRankCd,
+  websearchToTsquery,
+} from "./functions/textsearch";
 export {
   cumeDist,
   currentRow,

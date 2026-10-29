@@ -205,7 +205,7 @@ export const Articles = table(
   {
     id: pk(),
     tags: text({ notNull }), // Array of tags
-    searchVector: text({ notNull }), // tsvector for full-text search
+    searchVector: tsvector({ notNull }), // tsvector for full-text search
   },
   {
     indexes: (t) => [
@@ -769,7 +769,7 @@ export const Articles = table(
     id: pk(),
     title: varchar({ length: 255, notNull }),
     content: text({ notNull }),
-    searchVector: text({ notNull }), // tsvector column
+    searchVector: tsvector({ notNull }),
   },
   {
     indexes: (t) => [index([t.searchVector], "gin")],

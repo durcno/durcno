@@ -17,31 +17,31 @@ Read `docs/intro.md` first for the mental model, then read **only the files matc
 
 ### Task → file routing
 
-| Working on                                                              | Read                                                                                  |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Column types, custom columns, sequences                                 | `docs/Schema/columns.md`, `docs/Schema/custom-columns.md`, `docs/Schema/sequences.md` |
-| Enums                                                                   | `docs/Schema/enums.md`                                                                |
-| Relations / eager loading                                               | `docs/Schema/relations.md`, `docs/CRUD/relational-query.md`                           |
-| Indexes, constraints                                                    | `docs/Schema/indexes.md`, `docs/Schema/constraints.md`                                |
-| SELECT, GROUP BY, HAVING, pagination, scalar subqueries                 | `docs/CRUD/select.md`                                                                 |
-| Joins, left-join nullability                                            | `docs/CRUD/joins.md`                                                                  |
-| Row locking (`FOR UPDATE`, `NOWAIT`, `SKIP LOCKED`)                     | `docs/CRUD/locking.md`                                                                |
-| INSERT, conflict updates, `returning`                                   | `docs/CRUD/insert.md`                                                                 |
-| UPDATE, bulk `UPDATE ... FROM`, values aliases, `returning`             | `docs/CRUD/update.md`                                                                 |
-| DELETE, `returning`                                                     | `docs/CRUD/delete.md`                                                                 |
-| Transactions                                                            | `docs/CRUD/transaction.md`                                                            |
-| CTEs (`db.with()`)                                                      | `docs/CRUD/with.md`                                                                   |
-| Prepared statements                                                     | `docs/CRUD/prepare.md`                                                                |
-| Raw SQL                                                                 | `docs/CRUD/raw-sql.md`                                                                |
-| `db.$count` / `$sum` / `$first` / etc.                                  | `docs/CRUD/query-shortcuts.md`                                                        |
-| Filters (`eq`, `like`, `and`, …)                                        | `docs/Expressions/filters.md`                                                         |
-| SQL functions, aggregates, window functions, `numNonNulls` / `numNulls` | `docs/Expressions/functions.md`                                                       |
-| Zod validation                                                          | `docs/Validation/zod.md`                                                              |
-| Config / connectors / logging                                           | `docs/configuration.md`, `docs/connectors.md`, `docs/Advanced/logger.md`              |
-| CLI, migrations, migration options                                      | `docs/cli.md`, `docs/Migrations/`, `docs/Guides/concurrent-indexing.md`               |
-| PostGIS / pgvector                                                      | `docs/Extensions/postgis.md`, `docs/Extensions/pgvector.md`                           |
-| Naming and casing conventions                                           | `docs/Conventions/casing.md`                                                          |
-| Type inference helpers                                                  | `docs/Advanced/types.md`                                                              |
+| Working on                                                  | Read                                                                                  |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Column types, custom columns, sequences                     | `docs/Schema/columns.md`, `docs/Schema/custom-columns.md`, `docs/Schema/sequences.md` |
+| Enums                                                       | `docs/Schema/enums.md`                                                                |
+| Relations / eager loading                                   | `docs/Schema/relations.md`, `docs/CRUD/relational-query.md`                           |
+| Indexes, constraints                                        | `docs/Schema/indexes.md`, `docs/Schema/constraints.md`                                |
+| SELECT, GROUP BY, HAVING, pagination, scalar subqueries     | `docs/CRUD/select.md`                                                                 |
+| Joins, left-join nullability                                | `docs/CRUD/joins.md`                                                                  |
+| Row locking (`FOR UPDATE`, `NOWAIT`, `SKIP LOCKED`)         | `docs/CRUD/locking.md`                                                                |
+| INSERT, conflict updates, `returning`                       | `docs/CRUD/insert.md`                                                                 |
+| UPDATE, bulk `UPDATE ... FROM`, values aliases, `returning` | `docs/CRUD/update.md`                                                                 |
+| DELETE, `returning`                                         | `docs/CRUD/delete.md`                                                                 |
+| Transactions                                                | `docs/CRUD/transaction.md`                                                            |
+| CTEs (`db.with()`)                                          | `docs/CRUD/with.md`                                                                   |
+| Prepared statements                                         | `docs/CRUD/prepare.md`                                                                |
+| Raw SQL                                                     | `docs/CRUD/raw-sql.md`                                                                |
+| `db.$count` / `$sum` / `$first` / etc.                      | `docs/CRUD/query-shortcuts.md`                                                        |
+| Filters (`eq`, `like`, `and`, …)                            | `docs/Expressions/filters.md`                                                         |
+| SQL functions, aggregates, window functions, textsearch etc | `docs/Expressions/functions.md`                                                       |
+| Zod validation                                              | `docs/Validation/zod.md`                                                              |
+| Config / connectors / logging                               | `docs/configuration.md`, `docs/connectors.md`, `docs/Advanced/logger.md`              |
+| CLI, migrations, migration options                          | `docs/cli.md`, `docs/Migrations/`, `docs/Guides/concurrent-indexing.md`               |
+| PostGIS / pgvector                                          | `docs/Extensions/postgis.md`, `docs/Extensions/pgvector.md`                           |
+| Naming and casing conventions                               | `docs/Conventions/casing.md`                                                          |
+| Type inference helpers                                      | `docs/Advanced/types.md`                                                              |
 
 ## Configuration
 
@@ -330,7 +330,8 @@ const findByEmail = prepare({ email: Users.email.arg() }, (args) =>
     .prepare()
     .from(Users)
     .select("*")
-    .where(() => eq(Users.email, args.email)));
+    .where(() => eq(Users.email, args.email)),
+);
 
 const rows = await findByEmail.run(db, { email: "jane@example.com" });
 ```

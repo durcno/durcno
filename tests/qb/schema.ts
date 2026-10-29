@@ -16,6 +16,7 @@ import {
   table,
   text,
   timestamptz,
+  tsvector,
   unique,
   uuid,
   varchar,
@@ -186,6 +187,13 @@ export const Documents = table("public", "documents", {
   id: pk(),
   title: varchar({ length: 100 }),
   stamps: timestamptz({ dimension: array() }),
+});
+
+// Documents table for full-text search testing
+export const SearchDocuments = table("public", "searchDocuments", {
+  id: pk(),
+  body: text({ notNull }),
+  search: tsvector({ notNull }),
 });
 
 // AuditLogs table for testing insertFn and updateFn

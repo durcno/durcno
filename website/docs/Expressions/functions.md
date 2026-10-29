@@ -422,6 +422,105 @@ await db
 
 ---
 
+## Full-Text Search Functions
+
+PostgreSQL full-text search parses documents into `tsvector` values and queries into `tsquery` values. Durcno tracks both PostgreSQL types, while exposing their values as `string` in TypeScript, so document and query expressions cannot be mixed accidentally.
+
+| Function                                              | SQL                         | Returns  | Description                                                 |
+| ----------------------------------------------------- | --------------------------- | -------- | ----------------------------------------------------------- |
+| `toTsvector(document, config?)`                       | `to_tsvector(...)`          | `string` | Parses text into lexemes and positions                      |
+| `toTsquery(query, config?)`                           | `to_tsquery(...)`           | `string` | Parses a query with `&`, `&#124;`, `!`, and `<->` operators |
+| `plaintoTsquery(query, config?)`                      | `plainto_tsquery(...)`      | `string` | Treats every word as required                               |
+| `phrasetoTsquery(query, config?)`                     | `phraseto_tsquery(...)`     | `string` | Builds a phrase query                                       |
+| `websearchToTsquery(query, config?)`                  | `websearch_to_tsquery(...)` | `string` | Parses web-search-style input; safest for untrusted input   |
+| `tsHeadline(document, query, { config?, options? }?)` | `ts_headline(...)`          | `string` | Highlights query matches in a document                      |
+| `tsRank(vector, query, normalization?)`               | `ts_rank(...)`              | `number` | Ranks a match                                               |
+| `tsRankCd(vector, query, normalization?)`             | `ts_rank_cd(...)`           | `number` | Ranks a match using cover density                           |
+| `setweight(vector, weight)`                           | `setweight(...)`            | `string` | Assigns an `A`–`D` weight to every lexeme                   |
+| `strip(vector)`                                       | `strip(...)`                | `string` | Removes positions and weights from a vector                 |
+| `querytree(query)`                                    | `querytree(...)`            | `string` | Returns the indexable part of a query                       |
+| `numnode(query)`                                      | `numnode(...)`              | `number` | Counts lexemes and operators in a query                     |
+
+The optional `config` is a text search configuration name such as `"english"` or `"simple"`. When omitted, PostgreSQL uses `default_text_search_config`.
+
+### Storing search vectors
+
+Declare search columns with `tsvector()` and index them with GIN:
+
+```typescript
+import { index, notNull, pk, table, text, tsvector, varchar } from "durcno";
+
+export const Articles = table(
+  "public",
+  "articles",
+  {
+    id: pk(),
+    title: varchar({ length: 255, notNull }),
+    body: text({ notNull }),
+    search: tsvector({ notNull }),
+  },
+  {
+    indexes: (t) => [index([t.search]).using("gin")],
+  },
+);
+```
+
+Populate the column from the text columns with `toTsvector`:
+
+```typescript
+import { concat, toTsvector } from "durcno";
+
+await db
+  .update(Articles)
+  .set({
+    search: toTsvector(concat(Articles.title, " ", Articles.body), "english"),
+  });
+```
+
+### Searching with `tsMatch`
+
+`tsMatch(vector, query)` renders the `@@` predicate. It only accepts a `tsvector` on the left and a `tsquery` on the right:
+
+```typescript
+import { desc, tsMatch, tsRank, websearchToTsquery } from "durcno";
+
+const term = websearchToTsquery("postgres full text");
+
+const results = await db
+  .from(Articles)
+  .select(() => ({
+    id: Articles.id,
+    title: Articles.title,
+    rank: tsRank(Articles.search, term),
+  }))
+  .where(() => tsMatch(Articles.search, term))
+  .orderBy(() => desc(tsRank(Articles.search, term)));
+```
+
+For untrusted input, prefer `websearchToTsquery` over `toTsquery`; it treats quotes, `-`, and `OR` the way a web search does instead of requiring exact `tsquery` syntax.
+
+### Highlighting and weighting
+
+```typescript
+import { setweight, toTsvector, tsHeadline, websearchToTsquery } from "durcno";
+
+const term = websearchToTsquery("postgres");
+
+const result = await db
+  .from(Articles)
+  .select(() => ({
+    headline: tsHeadline(Articles.body, term, {
+      config: "english",
+      options: "StartSel=<mark>, StopSel=</mark>",
+    }),
+    weighted: setweight(toTsvector(Articles.title, "english"), "A"),
+  }));
+```
+
+`tsHeadline` accepts an options object so the text search configuration and the `ts_headline` options string are not ambiguous. Both are optional.
+
+---
+
 ## Mathematical Functions
 
 Mathematical functions accept any numeric column (`integer`, `bigint`, `numeric`, `smallint`, etc.) or the result of another numeric-producing function.
