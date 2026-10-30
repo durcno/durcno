@@ -13,8 +13,6 @@ A PostgreSQL query builder and migration manager for TypeScript. Everything belo
 
 Directory names are case-sensitive (`CRUD/`, `Schema/`, `Expressions/`, `Validation/`, `Migrations/`, `Advanced/`, `Conventions/`, `Extensions/`, `Guides/`).
 
-Read `docs/intro.md` first for the mental model, then read **only the files matching your task** — do not read all of `docs/`. When reading a doc file, ignore the YAML frontmatter (`sidebar_position`) and Docusaurus `:::note` / `:::tip` / `:::warning` admonition markers; they are site chrome, not part of the API.
-
 ### Task → file routing
 
 | Working on                                                  | Read                                                                                  |
