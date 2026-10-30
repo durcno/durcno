@@ -330,8 +330,7 @@ const findByEmail = prepare({ email: Users.email.arg() }, (args) =>
     .prepare()
     .from(Users)
     .select("*")
-    .where(() => eq(Users.email, args.email)),
-);
+    .where(() => eq(Users.email, args.email)));
 
 const rows = await findByEmail.run(db, { email: "jane@example.com" });
 ```

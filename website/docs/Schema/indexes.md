@@ -510,6 +510,64 @@ index("idx_orders_recent_unprocessed", [t.createdAt])
   .where(eq(t.status, "unprocessed"));
 ```
 
+## Expression Indexes
+
+Index keys can be SQL expressions instead of plain columns. Prefer a scalar function builder such as `toTsvector` or `lower`; fall back to the `sql` tag only when no builder exists. Expression indexes must have an explicit name.
+
+### Full-Text Search with GIN
+
+```typescript
+import { index, notNull, pk, table, text, toTsvector } from "durcno";
+
+export const Posts = table(
+  "public",
+  "posts",
+  {
+    id: pk(),
+    content: text({ notNull }),
+  },
+  {
+    indexes: (t) => [
+      index("posts_content_tsv_idx", [
+        toTsvector(t.content, "english"),
+      ]).using("gin"),
+    ],
+  },
+);
+```
+
+Function builders keep the expression type-checked and validate their operands. Raw SQL remains available for expressions that have no builder:
+
+```typescript
+import { index, sql } from "durcno";
+
+// Inside the indexes callback:
+index("posts_content_tsv_idx", [
+  sql`to_tsvector('english', ${t.content})`,
+]).using("gin");
+```
+
+Expressions render with unqualified column references, producing:
+
+```sql
+CREATE INDEX posts_content_tsv_idx ON "public"."posts"
+  USING gin (to_tsvector('english', "content"));
+```
+
+Expression keys can be mixed with columns:
+
+```typescript
+index("posts_user_lower_title_idx", [t.userId, lower(t.title)]);
+```
+
+:::note
+
+- Prefer scalar function builders (`toTsvector`, `lower`, ...) so index expressions stay type-checked. Use `sql` only for expressions without a builder.
+- PostgreSQL requires functions used in index expressions to be `IMMUTABLE`. Prefer the two-argument `to_tsvector('english', column)` form; stable or volatile functions are rejected.
+- Expression indexes cannot be auto-named; pass a name as the first argument to `index()` or `uniqueIndex()`.
+
+:::
+
 ## Index Naming
 
 Durcno automatically generates index names based on the table and column names when no custom name is passed:

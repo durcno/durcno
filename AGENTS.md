@@ -202,7 +202,7 @@ dist/                     # Production compiled output
 - **`src/index.ts`**: All public exports - **EXPORT NEW PUBLIC APIs HERE**
 - **`src/db.ts`**: Query builder creator classes
 - **`src/table.ts`**: Table and column types
-- **`src/indexes.ts`**: Index definitions (`using`, `unique`, partial `where`, custom name)
+- **`src/indexes.ts`**: Index definitions
 - **`src/types.ts`**: Shared TypeScript utility types
 - **`src/models.ts`**: Migration tracking table definition
 - **`src/columns/common.ts`**: Base column class

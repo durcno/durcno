@@ -1,6 +1,24 @@
-import type { IndexType } from "../../indexes";
+import {
+  type IndexExpressionFn,
+  type IndexType,
+  isIndexExpression,
+  renderIndexExpression,
+} from "../../indexes";
+import type { Sql } from "../../sql";
+import { camelToSnake } from "../../utils";
+import { createUnqualifiedTableContext } from "../context";
 import type { Snapshot } from "../snapshot";
 import { DDLStatement } from "./statement";
+
+/**
+ * A key accepted by {@link CreateIndexBuilder}: a column name, a
+ * `[column, opclass]` tuple, or an SQL expression.
+ */
+export type CreateIndexColumn =
+  | string
+  | [string, string]
+  | Sql
+  | IndexExpressionFn;
 
 /**
  * Create an index. Returns a chainable {@link CreateIndexBuilder}.
@@ -40,7 +58,7 @@ export class CreateIndexBuilder extends DDLStatement {
   private tableSchema = "";
   private tableName = "";
   private indexType: IndexType = "btree";
-  private indexColumns: (string | [string, string])[] = [];
+  private indexColumns: CreateIndexColumn[] = [];
   private isUnique = false;
   private isConcurrent = false;
   private wherePredicate?: string;
@@ -73,16 +91,12 @@ export class CreateIndexBuilder extends DDLStatement {
    *
    * @param schema - The table's schema.
    * @param table - The table name.
-   * @param columns - Optional array of column names to index.
+   * @param columns - Optional array of columns or expressions to index.
    * @returns `this` for chaining.
    */
-  on(
-    schema: string,
-    table: string,
-    columns?: (string | [string, string])[],
-  ): this {
-    this.tableSchema = schema;
-    this.tableName = table;
+  on(schema: string, table: string, columns?: CreateIndexColumn[]): this {
+    this.tableSchema = camelToSnake(schema);
+    this.tableName = camelToSnake(table);
     if (columns) {
       this.indexColumns = columns;
     }
@@ -93,10 +107,10 @@ export class CreateIndexBuilder extends DDLStatement {
    * Specify the index method.
    *
    * @param type - The index type (`"btree"`, `"hash"`, `"gin"`, `"gist"`, etc.).
-   * @param columns - Optional array of column names to index.
+   * @param columns - Optional array of columns or expressions to index.
    * @returns `this` for chaining.
    */
-  using(type: IndexType, columns?: (string | [string, string])[]): this {
+  using(type: IndexType, columns?: CreateIndexColumn[]): this {
     this.indexType = type;
     if (columns) {
       this.indexColumns = columns;
@@ -127,13 +141,22 @@ export class CreateIndexBuilder extends DDLStatement {
     return this;
   }
 
+  #renderExpression(expression: Sql | IndexExpressionFn): string {
+    return renderIndexExpression(
+      expression,
+      createUnqualifiedTableContext(this.tableSchema, this.tableName),
+    );
+  }
+
   toSQL(): string {
     const tableRelation = `"${this.tableSchema}"."${this.tableName}"`;
     const columns = this.indexColumns
       .map((c) => {
-        const colName = typeof c === "string" ? c : c[0];
-        const colOpclass = typeof c === "string" ? undefined : c[1];
-        return colOpclass ? `"${colName}" ${colOpclass}` : `"${colName}"`;
+        if (typeof c === "string") return `"${c}"`;
+        if (isIndexExpression(c)) {
+          return `(${this.#renderExpression(c)})`;
+        }
+        return `"${c[0]}" ${c[1]}`;
       })
       .join(", ");
     const uniqueStr = this.isUnique ? " UNIQUE" : "";
@@ -150,12 +173,11 @@ export class CreateIndexBuilder extends DDLStatement {
     table.indexes[this.indexName] = {
       name: this.indexName,
       columns: this.indexColumns.map((c) => {
-        const name = typeof c === "string" ? c : c[0];
-        const colOpclass = typeof c === "string" ? undefined : c[1];
-        return {
-          name,
-          opclass: colOpclass,
-        };
+        if (typeof c === "string") return { name: c };
+        if (isIndexExpression(c)) {
+          return { expression: this.#renderExpression(c) };
+        }
+        return { name: c[0], opclass: c[1] };
       }),
       type: this.indexType,
       unique: this.isUnique,

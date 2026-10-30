@@ -14,6 +14,7 @@ import type {
   SnapshotColumn,
   SnapshotTable,
   SnapshotTableIndex,
+  SnapshotTableIndexColumn,
 } from "../../migration/snapshot";
 import type { Options } from "..";
 import { ensureNoEntityCollisions, getMigrationFolderNames } from "../checks";
@@ -592,6 +593,45 @@ export async function generate(options: GenerateOptions) {
   );
 }
 
+interface GenerateState {
+  usesSql: boolean;
+}
+
+/** Serializes a string as a double-quoted JavaScript literal for generated code. */
+function jsString(value: string): string {
+  return JSON.stringify(value);
+}
+
+/** Generates the code for one index key. */
+function genIndexColumn(
+  column: SnapshotTableIndexColumn,
+  state: GenerateState,
+): string {
+  if ("expression" in column) {
+    state.usesSql = true;
+    return `sql.raw(${jsString(column.expression)})`;
+  }
+  return column.opclass
+    ? `[${jsString(column.name)}, ${jsString(column.opclass)}]`
+    : jsString(column.name);
+}
+
+/** Generates a `ddl.createIndex(...)` statement for a snapshot index. */
+function genCreateIndexStatement(
+  schema: string,
+  table: string,
+  index: SnapshotTableIndex,
+  state: GenerateState,
+): string {
+  const columns = index.columns
+    .map((column) => genIndexColumn(column, state))
+    .join(", ");
+  let statement = `ddl.createIndex(${jsString(index.name)}).on(${jsString(schema)}, ${jsString(table)}, [${columns}]).using(${jsString(index.type)})`;
+  if (index.unique) statement += ".unique()";
+  if (index.where) statement += `.where(${jsString(index.where)})`;
+  return statement;
+}
+
 /**
  * Generates TypeScript migration file exporting DDL statement objects.
  */
@@ -604,6 +644,7 @@ export function generateMigration(
   defaultOptions?: MigrationOptions,
 ): string | null {
   const statements: string[] = [];
+  const state: GenerateState = { usesSql: false };
 
   // Build a set of table keys that are rename targets (should not be dropped/created)
   const renamedFromKeys = new Set(Object.keys(renamedTables));
@@ -792,6 +833,7 @@ export function generateMigration(
           curr,
           statements,
           renamedColumns[tableName],
+          state,
         );
       }
       continue;
@@ -825,15 +867,9 @@ export function generateMigration(
 
       // Create indexes
       for (const idx of Object.values(currTable.indexes)) {
-        const cols = idx.columns
-          .map((c) =>
-            c.opclass ? `["${c.name}", "${c.opclass}"]` : `"${c.name}"`,
-          )
-          .join(", ");
-        let indexStmt = `ddl.createIndex("${idx.name}").on("${currTable.schema}", "${currTable.name}", [${cols}]).using("${idx.type}")`;
-        if (idx.unique) indexStmt += ".unique()";
-        if (idx.where) indexStmt += `.where(\`${idx.where}\`)`;
-        statements.push(indexStmt);
+        statements.push(
+          genCreateIndexStatement(currTable.schema, currTable.name, idx, state),
+        );
       }
       continue;
     }
@@ -846,6 +882,7 @@ export function generateMigration(
       curr,
       statements,
       renamedColumns[tableName],
+      state,
     );
   }
 
@@ -861,8 +898,10 @@ export function generateMigration(
 
   if (statements.length === 0) return null;
 
+  const sqlImport = state.usesSql ? ", sql" : "";
+
   // TypeScript migration file content
-  return `import { type DDLStatement, ddl, type MigrationOptions } from "durcno/migration";
+  return `import { type DDLStatement, ddl, type MigrationOptions${sqlImport} } from "durcno/migration";
 
 export const options: MigrationOptions = ${stringifyMigrationOpts(defaultOptions ?? {})};
 
@@ -909,7 +948,8 @@ function generateAlterTableStmts(
   tableName: string,
   curr: Snapshot,
   statements: string[],
-  columnRenames?: Record<string, string>,
+  columnRenames: Record<string, string> | undefined,
+  state: GenerateState,
 ): void {
   const alterStatements: string[] = [];
 
@@ -1103,16 +1143,14 @@ function generateAlterTableStmts(
     const prevIdx = prevTable.indexes[idxName];
     const currIdx = currTable.indexes[idxName];
     if (!prevIdx || !indexesEqual(prevIdx, currIdx)) {
-      const idx = currIdx;
-      const cols = idx.columns
-        .map((c) =>
-          c.opclass ? `["${c.name}", "${c.opclass}"]` : `"${c.name}"`,
-        )
-        .join(", ");
-      let indexStmt = `ddl.createIndex("${idx.name}").on("${currTable.schema}", "${currTable.name}", [${cols}]).using("${idx.type}")`;
-      if (idx.unique) indexStmt += ".unique()";
-      if (idx.where) indexStmt += `.where(\`${idx.where}\`)`;
-      statements.push(indexStmt);
+      statements.push(
+        genCreateIndexStatement(
+          currTable.schema,
+          currTable.name,
+          currIdx,
+          state,
+        ),
+      );
     }
   }
 }
@@ -1123,8 +1161,15 @@ function indexesEqual(a: SnapshotTableIndex, b: SnapshotTableIndex): boolean {
   if ((a.where ?? undefined) !== (b.where ?? undefined)) return false;
   if (a.columns.length !== b.columns.length) return false;
   for (let i = 0; i < a.columns.length; i++) {
-    if (a.columns[i].name !== b.columns[i].name) return false;
-    if (a.columns[i].opclass !== b.columns[i].opclass) return false;
+    const aCol = a.columns[i];
+    const bCol = b.columns[i];
+    if ("expression" in aCol || "expression" in bCol) {
+      if (!("expression" in aCol) || !("expression" in bCol)) return false;
+      if (aCol.expression !== bCol.expression) return false;
+    } else if (aCol.name !== bCol.name) {
+      return false;
+    }
+    if (aCol.opclass !== bCol.opclass) return false;
   }
   return true;
 }

@@ -452,9 +452,12 @@ export abstract class Column<
   }
 
   toQuery(query: Query, ctx?: QueryContext): void {
-    const alias = ctx?.tableAliases?.get(
-      `${this.table?._.schema}.${this.table?._.name}`,
-    );
+    const table = this.table;
+    const aliases = ctx?.tableAliases;
+    let alias = aliases?.get(`${table?._.schema}.${table?._.name}`);
+    if (alias === undefined && table) {
+      alias = aliases?.get(`${table._.schemaSql}.${table._.nameSql}`);
+    }
     if (alias === undefined) {
       query.sql += this.fullName;
     } else if (alias === null) {

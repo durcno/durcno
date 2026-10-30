@@ -145,8 +145,12 @@ describe("durcno generate - index changes (column + index ordering, partial inde
       path.resolve(migrationsDir, folders[0], "up.ts"),
       "utf-8",
     );
-    expect(upFile).toContain('.where(`"deleted_at" IS NULL`)');
-    expect(upFile).toContain(".where(`\"status\" = 'active'`)");
+    expect(upFile).toContain(
+      `.where(${JSON.stringify('"deleted_at" IS NULL')})`,
+    );
+    expect(upFile).toContain(
+      `.where(${JSON.stringify(`"status" = 'active'`)})`,
+    );
 
     // Users table indexes in PostgreSQL
     const uIndexes = await getUsersIndexes();
@@ -217,7 +221,9 @@ describe("durcno generate - index changes (column + index ordering, partial inde
       "utf-8",
     );
     expect(upFile).toContain('ddl.dropIndex("users_status_idx")');
-    expect(upFile).toContain(".where(`\"status\" = 'archived'`)");
+    expect(upFile).toContain(
+      `.where(${JSON.stringify(`"status" = 'archived'`)})`,
+    );
 
     const uIndexes = await getUsersIndexes();
     const statusIdx = uIndexes.find((i) => i.indexname === "users_status_idx");

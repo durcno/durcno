@@ -6,11 +6,16 @@ import { primaryKeyConstraint } from "../constraints/primary-key";
 import { uniqueConstraint } from "../constraints/unique";
 import { is } from "../entity";
 import { Enum } from "../enumtype";
-import type { IndexType } from "../indexes";
-import { Query, type QueryContext } from "../query-builders/query";
+import {
+  type IndexType,
+  isIndexExpression,
+  renderIndexExpression,
+} from "../indexes";
+import { Query } from "../query-builders/query";
 import { Sequence } from "../sequence";
 import { type StdTableWithColumns, Table } from "../table";
 import type { SnakeCase } from "../types";
+import { createUnqualifiedTableContext } from "./context";
 
 const { red } = chalk;
 
@@ -120,14 +125,21 @@ export interface SnapshotSequence {
 }
 
 /**
- * Snapshot of a table index column.
+ * Snapshot of a table index key: a column or an SQL expression.
  */
-export interface SnapshotTableIndexColumn {
-  /** The column name. */
-  name: string;
-  /** Optional operator class for this specific column. */
-  opclass?: string;
-}
+export type SnapshotTableIndexColumn =
+  | {
+      /** The column name. */
+      name: string;
+      /** Optional operator class for this specific column. */
+      opclass?: string;
+    }
+  | {
+      /** The raw SQL expression. */
+      expression: string;
+      /** Optional operator class for this expression. */
+      opclass?: string;
+    };
 
 /**
  * Snapshot of a table index.
@@ -268,12 +280,10 @@ export function snapshot(entities: unknown[]): Snapshot {
           };
         }
       }
-      const checkCtx: QueryContext = {
-        tableAliases: new Map([
-          [`${table._.schemaSql}.${table._.nameSql}`, null],
-          [`${table._.schema}.${table._.name}`, null],
-        ]),
-      };
+      const checkCtx = createUnqualifiedTableContext(
+        table._.schema,
+        table._.name,
+      );
       (table._.extra.indexes?.(table as StdTableWithColumns) ?? []).forEach(
         (index) => {
           const whereExpr = index._.getWhere();
@@ -290,6 +300,9 @@ export function snapshot(entities: unknown[]): Snapshot {
             columns: index._.getColumns().map((col) => {
               if (col instanceof IndexOn) {
                 return { name: col.column.nameSql, opclass: col.opclassStr };
+              }
+              if (isIndexExpression(col)) {
+                return { expression: renderIndexExpression(col, checkCtx) };
               }
               return { name: col.nameSql };
             }),

@@ -197,6 +197,8 @@ export {
   type WindowPartitionItem,
 } from "./functions/window";
 export {
+  type IndexColumn,
+  type IndexExpressionFn,
   type IndexType,
   index,
   uniqueIndex,

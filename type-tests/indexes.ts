@@ -1,12 +1,16 @@
 import {
+  abs,
   and,
+  count,
   eq,
   index,
   isNull,
+  lower,
   pk,
   sql,
   table,
   timestamptz,
+  toTsvector,
   uniqueIndex,
   varchar,
 } from "durcno";
@@ -82,6 +86,19 @@ export const Users = table(
 
       // Raw SQL expression for .where()
       index([t.email]).where(sql`"status" = 'active'`),
+
+      // Scalar function builder expression keys
+      index("idx_users_lower_email", [lower(t.email)]),
+      index("idx_users_email_tsv", [toTsvector(t.email, "english")]).using(
+        "gin",
+      ),
+      index("idx_users_mixed_expr", [t.id, lower(t.email)]),
+      uniqueIndex("uidx_users_lower_email", [lower(t.email)]),
+
+      // Raw SQL remains available for expressions without a builder
+      index("idx_users_email_tsv_sql", [
+        sql`to_tsvector('english', ${t.email})`,
+      ]).using("gin"),
     ],
   },
 );
@@ -98,3 +115,12 @@ index([Users.email]).where(123);
 
 // @ts-expect-error Index keys must be table columns, not plain strings
 index([Users.email, "status"]);
+
+// @ts-expect-error Aggregates are not valid index expressions
+index("idx_users_count", [count(Users.id)]);
+
+// @ts-expect-error Aggregates remain invalid when wrapped by scalar functions
+index("idx_users_abs_count", [abs(count(Users.id))]);
+
+// @ts-expect-error Prepared Arg values are not valid index expressions
+index("idx_users_lower_arg", [lower(Users.email.arg())]);
