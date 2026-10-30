@@ -5,8 +5,8 @@
     alt="Downloads"
   />
   <img
-    src="https://img.shields.io/badge/Node.js-24%2B-339935?style=flat&logo=node.js&logoColor=white"
-    alt="Node.js 24+"
+    src="https://img.shields.io/badge/Node.js-26.13%2B-339935?style=flat&logo=node.js&logoColor=white"
+    alt="Node.js 26.13+"
   />
   <img
     src="https://img.shields.io/badge/PostgreSQL-14%2B-336791?style=flat&logo=postgresql&logoColor=white"

@@ -145,8 +145,8 @@ body:
     id: runtime-version
     attributes:
       label: Runtime and Version
-      description: Which runtime and version are you using? (e.g., Node.js 24.14+, Bun, Deno)
-      placeholder: e.g., Node.js 24.14.0, Bun 1.3.0, Deno 2.5.0
+      description: Which runtime and version are you using? (e.g., Node.js 26.13+, Bun, Deno)
+      placeholder: e.g., Node.js 26.13.0, Bun 1.3.0, Deno 2.5.0
     validations:
       required: true
 

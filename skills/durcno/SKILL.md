@@ -420,4 +420,4 @@ Any object with `info(message, meta?)` and `error(message, meta?)` satisfies the
 
 ## Requirements
 
-PostgreSQL 14+ and Node.js 24.14+. Durcno targets Postgres semantics — prefer SQL features over application-side workarounds, and let the type system reject invalid SQL rather than casting around it.
+PostgreSQL 14+ and Node.js 26.13+. Durcno targets Postgres semantics — prefer SQL features over application-side workarounds, and let the type system reject invalid SQL rather than casting around it.

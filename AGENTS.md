@@ -30,7 +30,7 @@ This is NOT a Drizzle-based project - it's a custom query builder and migration 
 - **Website**: Docusaurus (https://durcno.dev)
 - **License**: Apache-2.0
 
-**Important**: Durcno only supports **PostgreSQL 14 and above**, **Node.js 24.14 and above**.
+**Important**: Durcno only supports **PostgreSQL 14 and above**, **Node.js 26.13 and above**.
 
 ## Usage
 
@@ -212,7 +212,7 @@ dist/                     # Production compiled output
 
 ### Environment Setup
 
-1. **Setup Node.js**: Ensure Node.js 24.14+ is installed (see `engines.node` in `package.json`)
+1. **Setup Node.js**: Ensure Node.js 26.13+ is installed (see `engines.node` in `package.json`)
 2. **Install Dependencies**: Run `pnpm i`
 
 ### Available Scripts
