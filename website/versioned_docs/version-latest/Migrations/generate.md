@@ -15,6 +15,25 @@ npm exec durcno generate [--config path/to/durcno.config.ts]
 Common options
 
 - `--config <path>` — Path to config file (defaults to `durcno.config.ts`).
+- `-y, --yes` — Treat unconfirmed potential renames as drop + create instead of prompting.
+- `--rename-table <old=new>` — Declare a table rename; repeat for multiple tables. The schema defaults to `public`.
+- `--rename-column <table.old=new>` — Declare a column rename; repeat for multiple columns. The schema defaults to `public`.
+
+Renames and non-interactive runs
+
+When a table or column is dropped while another is added in the same schema, Durcno cannot tell a rename from a delete + create. In an interactive terminal it asks you to confirm each pair.
+
+When stdin is not a TTY (CI, scripts, AI agents), `generate` never prompts. It exits with code `1` and prints the matching `--rename-table` / `--rename-column` flags. Pass those flags to record a rename, or pass `--yes` to treat the unresolved changes as drop + create.
+
+```bash npm2yarn
+# Rename public.users to public.members and its username column to handle
+npm exec durcno generate --rename-table public.users=public.members --rename-column public.members.username=handle
+
+# Accept drop + create for anything left unconfirmed
+npm exec durcno generate --yes
+```
+
+Rename flags also work in an interactive terminal; only the remaining ambiguous pairs are prompted.
 
 What it produces
 

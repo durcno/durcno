@@ -57,6 +57,34 @@ Columns are nullable by default unless `notNull` is specified.
 Use `char` for fixed-length codes like ISO country codes (2 chars) or currency codes (3 chars). For variable-length strings, prefer `varchar`.
 :::
 
+### Full-Text Search Columns
+
+#### `tsvector`
+
+- SQL type: `tsvector`
+- JS type: `string`
+- Notes: stores preprocessed lexemes and positions. Populate it with `toTsvector()` and index it with GIN.
+
+```typescript
+import { index, notNull, pk, table, text, tsvector, varchar } from "durcno";
+
+export const Articles = table(
+  "public",
+  "articles",
+  {
+    id: pk(),
+    title: varchar({ length: 255, notNull }),
+    body: text({ notNull }),
+    search: tsvector({ notNull }),
+  },
+  {
+    indexes: (t) => [index([t.search]).using("gin")],
+  },
+);
+```
+
+The TypeScript value is PostgreSQL's textual `tsvector` representation (for example `'fat':2 'rat':3`). See [Full-Text Search Functions](../Expressions/functions#full-text-search-functions) for building and searching vectors.
+
 ### Numeric Columns
 
 #### `integer`

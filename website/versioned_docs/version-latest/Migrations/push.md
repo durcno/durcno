@@ -17,6 +17,11 @@ npm exec durcno push [--config path/to/durcno.config.ts]
 ### Common options
 
 - `--config <path>` — Path to config file (defaults to `durcno.config.ts`).
+- `-y, --yes` — Treat unconfirmed potential renames as drop + create instead of prompting.
+- `--rename-table <old=new>` — Declare a table rename; repeat for multiple tables. The schema defaults to `public`.
+- `--rename-column <table.old=new>` — Declare a column rename; repeat for multiple columns. The schema defaults to `public`.
+
+`push` forwards these options to `generate`. See [generate](./generate) for how renames are resolved in non-interactive environments.
 
 ## What it does
 
