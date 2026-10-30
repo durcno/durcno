@@ -39,7 +39,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 ### Prerequisites
 
 - **Node.js 26.13+**
-- **pnpm 10+**
+- **pnpm 12+**
 - **Docker Desktop** — must be installed and **running** before executing integration tests (`pnpm test`)
 
 ### Dependencies
