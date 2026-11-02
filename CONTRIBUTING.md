@@ -87,7 +87,7 @@ For an overview of the project structure, see [AGENTS.md](AGENTS.md).
    pnpm test          # Integration tests
    ```
 
-5. **Create a branch and your first commit** using the [add-changenote skill](.agents/skills/add-changenote/SKILL.md), which walks you through creating a changenote, naming the branch, and staging your first commit following the [commit guidelines](#commit-guidelines)
+5. **Create a branch and your first commit** using the `changenote` skill with `--branch` (installed from [cngpac](https://github.com/cngpac/cngpac)), with this project's [commit-message](.agents/skills/commit-message/SKILL.md) and [changenote-customizations](.agents/skills/changenote-customizations/SKILL.md) skills. They walk you through naming the branch, writing the changenote title, and staging your first commit following the [commit guidelines](#commit-guidelines)
 
 ## Testing
 
@@ -152,7 +152,7 @@ Stage your changes (including the changenote file) before running this command.
 
 ## Commit Guidelines
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/) style. The [add-changenote skill](.agents/skills/add-changenote/SKILL.md) guides you through naming your branch, writing a commit message, and creating a changenote — refer to it when making your first commit on a change.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/) style. The [commit-message skill](.agents/skills/commit-message/SKILL.md) covers commit names and changenote titles, while the [changenote-customizations skill](.agents/skills/changenote-customizations/SKILL.md) covers the durcno-specific workflow — refer to both when making your first commit on a change.
 
 ## Pull Request Guidelines
 
