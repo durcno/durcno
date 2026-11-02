@@ -202,6 +202,29 @@ describe("durcno generate - initial migration", () => {
       expect(postFk?.foreign_column_name).toBe("id");
     });
 
+    it("should apply the configured on delete actions", async () => {
+      const result = await client.query(`
+        SELECT
+          con.conname AS constraint_name,
+          con.confdeltype AS on_delete
+        FROM pg_catalog.pg_constraint con
+        JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
+        JOIN pg_catalog.pg_namespace nsp ON nsp.oid = rel.relnamespace
+        WHERE con.contype = 'f'
+        AND nsp.nspname = 'public'
+        AND rel.relname IN ('posts', 'comments')
+        ORDER BY con.conname;
+      `);
+
+      const actions = Object.fromEntries(
+        result.rows.map((row) => [row.constraint_name, row.on_delete]),
+      );
+
+      expect(actions.posts_author_id_fkey).toBe("c");
+      expect(actions.comments_post_id_fkey).toBe("c");
+      expect(actions.comments_author_id_fkey).toBe("n");
+    });
+
     it("should create unique constraints", async () => {
       const result = await client.query(`
         SELECT

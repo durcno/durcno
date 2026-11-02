@@ -68,7 +68,9 @@ export const UserProfiles = table("public", "userProfiles", {
   userId: bigint({
     unique,
     notNull,
-  }).references({ column: () => Users.id, onDelete: "CASCADE" }),
+  })
+    .references(() => Users.id)
+    .onDeleteCascade(),
   bio: varchar({ length: 500 }),
   avatarUrl: varchar({ length: 200 }),
   // bytea columns: binary data storage for avatar
@@ -95,10 +97,14 @@ export const Comments = table("public", "comments", {
   id: pk(),
   postId: bigint({
     notNull,
-  }).references({ column: () => Posts.id, onDelete: "SET NULL" }),
+  })
+    .references(() => Posts.id)
+    .onDeleteSetNull(),
   userId: bigint({
     notNull,
-  }).references({ column: () => Users.id, onDelete: "RESTRICT" }),
+  })
+    .references(() => Users.id)
+    .onDeleteRestrict(),
   body: varchar({ length: 500 }),
   createdAt: timestamp({ notNull }).default(now()),
 });

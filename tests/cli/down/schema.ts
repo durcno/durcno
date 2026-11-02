@@ -39,9 +39,9 @@ export const Posts =
         id: pk(),
         title: varchar({ length: 200, notNull }),
         content: text({ notNull }),
-        authorId: bigint({
-          notNull,
-        }).references({ column: () => Users.id, onDelete: "CASCADE" }),
+        authorId: bigint({ notNull })
+          .references(() => Users.id)
+          .onDeleteCascade(),
         publishedAt: timestamptz({}),
         createdAt: timestamptz({ notNull }).default(now()),
       })

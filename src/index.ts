@@ -13,6 +13,7 @@ export {
   Dimension,
   identity,
   notNull,
+  type OnDeleteAction,
   primaryKey,
   tuple,
   unique,

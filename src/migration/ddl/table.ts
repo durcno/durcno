@@ -4,6 +4,7 @@ import { camelToSnake } from "../../utils";
 import type {
   Snapshot,
   SnapshotColumn,
+  SnapshotColumnRef,
   SnapshotTableCheck,
   SnapshotTablePrimaryKey,
   SnapshotTableUnique,
@@ -23,7 +24,17 @@ interface ColumnReference {
   /** Name of the referenced column. */
   column: string;
   /** The `ON DELETE` action (`CASCADE`, `SET NULL`, `RESTRICT`, etc.). */
-  onDelete: OnDeleteAction;
+  onDelete?: OnDeleteAction;
+}
+
+function toSnapshotRef(ref: ColumnReference): SnapshotColumnRef {
+  const snapshotRef: SnapshotColumnRef = {
+    schema: camelToSnake(ref.schema),
+    table: camelToSnake(ref.table),
+    column: camelToSnake(ref.column),
+  };
+  if (ref.onDelete !== undefined) snapshotRef.onDelete = ref.onDelete;
+  return snapshotRef;
 }
 
 /**
@@ -84,7 +95,10 @@ function toColumnDef(
   if (options.primaryKey) def += " PRIMARY KEY";
   if (options.references) {
     const refTable = `"${options.references.schema}"."${options.references.table}"`;
-    def += ` REFERENCES ${refTable}(${options.references.column}) ON DELETE ${options.references.onDelete}`;
+    def += ` REFERENCES ${refTable}(${options.references.column})`;
+    if (options.references.onDelete) {
+      def += ` ON DELETE ${options.references.onDelete}`;
+    }
   }
   if (options.unique) def += " UNIQUE";
   if (options.notNull) def += " NOT NULL";
@@ -237,12 +251,7 @@ export class CreateTableBuilder extends DDLStatement {
       if (col.options.generated) colSnapshot.generated = col.options.generated;
       if (col.options.as) colSnapshot.as = col.options.as;
       if (col.options.references) {
-        colSnapshot.references = {
-          schema: camelToSnake(col.options.references.schema),
-          table: camelToSnake(col.options.references.table),
-          column: camelToSnake(col.options.references.column),
-          onDelete: col.options.references.onDelete,
-        };
+        colSnapshot.references = toSnapshotRef(col.options.references);
       }
       columns[col.name] = colSnapshot;
     }
@@ -729,8 +738,11 @@ export class AlterTableBuilder extends DDLStatement {
         }
         case "addForeignKey": {
           const refTable = `"${action.references.schema}"."${action.references.table}"`;
+          const onDelete = action.references.onDelete
+            ? ` ON DELETE ${action.references.onDelete}`
+            : "";
           statements.push(
-            `ALTER TABLE ${relation} ADD CONSTRAINT ${action.constraintName} FOREIGN KEY ("${action.column}") REFERENCES ${refTable}("${action.references.column}") ON DELETE ${action.references.onDelete};`,
+            `ALTER TABLE ${relation} ADD CONSTRAINT ${action.constraintName} FOREIGN KEY ("${action.column}") REFERENCES ${refTable}("${action.references.column}")${onDelete};`,
           );
           break;
         }
@@ -766,12 +778,7 @@ export class AlterTableBuilder extends DDLStatement {
             colSnapshot.generated = action.options.generated;
           if (action.options.as) colSnapshot.as = action.options.as;
           if (action.options.references) {
-            colSnapshot.references = {
-              schema: camelToSnake(action.options.references.schema),
-              table: camelToSnake(action.options.references.table),
-              column: camelToSnake(action.options.references.column),
-              onDelete: action.options.references.onDelete,
-            };
+            colSnapshot.references = toSnapshotRef(action.options.references);
           }
           table.columns[action.name] = colSnapshot;
           break;
@@ -870,12 +877,9 @@ export class AlterTableBuilder extends DDLStatement {
         }
         case "addForeignKey": {
           if (table.columns[action.column]) {
-            table.columns[action.column].references = {
-              schema: camelToSnake(action.references.schema),
-              table: camelToSnake(action.references.table),
-              column: camelToSnake(action.references.column),
-              onDelete: action.references.onDelete,
-            };
+            table.columns[action.column].references = toSnapshotRef(
+              action.references,
+            );
           }
           break;
         }

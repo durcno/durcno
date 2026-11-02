@@ -196,20 +196,6 @@ type HasInsertFn<C> = C & { hasInsertFn: true };
 type HasUpdateFn<C> = C & { hasUpdateFn: true };
 
 /**
- * Describes a foreign key reference target for `references()`.
- * Supports either a direct column resolver function or an object with
- * a resolver and optional `onDelete` action.
- */
-// biome-ignore-start lint/suspicious/noExplicitAny: any config accepts every column config shape
-type BuildRef<ValType> =
-  | (() => StdTableColumn<Column<any, ValType>>)
-  | {
-      column: () => StdTableColumn<Column<any, ValType>>;
-      onDelete?: OnDeleteAction;
-    };
-// biome-ignore-end lint/suspicious/noExplicitAny: any config accepts every column config shape
-
-/**
  * Type that augments C with a `hasReferences` property set to true.
  * Used for columns that have foreign key references.
  */
@@ -292,9 +278,8 @@ export abstract class Column<
   #default: this["ValType"] | Sql | undefined;
   #insertFn: (() => this["ValType"]) | undefined;
   #updateFn: (() => this["ValType"]) | undefined;
-  #references:
-    | { column: () => StdTableColumn; onDelete: OnDeleteAction }
-    | undefined;
+  #references: (() => StdTableColumn) | undefined;
+  #onDelete: OnDeleteAction | undefined;
   #check: ((c: StdTableColumn) => AnyFilter | Sql) | undefined;
 
   // Cached from the config
@@ -745,32 +730,59 @@ export abstract class Column<
 
   /**
    * Sets a foreign key reference for this column.
-   * SQL equivalent: `REFERENCES <table>(<column>) [ON DELETE <action>]`
-   * @param ref - A function returning the referenced column, or an object with column and onDelete
+   * SQL equivalent: `REFERENCES <table>(<column>)`
+   * @param ref - A function returning the referenced column.
    * @returns this column instance
    */
-  references(ref: BuildRef<this["ValType"]>) {
-    if (typeof ref === "function") {
-      this.#references = {
-        column: ref,
-        onDelete: "CASCADE",
-      };
-    } else {
-      this.#references = {
-        column: ref.column,
-        onDelete: ref.onDelete ?? "CASCADE",
-      };
-    }
+  // biome-ignore lint/suspicious/noExplicitAny: any config accepts every column config shape
+  references(ref: () => StdTableColumn<Column<any, this["ValType"]>>) {
+    this.#references = ref;
     return this as HasReferences<this>;
   }
+
+  /**
+   * Sets the `ON DELETE` action for this column's foreign key.
+   * @param action - A PostgreSQL `ON DELETE` action.
+   * @returns this column instance
+   */
+  onDelete(action: OnDeleteAction): this {
+    this.#onDelete = action;
+    return this;
+  }
+
+  /** Sets `ON DELETE CASCADE` for this column's foreign key. */
+  onDeleteCascade(): this {
+    return this.onDelete("CASCADE");
+  }
+
+  /** Sets `ON DELETE SET NULL` for this column's foreign key. */
+  onDeleteSetNull(): this {
+    return this.onDelete("SET NULL");
+  }
+
+  /** Sets `ON DELETE SET DEFAULT` for this column's foreign key. */
+  onDeleteSetDefault(): this {
+    return this.onDelete("SET DEFAULT");
+  }
+
+  /** Sets `ON DELETE RESTRICT` for this column's foreign key. */
+  onDeleteRestrict(): this {
+    return this.onDelete("RESTRICT");
+  }
+
+  /** Sets `ON DELETE NO ACTION` for this column's foreign key. */
+  onDeleteNoAction(): this {
+    return this.onDelete("NO ACTION");
+  }
+
   get hasReferences(): boolean {
     return this.#references !== undefined;
   }
   get getReferencesCol(): StdTableColumn | null {
-    return this.#references ? this.#references.column() : null;
+    return this.#references ? this.#references() : null;
   }
   get getReferencesOnDelete(): OnDeleteAction | null {
-    return this.#references ? this.#references.onDelete : null;
+    return this.#references ? (this.#onDelete ?? null) : null;
   }
 
   /**

@@ -62,9 +62,9 @@ export const users = table("public", "users", {
 // Table with foreign key relationships
 export const posts = table("public", "posts", {
   id: pk(),
-  authorId: bigint({
-    notNull,
-  }).references({ column: () => users.id, onDelete: "CASCADE" }),
+  authorId: bigint({ notNull })
+    .references(() => users.id)
+    .onDeleteCascade(),
   title: varchar({ length: 200, notNull }),
   content: text({ notNull }),
   slug: varchar({ length: 250, unique, notNull }),
@@ -78,13 +78,12 @@ export const posts = table("public", "posts", {
 // Table with multiple foreign keys
 export const comments = table("public", "comments", {
   id: pk(),
-  postId: bigint({
-    notNull,
-  }).references({ column: () => posts.id, onDelete: "CASCADE" }),
-  authorId: bigint({}).references({
-    column: () => users.id,
-    onDelete: "SET NULL",
-  }),
+  postId: bigint({ notNull })
+    .references(() => posts.id)
+    .onDeleteCascade(),
+  authorId: bigint({})
+    .references(() => users.id)
+    .onDeleteSetNull(),
   parentId: bigint({}), // Will be updated to self-reference after table creation
   body: text({ notNull }),
   isEdited: boolean({ notNull }).default(false),

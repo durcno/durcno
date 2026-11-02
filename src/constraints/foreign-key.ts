@@ -27,7 +27,6 @@ export class ForeignKeyBuilder<TCol extends AnyColumn> {
     return new ForeignKey(
       this.#column as unknown as StdTableColumn,
       ref as unknown as StdTableColumn,
-      "CASCADE",
     );
   }
 }
@@ -39,12 +38,12 @@ export class ForeignKeyBuilder<TCol extends AnyColumn> {
 export class ForeignKey {
   readonly #column: StdTableColumn;
   readonly #reference: StdTableColumn;
-  #onDelete: OnDeleteAction;
+  #onDelete: OnDeleteAction | undefined;
 
   constructor(
     column: StdTableColumn,
     reference: StdTableColumn,
-    onDelete: OnDeleteAction,
+    onDelete?: OnDeleteAction,
   ) {
     this.#column = column;
     this.#reference = reference;
@@ -52,7 +51,7 @@ export class ForeignKey {
   }
 
   /**
-   * Override the default `CASCADE` delete action.
+   * Set the `ON DELETE` action.
    *
    * @param action - The `ON DELETE` action to apply.
    * @returns `this` for chaining.
@@ -62,13 +61,38 @@ export class ForeignKey {
     return this;
   }
 
+  /** Sets `ON DELETE CASCADE`. */
+  onDeleteCascade(): this {
+    return this.onDelete("CASCADE");
+  }
+
+  /** Sets `ON DELETE SET NULL`. */
+  onDeleteSetNull(): this {
+    return this.onDelete("SET NULL");
+  }
+
+  /** Sets `ON DELETE SET DEFAULT`. */
+  onDeleteSetDefault(): this {
+    return this.onDelete("SET DEFAULT");
+  }
+
+  /** Sets `ON DELETE RESTRICT`. */
+  onDeleteRestrict(): this {
+    return this.onDelete("RESTRICT");
+  }
+
+  /** Sets `ON DELETE NO ACTION`. */
+  onDeleteNoAction(): this {
+    return this.onDelete("NO ACTION");
+  }
+
   _ = {
     /** Returns the source column of the foreign key. */
     getColumn: (): StdTableColumn => this.#column,
     /** Returns the referenced column of the foreign key. */
     getReference: (): StdTableColumn => this.#reference,
     /** Returns the configured `ON DELETE` action. */
-    getOnDelete: (): OnDeleteAction => this.#onDelete,
+    getOnDelete: (): OnDeleteAction | undefined => this.#onDelete,
   };
 }
 

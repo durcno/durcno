@@ -65,7 +65,7 @@ export interface SnapshotColumnRef {
   /** Name of the referenced column. */
   column: SnakeCase<string>;
   /** The `ON DELETE` action for this foreign key. */
-  onDelete: OnDeleteAction;
+  onDelete?: OnDeleteAction;
 }
 
 /**
@@ -253,7 +253,9 @@ export function snapshot(entities: unknown[]): Snapshot {
                   schema: referencesCol.table._.schemaSql,
                   table: referencesCol.table._.nameSql,
                   column: referencesCol.nameSql,
-                  onDelete: referencesOnDelete ?? "CASCADE",
+                  ...(referencesOnDelete !== null && {
+                    onDelete: referencesOnDelete,
+                  }),
                 }
               : undefined,
           unique: col.isUnique || undefined,
@@ -272,11 +274,12 @@ export function snapshot(entities: unknown[]): Snapshot {
             srcCol.nameSql
           ];
         if (colEntry) {
+          const onDelete = foreignKey._.getOnDelete();
           colEntry.references = {
             schema: refCol.table._.schemaSql,
             table: refCol.table._.nameSql,
             column: refCol.nameSql,
-            onDelete: foreignKey._.getOnDelete(),
+            ...(onDelete !== undefined && { onDelete }),
           };
         }
       }

@@ -52,13 +52,13 @@ export const Posts = table("public", "posts", {
   body: text({}),
   views: integer({ notNull }),
   publishedAt: timestamptz({}),
-  userId: bigint({ notNull }).references({ column: () => Users.id }),
+  userId: bigint({ notNull }).references(() => Users.id),
 });
 
 export const Comments = table("public", "comments", {
   id: pk(),
   body: text({ notNull }),
-  postId: bigint({ notNull }).references({ column: () => Posts.id }),
+  postId: bigint({ notNull }).references(() => Posts.id),
 });
 
 export const UsersRelations = relations(Users, () => ({
@@ -114,7 +114,7 @@ export const Articles = table("public", "articles", {
 
 export const ArticleRevisions = table("public", "article_revisions", {
   id: pk(),
-  articleId: bigint({ notNull }).references({ column: () => Articles.id }),
+  articleId: bigint({ notNull }).references(() => Articles.id),
   revision: integer({ notNull }),
   editorName: varchar({ length: 120 }),
   editorEmail: varchar({ length: 200 }),
@@ -136,7 +136,7 @@ export const ArticleRevisions = table("public", "article_revisions", {
 
 export const ArticleRatings = table("public", "article_ratings", {
   id: pk(),
-  articleId: bigint({ notNull }).references({ column: () => Articles.id }),
+  articleId: bigint({ notNull }).references(() => Articles.id),
   rating: integer({ notNull }),
   raterName: varchar({ length: 120 }),
   raterEmail: varchar({ length: 200 }),
@@ -169,7 +169,7 @@ export const Events = table("public", "events", {
 /** Carries an array column, so array literal rendering is on the filter path. */
 export const Listings = table("public", "listings", {
   id: pk(),
-  articleId: bigint({ notNull }).references({ column: () => Articles.id }),
+  articleId: bigint({ notNull }).references(() => Articles.id),
   title: varchar({ length: 200, notNull }),
   tags: varchar({ length: 40, dimension: array() }),
   pairs: varchar({ length: 40, dimension: tuple(2) }),

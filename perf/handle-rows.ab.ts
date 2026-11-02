@@ -83,7 +83,7 @@ function buildSchema(idx: Durcno) {
     body: text({}),
     views: integer({ notNull }),
     publishedAt: timestamptz({}),
-    userId: bigint({ notNull }).references({ column: () => Users.id }),
+    userId: bigint({ notNull }).references(() => Users.id),
   });
   const Comments = table("public", "comments", {
     id: pk(),

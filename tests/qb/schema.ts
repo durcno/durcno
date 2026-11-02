@@ -78,10 +78,9 @@ export const UsersRelations = relations(Users, () => ({
 // User profiles for one-to-one relationship testing
 export const UserProfiles = table("public", "userProfiles", {
   id: pk(),
-  userId: bigint({ unique, notNull }).references({
-    column: () => Users.id,
-    onDelete: "CASCADE",
-  }),
+  userId: bigint({ unique, notNull })
+    .references(() => Users.id)
+    .onDeleteCascade(),
   bio: varchar({ length: 500 }),
   avatarUrl: varchar({ length: 200 }),
   website: varchar({ length: 200 }),
@@ -95,7 +94,9 @@ export const UserProfilesRelations = relations(UserProfiles, () => ({
 // Posts table with foreign key relationships
 export const Posts = table("public", "posts", {
   id: pk(),
-  userId: bigint({ notNull }).references(() => Users.id),
+  userId: bigint({ notNull })
+    .references(() => Users.id)
+    .onDeleteCascade(),
   title: varchar({ length: 200 }),
   content: varchar({ length: 1000 }),
   slug: varchar({ length: 250, unique }),
@@ -117,14 +118,12 @@ export const Comments = table(
   "comments",
   {
     id: pk(),
-    postId: bigint({ notNull }).references({
-      column: () => Posts.id,
-      onDelete: "CASCADE",
-    }),
-    userId: bigint({ notNull }).references({
-      column: () => Users.id,
-      onDelete: "CASCADE",
-    }),
+    postId: bigint({ notNull })
+      .references(() => Posts.id)
+      .onDeleteCascade(),
+    userId: bigint({ notNull })
+      .references(() => Users.id)
+      .onDeleteCascade(),
     parentId: bigint({}), // Self-reference for nested comments
     body: varchar({ length: 500 }),
     isEdited: boolean({ notNull }).default(false),

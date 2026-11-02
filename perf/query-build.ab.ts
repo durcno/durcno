@@ -96,12 +96,12 @@ function buildSchema(idx: Durcno) {
     body: text({ notNull }),
     views: integer({ notNull }),
     publishedAt: timestamptz({}),
-    userId: bigint({ notNull }).references({ column: () => Users.id }),
+    userId: bigint({ notNull }).references(() => Users.id),
   });
   const Comments = table("public", "comments", {
     id: pk(),
     body: text({ notNull }),
-    postId: bigint({ notNull }).references({ column: () => Posts.id }),
+    postId: bigint({ notNull }).references(() => Posts.id),
   });
 
   // Wide tables: a `LEFT JOIN` clones every column of the joined table to make
@@ -131,7 +131,7 @@ function buildSchema(idx: Durcno) {
   });
   const ArticleRevisions = table("public", "article_revisions", {
     id: pk(),
-    articleId: bigint({ notNull }).references({ column: () => Articles.id }),
+    articleId: bigint({ notNull }).references(() => Articles.id),
     revision: integer({ notNull }),
     editorName: varchar({ length: 120 }),
     editorEmail: varchar({ length: 200 }),
@@ -152,7 +152,7 @@ function buildSchema(idx: Durcno) {
   });
   const ArticleRatings = table("public", "article_ratings", {
     id: pk(),
-    articleId: bigint({ notNull }).references({ column: () => Articles.id }),
+    articleId: bigint({ notNull }).references(() => Articles.id),
     rating: integer({ notNull }),
     raterName: varchar({ length: 120 }),
     raterEmail: varchar({ length: 200 }),
@@ -185,7 +185,7 @@ function buildSchema(idx: Durcno) {
   /** Array and tuple columns, so `ARRAY[...]` rendering is on the path. */
   const Listings = table("public", "listings", {
     id: pk(),
-    articleId: bigint({ notNull }).references({ column: () => Articles.id }),
+    articleId: bigint({ notNull }).references(() => Articles.id),
     title: varchar({ length: 200, notNull }),
     tags: varchar({ length: 40, dimension: array() }),
     pairs: varchar({ length: 40, dimension: tuple(2) }),

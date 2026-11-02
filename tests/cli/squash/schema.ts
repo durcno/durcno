@@ -40,9 +40,9 @@ export const Posts =
         id: pk(),
         title: varchar({ length: 200, notNull }),
         content: text({ notNull }),
-        authorId: bigint({
-          notNull,
-        }).references({ column: () => Users.id, onDelete: "CASCADE" }),
+        authorId: bigint({ notNull })
+          .references(() => Users.id)
+          .onDeleteCascade(),
         publishedAt: timestamptz({}),
         createdAt: timestamptz({ notNull }).default(now()),
         ...(migrationVersion >= 5 && {
@@ -58,10 +58,9 @@ export const Comments =
   migrationVersion >= 4
     ? table("public", "comments", {
         id: pk(),
-        postId: bigint({ notNull }).references({
-          column: () => (Posts as NonNullable<typeof Posts>).id,
-          onDelete: "CASCADE",
-        }),
+        postId: bigint({ notNull })
+          .references(() => (Posts as NonNullable<typeof Posts>).id)
+          .onDeleteCascade(),
         body: text({ notNull }),
         createdAt: timestamptz({ notNull }).default(now()),
       })
