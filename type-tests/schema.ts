@@ -225,6 +225,9 @@ export const CheckTest = table(
         "name_length",
         and(gte(length(t.name), 2), lte(length(t.name), 100)),
       ),
+
+      // Boolean literal predicate
+      check("always_true", true),
     ],
   },
 );

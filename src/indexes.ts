@@ -1,5 +1,5 @@
 import { IndexOn } from "./columns/common";
-import type { Filter } from "./filters/index";
+import type { FilterExpression } from "./filters/index";
 import { SqlFn } from "./functions/index";
 import { Query, type QueryContext } from "./query-builders/query";
 import { Sql } from "./sql";
@@ -18,9 +18,10 @@ export type IndexType =
 
 /**
  * Expression accepted in an index WHERE predicate for partial indexes.
- * Supports type-safe `Filter` conditions without `Arg` placeholders, or raw `Sql`.
+ * Supports type-safe `Filter` conditions without `Arg` placeholders, raw `Sql`,
+ * or a boolean literal.
  */
-export type IndexWhereExpression = Filter<AnyColumn, false> | Sql;
+export type IndexWhereExpression = FilterExpression<AnyColumn>;
 
 /**
  * A scalar SQL function accepted as an index key.

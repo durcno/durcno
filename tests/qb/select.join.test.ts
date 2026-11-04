@@ -106,6 +106,32 @@ describe("SELECT with INNER JOIN", () => {
     expect(result[0].postTitle).toBe("My First Post");
   });
 
+  it("should accept boolean literals in join on", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "author1" }))
+      .returning({ id: true });
+
+    await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user.id, { title: "My First Post" }));
+
+    const onFalse = await db
+      .from(schema.Users)
+      .innerJoin(schema.Posts)
+      .on(() => false)
+      .select(() => ({ username: schema.Users.username }));
+
+    const onTrue = await db
+      .from(schema.Users)
+      .innerJoin(schema.Posts)
+      .on(() => true)
+      .select(() => ({ username: schema.Users.username }));
+
+    expect(onFalse).toHaveLength(0);
+    expect(onTrue).toHaveLength(1);
+  });
+
   it("should return multiple rows when user has multiple posts", async () => {
     const [user] = await db
       .insertInto(schema.Users)

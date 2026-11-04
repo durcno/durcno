@@ -1,5 +1,8 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { FilterExpression } from "../filters/index";
+import {
+  appendFilterExpression,
+  type FilterExpression,
+} from "../filters/index";
 import type { AnyTableWithColumns, StdTableWithColumns } from "../table";
 import type { RawRow, Valueof } from "../types";
 import { mapStarRows } from "./helpers";
@@ -40,9 +43,9 @@ export class FirstQuery<
   toQuery() {
     const query = new Query("SELECT * FROM ", this.handleRows.bind(this));
     query.sql += this.#$table._.fullName;
-    if (this.#$where) {
+    if (this.#$where !== undefined) {
       query.sql += " WHERE ";
-      this.#$where.toQuery(query);
+      appendFilterExpression(this.#$where, query);
     }
     query.sql += " LIMIT 1";
     return query;

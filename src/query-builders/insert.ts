@@ -1,7 +1,11 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
-import type { AnyFilterExpression, FilterExpression } from "../filters/index";
+import {
+  type AnyFilterExpression,
+  appendFilterExpression,
+  type FilterExpression,
+} from "../filters/index";
 import { type NonAggregateSqlFn, SqlFn, setOwn } from "../functions/index";
 import {
   isSelectQuery,
@@ -521,9 +525,9 @@ export class InsertQuery<
             query.sql += col.toSQL(value, { cast: true });
           }
         }
-        if (this.#$conflict.where) {
+        if (this.#$conflict.where !== undefined) {
           query.sql += " WHERE ";
-          this.#$conflict.where.toQuery(query);
+          appendFilterExpression(this.#$conflict.where, query);
         }
       }
     }

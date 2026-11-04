@@ -1,6 +1,9 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
-import type { FilterExpression } from "../filters/index";
+import {
+  appendFilterExpression,
+  type FilterExpression,
+} from "../filters/index";
 import type { AnyTableWithColumns, StdTableWithColumns } from "../table";
 import type { Key, RawRow, Valueof } from "../types";
 import {
@@ -119,9 +122,9 @@ export class DeleteQuery<
     }
     query.sql += "DELETE FROM ";
     query.sql += this.#$table._.fullName;
-    if (this.#$where) {
+    if (this.#$where !== undefined) {
       query.sql += " WHERE ";
-      this.#$where.toQuery(query);
+      appendFilterExpression(this.#$where, query);
     }
     buildReturningClause(
       this.#$table._.columns,

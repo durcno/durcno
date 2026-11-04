@@ -511,4 +511,47 @@ describe("Shortcuts ($count, $exists, $first, $sum, $avg, $min, $max, $distinct)
       expect(distinctViewCounts.sort((a, b) => a - b)).toEqual([10, 20]);
     });
   });
+
+  it("should accept boolean literal filters in shortcut queries", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "Alice" }),
+        createTestUser({ username: "Bob" }),
+      ])
+      .returning({ id: true });
+
+    await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user.id, { viewCount: 10 }));
+
+    expect(await db.$count(schema.Users, true)).toBe(2);
+    expect(await db.$count(schema.Users, false)).toBe(0);
+    expect(await db.$exists(schema.Users, true)).toBe(true);
+    expect(await db.$exists(schema.Users, false)).toBe(false);
+    expect(await db.$first(schema.Users, true)).not.toBeNull();
+    expect(await db.$first(schema.Users, false)).toBeNull();
+    expect(
+      await db.$distinct(schema.Users, schema.Users.username, true),
+    ).toHaveLength(2);
+    expect(
+      await db.$distinct(schema.Users, schema.Users.username, false),
+    ).toEqual([]);
+    expect(await db.$sum(schema.Posts, schema.Posts.viewCount, true)).toBe(10);
+    expect(
+      await db.$sum(schema.Posts, schema.Posts.viewCount, false),
+    ).toBeNull();
+    expect(await db.$avg(schema.Posts, schema.Posts.viewCount, true)).toBe(10);
+    expect(
+      await db.$avg(schema.Posts, schema.Posts.viewCount, false),
+    ).toBeNull();
+    expect(await db.$min(schema.Posts, schema.Posts.viewCount, true)).toBe(10);
+    expect(
+      await db.$min(schema.Posts, schema.Posts.viewCount, false),
+    ).toBeNull();
+    expect(await db.$max(schema.Posts, schema.Posts.viewCount, true)).toBe(10);
+    expect(
+      await db.$max(schema.Posts, schema.Posts.viewCount, false),
+    ).toBeNull();
+  });
 });

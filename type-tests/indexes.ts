@@ -84,6 +84,9 @@ export const Users = table(
       // Callback syntax for .where()
       index([t.email]).where(() => eq(t.status, "active")),
 
+      // Boolean literal predicate
+      index([t.email]).where(true),
+
       // Raw SQL expression for .where()
       index([t.email]).where(sql`"status" = 'active'`),
 

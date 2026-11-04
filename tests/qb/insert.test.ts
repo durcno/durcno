@@ -741,6 +741,27 @@ describe("INSERT queries", () => {
       expect(users[0].score).toBe(50); // should not be updated to 20
     });
 
+    it("doUpdateSet: should skip update when where is false", async () => {
+      const user = createTestUser({ username: "booleanSkip", score: 50 });
+      await db.insertInto(schema.Users).values(user);
+
+      await db
+        .insertInto(schema.Users)
+        .values({ ...user, score: 20 })
+        .onConflict(schema.Users.username)
+        .doUpdateSet(
+          ({ excluded }) => ({ score: excluded.score }),
+          () => false,
+        );
+
+      const users = await db
+        .from(schema.Users)
+        .select("*")
+        .where(() => eq(schema.Users.username, "booleanSkip"));
+      expect(users).toHaveLength(1);
+      expect(users[0].score).toBe(50);
+    });
+
     it("doUpdateSet: should update with scalar SQL functions referencing table columns and excluded", async () => {
       const user = createTestUser({
         username: "upsertFnUser",

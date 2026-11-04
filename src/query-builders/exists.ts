@@ -1,5 +1,8 @@
 import type { QueryExecutor } from "../connectors/common";
-import type { FilterExpression } from "../filters/index";
+import {
+  appendFilterExpression,
+  type FilterExpression,
+} from "../filters/index";
 import type { AnyTableWithColumns } from "../table";
 import type { RawRow, Valueof } from "../types";
 import { Query } from "./query";
@@ -37,9 +40,9 @@ export class ExistsQuery<
       this.handleRows.bind(this),
     );
     query.sql += this.#$table._.fullName;
-    if (this.#$where) {
+    if (this.#$where !== undefined) {
       query.sql += " WHERE ";
-      this.#$where.toQuery(query);
+      appendFilterExpression(this.#$where, query);
     }
     query.sql += ")";
     return query;

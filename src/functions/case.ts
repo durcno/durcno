@@ -1,5 +1,6 @@
 import { isCol } from "../entity";
 import {
+  appendFilterExpression,
   filterReferencedColumns,
   type GroupedFilterExpression,
 } from "../filters";
@@ -236,7 +237,7 @@ export class CaseFn<
     query.sql += "CASE";
     for (const b of this.branches) {
       query.sql += " WHEN ";
-      b.condition.toQuery(query, ctx);
+      appendFilterExpression(b.condition, query, ctx);
       query.sql += " THEN ";
       appendOperand(query, b.result, ctx, appendOpts);
     }

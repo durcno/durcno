@@ -290,6 +290,20 @@ describe("UPDATE queries", () => {
     expect(users[0].username).toBe("test");
   });
 
+  it("should accept boolean literals in WHERE clause", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([createTestUser({ score: 0 }), createTestUser({ score: 0 })]);
+
+    await db.update(schema.Users).set({ score: 1 }).where(false);
+    let users = await db.from(schema.Users).select("*");
+    expect(users.map((user) => user.score)).toEqual([0, 0]);
+
+    await db.update(schema.Users).set({ score: 2 }).where(true);
+    users = await db.from(schema.Users).select("*");
+    expect(users.map((user) => user.score)).toEqual([2, 2]);
+  });
+
   it("should update all rows when no WHERE clause", async () => {
     await db
       .insertInto(schema.Users)

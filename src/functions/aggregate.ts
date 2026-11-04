@@ -1,5 +1,5 @@
 import { isCol } from "../entity";
-import type { Filter } from "../filters";
+import { appendFilterExpression, type Filter } from "../filters";
 import type { AnyOrder } from "../query-builders/orderby-clause";
 import type { Query, QueryContext } from "../query-builders/query";
 import type { Sql } from "../sql";
@@ -29,6 +29,22 @@ export type OrderHasArg<T> = T extends readonly (infer U)[]
   : T extends { $: { HasArg: true } }
     ? true
     : false;
+
+/** Columns a `.filter()` predicate references; raw `Sql` has unknown scope. */
+type FilterConditionColumns<TCondition> = TCondition extends boolean
+  ? never
+  : TCondition extends Sql
+    ? AnyColumn
+    : TCondition extends { $: { Columns: infer TColumns extends AnyColumn } }
+      ? TColumns
+      : never;
+
+/** `true` when a `.filter()` predicate embeds at least one `Arg` placeholder. */
+type FilterConditionHasArg<TCondition> = [
+  TCondition extends { $: { HasArg: infer THasArg } } ? THasArg : false,
+] extends [false]
+  ? false
+  : true;
 
 /** Extracts union of referenced columns across a tuple of order items. */
 export type TupleOrderColumns<TTuple extends readonly unknown[]> =
@@ -82,16 +98,20 @@ export abstract class AggregateSqlFn<
    * count(orders.id).filter(eq(orders.status, "completed"))
    * jsonAgg(posts.title).filter(isNotNull(posts.id))
    */
-  filter<TFilterCol extends AnyColumn, TCondHasArg extends boolean = false>(
-    condition: Filter<TFilterCol, TCondHasArg> | Sql,
-  ): ScopedAggregate<this, TColumn | TFilterCol, Or<THasArg, TCondHasArg>> {
+  filter<TCondition extends Filter<AnyColumn, boolean> | boolean | Sql>(
+    condition: TCondition,
+  ): ScopedAggregate<
+    this,
+    TColumn | FilterConditionColumns<TCondition>,
+    Or<THasArg, FilterConditionHasArg<TCondition>>
+  > {
     const clone = Object.create(Object.getPrototypeOf(this));
     Object.assign(clone, this);
     clone._ = { ...clone._, filter: condition };
     return clone as ScopedAggregate<
       this,
-      TColumn | TFilterCol,
-      Or<THasArg, TCondHasArg>
+      TColumn | FilterConditionColumns<TCondition>,
+      Or<THasArg, FilterConditionHasArg<TCondition>>
     >;
   }
 
@@ -137,9 +157,9 @@ export abstract class AggregateSqlFn<
   /** Appends `FILTER (WHERE ...)` after the closing parenthesis if present. */
   protected appendFilter(query: Query, ctx?: QueryContext): void {
     const filter = this._.filter;
-    if (filter) {
+    if (filter !== undefined) {
       query.sql += " FILTER (WHERE ";
-      filter.toQuery(query, ctx);
+      appendFilterExpression(filter, query, ctx);
       query.sql += ")";
     }
   }

@@ -137,6 +137,33 @@ const countFiltered = count(Users.id).filter(eq(Users.type, "admin"));
 Expect<Equal<(typeof countFiltered._)["sqlFnType"], "aggregate">>();
 Expect<Equal<(typeof countFiltered.$)["HasArg"], false>>();
 
+const countFilteredByBoolean = count(Users.id).filter(true);
+Expect<Equal<(typeof countFilteredByBoolean._)["sqlFnType"], "aggregate">>();
+Expect<Equal<(typeof countFilteredByBoolean.$)["HasArg"], false>>();
+Expect<Equal<(typeof countFilteredByBoolean.$)["Columns"], typeof Users.id>>();
+
+const countFilteredByFalse = count(Users.id).filter(false);
+Expect<Equal<(typeof countFilteredByFalse.$)["Columns"], typeof Users.id>>();
+Expect<Equal<(typeof countFilteredByFalse.$)["HasArg"], false>>();
+
+// A union of filter and boolean stays valid
+const filterFlag = Math.random() > 0.5;
+const countFilteredByConditional = count(Users.id).filter(
+  filterFlag ? eq(Users.type, "admin") : false,
+);
+Expect<Equal<(typeof countFilteredByConditional.$)["HasArg"], false>>();
+Expect<
+  Equal<
+    (typeof countFilteredByConditional.$)["Columns"],
+    typeof Users.id | typeof Users.type
+  >
+>();
+
+const countFilteredByConditionalArg = count(Users.id).filter(
+  filterFlag ? eq(Users.username, Users.username.arg()) : false,
+);
+Expect<Equal<(typeof countFilteredByConditionalArg.$)["HasArg"], true>>();
+
 const countWithArg = count(Users.id).filter(
   eq(Users.username, Users.username.arg()),
 );
@@ -176,6 +203,12 @@ type CaseResult = Awaited<typeof caseQuery>;
 Expect<
   Equal<CaseResult, { roleLabel: "Admin User" | "Regular User" | "Guest" }[]>
 >();
+
+const booleanCaseQuery = db.from(Users).select(() => ({
+  badge: caseWhen(false, "Never").else("Always"),
+}));
+type BooleanCaseResult = Awaited<typeof booleanCaseQuery>;
+Expect<Equal<BooleanCaseResult, { badge: "Never" | "Always" }[]>>();
 
 // Without `.else()` the branch types stay nullable
 const caseDirectQuery = db.from(Users).select(() => ({

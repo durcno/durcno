@@ -82,6 +82,20 @@ Expect<
   Equal<FindManyFiltered, { id: bigint; username: string; createdAt: Date }[]>
 >();
 
+const _booleanFilteredQuery = db.query(Users).findMany({
+  columns: { id: true },
+  where: false,
+});
+type BooleanFiltered = Awaited<typeof _booleanFilteredQuery>;
+Expect<Equal<BooleanFiltered, { id: bigint }[]>>();
+
+const _booleanRelationQuery = db.query(Users).findMany({
+  columns: { id: true },
+  with: { posts: { columns: { id: true }, where: true } },
+});
+type BooleanRelation = Awaited<typeof _booleanRelationQuery>;
+Expect<Equal<BooleanRelation, { id: bigint; posts: { id: bigint }[] }[]>>();
+
 // @ts-expect-error - wrong value type in `where`
 db.query(Users).findMany({ where: eq(Users.id, "string_instead_of_number") });
 

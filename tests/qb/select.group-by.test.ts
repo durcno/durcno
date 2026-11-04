@@ -678,6 +678,47 @@ describe("SELECT .groupBy() and .having()", () => {
   // =========================================================================
 
   describe("having()", () => {
+    it("having accepts boolean literals", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "a1", type: "admin" }),
+          createTestUser({ username: "u1", type: "user" }),
+        ]);
+
+      const none = await db
+        .from(schema.Users)
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
+        .groupBy(() => schema.Users.type)
+        .having(() => false);
+
+      const all = await db
+        .from(schema.Users)
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
+        .groupBy(() => schema.Users.type)
+        .having(() => true);
+
+      expect(none).toHaveLength(0);
+      expect(all).toHaveLength(2);
+    });
+
+    it("aggregate filter accepts boolean literals", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "a1" }),
+          createTestUser({ username: "u1" }),
+        ]);
+
+      const [result] = await db.from(schema.Users).select(() => ({
+        all: count("*").filter(true),
+        none: count("*").filter(false),
+      }));
+
+      expect(result.all).toBe(2);
+      expect(result.none).toBe(0);
+    });
+
     it("having with literal — only returns groups with >= 2 rows", async () => {
       await db
         .insertInto(schema.Users)

@@ -147,6 +147,20 @@ describe("DELETE queries", () => {
     expect(users).toHaveLength(2);
   });
 
+  it("should accept boolean literals in WHERE clause", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([createTestUser(), createTestUser()]);
+
+    await db.deleteFrom(schema.Users).where(false);
+    let users = await db.from(schema.Users).select("*");
+    expect(users).toHaveLength(2);
+
+    await db.deleteFrom(schema.Users).where(true);
+    users = await db.from(schema.Users).select("*");
+    expect(users).toHaveLength(0);
+  });
+
   it("should delete all rows when no WHERE clause", async () => {
     await db
       .insertInto(schema.Users)

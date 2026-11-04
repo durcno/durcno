@@ -3,7 +3,10 @@ import type { QueryExecutor } from "../connectors/common";
 import { fk } from "../constraints/foreign-key";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isTCol } from "../entity";
-import type { FilterExpression } from "../filters/index";
+import {
+  appendFilterExpression,
+  type FilterExpression,
+} from "../filters/index";
 import {
   type InferValueType,
   type ScopedSqlFn,
@@ -577,9 +580,9 @@ class RelationQuery<
         }
       }
     }
-    if (options.where) {
+    if (options.where !== undefined) {
       query.sql += " WHERE ";
-      options.where.toQuery(query);
+      appendFilterExpression(options.where, query);
     }
     if (options.orderBy) {
       const orders = (
@@ -954,14 +957,14 @@ function buildRelationSubquery(
     }
     query.sql += ` WHERE "${escIdentifier(aliasPath)}"."${escIdentifier(relation.col.nameSql)}" = "${escIdentifier(parentTableAlias)}"."${escIdentifier(referencedCol.nameSql)}"`;
     // Apply user-supplied where filter on top of the join condition (Many only)
-    if (relation.t === "Many" && options.where) {
+    if (relation.t === "Many" && options.where !== undefined) {
       const ctx: QueryContext = {
         tableAliases: new Map([
           [`${relation.table._.schema}.${relation.table._.name}`, aliasPath],
         ]),
       };
       query.sql += " AND ";
-      options.where.toQuery(query, ctx);
+      appendFilterExpression(options.where, query, ctx);
     }
     if (relation.t === "One") {
       query.sql += ` LIMIT 1`;

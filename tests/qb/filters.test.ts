@@ -169,6 +169,59 @@ describe("Filters", () => {
     expect(orResult[0].username).toBe("alice");
   });
 
+  it("should accept boolean literals in where", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "alice" }),
+        createTestUser({ username: "bob" }),
+      ]);
+
+    const all = await db
+      .from(schema.Users)
+      .select(() => ({ username: schema.Users.username }))
+      .where(() => true);
+
+    const none = await db
+      .from(schema.Users)
+      .select(() => ({ username: schema.Users.username }))
+      .where(() => false);
+
+    expect(all).toHaveLength(2);
+    expect(none).toHaveLength(0);
+  });
+
+  it("should compose boolean literals in and/or combinators", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "alice", type: "admin" }),
+        createTestUser({ username: "bob", type: "user" }),
+        createTestUser({ username: "charlie", type: "user" }),
+      ]);
+
+    const selectUsernames = () =>
+      db.from(schema.Users).select(() => ({ username: schema.Users.username }));
+
+    const andTrue = await selectUsernames().where(() =>
+      and(true, eq(schema.Users.type, "admin")),
+    );
+    const andFalse = await selectUsernames().where(() =>
+      and(false, eq(schema.Users.type, "admin")),
+    );
+    const orFalse = await selectUsernames().where(() =>
+      or(false, eq(schema.Users.type, "admin")),
+    );
+    const orTrue = await selectUsernames().where(() =>
+      or(true, eq(schema.Users.type, "admin")),
+    );
+
+    expect(andTrue).toHaveLength(1);
+    expect(andFalse).toHaveLength(0);
+    expect(orFalse).toHaveLength(1);
+    expect(orTrue).toHaveLength(3);
+  });
+
   describe("ne (not equals)", () => {
     it("should filter rows with ne operator", async () => {
       await db

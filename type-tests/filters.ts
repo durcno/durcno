@@ -247,6 +247,26 @@ const nestedProjectionQuery = db
 type NestedProjection = Awaited<typeof nestedProjectionQuery>;
 Expect<Equal<NestedProjection, { id: bigint; type: "admin" | "user" }[]>>();
 
+// Boolean literals are valid conditions, alone and inside combinators
+const booleanWhereQuery = db
+  .from(Users)
+  .select("*")
+  .where(() => false);
+type BooleanWhereResult = Awaited<typeof booleanWhereQuery>;
+Expect<Equal<BooleanWhereResult, UserRows>>();
+
+const booleanCompositionQuery = db
+  .from(Users)
+  .select("*")
+  .where(() => and(true, or(false, eq(Users.type, "admin")), true));
+type BooleanCompositionResult = Awaited<typeof booleanCompositionQuery>;
+Expect<Equal<BooleanCompositionResult, UserRows>>();
+
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - and rejects non-boolean primitives
+  .where(() => and(eq(Users.type, "admin"), "true"));
+
 // -----------------------------------------------------------------------------
 // exists / notExists
 // -----------------------------------------------------------------------------

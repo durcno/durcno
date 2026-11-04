@@ -1,15 +1,18 @@
-import type { AnyFilter, Filter } from "../filters/index";
+import {
+  type AnyFilter,
+  appendFilterExpression,
+  type FilterExpression,
+} from "../filters/index";
 import { Query, type QueryContext } from "../query-builders/query";
 import type { Sql } from "../sql";
 import type { AnyColumn, TableAnyColumn } from "../table";
 
 /**
- * A check constraint expression that can be a filter condition or a raw SQL snippet.
- * Used in `checkConstraints` table extra to define `CHECK` constraints.
+ * A check constraint expression that can be a filter condition, a raw SQL
+ * snippet, or a boolean literal.
  */
 export type CheckExpression<TScopeColumns extends TableAnyColumn | AnyColumn> =
-  | Filter<TScopeColumns, false>
-  | Sql;
+  FilterExpression<TScopeColumns>;
 
 // ============================================================================
 // Check Constraint Class
@@ -18,9 +21,9 @@ export type CheckExpression<TScopeColumns extends TableAnyColumn | AnyColumn> =
 /** A CHECK constraint for a table, storing its name and filter/SQL expression. */
 export class Check {
   readonly #name: string;
-  readonly #expr: AnyFilter | Sql;
+  readonly #expr: AnyFilter | boolean | Sql;
 
-  constructor(name: string, expr: AnyFilter | Sql) {
+  constructor(name: string, expr: AnyFilter | boolean | Sql) {
     this.#name = name;
     this.#expr = expr;
   }
@@ -37,7 +40,7 @@ export class Check {
    */
   toSQL(ctx?: QueryContext): string {
     const query = new Query("", () => []);
-    this.#expr.toQuery(query, ctx);
+    appendFilterExpression(this.#expr, query, ctx);
     return query.sql;
   }
 }
@@ -56,6 +59,6 @@ export class Check {
  * });
  * ```
  */
-export function check(name: string, expr: AnyFilter | Sql): Check {
+export function check(name: string, expr: AnyFilter | boolean | Sql): Check {
   return new Check(name, expr);
 }

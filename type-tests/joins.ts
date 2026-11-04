@@ -80,6 +80,15 @@ Expect<
   >
 >();
 
+// Boolean literals are accepted as join conditions
+const booleanJoinQuery = db
+  .from(Users)
+  .innerJoin(Posts)
+  .on(() => true)
+  .select(() => ({ userId: Users.id, postId: Posts.id }));
+type BooleanJoin = Awaited<typeof booleanJoinQuery>;
+Expect<Equal<BooleanJoin, { userId: bigint; postId: bigint }[]>>();
+
 db.from(Users)
   .innerJoin(Posts)
   .on(() => eq(Users.id, Posts.userId))

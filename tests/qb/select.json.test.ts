@@ -324,6 +324,22 @@ describe("SELECT with JSON functions, Aggregate builders, and CASE", () => {
       });
     });
 
+    it("should accept boolean literals in case conditions", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "case_user" }));
+
+      const [row] = await db.from(schema.Users).select(() => ({
+        falseBranch: caseWhen(false, "never").else("always"),
+        trueBranch: caseWhen(true, "always").else("never"),
+      }));
+
+      expect(row).toEqual({
+        falseBranch: "always",
+        trueBranch: "always",
+      });
+    });
+
     it("should evaluate direct caseWhen without explicit else or end", async () => {
       await db
         .insertInto(schema.Users)

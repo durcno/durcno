@@ -2,10 +2,11 @@ import type { Column, SetValueType } from "../columns/common";
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isTCol } from "../entity";
-import type {
-  FilterExpression,
-  HavingExpression,
-  StdCondition,
+import {
+  appendFilterExpression,
+  type FilterExpression,
+  type HavingExpression,
+  type StdCondition,
 } from "../filters/index";
 import {
   type InferValueType,
@@ -1254,12 +1255,12 @@ export class SelectQuery<
         query.sql += join.type === "left" ? " LEFT JOIN " : " INNER JOIN ";
         query.sql += join.table._.fullName;
         query.sql += " ON ";
-        join.on.toQuery(query);
+        appendFilterExpression(join.on, query);
       }
     }
-    if (this.#$where) {
+    if (this.#$where !== undefined) {
       query.sql += " WHERE ";
-      this.#$where.toQuery(query);
+      appendFilterExpression(this.#$where, query);
     }
     if (this.#$groupBy?.length) {
       // Explicit GROUP BY — bypasses auto GROUP BY detection
@@ -1332,9 +1333,9 @@ export class SelectQuery<
       }
     }
     // HAVING — emitted after GROUP BY (explicit or auto)
-    if (this.#$having) {
+    if (this.#$having !== undefined) {
       query.sql += " HAVING ";
-      this.#$having.toQuery(query);
+      appendFilterExpression(this.#$having, query);
     }
     if (this.#$orderBy) {
       const orders = Array.isArray(this.#$orderBy)

@@ -160,6 +160,15 @@ const _havingOnce = db
 // @ts-expect-error - having is removed after the first call
 _havingOnce.having(() => gte(count("*"), 1));
 
+// Boolean literals are accepted as HAVING conditions
+const _booleanHavingQuery = db
+  .from(Users)
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type)
+  .having(() => false);
+type BooleanHaving = Awaited<typeof _booleanHavingQuery>;
+Expect<Equal<BooleanHaving, { type: "admin" | "user"; total: number }[]>>();
+
 // -----------------------------------------------------------------------------
 // ORDER BY on grouped queries
 // -----------------------------------------------------------------------------

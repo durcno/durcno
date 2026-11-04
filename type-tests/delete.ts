@@ -31,6 +31,9 @@ const _filteredDeleteQuery = db
   );
 Expect<Equal<Awaited<typeof _filteredDeleteQuery>, null>>();
 
+const _booleanDeleteQuery = db.deleteFrom(Users).where(true);
+Expect<Equal<Awaited<typeof _booleanDeleteQuery>, null>>();
+
 // @ts-expect-error - wrong type for a bigint column
 db.deleteFrom(Users).where(eq(Users.id, "string_instead_of_number"));
 

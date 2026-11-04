@@ -152,6 +152,30 @@ describe("Relational queries", () => {
       expect(admins[0].type).toBe("admin");
     });
 
+    it("should accept boolean literals in where and relation where", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser())
+        .returning({ id: true });
+
+      await db
+        .insertInto(schema.Posts)
+        .values(createTestPost(user.id, { title: "Post 1" }));
+
+      const all = await db.query(schema.Users).findMany({ where: true });
+      const none = await db.query(schema.Users).findMany({ where: false });
+      const users = await db.query(schema.Users).findMany({
+        columns: { id: true },
+        with: {
+          posts: { columns: { id: true }, where: false },
+        },
+      });
+
+      expect(all).toHaveLength(1);
+      expect(none).toHaveLength(0);
+      expect(users[0].posts).toEqual([]);
+    });
+
     it("should load one-to-one relation (profile)", async () => {
       const [user] = await db
         .insertInto(schema.Users)

@@ -6,6 +6,7 @@ import { primaryKeyConstraint } from "../constraints/primary-key";
 import { uniqueConstraint } from "../constraints/unique";
 import { is } from "../entity";
 import { Enum } from "../enumtype";
+import { appendFilterExpression } from "../filters/index";
 import {
   type IndexType,
   isIndexExpression,
@@ -291,9 +292,9 @@ export function snapshot(entities: unknown[]): Snapshot {
         (index) => {
           const whereExpr = index._.getWhere();
           let whereSql: string | undefined;
-          if (whereExpr) {
+          if (whereExpr !== undefined) {
             const q = new Query("", () => []);
-            whereExpr.toQuery(q, checkCtx);
+            appendFilterExpression(whereExpr, q, checkCtx);
             whereSql = q.sql;
           }
           ss.tables[`${table._.schemaSql}.${table._.nameSql}`].indexes[
@@ -331,7 +332,7 @@ export function snapshot(entities: unknown[]): Snapshot {
         const constraintName = `${table._.nameSql}_${col.nameSql}_check`;
         const expr = col.getCheckFn(table._.columns[colName]);
         const q = new Query("", () => []);
-        expr.toQuery(q, checkCtx);
+        appendFilterExpression(expr, q, checkCtx);
         const sql = q.sql;
         ss.tables[`${table._.schemaSql}.${table._.nameSql}`].checkConstraints[
           constraintName

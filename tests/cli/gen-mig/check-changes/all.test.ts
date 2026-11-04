@@ -1,7 +1,8 @@
 /** biome-ignore-all lint/complexity/useLiteralKeys: <> */
 import fs from "node:fs";
 import path from "node:path";
-import { MIGRATION_NAME_REGEX } from "durcno/migration";
+import { pk, table } from "durcno";
+import { MIGRATION_NAME_REGEX, snapshot } from "durcno/migration";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -109,6 +110,26 @@ describe("durcno generate - check constraint changes", () => {
   afterAll(async () => {
     await client?.end().catch(console.error);
     await stopPostgresContainer(containerInfo.container);
+  });
+
+  it("renders boolean check predicates", () => {
+    const BoolCheck = table(
+      "public",
+      "bool_check",
+      { id: pk() },
+      {
+        checkConstraints: (_t, check) => [
+          check("bool_check_true", true),
+          check("bool_check_false", false),
+        ],
+      },
+    );
+
+    const schemaSnapshot = snapshot([BoolCheck]);
+    const checks = schemaSnapshot.tables["public.bool_check"].checkConstraints;
+
+    expect(checks["bool_check_true"].sql).toBe("TRUE");
+    expect(checks["bool_check_false"].sql).toBe("FALSE");
   });
 
   it("[stage 1] should generate and apply initial migration with check constraints", async () => {

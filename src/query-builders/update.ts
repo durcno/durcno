@@ -1,7 +1,10 @@
 import type { QueryExecutor } from "../connectors/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isCol } from "../entity";
-import type { FilterExpression } from "../filters/index";
+import {
+  appendFilterExpression,
+  type FilterExpression,
+} from "../filters/index";
 import { type NonAggregateSqlFn, SqlFn, setOwn } from "../functions/index";
 import {
   isSelectQuery,
@@ -422,9 +425,9 @@ export class UpdateQuery<
       buildUpdateFromClause(this.#$froms, query);
     }
 
-    if (this.#$where) {
+    if (this.#$where !== undefined) {
       query.sql += ` WHERE `;
-      this.#$where.toQuery(query);
+      appendFilterExpression(this.#$where, query);
     }
     buildReturningClause(
       this.#table._.columns,
