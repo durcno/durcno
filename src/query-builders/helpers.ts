@@ -1,9 +1,14 @@
 import { resolveFromDriver } from "../columns/common";
 import type { AnyCteWithColumns } from "../cte";
 import { is, isTCol } from "../entity";
-import { SqlFn } from "../functions";
+import {
+  type InferValueType,
+  type NonAggregateSqlFn,
+  SqlFn,
+} from "../functions";
+import { escIdentifier, Sql } from "../sql";
 import type { AnyColumn, AnyTableWithColumns } from "../table";
-import type { Key } from "../types";
+import type { Key, RawRow, Valueof } from "../types";
 import { getValuesRows, ValuesSource } from "../values";
 import type { AnyQuery } from "./query";
 
@@ -52,6 +57,49 @@ export function buildSelectItemConverter(
   if (type === "boolean") return fromDriverBoolean;
   if (type === "number") return fromDriverNumber;
   return null;
+}
+
+/**
+ * Precomputed conversion of an explicit object projection. Which converter a
+ * key needs depends only on the projection, never on the row, so the type
+ * dispatch is resolved once and replayed per row.
+ */
+export type ProjectionRowsPlan = {
+  keys: string[];
+  converts: ((value: unknown) => unknown)[];
+};
+
+/** Builds the conversion plan of an explicit projection for the given keys. */
+export function buildProjectionRowsPlan(
+  projection: Record<string, unknown>,
+  keys: readonly string[],
+): ProjectionRowsPlan {
+  const planKeys: string[] = [];
+  const converts: ((value: unknown) => unknown)[] = [];
+  for (const key of keys) {
+    const convert = buildSelectItemConverter(projection[key]);
+    if (convert === null) continue;
+    planKeys.push(key);
+    converts.push(convert);
+  }
+  return { keys: planKeys, converts };
+}
+
+/** Applies a prebuilt projection conversion plan in place. */
+export function applyProjectionRowsPlan(
+  rows: Record<string, unknown>[],
+  plan: ProjectionRowsPlan,
+): Record<string, unknown>[] {
+  const keys = plan.keys;
+  const converts = plan.converts;
+  const width = keys.length;
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    for (let i = 0; i < width; i++) {
+      row[keys[i]] = converts[i](row[keys[i]]);
+    }
+  }
+  return rows;
 }
 
 /**
@@ -273,6 +321,68 @@ export function mapStarRows(
 }
 
 /**
+ * A single aliased projection value in a `RETURNING` clause: a target-table
+ * column, a non-aggregate scalar `SqlFn`, or a raw `Sql` expression.
+ */
+export type ReturningSelectItem<
+  TColumns extends Record<string, AnyColumn>,
+  TPrepare extends boolean = false,
+> =
+  | Valueof<TColumns>
+  | NonAggregateSqlFn<
+      Valueof<TColumns>,
+      unknown,
+      TPrepare extends true ? boolean : false
+    >
+  | Sql;
+
+/** Aliased RETURNING projection: `{ alias: column | SqlFn | Sql }`. */
+export type ReturningAliases<
+  TColumns extends Record<string, AnyColumn>,
+  TPrepare extends boolean = false,
+> = Record<string, ReturningSelectItem<TColumns, TPrepare>>;
+
+/** Keeps a value when it is a boolean flag, otherwise removes it. */
+type BooleanFlag<T> = T extends boolean ? T : never;
+
+/** Rejects non-boolean values in a `RETURNING` inclusion/exclusion map. */
+export type ReturningFlags<T> = {
+  [K in keyof T]: BooleanFlag<T[K]>;
+};
+
+/** Resolves the row type produced by a `RETURNING` clause. */
+export type ReturningRow<
+  TColumns extends Record<string, AnyColumn>,
+  TReturning,
+> = TReturning extends "*"
+  ? {
+      [ColName in keyof TColumns]: TColumns[ColName]["ValTypeSelect"];
+    }
+  : TReturning extends Record<Key, boolean>
+    ? TReturning extends {
+        [ColName in keyof TColumns]?: false;
+      }
+      ? {
+          [ColName in keyof TColumns as TReturning[ColName] extends false
+            ? never
+            : ColName]: TColumns[ColName]["ValTypeSelect"];
+        }
+      : {
+          [ColName in keyof TColumns as TReturning[ColName] extends true
+            ? ColName
+            : never]: TColumns[ColName]["ValTypeSelect"];
+        }
+    : TReturning extends Record<string, unknown>
+      ? { [K in keyof TReturning]: InferValueType<TReturning[K]> }
+      : Record<never, never>;
+
+/** Resolves the array (or `null`) result type of a `RETURNING` clause. */
+export type ReturningResult<
+  TColumns extends Record<string, AnyColumn>,
+  TReturning,
+> = TReturning extends undefined ? null : ReturningRow<TColumns, TReturning>[];
+
+/**
  * Resolves the resulting column map type for a `RETURNING` clause.
  */
 export type ReturningColumns<
@@ -296,13 +406,125 @@ export type ReturningColumns<
               : K
             : K]: TColumns[K];
         }
-    : Record<never, never>;
+    : TReturning extends Record<string, unknown>
+      ? TReturning
+      : Record<never, never>;
+
+/**
+ * True when a `RETURNING` map holds aliased expressions rather than boolean
+ * inclusion/exclusion flags.
+ *
+ * @throws If the map mixes flags with expressions.
+ */
+export function isAliasedReturning(
+  returning: Record<string, unknown>,
+): boolean {
+  let hasAlias = false;
+  let hasFlag = false;
+  for (const key in returning) {
+    if (typeof returning[key] === "boolean") {
+      hasFlag = true;
+    } else {
+      hasAlias = true;
+    }
+  }
+  if (hasFlag && hasAlias) {
+    throw new Error(
+      "RETURNING cannot mix boolean column flags with aliased expressions.",
+    );
+  }
+  return hasAlias;
+}
+
+/** Per-query cache of the conversion plan for an aliased `RETURNING` projection. */
+export type ReturningRowsCache = {
+  plan: ProjectionRowsPlan | null;
+};
+
+/**
+ * Converts driver rows for an aliased `RETURNING` projection, building the
+ * plan once and reusing it across executions. Returns `null` when the
+ * projection is not aliased, so the caller falls back to `mapStarRows`.
+ */
+export function applyAliasedReturningRows(
+  rows: RawRow[],
+  returning: unknown,
+  cache: ReturningRowsCache,
+): RawRow[] | null {
+  if (!returning || returning === "*") return null;
+  const projection = returning as Record<string, unknown>;
+  if (!isAliasedReturning(projection)) return null;
+  if (rows.length === 0) return [];
+  cache.plan ??= buildProjectionRowsPlan(projection, Object.keys(projection));
+  return applyProjectionRowsPlan(rows, cache.plan);
+}
+
+/**
+ * Validates aliased `RETURNING` expressions against the target table.
+ *
+ * @throws If an alias is empty, references another table, is an aggregate or
+ *   window expression, or is not a column, scalar `SqlFn`, or raw `Sql`.
+ */
+function assertReturningAliases(
+  table: AnyTableWithColumns,
+  returning: Record<string, unknown>,
+): void {
+  for (const alias in returning) {
+    if (alias.length === 0) {
+      throw new Error("RETURNING alias names must be non-empty.");
+    }
+    const expr = returning[alias];
+    if (isTCol(expr)) {
+      const exprTable = (
+        expr as unknown as {
+          table?: { _: { schema: string; name: string } };
+        }
+      ).table;
+      if (
+        exprTable &&
+        (exprTable._.schema !== table._.schema ||
+          exprTable._.name !== table._.name)
+      ) {
+        throw new Error(
+          `RETURNING alias "${alias}" references a column from another table. Only columns of the returned table are allowed.`,
+        );
+      }
+      continue;
+    }
+    if (expr instanceof SqlFn) {
+      if (expr._.hasAggregate || expr._.hasWindow) {
+        throw new Error(
+          `RETURNING alias "${alias}" cannot use an aggregate or window expression.`,
+        );
+      }
+      continue;
+    }
+    if (expr instanceof Sql) {
+      continue;
+    }
+    throw new Error(
+      `RETURNING alias "${alias}" must be a table column, scalar SqlFn, or raw Sql.`,
+    );
+  }
+}
+
+/** Validates an aliased `RETURNING` map, if the map uses aliases. */
+export function validateReturning(
+  table: AnyTableWithColumns,
+  returning: "*" | Record<string, unknown> | undefined,
+): void {
+  if (!returning || returning === "*") return;
+  if (isAliasedReturning(returning)) {
+    assertReturningAliases(table, returning);
+  }
+}
 
 /**
  * Resolves the output columns for a RETURNING clause.
  * - No returning → empty record
  * - `"*"` → all table columns
  * - Partial object → filter by `true`/`false` flags
+ * - Aliased object → the alias-to-expression map
  */
 export function resolveReturningColumns<
   TColumns extends Record<string, AnyColumn>,
@@ -317,7 +539,10 @@ export function resolveReturningColumns<
   if (returning === "*") {
     return columns as ReturningColumns<TColumns, TReturning>;
   }
-  const ret = returning as Record<string, boolean>;
+  const ret = returning as Record<string, unknown>;
+  if (isAliasedReturning(ret)) {
+    return ret as ReturningColumns<TColumns, TReturning>;
+  }
   const hasTrue = Object.values(ret).some((value) => value === true);
   const resolved: Record<string, AnyColumn> = {};
   for (const key in columns) {
@@ -329,13 +554,13 @@ export function resolveReturningColumns<
 }
 
 /**
- * Appends `RETURNING ...` to `query.sql`. Accepts `"*"`, inclusion, and
- * exclusion like `resolveReturningColumns`. `qualifier` renders qualified
- * columns for statements with FROM sources.
+ * Appends `RETURNING ...` to `query.sql`. Accepts `"*"`, inclusion, exclusion,
+ * and aliased expressions. `qualifier` renders qualified columns for statements
+ * with FROM sources.
  */
 export function buildReturningClause(
   columns: Record<string, AnyColumn>,
-  returning: "*" | Record<string, boolean> | undefined,
+  returning: "*" | Record<string, unknown> | undefined,
   query: AnyQuery,
   qualifier?: string | null,
 ): void {
@@ -344,7 +569,33 @@ export function buildReturningClause(
     query.sql += qualifier ? ` RETURNING "${qualifier}".*` : " RETURNING *";
     return;
   }
-  const hasTrue = Object.values(returning).some((v) => v === true);
+  if (isAliasedReturning(returning)) {
+    let opened = false;
+    for (const alias in returning) {
+      if (opened) {
+        query.sql += ", ";
+      } else {
+        query.sql += " RETURNING ";
+        opened = true;
+      }
+      const expr = returning[alias];
+      if (isTCol(expr)) {
+        const name = (expr as unknown as AnyColumn).nameSql;
+        query.sql += qualifier ? `"${qualifier}"."${name}"` : `"${name}"`;
+      } else if (expr instanceof SqlFn) {
+        expr.toQuery(query);
+      } else if (expr instanceof Sql) {
+        expr.toQuery(query);
+      } else {
+        throw new Error(
+          `RETURNING alias "${alias}" must be a table column, scalar SqlFn, or raw Sql.`,
+        );
+      }
+      query.sql += ` AS "${escIdentifier(alias)}"`;
+    }
+    return;
+  }
+  const hasTrue = Object.values(returning).some((value) => value === true);
   let opened = false;
   for (const key in columns) {
     const include = hasTrue

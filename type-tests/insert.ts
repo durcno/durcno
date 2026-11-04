@@ -256,6 +256,43 @@ Expect<
   >
 >();
 
+const _insertReturningAliased = db
+  .insertInto(Users)
+  .values({
+    username: "ghost",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .returning({
+    userId: Users.id,
+    name: Users.username,
+    loweredName: lower(Users.username),
+    computed: sql<number>`length(${Users.username})`,
+  });
+type InsertReturningAliased = Awaited<typeof _insertReturningAliased>;
+Expect<
+  Equal<
+    InsertReturningAliased,
+    {
+      userId: bigint;
+      name: string;
+      loweredName: string;
+      computed: number;
+    }[]
+  >
+>();
+
+const widenedReturningFlags: Partial<Record<"id" | "username", true>> = {
+  id: true,
+};
+db.insertInto(Users)
+  .values({
+    username: "test",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .returning(widenedReturningFlags);
+
 db.insertInto(Users)
   .values({
     username: "test",
@@ -264,6 +301,37 @@ db.insertInto(Users)
   })
   // @ts-expect-error - returning a non-existent column
   .returning({ nonExistentColumn: true });
+
+db.insertInto(Users)
+  .values({
+    username: "test",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .returning({
+    // @ts-expect-error - aliased returning only accepts columns of the returned table
+    postId: Posts.id,
+  });
+
+db.insertInto(Users)
+  .values({
+    username: "test",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .returning({
+    // @ts-expect-error - aggregate expressions are not valid in RETURNING
+    total: count("*"),
+  });
+
+db.insertInto(Users)
+  .values({
+    username: "test",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  // @ts-expect-error - boolean flags and aliased expressions cannot be mixed
+  .returning({ id: true, name: Users.username });
 
 // -----------------------------------------------------------------------------
 // OnConflict / upsert

@@ -5,13 +5,19 @@ import {
   type FilterExpression,
 } from "../filters/index";
 import type { AnyTableWithColumns, StdTableWithColumns } from "../table";
-import type { Key, RawRow, Valueof } from "../types";
+import type { RawRow, Valueof } from "../types";
 import {
+  applyAliasedReturningRows,
   buildReturningClause,
   buildWithClause,
   mapStarRows,
+  type ReturningAliases,
   type ReturningColumns,
+  type ReturningFlags,
+  type ReturningResult,
+  type ReturningRowsCache,
   resolveReturningColumns,
+  validateReturning,
 } from "./helpers";
 import { type AnyQuery, Query } from "./query";
 import { QueryPromise } from "./query-promise";
@@ -23,26 +29,9 @@ export class DeleteQuery<
     | "*"
     | Partial<Record<keyof TTableWC["_"]["columns"], true>>
     | Partial<Record<keyof TTableWC["_"]["columns"], false>>
+    | ReturningAliases<TTableWC["_"]["columns"], TPrepare>
     | undefined,
-  TReturn = TReturning extends "*"
-    ? {
-        [ColName in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-      }[]
-    : TReturning extends Record<Key, boolean>
-      ? TReturning extends {
-          [ColName in keyof TTableWC["_"]["columns"]]?: false;
-        }
-        ? {
-            [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends false
-              ? never
-              : ColName]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-          }[]
-        : {
-            [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends true
-              ? ColName
-              : never]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-          }[]
-      : null,
+  TReturn = ReturningResult<TTableWC["_"]["columns"], TReturning>,
 > extends QueryPromise<TReturn> {
   readonly #$table: TTableWC;
   readonly #$where:
@@ -52,6 +41,7 @@ export class DeleteQuery<
   readonly #$executor: QueryExecutor;
   readonly #$prepare: TPrepare;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
+  readonly #returningRows: ReturningRowsCache = { plan: null };
 
   constructor(
     table: TTableWC,
@@ -95,13 +85,24 @@ export class DeleteQuery<
     TReturnings extends
       | Partial<Record<keyof TTableWC["_"]["columns"], true>>
       | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
+  >(
+    returnings: TReturnings & ReturningFlags<TReturnings>,
+  ): DeleteQuery<TTableWC, TPrepare, TReturnings>;
+  /** Return aliased columns or expressions. */
+  returning<
+    TReturnings extends ReturningAliases<TTableWC["_"]["columns"], TPrepare>,
   >(returnings: TReturnings): DeleteQuery<TTableWC, TPrepare, TReturnings>;
   returning<
     TReturnings extends
       | "*"
       | Partial<Record<keyof TTableWC["_"]["columns"], true>>
-      | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
+      | Partial<Record<keyof TTableWC["_"]["columns"], false>>
+      | ReturningAliases<TTableWC["_"]["columns"], TPrepare>,
   >(returnings: TReturnings): DeleteQuery<TTableWC, TPrepare, TReturnings> {
+    validateReturning(
+      this.#$table,
+      returnings as "*" | Record<string, unknown> | undefined,
+    );
     return new DeleteQuery(
       this.#$table,
       this.#$where,
@@ -128,7 +129,7 @@ export class DeleteQuery<
     }
     buildReturningClause(
       this.#$table._.columns,
-      this.#$returning as "*" | Record<string, boolean> | undefined,
+      this.#$returning as "*" | Record<string, unknown> | undefined,
       query,
     );
     return query;
@@ -148,6 +149,12 @@ export class DeleteQuery<
   }
 
   handleRows(rows: RawRow[]) {
+    const aliasedRows = applyAliasedReturningRows(
+      rows,
+      this.#$returning,
+      this.#returningRows,
+    );
+    if (aliasedRows !== null) return aliasedRows as TReturn;
     return mapStarRows(
       rows,
       this.#$table as unknown as StdTableWithColumns,

@@ -47,10 +47,12 @@ import type {
   StdGroupByExpression,
 } from "./groupby-clause";
 import {
+  applyProjectionRowsPlan,
   applyStarRowsPlan,
-  buildSelectItemConverter,
+  buildProjectionRowsPlan,
   buildStarRowsPlan,
   buildWithClause,
+  type ProjectionRowsPlan,
   type SelectAliasesView,
   type StarRowsPlan,
 } from "./helpers";
@@ -693,37 +695,6 @@ export class SelectBuilder<
 }
 
 // ============================================================================
-// Runtime helpers — row conversion
-// ============================================================================
-
-/**
- * Precomputed conversion of an explicit `.select({...})` projection.
- * Which converter a key needs depends only on the projection, never on the
- * row, so the type dispatch is resolved once and replayed per row.
- * Keys needing no conversion (raw `Sql` and string literals) are left out.
- */
-type SelectRowsPlan = {
-  keys: string[];
-  converts: ((value: unknown) => unknown)[];
-};
-
-/** Builds the conversion plan of an explicit projection for the given keys. */
-function buildSelectRowsPlan(
-  select: Record<string, unknown>,
-  keys: readonly string[],
-): SelectRowsPlan {
-  const planKeys: string[] = [];
-  const converts: ((value: unknown) => unknown)[] = [];
-  for (const key of keys) {
-    const convert = buildSelectItemConverter(select[key]);
-    if (convert === null) continue;
-    planKeys.push(key);
-    converts.push(convert);
-  }
-  return { keys: planKeys, converts };
-}
-
-// ============================================================================
 // Row locking (FOR UPDATE & co.)
 // ============================================================================
 
@@ -877,7 +848,7 @@ export class SelectQuery<
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
   #cachedView: ColumnsViewRecord | null;
   #cachedSelectAliases: Record<string, string> | null = null;
-  #selectRowsPlan: SelectRowsPlan | null = null;
+  #selectRowsPlan: ProjectionRowsPlan | null = null;
   #starRowsPlan: StarRowsPlan | null = null;
 
   /**
@@ -1424,23 +1395,12 @@ export class SelectQuery<
     if (this.#$select !== undefined) {
       if (rows.length === 0) return [] as TReturn;
       if (!this.#selectRowsPlan) {
-        this.#selectRowsPlan = buildSelectRowsPlan(
+        this.#selectRowsPlan = buildProjectionRowsPlan(
           this.#$select as Record<string, unknown>,
           Object.keys(rows[0]),
         );
       }
-      const plan = this.#selectRowsPlan;
-      const keys = plan.keys;
-      const converts = plan.converts;
-      const width = keys.length;
-      for (let r = 0; r < rows.length; r++) {
-        const row = rows[r];
-        for (let i = 0; i < width; i++) {
-          const key = keys[i];
-          row[key] = converts[i](row[key]);
-        }
-      }
-      return rows as TReturn;
+      return applyProjectionRowsPlan(rows, this.#selectRowsPlan) as TReturn;
     }
     if (rows.length === 0) return [] as TReturn;
     if (!this.#starRowsPlan) {

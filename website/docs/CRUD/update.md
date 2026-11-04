@@ -17,10 +17,10 @@ Use `db.update()` to modify existing rows in a table. The update builder provide
 
 ### Query methods (UpdateQuery)
 
-| Method              | Description                                                        |
-| ------------------- | ------------------------------------------------------------------ |
-| `.where(condition)` | Filter which rows are updated                                      |
-| `.returning(cols)`  | Specify columns to return after update (use `"*"` for all columns) |
+| Method              | Description                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| `.where(condition)` | Filter which rows are updated                                                             |
+| `.returning(cols)`  | Specify columns or aliased expressions to return after update (use `"*"` for all columns) |
 
 ## Basic Usage
 
@@ -115,6 +115,28 @@ const updated = await db
   .returning("*");
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; ... }[]
 ```
+
+### Aliased Returning
+
+Use a direct object to rename output keys or project scalar expressions. Values may be columns of the updated table, scalar `SqlFn`s, or raw `sql` fragments:
+
+```typescript
+import { lower, sql } from "durcno";
+
+const updated = await db
+  .update(Users)
+  .set({ email: "updated@example.com" })
+  .where(eq(Users.id, 1n))
+  .returning({
+    userId: Users.id,
+    name: Users.username,
+    loweredName: lower(Users.username),
+    emailLength: sql<number>`length(${Users.email})`,
+  });
+// Type: { userId: bigint; name: string; loweredName: string; emailLength: number }[]
+```
+
+Aliased expressions cannot be mixed with boolean `true`/`false` flags in the same object. Aggregate and window expressions are rejected, matching PostgreSQL. Columns are qualified with the updated table, so aliased returning stays unambiguous when the statement has a `FROM` source.
 
 ### Without Returning
 

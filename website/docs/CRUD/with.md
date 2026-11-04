@@ -120,6 +120,25 @@ const insertedUsers = db
 const rows = await db.with(insertedUsers).from(insertedUsers).select("*");
 ```
 
+When `.returning()` uses aliased projections, the aliases become the CTE's column names:
+
+```typescript
+import { lower } from "durcno";
+
+const insertedUsers = db.with("insertedUsers").as(
+  db
+    .insertInto(Users)
+    .values({ username: "new-user", type: "user" })
+    .returning({
+      userId: Users.id,
+      loweredName: lower(Users.username),
+    }),
+);
+
+const rows = await db.with(insertedUsers).from(insertedUsers).select("*");
+// Type: { userId: bigint; loweredName: string }[]
+```
+
 These DML CTEs are useful when you need the inserted/updated/deleted rows available to the same statement.
 
 ## CTEs in joins

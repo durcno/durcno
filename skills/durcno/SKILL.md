@@ -163,6 +163,8 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1n));
 await db.deleteFrom(Users).where(eq(Users.id, 1n));
 ```
 
+`returning()` also accepts aliased columns and scalar expressions: `.returning({ userId: Users.id, lowered: lower(Users.name) })`. Aliased keys become CTE column names, and boolean flags cannot be mixed with aliased expressions.
+
 ### Where-clause arity — read this before writing filters
 
 | Builder                                     | `where()` argument          |

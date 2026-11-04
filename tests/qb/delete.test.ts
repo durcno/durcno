@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type Docker from "dockerode";
-import { type $Client, database, defineConfig, eq } from "durcno";
+import { type $Client, database, defineConfig, eq, lower } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import * as schema from "./schema";
@@ -114,6 +114,28 @@ describe("DELETE queries", () => {
 
     const remaining = await db.from(schema.Users).select("*");
     expect(remaining).toHaveLength(0);
+  });
+
+  it("should delete with aliased RETURNING expressions", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "todeletealias" }))
+      .returning({ id: true });
+
+    const [deleted] = await db
+      .deleteFrom(schema.Users)
+      .where(eq(schema.Users.id, user.id))
+      .returning({
+        userId: schema.Users.id,
+        name: schema.Users.username,
+        loweredName: lower(schema.Users.username),
+      });
+
+    expect(deleted).toEqual({
+      userId: user.id,
+      name: "todeletealias",
+      loweredName: "todeletealias",
+    });
   });
 
   it("should delete and exclude fields from RETURNING", async () => {

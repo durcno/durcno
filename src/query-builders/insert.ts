@@ -21,14 +21,20 @@ import {
   type TableAnyColumn,
   type TableColumn,
 } from "../table";
-import type { Key, Prettify, RawRow, SelfOrArray, Valueof } from "../types";
+import type { Prettify, RawRow, SelfOrArray, Valueof } from "../types";
 import {
+  applyAliasedReturningRows,
   buildReturningClause,
   buildWithClause,
   generatedValueSQL,
   mapStarRows,
+  type ReturningAliases,
   type ReturningColumns,
+  type ReturningFlags,
+  type ReturningResult,
+  type ReturningRowsCache,
   resolveReturningColumns,
+  validateReturning,
 } from "./helpers";
 import { Arg } from "./prepare";
 import { type AnyQuery, Query } from "./query";
@@ -135,6 +141,7 @@ export class ConflictBuilder<
   TReturning extends
     | { [ColName in keyof TTableWC["_"]["columns"]]?: true }
     | { [ColName in keyof TTableWC["_"]["columns"]]?: false }
+    | ReturningAliases<TTableWC["_"]["columns"], TPrepare>
     | "*"
     | undefined,
   THasColumns extends boolean,
@@ -327,26 +334,9 @@ export class InsertQuery<
     | "*"
     | Partial<Record<keyof TTableWC["_"]["columns"], true>>
     | Partial<Record<keyof TTableWC["_"]["columns"], false>>
+    | ReturningAliases<TTableWC["_"]["columns"], TPrepare>
     | undefined,
-  TReturn = TReturning extends "*"
-    ? {
-        [ColName in keyof TTableWC["_"]["columns"]]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-      }[]
-    : TReturning extends Record<Key, boolean>
-      ? TReturning extends {
-          [ColName in keyof TTableWC["_"]["columns"]]?: false;
-        }
-        ? {
-            [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends false
-              ? never
-              : ColName]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-          }[]
-        : {
-            [ColName in keyof TTableWC["_"]["columns"] as TReturning[ColName] extends true
-              ? ColName
-              : never]: TTableWC["_"]["columns"][ColName]["ValTypeSelect"];
-          }[]
-      : null,
+  TReturn = ReturningResult<TTableWC["_"]["columns"], TReturning>,
 > extends QueryPromise<TReturn> {
   readonly #table: TTableWC;
   readonly #values: Record<string, unknown> | Record<string, unknown>[];
@@ -355,6 +345,7 @@ export class InsertQuery<
   readonly #prepare: TPrepare;
   readonly #$ctes: readonly AnyCteWithColumns[] | null;
   readonly #$conflict: ConflictClause | undefined;
+  readonly #returningRows: ReturningRowsCache = { plan: null };
 
   constructor(
     table: TTableWC,
@@ -382,13 +373,24 @@ export class InsertQuery<
     TReturnings extends
       | Partial<Record<keyof TTableWC["_"]["columns"], true>>
       | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
+  >(
+    returnings: TReturnings & ReturningFlags<TReturnings>,
+  ): InsertQuery<TTableWC, TPrepare, TReturnings>;
+  /** Return aliased columns or expressions. */
+  returning<
+    TReturnings extends ReturningAliases<TTableWC["_"]["columns"], TPrepare>,
   >(returnings: TReturnings): InsertQuery<TTableWC, TPrepare, TReturnings>;
   returning<
     TReturnings extends
       | "*"
       | Partial<Record<keyof TTableWC["_"]["columns"], true>>
-      | Partial<Record<keyof TTableWC["_"]["columns"], false>>,
+      | Partial<Record<keyof TTableWC["_"]["columns"], false>>
+      | ReturningAliases<TTableWC["_"]["columns"], TPrepare>,
   >(returnings: TReturnings) {
+    validateReturning(
+      this.#table,
+      returnings as "*" | Record<string, unknown> | undefined,
+    );
     return new InsertQuery(
       this.#table,
       this.#values,
@@ -534,7 +536,7 @@ export class InsertQuery<
 
     buildReturningClause(
       this.#table._.columns,
-      this.#$returning as "*" | Record<string, boolean> | undefined,
+      this.#$returning as "*" | Record<string, unknown> | undefined,
       query,
     );
 
@@ -555,6 +557,12 @@ export class InsertQuery<
   }
 
   handleRows(rows: RawRow[]) {
+    const aliasedRows = applyAliasedReturningRows(
+      rows,
+      this.#$returning,
+      this.#returningRows,
+    );
+    if (aliasedRows !== null) return aliasedRows as TReturn;
     return mapStarRows(
       rows,
       this.#table as unknown as StdTableWithColumns,

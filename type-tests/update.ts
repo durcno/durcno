@@ -183,6 +183,22 @@ const _updateReturningQuery = db
 type UpdateReturning = Awaited<typeof _updateReturningQuery>;
 Expect<Equal<UpdateReturning, { id: bigint; email: string | null }[]>>();
 
+const _updateReturningAliased = db
+  .update(Users)
+  .set({ email: "updated@example.com" })
+  .returning({
+    userId: Users.id,
+    name: Users.username,
+    loweredName: lower(Users.username),
+  });
+type UpdateReturningAliased = Awaited<typeof _updateReturningAliased>;
+Expect<
+  Equal<
+    UpdateReturningAliased,
+    { userId: bigint; name: string; loweredName: string }[]
+  >
+>();
+
 db.update(Users)
   .set({ username: "test" })
   // @ts-expect-error - returning a non-existent column

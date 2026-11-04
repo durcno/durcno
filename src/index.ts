@@ -206,6 +206,12 @@ export {
 } from "./indexes";
 export { Migrations, pk } from "./models";
 export type {
+  ReturningAliases,
+  ReturningResult,
+  ReturningRow,
+  ReturningSelectItem,
+} from "./query-builders/helpers";
+export type {
   ConflictScopeColumns,
   ConflictUpdateableItem,
   ConflictUpdateValues,

@@ -180,6 +180,27 @@ describe("CTE queries", () => {
     ]);
   });
 
+  it("WITH (INSERT aliased RETURNING) → SELECT from CTE", async () => {
+    const insertedUsers = db.with("insertedAliasedUsers").as(
+      db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "cte-alias" }))
+        .returning({
+          userId: schema.Users.id,
+          name: schema.Users.username,
+          loweredName: lower(schema.Users.username),
+        }),
+    );
+
+    const [row] = await db.with(insertedUsers).from(insertedUsers).select("*");
+
+    expect(row).toEqual({
+      userId: row.userId,
+      name: "cte-alias",
+      loweredName: "cte-alias",
+    });
+  });
+
   it("WITH (UPDATE RETURNING) → SELECT from CTE", async () => {
     await db
       .insertInto(schema.Users)

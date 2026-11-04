@@ -1,4 +1,4 @@
-import { and, eq, gte, isIn, isNull, lte, or } from "durcno";
+import { and, eq, gte, isIn, isNull, lower, lte, or } from "durcno";
 import { db, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
 
@@ -54,6 +54,22 @@ const _deleteReturningQuery = db
   .returning({ id: true, username: true });
 type DeleteReturning = Awaited<typeof _deleteReturningQuery>;
 Expect<Equal<DeleteReturning, { id: bigint; username: string }[]>>();
+
+const _deleteReturningAliased = db
+  .deleteFrom(Users)
+  .where(eq(Users.type, "admin"))
+  .returning({
+    userId: Users.id,
+    name: Users.username,
+    loweredName: lower(Users.username),
+  });
+type DeleteReturningAliased = Awaited<typeof _deleteReturningAliased>;
+Expect<
+  Equal<
+    DeleteReturningAliased,
+    { userId: bigint; name: string; loweredName: string }[]
+  >
+>();
 
 db.deleteFrom(Users)
   .where(eq(Users.id, 1n))

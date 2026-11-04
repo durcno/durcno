@@ -436,6 +436,34 @@ describe("INSERT queries", () => {
     expect(Object.keys(result[0])).toEqual(["id", "username", "createdAt"]);
   });
 
+  it("should return aliased columns and expressions from RETURNING", async () => {
+    const [result] = await db
+      .insertInto(schema.Users)
+      .values({
+        username: "aliased_returning",
+        type: "user",
+        status: "active",
+        role: "user",
+      })
+      .returning({
+        userId: schema.Users.id,
+        name: schema.Users.username,
+        loweredName: lower(schema.Users.username),
+        nameLength: sql<number>`length(${schema.Users.username})`,
+      });
+
+    expect(typeof result.userId).toBe("bigint");
+    expect(result.name).toBe("aliased_returning");
+    expect(result.loweredName).toBe("aliased_returning");
+    expect(result.nameLength).toBe(17);
+    expect(Object.keys(result)).toEqual([
+      "userId",
+      "name",
+      "loweredName",
+      "nameLength",
+    ]);
+  });
+
   it("should allow explicit value to override insertFn", async () => {
     const explicitDate = new Date("2020-01-01T00:00:00.000Z");
 

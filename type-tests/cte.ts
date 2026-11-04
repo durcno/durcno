@@ -62,6 +62,44 @@ Expect<Equal<keyof InsertedRow, "id" | "username">>();
 Expect<Equal<InsertedRow["id"], bigint>>();
 Expect<Equal<InsertedRow["username"], string>>();
 
+const aliasedInsertedSource = db
+  .insertInto(Users)
+  .values({
+    username: "cte-aliased",
+    type: "user",
+    externalId: "ext-cte-aliased",
+  })
+  .returning({
+    userId: Users.id,
+    displayName: Users.username,
+    loweredName: lower(Users.username),
+  });
+
+type AliasedInsertedSourceColumns = InferQueryColumns<
+  "aliasedInserted",
+  typeof aliasedInsertedSource
+>;
+Expect<
+  Equal<
+    keyof AliasedInsertedSourceColumns,
+    "userId" | "displayName" | "loweredName"
+  >
+>();
+
+const aliasedInserted = db.with("aliasedInserted").as(aliasedInsertedSource);
+const aliasedInsertedQuery = db
+  .with(aliasedInserted)
+  .from(aliasedInserted)
+  .select("*");
+
+type AliasedInsertedRow = Awaited<typeof aliasedInsertedQuery>[number];
+Expect<
+  Equal<keyof AliasedInsertedRow, "userId" | "displayName" | "loweredName">
+>();
+Expect<Equal<AliasedInsertedRow["userId"], bigint>>();
+Expect<Equal<AliasedInsertedRow["displayName"], string>>();
+Expect<Equal<AliasedInsertedRow["loweredName"], string>>();
+
 // @ts-expect-error: only typed query builders can be turned into CTEs
 db.with("bad").as(Users);
 

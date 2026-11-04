@@ -175,6 +175,59 @@ describe("UPDATE queries", () => {
     expect(result[0].id).toEqual(user.id);
   });
 
+  it("should update with aliased RETURNING expressions", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "beforealias" }))
+      .returning({ id: true });
+
+    const [updated] = await db
+      .update(schema.Users)
+      .set({ username: "afteralias", email: "alias@example.com" })
+      .where(eq(schema.Users.id, user.id))
+      .returning({
+        userId: schema.Users.id,
+        name: schema.Users.username,
+        loweredName: lower(schema.Users.username),
+        emailLength: sql<number>`length(${schema.Users.email})`,
+      });
+
+    expect(updated).toEqual({
+      userId: user.id,
+      name: "afteralias",
+      loweredName: "afteralias",
+      emailLength: 17,
+    });
+  });
+
+  it("should qualify aliased RETURNING columns against FROM sources", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "alias_from", bio: "original" }))
+      .returning({ id: true });
+
+    const V = db
+      .values("v", { userId: schema.Users.id, bio: schema.Users.bio })
+      .as([{ userId: user.id, bio: "from_alias" }]);
+
+    const [updated] = await db
+      .update(schema.Users)
+      .from(V)
+      .set({ bio: "explicit" })
+      .where(eq(schema.Users.id, V.userId))
+      .returning({
+        userId: schema.Users.id,
+        name: schema.Users.username,
+        bio: schema.Users.bio,
+      });
+
+    expect(updated).toEqual({
+      userId: user.id,
+      name: "alias_from",
+      bio: "explicit",
+    });
+  });
+
   it("should update and exclude fields from RETURNING", async () => {
     const [user] = await db
       .insertInto(schema.Users)

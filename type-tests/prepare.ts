@@ -161,6 +161,22 @@ const _updateQuery = prepare(
 type UpdateResult = Awaited<ReturnType<typeof _updateQuery.run>>;
 Expect<Equal<UpdateResult, { id: bigint; username: string }[]>>();
 
+const _aliasedUpdateQuery = prepare(
+  { id: Users.id.arg(), username: Users.username.arg() },
+  (args) =>
+    db
+      .prepare()
+      .update(Users)
+      .set({ username: args.username })
+      .where(eq(Users.id, args.id))
+      .returning({
+        userId: Users.id,
+        loweredName: lower(Users.username),
+      }),
+);
+type AliasedUpdateResult = Awaited<ReturnType<typeof _aliasedUpdateQuery.run>>;
+Expect<Equal<AliasedUpdateResult, { userId: bigint; loweredName: string }[]>>();
+
 // A table with `$updateFn` columns
 const _updateFnQuery = prepare({ id: Logs.id.arg() }, (args) =>
   db

@@ -612,6 +612,35 @@ describe("returning handleRows", () => {
     expect(rows).toEqual([{ id: 9n, userName: "returning" }]);
   });
 
+  it("converts and renders aliased projections", () => {
+    const query = db.insertInto(Users).values(values).returning({
+      userId: Users.id,
+      name: Users.userName,
+      points: Users.points,
+      active: Users.isActive,
+    });
+    const driver = driverUser(9);
+
+    const rows = query.handleRows([
+      {
+        userId: driver.id,
+        name: driver.user_name,
+        points: driver.points,
+        active: driver.is_active,
+      },
+    ]);
+
+    expect(rows).toEqual([
+      { userId: 9n, name: "user_9", points: 900n, active: true },
+    ]);
+
+    const returningClause = query.toQuery().sql.split("RETURNING ")[1];
+    expect(returningClause).toContain('"id" AS "userId"');
+    expect(returningClause).toContain('"user_name" AS "name"');
+    expect(returningClause).toContain('"points" AS "points"');
+    expect(returningClause).toContain('"is_active" AS "active"');
+  });
+
   it("converts an exclusion projection, which returns every other column", () => {
     const query = db.insertInto(Users).values(values).returning({ bio: false });
     const driver = fullDriverUser();
@@ -653,5 +682,23 @@ describe("returning handleRows", () => {
 
     expect(query.handleRows([fullDriverUser()])[0].userName).toBe("user_9");
     expect(query.handleRows([])).toEqual([]);
+  });
+
+  it("rejects mixed flag and alias maps", () => {
+    expect(() =>
+      db
+        .insertInto(Users)
+        .values(values)
+        .returning({ id: true, name: Users.userName } as never),
+    ).toThrow("cannot mix boolean column flags with aliased expressions");
+  });
+
+  it("rejects aliased columns from another table", () => {
+    expect(() =>
+      db
+        .insertInto(Users)
+        .values(values)
+        .returning({ postId: Posts.id } as never),
+    ).toThrow("references a column from another table");
   });
 });
