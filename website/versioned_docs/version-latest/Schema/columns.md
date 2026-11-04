@@ -642,7 +642,9 @@ export const Posts = table("public", "posts", {
 
 #### `.references(ref)`
 
-Creates a foreign key reference to another table's column. Accepts either a lazy column getter `() => Table.column` or an object `{ column: () => Table.column, onDelete?: OnDeleteAction }`. Defaults to `CASCADE` on delete.
+Creates a foreign key reference to another table's column. Accepts a lazy column getter `() => Table.column`.
+
+No `ON DELETE` action is generated unless you chain one, so PostgreSQL's default (`NO ACTION`) applies.
 
 ```typescript
 import { bigint, notNull, pk, table } from "durcno";
@@ -651,15 +653,27 @@ export const Users = table("public", "users", { id: pk() });
 
 export const Posts = table("public", "posts", {
   id: pk(),
-  // Simple reference (defaults to CASCADE)
+  // No ON DELETE clause — PostgreSQL defaults to NO ACTION
   authorId: bigint({ notNull }).references(() => Users.id),
-  // With explicit onDelete action
-  reviewerId: bigint({}).references({
-    column: () => Users.id,
-    onDelete: "SET NULL",
-  }),
+  // Cascade deletes to posts
+  ownerId: bigint({ notNull }).references(() => Users.id).onDeleteCascade(),
+  // Set the column to NULL when the referenced row is deleted
+  reviewerId: bigint({}).references(() => Users.id).onDeleteSetNull(),
 });
 ```
+
+Chain one of these methods to add an `ON DELETE` action:
+
+| Method                  | Generated SQL           |
+| ----------------------- | ----------------------- |
+| `.onDelete(action)`     | `ON DELETE <action>`    |
+| `.onDeleteCascade()`    | `ON DELETE CASCADE`     |
+| `.onDeleteSetNull()`    | `ON DELETE SET NULL`    |
+| `.onDeleteSetDefault()` | `ON DELETE SET DEFAULT` |
+| `.onDeleteRestrict()`   | `ON DELETE RESTRICT`    |
+| `.onDeleteNoAction()`   | `ON DELETE NO ACTION`   |
+
+`action` accepts any `OnDeleteAction`: `"CASCADE"`, `"SET NULL"`, `"SET DEFAULT"`, `"RESTRICT"`, or `"NO ACTION"`.
 
 :::tip
 

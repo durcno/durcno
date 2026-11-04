@@ -320,13 +320,12 @@ export const Users = table("public", "users", { id: pk() });
 
 export const Posts = table("public", "posts", {
   id: pk(),
-  // Defaults to CASCADE on delete
+  // No ON DELETE clause — PostgreSQL defaults to NO ACTION
   userId: bigint({ notNull }).references(() => Users.id),
   // With explicit onDelete action
-  reviewerId: bigint({}).references({
-    column: () => Users.id,
-    onDelete: "SET NULL",
-  }),
+  reviewerId: bigint({})
+    .references(() => Users.id)
+    .onDeleteSetNull(),
 });
 ```
 
@@ -334,7 +333,7 @@ export const Posts = table("public", "posts", {
 
 Use the `foreignKeys` callback in the fourth argument to `table()` when a column references the **same table** — for example, a `parentId` column on a comments table that points back to the same table's `id`.
 
-Because the table object is fully constructed before the callback is invoked, column references are available directly without lazy arrow-function wrappers.
+Because the table object is fully constructed before the callback is invoked, column references are available directly without lazy arrow-function wrappers. Like column-level `.references()`, the table-level `fk()` builder emits no `ON DELETE` clause unless you chain an action.
 
 ```typescript
 import { bigint, notNull, pk, table, varchar } from "durcno";
@@ -359,13 +358,13 @@ The `fk` helper is injected by Durcno and works as follows:
 
 1. `fk(sourceColumn)` — selects the column that holds the foreign key value.
 2. `.references(targetColumn)` — specifies the column being referenced (on the same or a different table).
-3. `.onDelete(action)` _(optional)_ — overrides the default `CASCADE` action. Accepts any standard PostgreSQL `ON DELETE` action: `"CASCADE"`, `"SET NULL"`, `"SET DEFAULT"`, `"RESTRICT"`, or `"NO ACTION"`.
+3. `.onDelete(action)` _(optional)_ — sets the `ON DELETE` action. Accepts any standard PostgreSQL `ON DELETE` action: `"CASCADE"`, `"SET NULL"`, `"SET DEFAULT"`, `"RESTRICT"`, or `"NO ACTION"`. Named shortcuts are also available: `.onDeleteCascade()`, `.onDeleteSetNull()`, `.onDeleteSetDefault()`, `.onDeleteRestrict()`, and `.onDeleteNoAction()`.
 
 #### Available `ON DELETE` Actions
 
 | Action          | Behaviour                                                                  |
 | --------------- | -------------------------------------------------------------------------- |
-| `"CASCADE"`     | Delete child rows when the parent is deleted _(default)_                   |
+| `"CASCADE"`     | Delete child rows when the parent is deleted                               |
 | `"SET NULL"`    | Set the foreign key column to `NULL` when the parent is deleted            |
 | `"SET DEFAULT"` | Set the foreign key column to its default value when the parent is deleted |
 | `"RESTRICT"`    | Prevent deletion of the parent if any child rows exist                     |

@@ -16,10 +16,10 @@ Use `db.insertInto()` to insert rows into a table. Durcno provides full type saf
 
 ### Query methods (InsertQuery)
 
-| Method             | Description                                                        |
-| ------------------ | ------------------------------------------------------------------ |
-| `.onConflict()`    | Start an `ON CONFLICT` clause for upsert-style handling            |
-| `.returning(cols)` | Specify columns to return after insert (use `"*"` for all columns) |
+| Method             | Description                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `.onConflict()`    | Start an `ON CONFLICT` clause for upsert-style handling                                   |
+| `.returning(cols)` | Specify columns or aliased expressions to return after insert (use `"*"` for all columns) |
 
 ## Basic Usage
 
@@ -196,6 +196,27 @@ const inserted = await db
   .returning("*");
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
 ```
+
+### Aliased Returning
+
+Use a direct object to rename output keys or project scalar expressions. Values may be columns of the returned table, scalar `SqlFn`s, or raw `sql` fragments:
+
+```typescript
+import { lower, sql } from "durcno";
+
+const inserted = await db
+  .insertInto(Users)
+  .values({ username: "john_doe", type: "user" })
+  .returning({
+    userId: Users.id,
+    name: Users.username,
+    loweredName: lower(Users.username),
+    nameLength: sql<number>`length(${Users.username})`,
+  });
+// Type: { userId: bigint; name: string; loweredName: string; nameLength: number }[]
+```
+
+Aliased expressions cannot be mixed with boolean `true`/`false` flags in the same object. Aggregate and window expressions are rejected, matching PostgreSQL.
 
 ### Without Returning
 

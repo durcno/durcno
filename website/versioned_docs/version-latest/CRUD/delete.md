@@ -10,10 +10,10 @@ Use `db.deleteFrom()` to remove rows from a table. The delete builder supports f
 
 ### Query methods (DeleteQuery)
 
-| Method              | Description                                                        |
-| ------------------- | ------------------------------------------------------------------ |
-| `.where(condition)` | Filter which rows will be deleted                                  |
-| `.returning(cols)`  | Specify columns to return after delete (use `"*"` for all columns) |
+| Method              | Description                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| `.where(condition)` | Filter which rows will be deleted                                                         |
+| `.returning(cols)`  | Specify columns or aliased expressions to return after delete (use `"*"` for all columns) |
 
 ## Basic Usage
 
@@ -85,6 +85,27 @@ const deleted = await db
   .returning("*");
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; ... }[]
 ```
+
+### Aliased Returning
+
+Use a direct object to rename output keys or project scalar expressions. Values may be columns of the deleted table, scalar `SqlFn`s, or raw `sql` fragments:
+
+```typescript
+import { lower, sql } from "durcno";
+
+const deleted = await db
+  .deleteFrom(Users)
+  .where(eq(Users.id, 1n))
+  .returning({
+    userId: Users.id,
+    name: Users.username,
+    loweredName: lower(Users.username),
+    nameLength: sql<number>`length(${Users.username})`,
+  });
+// Type: { userId: bigint; name: string; loweredName: string; nameLength: number }[]
+```
+
+Aliased expressions cannot be mixed with boolean `true`/`false` flags in the same object. Aggregate and window expressions are rejected, matching PostgreSQL.
 
 ### Without Returning
 

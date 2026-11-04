@@ -8,33 +8,33 @@ Durcno provides a set of type-safe filter operators for building WHERE and CHECK
 
 ## Operator Reference
 
-| Operator                      | Description                                    | Example                                      |
-| ----------------------------- | ---------------------------------------------- | -------------------------------------------- |
-| `eq(col, val)`                | Equal                                          | `eq(Users.type, "admin")`                    |
-| `ne(col, val)`                | Not equal                                      | `ne(Users.type, "admin")`                    |
-| `gt(col, val)`                | Greater than                                   | `gt(Users.id, 10n)`                          |
-| `gte(col, val)`               | Greater than or equal                          | `gte(Users.id, 10n)`                         |
-| `lt(col, val)`                | Less than                                      | `lt(Users.id, 10n)`                          |
-| `lte(col, val)`               | Less than or equal                             | `lte(Users.id, 10n)`                         |
-| `isNull(col)`                 | IS NULL                                        | `isNull(Users.email)`                        |
-| `isNotNull(col)`              | IS NOT NULL                                    | `isNotNull(Users.email)`                     |
-| `isIn(col, arrOrSubquery)`    | IN array or subquery                           | `isIn(Users.id, [1n, 2n, 3n])`               |
-| `notIn(col, values)`          | NOT IN array                                   | `notIn(Users.type, ["banned", "deleted"])`   |
-| `exists(subquery)`            | Subquery returns at least one row              | `exists(db.from(Posts)...)`                  |
-| `notExists(subquery)`         | Subquery returns no rows                       | `notExists(db.from(Posts)...)`               |
-| `startsWith(col, val)`        | Starts with (`starts_with()`, case-sensitive)  | `startsWith(Users.username, "admin")`        |
-| `endsWith(col, val)`          | Ends with (case-sensitive)                     | `endsWith(Users.email, "@test.com")`         |
-| `contains(col, val)`          | Contains (case-sensitive)                      | `contains(Users.bio, "typescript")`          |
-| `like(col, pattern)`          | Case-sensitive LIKE pattern                    | `like(Users.code, "US%")`                    |
-| `ilike(col, pattern)`         | Case-insensitive ILIKE pattern                 | `ilike(Users.code, "us%")`                   |
-| `tsMatch(vector, query)`      | Full-text match (`@@`)                         | `tsMatch(Articles.search, term)`             |
-| `and(...conditions)`          | AND logic; ignores `null`, `undefined` entries | `and(eq(...), gte(...))`                     |
-| `or(...conditions)`           | OR logic; ignores `null`, `undefined` entries  | `or(eq(...), eq(...))`                       |
-| `arrayContains(col, values)`  | Array contains all values (`@>`)               | `arrayContains(Posts.tags, ["ts", "pg"])`    |
-| `arrayContainedBy(col, vals)` | Array subset of values (`<@`)                  | `arrayContainedBy(Posts.tags, ["ts", "pg"])` |
-| `arrayOverlaps(col, values)`  | Array overlaps values (`&&`)                   | `arrayOverlaps(Posts.tags, ["ts"])`          |
-| `arrayHas(col, value)`        | Value exists in array (`ANY`)                  | `arrayHas(Posts.tags, "typescript")`         |
-| `arrayAll(col, value)`        | All elements match value (`ALL`)               | `arrayAll(Posts.flags, true)`                |
+| Operator                      | Description                                   | Example                                      |
+| ----------------------------- | --------------------------------------------- | -------------------------------------------- |
+| `eq(col, val)`                | Equal                                         | `eq(Users.type, "admin")`                    |
+| `ne(col, val)`                | Not equal                                     | `ne(Users.type, "admin")`                    |
+| `gt(col, val)`                | Greater than                                  | `gt(Users.id, 10n)`                          |
+| `gte(col, val)`               | Greater than or equal                         | `gte(Users.id, 10n)`                         |
+| `lt(col, val)`                | Less than                                     | `lt(Users.id, 10n)`                          |
+| `lte(col, val)`               | Less than or equal                            | `lte(Users.id, 10n)`                         |
+| `isNull(col)`                 | IS NULL                                       | `isNull(Users.email)`                        |
+| `isNotNull(col)`              | IS NOT NULL                                   | `isNotNull(Users.email)`                     |
+| `isIn(col, arrOrSubquery)`    | IN array or subquery                          | `isIn(Users.id, [1n, 2n, 3n])`               |
+| `notIn(col, values)`          | NOT IN array                                  | `notIn(Users.type, ["banned", "deleted"])`   |
+| `exists(subquery)`            | Subquery returns at least one row             | `exists(db.from(Posts)...)`                  |
+| `notExists(subquery)`         | Subquery returns no rows                      | `notExists(db.from(Posts)...)`               |
+| `startsWith(col, val)`        | Starts with (`starts_with()`, case-sensitive) | `startsWith(Users.username, "admin")`        |
+| `endsWith(col, val)`          | Ends with (case-sensitive)                    | `endsWith(Users.email, "@test.com")`         |
+| `contains(col, val)`          | Contains (case-sensitive)                     | `contains(Users.bio, "typescript")`          |
+| `like(col, pattern)`          | Case-sensitive LIKE pattern                   | `like(Users.code, "US%")`                    |
+| `ilike(col, pattern)`         | Case-insensitive ILIKE pattern                | `ilike(Users.code, "us%")`                   |
+| `tsMatch(vector, query)`      | Full-text match (`@@`)                        | `tsMatch(Articles.search, term)`             |
+| `and(...conditions)`          | AND logic; accepts booleans, ignores nullish  | `and(eq(...), gte(...))`                     |
+| `or(...conditions)`           | OR logic; accepts booleans, ignores nullish   | `or(eq(...), eq(...))`                       |
+| `arrayContains(col, values)`  | Array contains all values (`@>`)              | `arrayContains(Posts.tags, ["ts", "pg"])`    |
+| `arrayContainedBy(col, vals)` | Array subset of values (`<@`)                 | `arrayContainedBy(Posts.tags, ["ts", "pg"])` |
+| `arrayOverlaps(col, values)`  | Array overlaps values (`&&`)                  | `arrayOverlaps(Posts.tags, ["ts"])`          |
+| `arrayHas(col, value)`        | Value exists in array (`ANY`)                 | `arrayHas(Posts.tags, "typescript")`         |
+| `arrayAll(col, value)`        | All elements match value (`ALL`)              | `arrayAll(Posts.flags, true)`                |
 
 ## Comparison Operators
 
@@ -427,6 +427,26 @@ await db
       gte(Users.createdAt, new Date("2024-01-01")),
     )
   );
+```
+
+### Boolean Literals
+
+Pass `true` or `false` anywhere a filter expression is accepted — `.where()`, `.having()`, join `.on()`, check constraints, and partial index predicates. They render as the PostgreSQL constants `TRUE` and `FALSE`.
+
+```typescript
+// Matches every row
+await db.from(Users).select("*").where(() => true);
+
+// `false` makes an AND impossible and an OR neutral
+await db
+  .from(Users)
+  .select("*")
+  .where(() => and(false, eq(Users.type, "admin")));
+
+await db
+  .from(Users)
+  .select("*")
+  .where(() => or(true, eq(Users.type, "admin")));
 ```
 
 ## Array Operators
