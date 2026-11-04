@@ -65,7 +65,7 @@ describe("SELECT with INNER JOIN", () => {
         }),
       }),
     );
-    client = db.$.config.connector.getClient();
+    client = db._.config.connector.getClient();
     await client.connect();
   }, 120000);
 
@@ -603,7 +603,7 @@ describe("SELECT with LEFT JOIN", () => {
         }),
       }),
     );
-    client = db.$.config.connector.getClient();
+    client = db._.config.connector.getClient();
     await client.connect();
   }, 120000);
 

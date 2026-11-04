@@ -35,9 +35,9 @@ const UsersRelations = relations(Users, () => ({
 describe("database() entity discovery", () => {
   it("registers valid tables and relations", () => {
     const db = database({ Users, Posts, UsersRelations }, config);
-    expect(db.$.tables).toHaveProperty("Users");
-    expect(db.$.tables).toHaveProperty("Posts");
-    expect(db.$.allRelations).toHaveProperty('"public"."users"');
+    expect(db._.tables).toHaveProperty("Users");
+    expect(db._.tables).toHaveProperty("Posts");
+    expect(db._.allRelations).toHaveProperty('"public"."users"');
   });
 
   it("safely skips user-exported functions expecting arguments without invoking them", () => {
@@ -88,7 +88,7 @@ describe("database() entity discovery", () => {
       },
       config,
     );
-    expect(db.$.tables).toHaveProperty("Users");
-    expect(Object.keys(db.$.tables)).toEqual(["Users"]);
+    expect(db._.tables).toHaveProperty("Users");
+    expect(Object.keys(db._.tables)).toEqual(["Users"]);
   });
 });

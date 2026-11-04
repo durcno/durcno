@@ -62,7 +62,7 @@ describe("check constraints — insert acceptance and rejection", () => {
         }),
       }),
     );
-    client = db.$.config.connector.getClient();
+    client = db._.config.connector.getClient();
     await client.connect();
   }, 120_000);
 

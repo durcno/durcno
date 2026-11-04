@@ -57,11 +57,8 @@ class Base<
   #allRelations: TAllRelations;
   #executor: QueryExecutor | null;
 
-  _ = {
-    getExecutor: this.#getExecutor.bind(this),
-  };
-
-  $: {
+  _: {
+    getExecutor: () => QueryExecutor;
     tables: TTables;
     allRelations: TAllRelations;
     config: Config;
@@ -78,7 +75,8 @@ class Base<
     this.#allRelations = allRelations;
     this.#executor = executor;
 
-    this.$ = {
+    this._ = {
+      getExecutor: this.#getExecutor.bind(this),
       tables,
       allRelations,
       config,
@@ -87,7 +85,7 @@ class Base<
   }
 
   #getExecutor(): QueryExecutor {
-    if (this.$.pre === true) {
+    if (this._.pre === true) {
       return null as unknown as QueryExecutor;
     } else if (this.#executor === null) {
       throw new Error("Cannot execute query: no database connection available");
@@ -101,7 +99,7 @@ class Base<
    * @returns An InsertBuilder instance to chain `.values()` and execute the insert
    */
   insertInto<TTable extends TTables[keyof TTables]>(table: TTable) {
-    return new InsertBuilder(table, this.#getExecutor(), this.$.pre);
+    return new InsertBuilder(table, this.#getExecutor(), this._.pre);
   }
 
   /**
@@ -119,7 +117,7 @@ class Base<
       null,
       undefined,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -129,7 +127,7 @@ class Base<
    * @returns An UpdateBuilder instance to chain `.set()` and `.where()` clauses
    */
   update<TTable extends TTables[keyof TTables]>(table: TTable) {
-    return new UpdateBuilder(table, this.#getExecutor(), this.$.pre);
+    return new UpdateBuilder(table, this.#getExecutor(), this._.pre);
   }
 
   /**
@@ -143,7 +141,7 @@ class Base<
       undefined,
       undefined,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -164,7 +162,7 @@ class Base<
     table: TTable,
     where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
-    return new CountQuery(table, where, this.#getExecutor(), this.$.pre);
+    return new CountQuery(table, where, this.#getExecutor(), this._.pre);
   }
 
   /**
@@ -184,7 +182,7 @@ class Base<
     table: TTable,
     where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
-    return new ExistsQuery(table, where, this.#getExecutor(), this.$.pre);
+    return new ExistsQuery(table, where, this.#getExecutor(), this._.pre);
   }
 
   /**
@@ -204,7 +202,7 @@ class Base<
     table: TTable,
     where?: FilterExpression<Valueof<TTable["_"]["columns"]>, TPrepare>,
   ) {
-    return new FirstQuery(table, where, this.#getExecutor(), this.$.pre);
+    return new FirstQuery(table, where, this.#getExecutor(), this._.pre);
   }
 
   /**
@@ -244,7 +242,7 @@ class Base<
       "SUM",
       where,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -285,7 +283,7 @@ class Base<
       "AVG",
       where,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -326,7 +324,7 @@ class Base<
       "MIN",
       where,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -367,7 +365,7 @@ class Base<
       "MAX",
       where,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -407,7 +405,7 @@ class Base<
       column,
       where,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -446,7 +444,7 @@ class Base<
       this.#allRelations[table._.fullName],
       this.#allRelations,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -511,7 +509,7 @@ class Base<
       [nameOrFirstCte, ...restCtes],
       this.#allRelations,
       this.#getExecutor(),
-      this.$.pre,
+      this._.pre,
     );
   }
 
@@ -568,7 +566,7 @@ class DB<
   }
 
   prepare() {
-    return new Preparer(this.$.tables, this.$.allRelations, this.$.config);
+    return new Preparer(this._.tables, this._.allRelations, this._.config);
   }
 
   /**
@@ -586,10 +584,10 @@ class DB<
     try {
       await client.execStrArgs("BEGIN;");
       const tx = new Transaction(
-        this.$.tables,
-        this.$.allRelations,
+        this._.tables,
+        this._.allRelations,
         client,
-        this.$.config,
+        this._.config,
         false,
       );
       const result = await callback(tx);

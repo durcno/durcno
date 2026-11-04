@@ -81,7 +81,7 @@ describe("Filters with Functions", () => {
         }),
       }),
     );
-    client = db.$.config.connector.getClient();
+    client = db._.config.connector.getClient();
     await client.connect();
   }, 120000);
 

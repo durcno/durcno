@@ -4,7 +4,7 @@ import { Expect } from "./utils";
 // `database()` splits schema exports into tables and relation factories; only
 // tables may appear in the table map, otherwise `insertInto`/`update`/`deleteFrom`
 // accept entities that are not tables.
-type TableKeys = keyof (typeof db.$)["tables"];
+type TableKeys = keyof (typeof db._)["tables"];
 
 type _HasUsers = "Users" extends TableKeys ? true : false;
 Expect<_HasUsers>;
