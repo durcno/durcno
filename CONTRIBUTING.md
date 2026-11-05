@@ -56,10 +56,10 @@ pnpm install ---frozen-lockfile
 | -------------------------- | -------------------------------------------------------- |
 | `pnpm run build-src:watch` | Watch mode for main code compilation                     |
 | `pnpm run build-cli:watch` | Watch mode for CLI compilation                           |
-| `pnpm run tsclint`         | (`/src`) TypeScript type checking                        |
+| `pnpm run tsclint-src`     | (`/src`) TypeScript type checking                        |
 | `pnpm run tsclint-cli`     | (`/src/cli`) TypeScript type checking                    |
 | `pnpm run test-types`      | (`/type-tests`) TypeScript type checking                 |
-| `pnpm run tsclint-all`     | Run all tsc checks (/src, /src/cli, /type-tests, /tests) |
+| `pnpm run tsclint`         | Run all tsc checks (/src, /src/cli, /type-tests, /tests) |
 | `pnpm run lint`            | Run Biome linter                                         |
 | `pnpm run test`            | Build and run tests                                      |
 | `pnpm run format`          | Format code                                              |
@@ -83,7 +83,7 @@ For an overview of the project structure, see [AGENTS.md](AGENTS.md).
 
    ```bash
    pnpm run lint      # Linting
-   pnpm run tsclint-all    # tsc checks and type tests
+   pnpm run tsclint        # tsc checks and type tests
    pnpm test          # Integration tests
    ```
 
@@ -166,7 +166,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/) styl
 2. **Run the full validation suite**:
    ```bash
    pnpm run lint      # Linting
-   pnpm run tsclint-all    # All type checks
+   pnpm run tsclint        # All type checks
    pnpm test          # Integration tests
    ```
 3. **Ensure no unrelated changes** are included

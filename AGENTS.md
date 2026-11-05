@@ -219,12 +219,12 @@ dist/                     # Production compiled output
 
 - **`pnpm run lint`**: Run Biome linter
 - **`pnpm run format`**: Format with Biome + dprint + oxfmt
-- **`pnpm run tsclint`**: Run TypeScript type checking `src/`
+- **`pnpm run tsclint-src`**: Run TypeScript type checking `src/`
 - **`pnpm run tsclint-cli`**: Run CLI TypeScript type checking `src/cli/`
 - **`pnpm run tsclint-tests`**: Run TypeScript type checking `tests/`
 - **`pnpm run tsclint-perf`**: Run TypeScript type checking `perf/`
 - **`pnpm run test-types`**: Run only type tests `type-tests/`
-- **`pnpm run tsclint-all`**: Run all type checks (tsclint + tsclint-cli + test-types + tsclint-tests + tsclint-perf)
+- **`pnpm run tsclint`**: Run all type checks (tsclint-src + tsclint-cli + test-types + tsclint-tests + tsclint-perf)
 - **`pnpm run build`**: Build `src/` (tsdown) and `cli/` (esbuild) into `dist/`
 - **`pnpm run test`**: Build src & cli then run integration tests `tests/`
 - **`pnpm test tests/cli/`**: Run a single folder/file of integration tests (requires Docker)
