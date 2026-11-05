@@ -3,7 +3,14 @@ import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
-import { Check, Copy, Map as MapIcon, Repeat, ShieldCheck } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Map as MapIcon,
+  Repeat,
+  ShieldCheck,
+  Waypoints,
+} from "lucide-react";
 import { type ReactNode, useState } from "react";
 import ShikiCodeBlock from "../components/ShikiCodeBlock";
 import styles from "./index.module.css";
@@ -348,6 +355,24 @@ function FeatureHighlights() {
               First-class support from day one. Use built-in{" "}
               <strong>geography</strong> columns with geojson date types and
               fully type-safe spatial operations & filters.
+            </p>
+          </div>
+          <div className={styles.featureCard}>
+            <div
+              className={styles.featureIconWrapper}
+              style={{ background: "rgba(20, 160, 200, 0.1)" }}
+            >
+              <Waypoints
+                className={styles.featureIcon}
+                style={{ color: "rgb(20, 160, 200)" }}
+              />
+            </div>
+            <h3>pgvector Built-in</h3>
+            <p>
+              Vector search without extra glue. Store embeddings in typed{" "}
+              <strong>vector</strong>, <strong>halfvec</strong>, and{" "}
+              <strong>sparsevec</strong> columns, with distance functions ready
+              for similarity queries.
             </p>
           </div>
         </div>
