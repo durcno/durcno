@@ -5,6 +5,7 @@ import {
   inet,
   macaddr,
   numeric,
+  pgvector,
   text,
   time,
   uuid,
@@ -210,6 +211,75 @@ describe("SQL Injection Protection (String JS Type Columns)", () => {
     },
     { name: "should handle null values", input: null, expectEq: "NULL" },
   ]);
+
+  runCases("pgvector.bit column", pgvector.bit({ length: 3 }), [
+    {
+      name: "should serialize a valid bit string",
+      input: "101",
+      expectEq: "B'101'",
+    },
+    { name: "should handle null values", input: null, expectEq: "NULL" },
+    {
+      name: "should reject an SQL injection payload as an invalid bit string",
+      input: "1' || pg_sleep(5) || '",
+      throws: "Invalid bit string value",
+    },
+    {
+      name: "should reject non-binary characters",
+      input: "102",
+      throws: "Invalid bit string value",
+    },
+  ]);
+
+  for (const [name, column] of [
+    ["pgvector.vector column", pgvector.vector({ dimensions: 3 })],
+    ["pgvector.halfvec column", pgvector.halfvec({ dimensions: 3 })],
+  ] as const) {
+    runCases(name, column, [
+      {
+        name: "should serialize finite numbers",
+        input: [1, 2.5, -3],
+        expectEq: "'[1,2.5,-3]'",
+      },
+      { name: "should handle null values", input: null, expectEq: "NULL" },
+      {
+        name: "should reject an SQL injection payload as a non-numeric element",
+        input: ["1]' || pg_sleep(5) || '["],
+        throws: "Invalid vector element",
+      },
+      {
+        name: "should reject non-finite elements",
+        input: [1, Number.NaN, 3],
+        throws: "Invalid vector element",
+      },
+    ]);
+  }
+
+  describe("pgvector value type guards", () => {
+    it("rejects invalid bit strings", () => {
+      expect(() => pgvector.bit({ length: 3 }).toDriver("1'")).toThrow(
+        "Invalid bit string value",
+      );
+    });
+
+    it("rejects non-string bit values", () => {
+      expect(() => pgvector.bit({ length: 3 }).toSQL(101 as never)).toThrow(
+        "Invalid bit string value",
+      );
+    });
+
+    it("rejects non-finite vector elements", () => {
+      expect(() =>
+        pgvector.vector({ dimensions: 3 }).toDriver([1, Number.NaN, 3]),
+      ).toThrow("Invalid vector element");
+    });
+
+    it("rejects non-array vector values", () => {
+      expect(() =>
+        pgvector.vector({ dimensions: 3 }).toSQL("1,2,3" as never),
+      ).toThrow("Invalid vector value");
+    });
+  });
 
   runCases("Common SQL injection patterns", varchar({ length: 1000 }), [
     {

@@ -39,6 +39,8 @@ import {
 
 ## Vector Column Types
 
+Durcno validates values before rendering SQL: `vector` and `halfvec` elements must be finite numbers, and `bit` strings may contain only `0` and `1`. Invalid values throw instead of reaching the database.
+
 ### `pgvector.vector`
 
 Represents a dense vector of floating-point numbers.

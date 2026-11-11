@@ -6,6 +6,15 @@ export type BitConfig = ColumnConfig & {
   length?: number;
 };
 
+const BIT_STRING_REGEX = /^[01]+$/;
+
+/** Rejects anything that would not be a valid PostgreSQL bit string literal. */
+function assertBitString(value: string): void {
+  if (typeof value !== "string" || !BIT_STRING_REGEX.test(value)) {
+    throw new Error(`Invalid bit string value: ${value}`);
+  }
+}
+
 export class BitColumn<TConfig extends BitConfig> extends Column<
   TConfig,
   string,
@@ -28,7 +37,7 @@ export class BitColumn<TConfig extends BitConfig> extends Column<
   }
 
   get zodTypeScaler() {
-    let base = z.string().regex(/^[01]+$/);
+    let base = z.string().regex(BIT_STRING_REGEX);
     if (this.#length !== undefined) {
       base = base.length(this.#length);
     }
@@ -37,13 +46,16 @@ export class BitColumn<TConfig extends BitConfig> extends Column<
 
   toDriverScalar(value: string | Sql | null) {
     if (value === null) return null;
-    return value instanceof Sql ? value.string : value;
+    if (value instanceof Sql) return value.string;
+    assertBitString(value);
+    return value;
   }
 
   toSQLScalar(value: string | Sql | null): string {
     if (value === null) return "NULL";
-    // standard bit literal syntax: B'101010'
-    return value instanceof Sql ? value.string : `B'${value}'`;
+    if (value instanceof Sql) return value.string;
+    assertBitString(value);
+    return `B'${value}'`;
   }
 
   fromDriverScalar(value: string | null): string | null {

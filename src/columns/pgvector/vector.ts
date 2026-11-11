@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { Sql } from "../../sql";
 import { Column, type ColumnConfig } from "../common";
+import { assertFiniteVector } from "./validate";
 
 export type VectorConfig = ColumnConfig & {
   dimensions?: number;
@@ -34,16 +35,16 @@ export class VectorColumn<TConfig extends VectorConfig> extends Column<
 
   toDriverScalar(value: number[] | Sql | null) {
     if (value === null) return null;
-    return value instanceof Sql
-      ? value.string
-      : `[${(value as number[]).join(",")}]`;
+    if (value instanceof Sql) return value.string;
+    assertFiniteVector(value);
+    return `[${value.join(",")}]`;
   }
 
   toSQLScalar(value: number[] | Sql | null): string {
     if (value === null) return "NULL";
-    return value instanceof Sql
-      ? value.string
-      : `'[${(value as number[]).join(",")}]'`;
+    if (value instanceof Sql) return value.string;
+    assertFiniteVector(value);
+    return `'[${value.join(",")}]'`;
   }
 
   fromDriverScalar(value: unknown): number[] | null {
