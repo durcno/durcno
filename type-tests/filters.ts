@@ -136,6 +136,30 @@ const nullabilityQuery = db
 type NullabilityResult = Awaited<typeof nullabilityQuery>;
 Expect<Equal<NullabilityResult, UserRows>>();
 
+// Null is a SQL predicate and a valid comparison operand, even for NOT NULL columns.
+const nullPredicateQuery = db
+  .from(Users)
+  .select("*")
+  .where(() => null);
+type NullPredicateResult = Awaited<typeof nullPredicateQuery>;
+Expect<Equal<NullPredicateResult, UserRows>>();
+
+const nullComparisonQuery = db
+  .from(Users)
+  .select("*")
+  .where(() =>
+    and(
+      eq(Users.id, null),
+      ne(Users.email, null),
+      gt(Users.id, null),
+      gte(Users.id, null),
+      lt(Users.id, null),
+      lte(Users.id, null),
+    ),
+  );
+type NullComparisonResult = Awaited<typeof nullComparisonQuery>;
+Expect<Equal<NullComparisonResult, UserRows>>();
+
 // -----------------------------------------------------------------------------
 // Membership
 // -----------------------------------------------------------------------------
@@ -262,10 +286,53 @@ const booleanCompositionQuery = db
 type BooleanCompositionResult = Awaited<typeof booleanCompositionQuery>;
 Expect<Equal<BooleanCompositionResult, UserRows>>();
 
+const nullCompositionQuery = db
+  .from(Users)
+  .select("*")
+  .where(() => and(eq(Users.type, "admin"), null));
+type NullCompositionResult = Awaited<typeof nullCompositionQuery>;
+Expect<Equal<NullCompositionResult, UserRows>>();
+
+const nullOnlyCondition = and(null);
+Expect<Equal<(typeof nullOnlyCondition.$)["Columns"], never>>();
+Expect<Equal<(typeof nullOnlyCondition.$)["HasArg"], false>>();
+
+const preparedNullCompositionQuery = db
+  .prepare()
+  .from(Users)
+  .select("*")
+  .where(() => and(eq(Users.id, Arg.bigint()), null));
+Expect<Equal<typeof preparedNullCompositionQuery.$prepare, true>>();
+
 db.from(Users)
   .select("*")
   // @ts-expect-error - and rejects non-boolean primitives
   .where(() => and(eq(Users.type, "admin"), "true"));
+
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - undefined is not a predicate
+  .where(() => undefined);
+
+db.from(Users)
+  .select("*")
+  .where(() =>
+    // @ts-expect-error - and does not accept undefined conditions
+    and(eq(Users.type, "admin"), undefined),
+  );
+
+db.from(Users)
+  .select("*")
+  .where(() =>
+    // @ts-expect-error - or does not accept undefined conditions
+    or(eq(Users.type, "admin"), undefined),
+  );
+
+// @ts-expect-error - and requires at least one condition
+and();
+
+// @ts-expect-error - or requires at least one condition
+or();
 
 // -----------------------------------------------------------------------------
 // exists / notExists

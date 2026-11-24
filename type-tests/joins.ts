@@ -89,6 +89,14 @@ const booleanJoinQuery = db
 type BooleanJoin = Awaited<typeof booleanJoinQuery>;
 Expect<Equal<BooleanJoin, { userId: bigint; postId: bigint }[]>>();
 
+const nullJoinQuery = db
+  .from(Users)
+  .innerJoin(Posts)
+  .on(() => null)
+  .select(() => ({ userId: Users.id, postId: Posts.id }));
+type NullJoin = Awaited<typeof nullJoinQuery>;
+Expect<Equal<NullJoin, { userId: bigint; postId: bigint }[]>>();
+
 db.from(Users)
   .innerJoin(Posts)
   .on(() => eq(Users.id, Posts.userId))

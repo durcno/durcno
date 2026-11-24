@@ -115,7 +115,7 @@ describe("durcno generate - expression indexes", () => {
     ).toThrow(/Expression indexes require an explicit name/);
   });
 
-  it("renders boolean partial index predicates", () => {
+  it("renders literal partial index predicates", () => {
     const BoolIndex = table(
       "public",
       "bool_index",
@@ -124,6 +124,7 @@ describe("durcno generate - expression indexes", () => {
         indexes: (t) => [
           index("bool_index_idx", [t.id]).where(false),
           index("bool_index_true_idx", [t.id]).where(true),
+          index("bool_index_null_idx", [t.id]).where(null),
         ],
       },
     );
@@ -131,8 +132,9 @@ describe("durcno generate - expression indexes", () => {
     const schemaSnapshot = snapshot([BoolIndex]);
     const indexes = schemaSnapshot.tables["public.bool_index"].indexes;
 
-    expect(indexes["bool_index_idx"].where).toBe("FALSE");
-    expect(indexes["bool_index_true_idx"].where).toBe("TRUE");
+    expect(indexes.bool_index_idx.where).toBe("FALSE");
+    expect(indexes.bool_index_true_idx.where).toBe("TRUE");
+    expect(indexes.bool_index_null_idx.where).toBe("NULL");
   });
 
   it("rejects aggregate function keys at runtime", () => {

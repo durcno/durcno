@@ -169,6 +169,14 @@ const _booleanHavingQuery = db
 type BooleanHaving = Awaited<typeof _booleanHavingQuery>;
 Expect<Equal<BooleanHaving, { type: "admin" | "user"; total: number }[]>>();
 
+const _nullHavingQuery = db
+  .from(Users)
+  .select(() => ({ type: Users.type, total: count("*") }))
+  .groupBy(() => Users.type)
+  .having(() => null);
+type NullHaving = Awaited<typeof _nullHavingQuery>;
+Expect<Equal<NullHaving, { type: "admin" | "user"; total: number }[]>>();
+
 // -----------------------------------------------------------------------------
 // ORDER BY on grouped queries
 // -----------------------------------------------------------------------------

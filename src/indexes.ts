@@ -19,7 +19,7 @@ export type IndexType =
 /**
  * Expression accepted in an index WHERE predicate for partial indexes.
  * Supports type-safe `Filter` conditions without `Arg` placeholders, raw `Sql`,
- * or a boolean literal.
+ * a boolean literal, or `null`.
  */
 export type IndexWhereExpression = FilterExpression<AnyColumn>;
 

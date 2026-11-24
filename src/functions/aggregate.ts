@@ -98,7 +98,7 @@ export abstract class AggregateSqlFn<
    * count(orders.id).filter(eq(orders.status, "completed"))
    * jsonAgg(posts.title).filter(isNotNull(posts.id))
    */
-  filter<TCondition extends Filter<AnyColumn, boolean> | boolean | Sql>(
+  filter<TCondition extends Filter<AnyColumn, boolean> | boolean | null | Sql>(
     condition: TCondition,
   ): ScopedAggregate<
     this,

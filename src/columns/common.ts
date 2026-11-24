@@ -280,7 +280,7 @@ export abstract class Column<
   #updateFn: (() => this["ValType"]) | undefined;
   #references: (() => StdTableColumn) | undefined;
   #onDelete: OnDeleteAction | undefined;
-  #check: ((c: StdTableColumn) => AnyFilter | boolean | Sql) | undefined;
+  #check: ((c: StdTableColumn) => AnyFilter | boolean | null | Sql) | undefined;
 
   // Cached from the config
   readonly #dimensions: Readonly<(number | null)[]> | undefined;
@@ -793,7 +793,7 @@ export abstract class Column<
   check(fn: (c: this) => CheckExpression<this>) {
     this.#check = fn as unknown as (
       c: StdTableColumn,
-    ) => AnyFilter | boolean | Sql;
+    ) => AnyFilter | boolean | null | Sql;
     return this;
   }
 

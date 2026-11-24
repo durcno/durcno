@@ -28,8 +28,8 @@ Durcno provides a set of type-safe filter operators for building WHERE and CHECK
 | `like(col, pattern)`          | Case-sensitive LIKE pattern                   | `like(Users.code, "US%")`                    |
 | `ilike(col, pattern)`         | Case-insensitive ILIKE pattern                | `ilike(Users.code, "us%")`                   |
 | `tsMatch(vector, query)`      | Full-text match (`@@`)                        | `tsMatch(Articles.search, term)`             |
-| `and(...conditions)`          | AND logic; accepts booleans, ignores nullish  | `and(eq(...), gte(...))`                     |
-| `or(...conditions)`           | OR logic; accepts booleans, ignores nullish   | `or(eq(...), eq(...))`                       |
+| `and(...conditions)`          | AND logic; `null` renders as SQL `NULL`       | `and(eq(...), gte(...))`                     |
+| `or(...conditions)`           | OR logic; `null` renders as SQL `NULL`        | `or(eq(...), eq(...))`                       |
 | `arrayContains(col, values)`  | Array contains all values (`@>`)              | `arrayContains(Posts.tags, ["ts", "pg"])`    |
 | `arrayContainedBy(col, vals)` | Array subset of values (`<@`)                 | `arrayContainedBy(Posts.tags, ["ts", "pg"])` |
 | `arrayOverlaps(col, values)`  | Array overlaps values (`&&`)                  | `arrayOverlaps(Posts.tags, ["ts"])`          |
@@ -75,6 +75,8 @@ await db
 ```
 
 A single-column `SelectQuery` is accepted wherever a comparison operand is expected; the value is typed `T | null`.
+
+Column comparisons also accept `null`. It renders as SQL `NULL`, so `eq(Users.email, null)` produces `"email" = NULL` and matches no rows. Use `isNull(Users.email)` to match null values.
 
 ### Not Equal (`ne`)
 
@@ -370,7 +372,21 @@ Use `websearchToTsquery` for untrusted input, and `toTsquery` when you control t
 
 ## Logical Operators
 
-Both `and()` and `or()` ignore `null` and `undefined` entries, so you can pass optional filters without generating invalid SQL.
+Both `and()` and `or()` accept `null`, which renders as SQL `NULL` and follows PostgreSQL's three-valued logic. They require at least one condition and do not accept `undefined`. Omit an optional `where` clause entirely when no filter is needed.
+
+Use `true` as the neutral condition for `and()` and `false` as the neutral condition for `or()`:
+
+```typescript
+const result = await db
+  .from(Users)
+  .select("*")
+  .where(() =>
+    and(
+      eq(Users.type, "admin"),
+      status ? eq(Users.status, "active") : true,
+    )
+  );
+```
 
 ### AND (`and`)
 

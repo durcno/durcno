@@ -4,7 +4,10 @@ import type Docker from "dockerode";
 import {
   type $Client,
   and,
+  asc,
+  caseWhen,
   contains,
+  count,
   database,
   defineConfig,
   endsWith,
@@ -23,6 +26,7 @@ import {
   ne,
   or,
   startsWith,
+  sum,
 } from "durcno";
 import { pg } from "durcno/connectors/pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -145,28 +149,180 @@ describe("Filters", () => {
     });
   });
 
-  it("should ignore nullish conditions in and/or combinators", async () => {
-    await db
-      .insertInto(schema.Users)
-      .values([
-        createTestUser({ username: "alice", type: "admin" }),
-        createTestUser({ username: "bob", type: "user" }),
+  describe("null predicates", () => {
+    it("rejects empty logical groups at runtime", () => {
+      // @ts-expect-error - runtime guard for untyped callers
+      expect(() => and()).toThrow("and() requires at least one condition.");
+      // @ts-expect-error - runtime guard for untyped callers
+      expect(() => or()).toThrow("or() requires at least one condition.");
+    });
+
+    it("renders null as SQL NULL in a SELECT predicate", async () => {
+      await db.insertInto(schema.Users).values(createTestUser());
+
+      const query = db
+        .from(schema.Users)
+        .select("*")
+        .where(() => null);
+      expect(query.toQuery().sql).toContain(" WHERE NULL");
+      await expect(query).resolves.toEqual([]);
+    });
+
+    it("keeps native SQL semantics for null comparison operands", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "with_email", email: "test@example.com" }),
+          createTestUser({ username: "without_email", email: null }),
+        ]);
+
+      const equalsNull = db
+        .from(schema.Users)
+        .select("*")
+        .where(() => eq(schema.Users.email, null));
+      const notEqualsNull = db
+        .from(schema.Users)
+        .select("*")
+        .where(() => ne(schema.Users.email, null));
+
+      expect(equalsNull.toQuery().sql).toContain('"email" = NULL');
+      expect(notEqualsNull.toQuery().sql).toContain('"email" != NULL');
+      await expect(equalsNull).resolves.toEqual([]);
+      await expect(notEqualsNull).resolves.toEqual([]);
+    });
+
+    it("uses PostgreSQL three-valued logic in and/or combinators", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values([
+          createTestUser({ username: "alice", type: "admin" }),
+          createTestUser({ username: "bob", type: "user" }),
+        ]);
+
+      const selectUsernames = () =>
+        db
+          .from(schema.Users)
+          .select(() => ({ username: schema.Users.username }))
+          .orderBy(() => asc(schema.Users.username));
+      const isAdmin = eq(schema.Users.type, "admin");
+
+      const andNull = selectUsernames().where(() => and(isAdmin, null));
+      const orNull = selectUsernames().where(() => or(isAdmin, null));
+      const orFalseNull = selectUsernames().where(() => or(false, null));
+      const orTrueNull = selectUsernames().where(() => or(true, null));
+
+      expect(andNull.toQuery().sql).toContain("AND NULL");
+      expect(orNull.toQuery().sql).toContain("OR NULL");
+      await expect(andNull).resolves.toEqual([]);
+      await expect(orNull).resolves.toEqual([{ username: "alice" }]);
+      await expect(orFalseNull).resolves.toEqual([]);
+      await expect(orTrueNull).resolves.toEqual([
+        { username: "alice" },
+        { username: "bob" },
       ]);
+    });
 
-    const andResult = await db
-      .from(schema.Users)
-      .select(() => ({ username: schema.Users.username }))
-      .where(() => and(eq(schema.Users.type, "admin"), undefined, null));
+    it("applies SQL NULL predicates to updates, deletes, and shortcuts", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "unchanged", bio: "original" }))
+        .returning({ id: true });
 
-    const orResult = await db
-      .from(schema.Users)
-      .select(() => ({ username: schema.Users.username }))
-      .where(() => or(undefined, eq(schema.Users.type, "admin"), null));
+      await expect(
+        db
+          .update(schema.Users)
+          .set({ bio: "changed" })
+          .where(null)
+          .returning("*"),
+      ).resolves.toEqual([]);
+      await expect(db.deleteFrom(schema.Users).where(null)).resolves.toEqual(
+        [],
+      );
 
-    expect(andResult).toHaveLength(1);
-    expect(andResult[0].username).toBe("alice");
-    expect(orResult).toHaveLength(1);
-    expect(orResult[0].username).toBe("alice");
+      const [unchanged] = await db
+        .from(schema.Users)
+        .select(() => ({ bio: schema.Users.bio }))
+        .where(() => eq(schema.Users.id, user.id));
+      expect(unchanged.bio).toBe("original");
+      await expect(db.$count(schema.Users, null)).resolves.toBe(0);
+      await expect(db.$exists(schema.Users, null)).resolves.toBe(false);
+    });
+
+    it("uses SQL NULL in join predicates", async () => {
+      const [user] = await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "null_join" }))
+        .returning({ id: true });
+      await db
+        .insertInto(schema.Posts)
+        .values({ userId: user.id, title: "Post" });
+
+      const innerJoin = db
+        .from(schema.Users)
+        .innerJoin(schema.Posts)
+        .on(() => null)
+        .select(() => ({ userId: schema.Users.id, postId: schema.Posts.id }));
+      const leftJoin = db
+        .from(schema.Users)
+        .leftJoin(schema.Posts)
+        .on(() => null)
+        .select(({ posts }) => ({
+          userId: schema.Users.id,
+          postId: posts.id,
+        }));
+
+      await expect(innerJoin).resolves.toEqual([]);
+      await expect(leftJoin).resolves.toEqual([
+        { userId: user.id, postId: null },
+      ]);
+    });
+
+    it("uses SQL NULL in HAVING, FILTER, and CASE predicates", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "null_aggregates", score: 10 }));
+
+      const grouped = db
+        .from(schema.Users)
+        .select(() => ({ type: schema.Users.type, total: count("*") }))
+        .groupBy(() => schema.Users.type)
+        .having(() => null);
+      await expect(grouped).resolves.toEqual([]);
+
+      const aggregates = db.from(schema.Users).select(() => ({
+        total: count("*").filter(null),
+        scoreSum: sum(schema.Users.score).filter(null),
+        label: caseWhen(null, "matched").else("fallback"),
+      }));
+      await expect(aggregates).resolves.toEqual([
+        { total: 0, scoreSum: null, label: "fallback" },
+      ]);
+    });
+
+    it("uses SQL NULL in conflict update predicates", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "null_conflict", bio: "original" }));
+
+      const conflictResult = await db
+        .insertInto(schema.Users)
+        .values(
+          createTestUser({ username: "null_conflict", bio: "replacement" }),
+        )
+        .onConflict(schema.Users.username)
+        .doUpdateSet(
+          ({ excluded }) => ({ bio: excluded.bio }),
+          () => null,
+        )
+        .returning("*");
+      expect(conflictResult).toEqual([]);
+
+      const [afterConflict] = await db
+        .from(schema.Users)
+        .select(() => ({ bio: schema.Users.bio }))
+        .where(() => eq(schema.Users.username, "null_conflict"));
+      expect(afterConflict.bio).toBe("original");
+    });
   });
 
   it("should accept boolean literals in where", async () => {

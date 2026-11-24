@@ -375,6 +375,18 @@ db.insertInto(CheckTest)
     name: excluded.name,
   }));
 
+db.insertInto(Users)
+  .values({
+    username: "alice",
+    type: "user",
+    externalId: "550e8400-e29b-41d4-a716-446655440000",
+  })
+  .onConflict(Users.externalId)
+  .doUpdateSet(
+    ({ excluded }) => ({ username: excluded.username }),
+    () => null,
+  );
+
 // Raw SQL
 db.insertInto(Users)
   .values({

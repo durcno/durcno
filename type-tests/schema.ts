@@ -228,9 +228,16 @@ export const CheckTest = table(
 
       // Boolean literal predicate
       check("always_true", true),
+
+      // SQL NULL predicate
+      check("always_null", null),
     ],
   },
 );
+
+table("public", "null_column_check_test", {
+  value: integer({ notNull }).check(() => null),
+});
 
 // Network address types (INET, CIDR, MACADDR)
 export const NetworkDevices = table("public", "network_devices", {

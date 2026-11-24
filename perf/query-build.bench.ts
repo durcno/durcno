@@ -35,6 +35,7 @@ import {
   jsonbBuildObject,
   least,
   lower,
+  or,
   Query,
   sql,
 } from "durcno";
@@ -253,6 +254,20 @@ describe("query build — streamed, not assembled", () => {
             arrayContainedBy(schema.Listings.tags, tags),
             arrayOverlaps(schema.Listings.tags, tags),
             arrayContains(schema.Listings.pairs, pair),
+          ),
+        )
+        .toQuery();
+    }).run();
+  });
+
+  test("where — logical predicates with null", async ({ bench, task }) => {
+    await bench(task.name, () => {
+      db.from(schema.Listings)
+        .select("*")
+        .where(() =>
+          or(
+            and(eq(schema.Listings.title, "benchmark"), null),
+            eq(schema.Listings.articleId, 1n),
           ),
         )
         .toQuery();

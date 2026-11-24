@@ -75,6 +75,12 @@ const _booleanUpdateQuery = db
   .where(false);
 Expect<Equal<Awaited<typeof _booleanUpdateQuery>, null>>();
 
+const _nullUpdateQuery = db
+  .update(Users)
+  .set({ username: "new_username" })
+  .where(null);
+Expect<Equal<Awaited<typeof _nullUpdateQuery>, null>>();
+
 // A `$updateFn` column may be omitted or set explicitly
 db.update(Logs).set({ message: "Updated message" });
 db.update(Logs).set({

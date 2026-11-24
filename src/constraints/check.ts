@@ -9,7 +9,7 @@ import type { AnyColumn, TableAnyColumn } from "../table";
 
 /**
  * A check constraint expression that can be a filter condition, a raw SQL
- * snippet, or a boolean literal.
+ * snippet, a boolean literal, or `null`.
  */
 export type CheckExpression<TScopeColumns extends TableAnyColumn | AnyColumn> =
   FilterExpression<TScopeColumns>;
@@ -21,9 +21,9 @@ export type CheckExpression<TScopeColumns extends TableAnyColumn | AnyColumn> =
 /** A CHECK constraint for a table, storing its name and filter/SQL expression. */
 export class Check {
   readonly #name: string;
-  readonly #expr: AnyFilter | boolean | Sql;
+  readonly #expr: AnyFilter | boolean | null | Sql;
 
-  constructor(name: string, expr: AnyFilter | boolean | Sql) {
+  constructor(name: string, expr: AnyFilter | boolean | null | Sql) {
     this.#name = name;
     this.#expr = expr;
   }
@@ -59,6 +59,9 @@ export class Check {
  * });
  * ```
  */
-export function check(name: string, expr: AnyFilter | boolean | Sql): Check {
+export function check(
+  name: string,
+  expr: AnyFilter | boolean | null | Sql,
+): Check {
   return new Check(name, expr);
 }

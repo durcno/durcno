@@ -85,7 +85,7 @@ describe("check constraints — insert acceptance and rejection", () => {
       userName: "alice",
     };
 
-    it("accepts a valid row", async () => {
+    it("accepts a valid row when a CHECK predicate is SQL NULL", async () => {
       await expect(
         db.insertInto(schema.Products).values(validRow),
       ).resolves.not.toThrow();

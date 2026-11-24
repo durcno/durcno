@@ -46,6 +46,7 @@ export const Products = table(
         "name_length",
         and(gt(length(t.userName), 2), lte(length(t.userName), 100)),
       ),
+      check("always_null", null),
     ],
   },
 );

@@ -64,8 +64,9 @@ export type AnyFilter = Filter<AnyColumn, boolean>;
 /**
  * Constrains a filter expression to columns allowed in the current query scope.
  * Accepts a `Filter` whose `$.Columns` is assignable to `TScopeColumns`, a raw
- * `Sql` snippet, or a boolean literal. When `TArg` is `true`, filters carrying
- * `Arg` placeholders are also accepted (prepared-query context).
+ * `Sql` snippet, a boolean literal, or `null`. `null` renders as SQL `NULL`.
+ * When `TArg` is `true`, filters carrying `Arg` placeholders are also accepted
+ * (prepared-query context).
  *
  * Aggregates are excluded; see `GroupedFilterExpression` for the `HAVING` shape.
  */
@@ -75,6 +76,7 @@ export type FilterExpression<
 > =
   | Filter<TScopeColumns, TPrepare extends true ? boolean : false>
   | boolean
+  | null
   | Sql;
 
 export type StdCondition = FilterExpression<AnyColumn>;
@@ -91,6 +93,7 @@ export type GroupedFilterExpression<
 > =
   | Filter<TScopeColumns, TPrepare extends true ? boolean : false, boolean>
   | boolean
+  | null
   | Sql;
 
 /** A `HAVING` expression; accepts aggregates. */
@@ -101,15 +104,17 @@ export type HavingExpression<
 
 /**
  * Appends a filter expression to a query.
- * Boolean literals render as `TRUE`/`FALSE`.
+ * Boolean literals render as `TRUE`/`FALSE`; `null` renders as `NULL`.
  * @internal
  */
 export function appendFilterExpression(
-  expression: Filter<AnyColumn, boolean, boolean> | boolean | Sql,
+  expression: Filter<AnyColumn, boolean, boolean> | boolean | null | Sql,
   query: Query,
   ctx?: QueryContext,
 ): void {
-  if (typeof expression === "boolean") {
+  if (expression === null) {
+    query.sql += "NULL";
+  } else if (typeof expression === "boolean") {
     query.sql += expression ? "TRUE" : "FALSE";
   } else {
     expression.toQuery(query, ctx);
@@ -121,6 +126,7 @@ type HasArg<T> = T extends { $: { HasArg: true } } ? true : false;
 /** Right operand accepted by a comparison whose left side is a table column. */
 export type ColumnComparisonRight<TLeft extends AnyColumn> =
   | TLeft["ValType"]
+  | null
   | Arg<TLeft["ValType"]>
   | AnyColumn
   | NonAggregateSqlFn
@@ -247,6 +253,7 @@ export function eq(
   left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
+    | null
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
     | AnySqlFn
@@ -315,6 +322,7 @@ export function ne(
   left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
+    | null
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
     | AnySqlFn
@@ -383,6 +391,7 @@ export function gt(
   left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
+    | null
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
     | AnySqlFn
@@ -454,6 +463,7 @@ export function gte(
   left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
+    | null
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
     | AnySqlFn
@@ -522,6 +532,7 @@ export function lt(
   left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
+    | null
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
     | AnySqlFn
@@ -593,6 +604,7 @@ export function lte(
   left: AnyColumn | AnySqlFn | ScalarQueryLike,
   right:
     | AnyColumn["ValType"]
+    | null
     | Arg<AnyColumn["ValType"]>
     | AnyColumn
     | AnySqlFn
@@ -663,8 +675,10 @@ export function isNotNull<TCol extends AnyColumn>(field: TCol) {
 /** @internal Filter shape `and()`/`or()` accept, aggregate flag open. */
 type AnySqlFilter = Filter<AnyColumn, boolean, boolean>;
 
-/** @internal Union of table columns from all Filter conditions in the array. */
-type Filters = AnySqlFilter | boolean | Sql | null | undefined;
+/** @internal Union of conditions `and()`/`or()` accept. */
+type Filters = AnySqlFilter | boolean | null | Sql;
+
+type NonEmptyFilters = [Filters, ...Filters[]];
 
 type ExtractCols<T extends Filters> = T extends { $: { Columns: infer C } }
   ? C
@@ -677,7 +691,7 @@ type HasArgOf<T extends Filters[]> = [CondHasArg<T[number]>] extends [false]
 
 type CondHasArg<T> = T extends { $: { HasArg: infer H } } ? H : false;
 
-export class AndCondition<TConditions extends Filters[]> extends Filter<
+export class AndCondition<TConditions extends NonEmptyFilters> extends Filter<
   ExtractCols<TConditions[number]>,
   HasArgOf<TConditions>,
   HasAggregateOfConditions<TConditions>
@@ -685,6 +699,9 @@ export class AndCondition<TConditions extends Filters[]> extends Filter<
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
     super(containsAggregate(conditions), containsWindow(conditions));
+    if (conditions.length === 0) {
+      throw new Error("and() requires at least one condition.");
+    }
     this.conditions = conditions;
   }
   get referencedColumns(): AnyColumn[] | null {
@@ -701,7 +718,6 @@ export class AndCondition<TConditions extends Filters[]> extends Filter<
     query.sql += "(";
     let first = true;
     for (const condition of this.conditions) {
-      if (condition === null || condition === undefined) continue;
       if (!first) query.sql += " AND ";
       first = false;
       appendFilterExpression(condition, query, ctx);
@@ -710,13 +726,13 @@ export class AndCondition<TConditions extends Filters[]> extends Filter<
   }
 }
 
-export function and<TConditions extends Filters[]>(
+export function and<TConditions extends NonEmptyFilters>(
   ...conditions: TConditions
 ): AndCondition<TConditions> {
   return new AndCondition(...conditions);
 }
 
-export class OrCondition<TConditions extends Filters[]> extends Filter<
+export class OrCondition<TConditions extends NonEmptyFilters> extends Filter<
   ExtractCols<TConditions[number]>,
   HasArgOf<TConditions>,
   HasAggregateOfConditions<TConditions>
@@ -724,6 +740,9 @@ export class OrCondition<TConditions extends Filters[]> extends Filter<
   readonly conditions: TConditions;
   constructor(...conditions: TConditions) {
     super(containsAggregate(conditions), containsWindow(conditions));
+    if (conditions.length === 0) {
+      throw new Error("or() requires at least one condition.");
+    }
     this.conditions = conditions;
   }
   get referencedColumns(): AnyColumn[] | null {
@@ -740,7 +759,6 @@ export class OrCondition<TConditions extends Filters[]> extends Filter<
     query.sql += "(";
     let first = true;
     for (const condition of this.conditions) {
-      if (condition === null || condition === undefined) continue;
       if (!first) query.sql += " OR ";
       first = false;
       appendFilterExpression(condition, query, ctx);
@@ -749,7 +767,7 @@ export class OrCondition<TConditions extends Filters[]> extends Filter<
   }
 }
 
-export function or<TConditions extends Filters[]>(
+export function or<TConditions extends NonEmptyFilters>(
   ...conditions: TConditions
 ): OrCondition<TConditions> {
   return new OrCondition(...conditions);
@@ -757,8 +775,8 @@ export function or<TConditions extends Filters[]>(
 
 /** Columns a condition reads, or `null` when it does not publish them. */
 export function filterReferencedColumns(filter: unknown): AnyColumn[] | null {
-  if (typeof filter === "boolean") return [];
-  if (filter === null || typeof filter !== "object") return null;
+  if (filter === null || typeof filter === "boolean") return [];
+  if (typeof filter !== "object") return null;
   const refs = (filter as { referencedColumns?: unknown }).referencedColumns;
   return Array.isArray(refs) ? (refs as AnyColumn[]) : null;
 }

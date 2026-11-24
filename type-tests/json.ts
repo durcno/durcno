@@ -146,6 +146,10 @@ const countFilteredByFalse = count(Users.id).filter(false);
 Expect<Equal<(typeof countFilteredByFalse.$)["Columns"], typeof Users.id>>();
 Expect<Equal<(typeof countFilteredByFalse.$)["HasArg"], false>>();
 
+const countFilteredByNull = count(Users.id).filter(null);
+Expect<Equal<(typeof countFilteredByNull.$)["Columns"], typeof Users.id>>();
+Expect<Equal<(typeof countFilteredByNull.$)["HasArg"], false>>();
+
 // A union of filter and boolean stays valid
 const filterFlag = Math.random() > 0.5;
 const countFilteredByConditional = count(Users.id).filter(
@@ -209,6 +213,12 @@ const booleanCaseQuery = db.from(Users).select(() => ({
 }));
 type BooleanCaseResult = Awaited<typeof booleanCaseQuery>;
 Expect<Equal<BooleanCaseResult, { badge: "Never" | "Always" }[]>>();
+
+const nullCaseQuery = db.from(Users).select(() => ({
+  badge: caseWhen(null, "Never").else("Always"),
+}));
+type NullCaseResult = Awaited<typeof nullCaseQuery>;
+Expect<Equal<NullCaseResult, { badge: "Never" | "Always" }[]>>();
 
 // Without `.else()` the branch types stay nullable
 const caseDirectQuery = db.from(Users).select(() => ({
