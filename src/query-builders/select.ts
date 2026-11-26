@@ -795,6 +795,29 @@ type InferJoinSelect<TJoin> = TJoin extends {
     ? S
     : Record<never, never>;
 
+/** Result names contributed by one join entry. Distributes over a union of entries. */
+type JoinSelectKeys<TJoin> = TJoin extends {
+  table: { $: { inferSelect: infer S } };
+}
+  ? Extract<keyof S, string>
+  : never;
+
+/**
+ * Names shared by two or more tables of a star select. The base table's names
+ * seed the seen set, then each join adds its own names and any repeats.
+ */
+type StarConflictKeys<
+  TJoins,
+  TSeen extends string = never,
+  TConflicts extends string = never,
+> = TJoins extends readonly [infer TJoin, ...infer TRest]
+  ? StarConflictKeys<
+      TRest,
+      TSeen | JoinSelectKeys<TJoin>,
+      TConflicts | Extract<TSeen, JoinSelectKeys<TJoin>>
+    >
+  : TConflicts;
+
 export class SelectQuery<
   TTSchema extends string,
   TTName extends string,
@@ -842,10 +865,15 @@ export class SelectQuery<
         [K in keyof TSelects]: InferSelectValue<TSelects[K]>;
       }
     : Prettify<
-        TableWithColumns<TTSchema, TTName, TColumns>["$"]["inferSelect"] &
-          (TJoins extends unknown[]
-            ? UnionToIntersection<InferJoinSelect<TJoins[number]>>
-            : Record<never, never>)
+        Omit<
+          TableWithColumns<TTSchema, TTName, TColumns>["$"]["inferSelect"] &
+            (TJoins extends unknown[]
+              ? UnionToIntersection<InferJoinSelect<TJoins[number]>>
+              : Record<never, never>),
+          TJoins extends readonly unknown[]
+            ? StarConflictKeys<TJoins, Extract<keyof TColumns, string>>
+            : never
+        >
       >)[],
 > extends QueryPromise<TReturn> {
   /** Marks a select query for scalar-expression normalization. */

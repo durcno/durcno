@@ -52,6 +52,20 @@ const users = await db.from(Users).select("*");
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
 ```
 
+With joins, `select("*")` includes columns from every table, but omits any field name shared by two or more tables. Those names are ambiguous, so they are removed from both the inferred type and the returned rows. Select them explicitly when you need one:
+
+```typescript
+const rows = await db
+  .from(Users)
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .select(() => ({
+    id: Users.id,
+    username: Users.username,
+    title: Posts.title,
+  }));
+```
+
 ### Select Specific Columns
 
 Pass a callback to `.select()` to choose specific columns:

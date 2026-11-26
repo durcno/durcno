@@ -139,7 +139,7 @@ await db.update(Users).set({ name: "Jane Doe" }).where(eq(Users.id, 1n));
 
 **Fluent API**: Chainable methods provide an intuitive query-building experience:
 
-- `.select()` - Define columns to return (e.g. `select("*")` for all columns, or `select(() => ({ id: Users.id }))` for specific columns; use callback view `({ posts }) => ...` only for left-joined tables)
+- `.select()` - Define columns to return (e.g. `select("*")` for all columns, or `select(() => ({ id: Users.id }))` for specific columns; use callback view `({ posts }) => ...` only for left-joined tables).
 - `.where()` - Add filtering conditions; SELECT takes a callback (`() => eq(Users.type, "user")`), UPDATE/DELETE take the filter directly (`eq(Users.type, "user")`)
 - `.orderBy()` - Sort results via callback (`() => asc(Users.name)` or `(_, { alias }) => asc(alias)`)
 - `.groupBy()` - Group results via callback (`() => [Users.type]` or `(_, { alias }) => [alias]`)

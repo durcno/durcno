@@ -283,7 +283,6 @@ describe("select handleRows", () => {
 
     expect(rows).toEqual([
       {
-        id: 1n,
         userName: "user_1",
         email: null,
         age: null,
@@ -296,6 +295,25 @@ describe("select handleRows", () => {
         userId: 1n,
       },
     ]);
+  });
+
+  it("omits every name shared by two joined tables", () => {
+    const driver = {
+      id: "1",
+      user_id: "1",
+      website: "https://example.com",
+      title: "hello",
+    };
+    const rows = db
+      .from(Profiles)
+      .innerJoin(Posts)
+      .on(() => eq(Profiles.userId, Posts.userId))
+      .select("*")
+      .handleRows([driver]);
+
+    expect(rows).toEqual([{ website: "https://example.com", title: "hello" }]);
+    expect(driver.id).toBe("1");
+    expect(driver.user_id).toBe("1");
   });
 
   it("throws when a driver key belongs to no table", () => {

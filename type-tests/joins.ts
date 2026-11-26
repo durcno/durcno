@@ -25,7 +25,7 @@ const usersWithProfileQuery = db
 type UsersWithProfile = Awaited<typeof usersWithProfileQuery>;
 Expect<Equal<UsersWithProfile, { username: string; bio: string | null }[]>>();
 
-// select("*") includes the joined table's columns
+// select("*") includes the joined table's columns but omits shared names
 const usersWithPostsAllQuery = db
   .from(Users)
   .innerJoin(Posts)
@@ -36,11 +36,9 @@ Expect<
   Equal<
     UsersWithPostsAll,
     {
-      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
-      createdAt: Date;
       externalId: string;
       trackingId: string | null;
       userId: bigint;
@@ -51,6 +49,20 @@ Expect<
     }[]
   >
 >();
+
+// Differing types for the same name still omit the field instead of intersecting
+const usersWithProfilesAllQuery = db
+  .from(Users)
+  .innerJoin(UserProfiles)
+  .on(() => eq(Users.id, UserProfiles.userId))
+  .select("*");
+type UsersWithProfilesAllRow = Awaited<
+  typeof usersWithProfilesAllQuery
+>[number];
+Expect<Equal<Extract<keyof UsersWithProfilesAllRow, "id">, never>>();
+Expect<Equal<UsersWithProfilesAllRow["userId"], bigint>>();
+Expect<Equal<UsersWithProfilesAllRow["username"], string>>();
+Expect<Equal<UsersWithProfilesAllRow["bio"], string | null>>();
 
 // Columns from both tables, filtering both, and ordering both
 const mixedJoinQuery = db
@@ -178,18 +190,16 @@ Expect<
   >
 >();
 
-// select("*") includes the cross-joined table's columns without adding nullability
+// select("*") keeps the cross-joined table's columns, minus shared names
 const usersCrossPostsAllQuery = db.from(Users).crossJoin(Posts).select("*");
 type UsersCrossPostsAll = Awaited<typeof usersCrossPostsAllQuery>;
 Expect<
   Equal<
     UsersCrossPostsAll,
     {
-      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
-      createdAt: Date;
       externalId: string;
       trackingId: string | null;
       userId: bigint;
@@ -289,7 +299,7 @@ Expect<
   >
 >();
 
-// select("*") promotes the same way
+// select("*") omits shared names while still promoting join-only columns
 const leftJoinSelectAllQuery = db
   .from(Users)
   .leftJoin(Posts)
@@ -300,11 +310,9 @@ Expect<
   Equal<
     LeftJoinSelectAll,
     {
-      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
-      createdAt: Date;
       externalId: string;
       trackingId: string | null;
       userId: bigint | null;
@@ -365,14 +373,11 @@ Expect<
   Equal<
     MixedJoinTypes,
     {
-      id: bigint;
       username: string;
       email: string | null;
       type: "admin" | "user";
-      createdAt: Date;
       externalId: string;
       trackingId: string | null;
-      userId: bigint;
       title: string | null;
       content: string | null;
       tags: string[] | null;
@@ -382,6 +387,21 @@ Expect<
     }[]
   >
 >();
+
+// Names shared only by two joined tables are omitted as well
+const doubleJoinAllQuery = db
+  .from(Users)
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .innerJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
+  .select("*");
+type DoubleJoinAllRow = Awaited<typeof doubleJoinAllQuery>[number];
+Expect<
+  Equal<Extract<keyof DoubleJoinAllRow, "id" | "createdAt" | "userId">, never>
+>();
+Expect<Equal<DoubleJoinAllRow["postId"], bigint>>();
+Expect<Equal<DoubleJoinAllRow["body"], string | null>>();
 
 // A later join can reference a column from an earlier left-joined table
 const leftThenJoinOnLeftColQuery = db

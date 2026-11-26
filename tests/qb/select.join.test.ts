@@ -293,6 +293,29 @@ describe("SELECT with INNER JOIN", () => {
     expect(result).toEqual([]);
   });
 
+  it("should omit shared column names from an inner join star result", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "star_inner_author" }))
+      .returning({ id: true });
+    await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user.id, { title: "Star Inner Post" }));
+
+    const result = await db
+      .from(schema.Users)
+      .innerJoin(schema.Posts)
+      .on(() => eq(schema.Posts.userId, schema.Users.id))
+      .select("*");
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toHaveProperty("id");
+    expect(result[0]).not.toHaveProperty("createdAt");
+    expect(result[0].username).toBe("star_inner_author");
+    expect(result[0].title).toBe("Star Inner Post");
+    expect(result[0].userId).toBe(user.id);
+  });
+
   // Double inner join tests
   it("should select with double inner join: Users -> Posts -> Comments", async () => {
     const [user] = await db
@@ -691,11 +714,12 @@ describe("SELECT with LEFT JOIN", () => {
       .select("*");
 
     expect(result).toHaveLength(1);
+    expect(result[0]).not.toHaveProperty("id");
+    expect(result[0]).not.toHaveProperty("createdAt");
     expect(result[0].username).toBe("user_no_post");
     expect(result[0].title).toBeNull();
     expect(result[0].content).toBeNull();
     expect(result[0].userId).toBeNull();
-    expect(result[0].createdAt).toBeNull();
   });
 
   it("should handle left join with sql function correctly", async () => {
@@ -1076,6 +1100,8 @@ describe("SELECT with CROSS JOIN", () => {
       .orderBy(() => asc(schema.Categories.name));
 
     expect(result).toHaveLength(2);
+    expect(result[0]).not.toHaveProperty("id");
+    expect(result[0]).not.toHaveProperty("description");
     expect(result.map((row) => [row.username, row.name])).toEqual([
       ["cross_all_columns", "Cross Category A"],
       ["cross_all_columns", "Cross Category B"],

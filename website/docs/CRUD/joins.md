@@ -66,6 +66,22 @@ const userPosts = await db
 
 A cross join returns the Cartesian product, so the result can grow quickly. Use `.where()`, `.limit()`, or a single-row CTE when you only need a specific combination or lookup value.
 
+## Selecting all columns with joins
+
+`.select("*")` returns columns from every joined table. Field names shared by two or more tables are ambiguous, so they are omitted from the result type and the returned rows. Use an explicit projection to read a shared column:
+
+```typescript
+const rows = await db
+  .from(Users)
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .select(() => ({
+    id: Users.id,
+    username: Users.username,
+    title: Posts.title,
+  }));
+```
+
 ## Multiple joins
 
 Chain joins in the same query to traverse more than one relationship. For inner and left joins, each `.on()` hands back the query builder, so the next join follows it directly. A `.crossJoin()` also returns the query builder directly:

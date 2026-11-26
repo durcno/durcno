@@ -230,9 +230,9 @@ export type StarRowsPlan = {
 };
 
 /**
- * Resolves every key of a `SELECT *` result set to its column, falling back to
- * the joined tables. The last matching join wins, mirroring the SQL projection
- * order of overlapping column names.
+ * Converts every key of a `SELECT *` result set using the column that produced
+ * it, falling back to the joined tables. Keys shared by two or more tables are
+ * ambiguous, so they are omitted from the result rows.
  *
  * @param table - The primary table.
  * @param joins - Joined tables to fall back to, or null.
@@ -244,6 +244,18 @@ export function buildStarRowsPlan(
   joins: readonly { table: StarSource }[] | null | undefined,
   sqlKeys: readonly string[],
 ): StarRowsPlan {
+  let conflicts: Set<string> | undefined;
+  if (joins) {
+    const seen = new Set<string>(Object.keys(table._.columns));
+    conflicts = new Set<string>();
+    for (const join of joins) {
+      for (const name of Object.keys(join.table._.columns)) {
+        if (seen.has(name)) conflicts.add(name);
+        else seen.add(name);
+      }
+    }
+  }
+
   const converts: StarRowsPlan["converts"][number][] = [];
   let inPlace = true;
   for (const key of sqlKeys) {
@@ -262,6 +274,10 @@ export function buildStarRowsPlan(
       throw new Error(`Column ${key} not found in any table`);
     }
     const outKey = column.name as string;
+    if (conflicts?.has(outKey)) {
+      inPlace = false;
+      continue;
+    }
     if (outKey !== key) inPlace = false;
     const fromDriver = resolveFromDriver(column);
     converts.push((row, out) => {
