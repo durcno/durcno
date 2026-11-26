@@ -5,9 +5,11 @@ import {
   exists,
   gt,
   gte,
+  ilike,
   isIn,
   isNotNull,
   isNull,
+  like,
   lt,
   lte,
   ne,
@@ -433,3 +435,51 @@ db.prepare()
 
 // @ts-expect-error - trigram predicates require text operands
 similar(Users.id, "john");
+
+// -----------------------------------------------------------------------------
+// LIKE / ILIKE ESCAPE
+// -----------------------------------------------------------------------------
+
+const likeEscapeQuery = db
+  .from(Users)
+  .select("*")
+  .where(() =>
+    and(
+      like(Users.username, "a!%").escape("!"),
+      ilike(Users.email, "%@EXAMPLE.COM").escape("!"),
+    ),
+  );
+type LikeEscapeResult = Awaited<typeof likeEscapeQuery>;
+Expect<Equal<LikeEscapeResult, UserRows>>();
+
+const plainLike = like(Users.username, "a%");
+Expect<Equal<(typeof plainLike.$)["HasArg"], false>>();
+const literalEscape = like(Users.username, "a!%").escape("!");
+Expect<Equal<(typeof literalEscape.$)["HasArg"], false>>();
+const argEscape = like(Users.username, "a!%").escape(
+  new Arg<string>((value) => value),
+);
+Expect<Equal<(typeof argEscape.$)["HasArg"], true>>();
+const argPatternAndEscape = ilike(
+  Users.username,
+  new Arg<string>((value) => value),
+).escape(new Arg<string>((value) => value));
+Expect<Equal<(typeof argPatternAndEscape.$)["HasArg"], true>>();
+
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - an Arg escape requires a prepared query
+  .where(() => like(Users.username, "a!%").escape(new Arg<string>((v) => v)));
+
+db.prepare()
+  .from(Users)
+  .select("*")
+  .where(() => like(Users.username, "a!%").escape(new Arg<string>((v) => v)));
+
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - escape accepts only a string or Arg<string>
+  .where(() => like(Users.username, "a%").escape(1));
+
+// @ts-expect-error - escape does not accept a non-text Arg
+ilike(Users.username, "a%").escape(new Arg<number>((value) => value));

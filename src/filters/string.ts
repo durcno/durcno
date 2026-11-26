@@ -2,6 +2,7 @@ import type { Column } from "../columns/common";
 import { is } from "../entity";
 import { Arg, type IsArg } from "../query-builders/prepare";
 import type { Query, QueryContext } from "../query-builders/query";
+import type { Or } from "../types";
 import { Filter } from "./index";
 
 // biome-ignore lint/suspicious/noExplicitAny: text columns are wildcards here
@@ -125,18 +126,39 @@ export function contains<
 }
 
 // ============================================================================
-// like
+// like / ilike
 // ============================================================================
+
+/** Appends a pattern or escape operand as a quoted literal or a prepared placeholder. */
+function appendPatternOperand(
+  query: Query,
+  operand: string | Arg<string>,
+): void {
+  if (is(operand, Arg<string>)) {
+    query.addArg(operand);
+  } else {
+    query.sql += `'${operand.replace(/'/g, "''")}'`;
+  }
+}
 
 export class LikeCondition<
   TCol extends TextScalarTableColumn,
   TPattern extends string | Arg<string>,
-> extends Filter<TCol, IsArg<TPattern>> {
+  TEscape extends string | Arg<string> | undefined = undefined,
+> extends Filter<TCol, Or<IsArg<TPattern>, IsArg<TEscape>>> {
   constructor(
     private readonly col: TCol,
     private readonly pattern: TPattern,
+    private readonly escapeChar?: TEscape,
   ) {
     super();
+  }
+
+  /** Adds an `ESCAPE` clause with a custom escape character. */
+  escape<TEscape2 extends string | Arg<string>>(
+    escapeChar: TEscape2,
+  ): LikeCondition<TCol, TPattern, TEscape2> {
+    return new LikeCondition(this.col, this.pattern, escapeChar);
   }
 
   get referencedColumns(): TCol[] {
@@ -146,10 +168,10 @@ export class LikeCondition<
   toQuery(query: Query, ctx?: QueryContext): void {
     this.col.toQuery(query, ctx);
     query.sql += " LIKE ";
-    if (is(this.pattern, Arg<string>)) {
-      query.addArg(this.pattern);
-    } else {
-      query.sql += `'${this.pattern.replace(/'/g, "''")}'`;
+    appendPatternOperand(query, this.pattern);
+    if (this.escapeChar !== undefined) {
+      query.sql += " ESCAPE ";
+      appendPatternOperand(query, this.escapeChar);
     }
   }
 }
@@ -161,19 +183,24 @@ export function like<
   return new LikeCondition(col, pattern);
 }
 
-// ============================================================================
-// ilike
-// ============================================================================
-
 export class ILikeCondition<
   TCol extends TextScalarTableColumn,
   TPattern extends string | Arg<string>,
-> extends Filter<TCol, IsArg<TPattern>> {
+  TEscape extends string | Arg<string> | undefined = undefined,
+> extends Filter<TCol, Or<IsArg<TPattern>, IsArg<TEscape>>> {
   constructor(
     private readonly col: TCol,
     private readonly pattern: TPattern,
+    private readonly escapeChar?: TEscape,
   ) {
     super();
+  }
+
+  /** Adds an `ESCAPE` clause with a custom escape character. */
+  escape<TEscape2 extends string | Arg<string>>(
+    escapeChar: TEscape2,
+  ): ILikeCondition<TCol, TPattern, TEscape2> {
+    return new ILikeCondition(this.col, this.pattern, escapeChar);
   }
 
   get referencedColumns(): TCol[] {
@@ -183,10 +210,10 @@ export class ILikeCondition<
   toQuery(query: Query, ctx?: QueryContext): void {
     this.col.toQuery(query, ctx);
     query.sql += " ILIKE ";
-    if (is(this.pattern, Arg<string>)) {
-      query.addArg(this.pattern);
-    } else {
-      query.sql += `'${this.pattern.replace(/'/g, "''")}'`;
+    appendPatternOperand(query, this.pattern);
+    if (this.escapeChar !== undefined) {
+      query.sql += " ESCAPE ";
+      appendPatternOperand(query, this.escapeChar);
     }
   }
 }

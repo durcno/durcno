@@ -25,8 +25,8 @@ Durcno provides a set of type-safe filter operators for building WHERE and CHECK
 | `startsWith(col, val)`        | Starts with (`starts_with()`, case-sensitive) | `startsWith(Users.username, "admin")`        |
 | `endsWith(col, val)`          | Ends with (case-sensitive)                    | `endsWith(Users.email, "@test.com")`         |
 | `contains(col, val)`          | Contains (case-sensitive)                     | `contains(Users.bio, "typescript")`          |
-| `like(col, pattern)`          | Case-sensitive LIKE pattern                   | `like(Users.code, "US%")`                    |
-| `ilike(col, pattern)`         | Case-insensitive ILIKE pattern                | `ilike(Users.code, "us%")`                   |
+| `like(col, pattern)`          | Case-sensitive LIKE; chain `.escape(ch)`      | `like(Users.code, "US%")`                    |
+| `ilike(col, pattern)`         | Case-insensitive ILIKE; chain `.escape(ch)`   | `ilike(Users.code, "us%")`                   |
 | `tsMatch(vector, query)`      | Full-text match (`@@`)                        | `tsMatch(Articles.search, term)`             |
 | `and(...conditions)`          | AND logic; `null` renders as SQL `NULL`       | `and(eq(...), gte(...))`                     |
 | `or(...conditions)`           | OR logic; `null` renders as SQL `NULL`        | `or(eq(...), eq(...))`                       |
@@ -345,6 +345,40 @@ await db
 **Case sensitivity** — `like`, `startsWith`, `endsWith`, and `contains` are case-sensitive matching functions. For case-insensitive pattern matching, use `ilike`.
 
 :::
+
+### Custom escape character (`.escape()`)
+
+`%` and `_` are wildcards in `LIKE` and `ILIKE` patterns. When the pattern needs to match one of those characters literally, chain `.escape()` to choose an escape character:
+
+```typescript
+import { like } from "durcno";
+
+// Match codes that start with the literal text "100%"
+await db
+  .from(Products)
+  .select("*")
+  .where(() => like(Products.code, "100!%%").escape("!"));
+```
+
+`escape()` returns a new condition and leaves the original predicate unchanged. It accepts a string literal or an `Arg<string>`; an `Arg` requires a prepared query:
+
+```typescript
+import { Arg, like, prepare } from "durcno";
+
+const search = prepare(
+  { escape: new Arg<string>((value) => value) },
+  (args) =>
+    db
+      .prepare()
+      .from(Products)
+      .select("*")
+      .where(() => like(Products.code, "100!%%").escape(args.escape)),
+);
+
+const rows = await search.run(db, { escape: "!" });
+```
+
+Without `escape()`, PostgreSQL's default escape character is the backslash. Use `.escape("")` to disable escaping. PostgreSQL requires the escape character to be a single character (or empty).
 
 ### Full-Text Search (`tsMatch`)
 

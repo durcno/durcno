@@ -3,6 +3,7 @@ import path from "node:path";
 import type Docker from "dockerode";
 import {
   type $Client,
+  Arg,
   and,
   asc,
   caseWhen,
@@ -25,6 +26,8 @@ import {
   lte,
   ne,
   or,
+  prepare,
+  Query,
   startsWith,
   sum,
 } from "durcno";
@@ -926,6 +929,63 @@ describe("Filters", () => {
         .select(() => ({ id: schema.Users.id }))
         .where(() => like(schema.Users.username, `prefix_${uniqueVal}%`));
       expect(byLikeCaseMismatch.length).toBe(0);
+    });
+
+    it("should honor a custom escape character", async () => {
+      await db
+        .insertInto(schema.Users)
+        .values(createTestUser({ username: "100%_done" }));
+
+      const escaped = await db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => like(schema.Users.username, "100!%%!_done").escape("!"));
+      expect(escaped).toHaveLength(1);
+
+      const caseInsensitive = await db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => ilike(schema.Users.username, "100!%%!_DONE").escape("!"));
+      expect(caseInsensitive).toHaveLength(1);
+
+      // Without a custom escape, '!' is a literal character in the pattern.
+      const unescaped = await db
+        .from(schema.Users)
+        .select(() => ({ id: schema.Users.id }))
+        .where(() => like(schema.Users.username, "100!%%!_done"));
+      expect(unescaped).toHaveLength(0);
+
+      const escapeArg = new Arg<string>((value) => value);
+      const prepared = prepare({ escape: escapeArg }, (args) =>
+        db
+          .prepare()
+          .from(schema.Users)
+          .select(() => ({ id: schema.Users.id }))
+          .where(() =>
+            like(schema.Users.username, "100!%%!_done").escape(args.escape),
+          ),
+      );
+      const preparedRows = await prepared.run(db, { escape: "!" });
+      expect(preparedRows).toHaveLength(1);
+    });
+
+    it("should render ESCAPE clauses", () => {
+      const query = new Query("", () => []);
+      like(schema.Users.username, "a!%").escape("!").toQuery(query);
+      query.sql += " ";
+      ilike(schema.Users.username, "a!%")
+        .escape(new Arg<string>((value) => value))
+        .toQuery(query);
+      query.sql += " ";
+      like(schema.Users.username, "a'%").escape("'").toQuery(query);
+      query.sql += " ";
+      like(schema.Users.username, "a%").toQuery(query);
+
+      expect(query.sql).toContain("LIKE 'a!%' ESCAPE '!'");
+      expect(query.sql).toContain("ILIKE 'a!%' ESCAPE $1");
+      expect(query.sql).toContain("LIKE 'a''%' ESCAPE ''''");
+      expect(query.sql).toContain("LIKE 'a%'");
+      expect(query.sql).not.toContain("LIKE 'a%' ESCAPE");
     });
   });
 
