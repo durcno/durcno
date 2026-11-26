@@ -218,14 +218,13 @@ type MergeJoinedColumns<
 >;
 
 /** Join flavours. `left` is the only one that makes the joined columns nullable. */
-type JoinType = "inner" | "left";
+type OnJoinType = "inner" | "left";
+type JoinType = OnJoinType | "cross";
 
 /** Shared shape for a single entry in the joins tuple. */
-type JoinEntryOf<TType extends JoinType, TTable> = {
-  type: TType;
-  table: TTable;
-  on: StdCondition;
-};
+type JoinEntryOf<TType extends JoinType, TTable> = TType extends "cross"
+  ? { type: "cross"; table: TTable }
+  : { type: TType; table: TTable; on: StdCondition };
 
 type JoinEntry = JoinEntryOf<JoinType, AnyTableWithColumns>;
 
@@ -488,14 +487,9 @@ export class SelectBuilder<
     return this.#cachedView;
   }
 
-  /**
-   * Commits a join whose condition has already been resolved. `JoinBuilder.on`
-   * calls this; nothing else should.
-   */
-  #join(
-    type: JoinType,
-    table: AnyTableWithColumns,
-    on: StdCondition,
+  /** Appends a committed join and invalidates the cached columns view. */
+  #appendJoin(
+    entry: JoinEntry,
   ): SelectBuilder<
     TTSchema,
     TTName,
@@ -506,9 +500,7 @@ export class SelectBuilder<
     const joins = this.#$joins;
     return new SelectBuilder(
       this.#table,
-      (joins
-        ? [...joins, { type, table, on }]
-        : [{ type, table, on }]) as never,
+      (joins ? [...joins, entry] : [entry]) as never,
       // DISTINCT ON was resolved against the previous projection.
       undefined,
       this.#executor,
@@ -517,6 +509,21 @@ export class SelectBuilder<
       // `joins` changed, so the parent's cached view no longer matches.
       null,
     );
+  }
+
+  /** Commits a join whose condition has already been resolved. */
+  #join(
+    type: OnJoinType,
+    table: AnyTableWithColumns,
+    on: StdCondition,
+  ): SelectBuilder<
+    TTSchema,
+    TTName,
+    TColumns,
+    TPrepare,
+    null | [JoinEntry, ...JoinEntry[]]
+  > {
+    return this.#appendJoin({ type, table, on });
   }
 
   innerJoin<
@@ -599,13 +606,33 @@ export class SelectBuilder<
     );
   }
 
+  crossJoin<
+    TJoinTSchema extends string,
+    TJoinTName extends string,
+    TJoinColumns extends Record<string, AnyColumn>,
+  >(
+    table: TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>,
+  ): SelectBuilder<
+    TTSchema,
+    TTName,
+    TColumns,
+    TPrepare,
+    AppendJoin<
+      TJoins,
+      "cross",
+      TableWithColumns<TJoinTSchema, TJoinTName, TJoinColumns>
+    >
+  > {
+    return this.#appendJoin({ type: "cross", table }) as never;
+  }
+
   distinctOn(
     callback: (
       view: ColumnsView<TTSchema, TTName, TColumns, TJoins>,
     ) => SelfOrArray<AllViewColumns<TTSchema, TTName, TColumns, TJoins>>,
   ): Omit<
     SelectBuilder<TTSchema, TTName, TColumns, TPrepare, TJoins>,
-    "distinctOn" | "innerJoin" | "leftJoin"
+    "distinctOn" | "innerJoin" | "leftJoin" | "crossJoin"
   > {
     const columns = callback(this.#getView() as never);
     return new SelectBuilder(
@@ -1223,6 +1250,11 @@ export class SelectQuery<
     const joins = this.#$joins;
     if (joins) {
       for (const join of joins) {
+        if (join.type === "cross") {
+          query.sql += " CROSS JOIN ";
+          query.sql += join.table._.fullName;
+          continue;
+        }
         query.sql += join.type === "left" ? " LEFT JOIN " : " INNER JOIN ";
         query.sql += join.table._.fullName;
         query.sql += " ON ";

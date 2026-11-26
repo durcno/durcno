@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lower } from "durcno";
+import { and, asc, count, desc, eq, gte, lower } from "durcno";
 import {
   Articles,
   Categories,
@@ -157,6 +157,107 @@ Expect<
     { articleTitle: string; categoryName: string }[]
   >
 >();
+
+// -----------------------------------------------------------------------------
+// Cross join
+// -----------------------------------------------------------------------------
+
+const usersCrossPostsQuery = db
+  .from(Users)
+  .crossJoin(Posts)
+  .select(() => ({
+    username: Users.username,
+    postUserId: Posts.userId,
+    postCreatedAt: Posts.createdAt,
+  }));
+type UsersCrossPosts = Awaited<typeof usersCrossPostsQuery>;
+Expect<
+  Equal<
+    UsersCrossPosts,
+    { username: string; postUserId: bigint; postCreatedAt: Date }[]
+  >
+>();
+
+// select("*") includes the cross-joined table's columns without adding nullability
+const usersCrossPostsAllQuery = db.from(Users).crossJoin(Posts).select("*");
+type UsersCrossPostsAll = Awaited<typeof usersCrossPostsAllQuery>;
+Expect<
+  Equal<
+    UsersCrossPostsAll,
+    {
+      id: bigint;
+      username: string;
+      email: string | null;
+      type: "admin" | "user";
+      createdAt: Date;
+      externalId: string;
+      trackingId: string | null;
+      userId: bigint;
+      title: string | null;
+      content: string | null;
+      tags: string[] | null;
+      metrics: { views: number; likes: number } | null;
+    }[]
+  >
+>();
+
+const postCountCte = db
+  .with("postCount")
+  .as(db.from(Posts).select(() => ({ total: count("*") })));
+const usersCrossPostCountQuery = db
+  .with(postCountCte)
+  .from(Users)
+  .crossJoin(postCountCte)
+  .select(({ postCount }) => ({
+    username: Users.username,
+    total: postCount.total,
+  }));
+Expect<
+  Equal<
+    Awaited<typeof usersCrossPostCountQuery>,
+    { username: string; total: number }[]
+  >
+>();
+
+const crossThenLeftJoinQuery = db
+  .from(Users)
+  .crossJoin(Posts)
+  .leftJoin(Comments)
+  .on(() => eq(Posts.id, Comments.postId))
+  .select(({ comments }) => ({
+    username: Users.username,
+    postUserId: Posts.userId,
+    commentBody: comments.body,
+  }));
+Expect<
+  Equal<
+    Awaited<typeof crossThenLeftJoinQuery>,
+    { username: string; postUserId: bigint; commentBody: string | null }[]
+  >
+>();
+
+db.from(Users)
+  .crossJoin(Posts)
+  .select(() => ({ username: Users.username, postUserId: Posts.userId }))
+  .where(() => eq(Posts.userId, Users.id))
+  .orderBy(() => [asc(Users.username), desc(Posts.createdAt)])
+  .groupBy(() => [Users.username, Posts.userId])
+  .having(() => gte(count("*"), 1));
+
+db.from(Users)
+  .crossJoin(Posts)
+  // @ts-expect-error - cross joins have no ON condition
+  .on(() => true);
+
+db.from(Users)
+  .crossJoin(Posts)
+  // @ts-expect-error - column from an unjoined table
+  .select(() => ({ commentBody: Comments.body }));
+
+db.from(Users)
+  .distinctOn(() => Users.username)
+  // @ts-expect-error - joins must be added before DISTINCT ON
+  .crossJoin(Posts);
 
 // -----------------------------------------------------------------------------
 // Left join

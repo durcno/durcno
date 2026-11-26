@@ -170,6 +170,15 @@ describe("query build — cached per table / per class", () => {
     }).run();
   });
 
+  test("columns view — cross join", async ({ bench, task }) => {
+    await bench(task.name, () => {
+      db.from(schema.Articles)
+        .crossJoin(schema.ArticleRevisions)
+        .select("*")
+        .toQuery();
+    }).run();
+  });
+
   test("insert — 50 rows, 5 of 9 columns omitted", async ({ bench, task }) => {
     await bench(task.name, () => {
       db.insertInto(schema.Events)

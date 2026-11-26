@@ -953,3 +953,233 @@ describe("SELECT with LEFT JOIN", () => {
     expect(result[0].userStatus).toBe("active");
   });
 });
+
+describe("SELECT with CROSS JOIN", () => {
+  let containerInfo: TestContainerInfo;
+  let container: Docker.Container;
+  let db: ReturnType<typeof database<typeof schema>>;
+  let client: $Client;
+  const migrationsDirName = generateMigrationsDirPath("cross_joins");
+
+  beforeAll(async () => {
+    containerInfo = await startPostgresContainer({
+      image: "postgres:16-alpine",
+    });
+    container = containerInfo.container;
+
+    const configPath = path.resolve(__dirname, "durcno.config.ts");
+    const migrationsDir = path.resolve(__dirname, migrationsDirName);
+
+    if (fs.existsSync(migrationsDir)) {
+      fs.rmSync(migrationsDir, { recursive: true, force: true });
+    }
+
+    runDurcnoCli("generate", configPath, containerInfo, migrationsDirName);
+    runDurcnoCli("migrate", configPath, containerInfo, migrationsDirName);
+    db = database(
+      schema,
+      defineConfig({
+        schema: "./schema.ts",
+        connector: pg({
+          pool: { max: 1 },
+          dbCredentials: {
+            host: "localhost",
+            port: containerInfo.port,
+            user: "testuser",
+            password: "testpassword",
+            database: containerInfo.dbName,
+          },
+        }),
+      }),
+    );
+    client = db._.config.connector.getClient();
+    await client.connect();
+  }, 120000);
+
+  beforeEach(async () => {
+    await truncateTables(client);
+  });
+
+  afterAll(async () => {
+    if (client) await client.close();
+    if (db) await db.close();
+    if (container) await stopPostgresContainer(container);
+  });
+
+  it("should return the Cartesian product without an ON condition", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "cross_user_a" }),
+        createTestUser({ username: "cross_user_b" }),
+      ]);
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "cross_post_author" }))
+      .returning({ id: true });
+    await db
+      .insertInto(schema.Posts)
+      .values([
+        createTestPost(user.id, { title: "Cross Post A" }),
+        createTestPost(user.id, { title: "Cross Post B" }),
+      ]);
+
+    const query = db
+      .from(schema.Users)
+      .crossJoin(schema.Posts)
+      .select(() => ({
+        username: schema.Users.username,
+        postTitle: schema.Posts.title,
+      }))
+      .orderBy(() => [asc(schema.Users.username), asc(schema.Posts.title)]);
+
+    expect(query.toQuery().sql).toContain(" CROSS JOIN ");
+    expect(query.toQuery().sql).not.toContain(" ON ");
+
+    const result = await query;
+    expect(result).toHaveLength(6);
+    expect(result.map((row) => [row.username, row.postTitle])).toEqual([
+      ["cross_post_author", "Cross Post A"],
+      ["cross_post_author", "Cross Post B"],
+      ["cross_user_a", "Cross Post A"],
+      ["cross_user_a", "Cross Post B"],
+      ["cross_user_b", "Cross Post A"],
+      ["cross_user_b", "Cross Post B"],
+    ]);
+  });
+
+  it("should return no rows when the cross-joined table is empty", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "cross_without_posts" }));
+
+    const result = await db
+      .from(schema.Users)
+      .crossJoin(schema.Posts)
+      .select(() => ({ username: schema.Users.username }));
+
+    expect(result).toEqual([]);
+  });
+
+  it("should select all columns from both tables", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "cross_all_columns" }));
+    await db
+      .insertInto(schema.Categories)
+      .values([{ name: "Cross Category A" }, { name: "Cross Category B" }]);
+
+    const result = await db
+      .from(schema.Users)
+      .crossJoin(schema.Categories)
+      .select("*")
+      .orderBy(() => asc(schema.Categories.name));
+
+    expect(result).toHaveLength(2);
+    expect(result.map((row) => [row.username, row.name])).toEqual([
+      ["cross_all_columns", "Cross Category A"],
+      ["cross_all_columns", "Cross Category B"],
+    ]);
+  });
+
+  it("should attach a single-row aggregate CTE to every parent row", async () => {
+    await db
+      .insertInto(schema.Users)
+      .values([
+        createTestUser({ username: "cross_cte_a" }),
+        createTestUser({ username: "cross_cte_b" }),
+      ]);
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "cross_cte_author" }))
+      .returning({ id: true });
+    await db
+      .insertInto(schema.Posts)
+      .values([
+        createTestPost(user.id, { title: "CTE Post A" }),
+        createTestPost(user.id, { title: "CTE Post B" }),
+      ]);
+
+    const postCount = db
+      .with("postCount")
+      .as(db.from(schema.Posts).select(() => ({ total: count("*") })));
+
+    const result = await db
+      .with(postCount)
+      .from(schema.Users)
+      .crossJoin(postCount)
+      .select(({ postCount }) => ({
+        username: schema.Users.username,
+        total: postCount.total,
+      }))
+      .orderBy(() => asc(schema.Users.username));
+
+    expect(result).toEqual([
+      { username: "cross_cte_a", total: 2 },
+      { username: "cross_cte_author", total: 2 },
+      { username: "cross_cte_b", total: 2 },
+    ]);
+  });
+
+  it("should compose with left joins and preserve their nullability", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "cross_mixed_user" }))
+      .returning({ id: true });
+    const [postWithComment] = await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user.id, { title: "Cross Mixed A" }))
+      .returning({ id: true });
+    await db
+      .insertInto(schema.Posts)
+      .values(createTestPost(user.id, { title: "Cross Mixed B" }));
+    await db.insertInto(schema.Comments).values(
+      createTestComment(postWithComment.id, user.id, {
+        body: "Cross comment",
+      }),
+    );
+
+    const result = await db
+      .from(schema.Users)
+      .crossJoin(schema.Posts)
+      .leftJoin(schema.Comments)
+      .on(() => eq(schema.Posts.id, schema.Comments.postId))
+      .select(({ comments }) => ({
+        postTitle: schema.Posts.title,
+        commentBody: comments.body,
+      }))
+      .orderBy(() => asc(schema.Posts.title));
+
+    expect(result).toEqual([
+      { postTitle: "Cross Mixed A", commentBody: "Cross comment" },
+      { postTitle: "Cross Mixed B", commentBody: null },
+    ]);
+  });
+
+  it("should support filtering, grouping, and having after a cross join", async () => {
+    const [user] = await db
+      .insertInto(schema.Users)
+      .values(createTestUser({ username: "cross_grouped", type: "admin" }))
+      .returning({ id: true });
+    await db
+      .insertInto(schema.Posts)
+      .values([
+        createTestPost(user.id, { title: "Grouped A" }),
+        createTestPost(user.id, { title: "Grouped B" }),
+      ]);
+
+    const result = await db
+      .from(schema.Users)
+      .crossJoin(schema.Posts)
+      .select(() => ({
+        username: schema.Users.username,
+        total: count("*"),
+      }))
+      .where(() => eq(schema.Users.type, "admin"))
+      .groupBy(() => [schema.Users.username])
+      .having(() => gte(count("*"), 2))
+      .orderBy(() => asc(schema.Users.username));
+
+    expect(result).toEqual([{ username: "cross_grouped", total: 2 }]);
+  });
+});

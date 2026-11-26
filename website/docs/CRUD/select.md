@@ -14,13 +14,14 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 | ----------------------- | ------------------------------------------------ |
 | `.innerJoin(table)`     | Start an inner join, returning a join builder    |
 | `.leftJoin(table)`      | Start a left join, returning a join builder      |
+| `.crossJoin(table)`     | Return the Cartesian product of both tables      |
 | `.distinctOn(callback)` | Apply DISTINCT ON via `() => col` or `[...cols]` |
 | `.select("*")`          | Select all columns                               |
 | `.select(callback)`     | Select specific columns via `() => ({ ... })`    |
 
 ### Join builder methods (JoinBuilder)
 
-Returned by `.innerJoin(table)` / `.leftJoin(table)`. The join is committed once `.on()` supplies its condition, which is what makes a half-written join unrepresentable.
+Returned by `.innerJoin(table)` / `.leftJoin(table)`. The join is committed once `.on()` supplies its condition, which is what makes a half-written join unrepresentable. `.crossJoin(table)` has no condition and returns `SelectBuilder` directly.
 
 | Method          | Description                                  |
 | --------------- | -------------------------------------------- |

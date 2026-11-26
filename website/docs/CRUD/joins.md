@@ -4,9 +4,9 @@ sidebar_position: 1.1
 
 # Joins
 
-Use `.innerJoin()` and `.leftJoin()` to combine rows from related tables in a `SELECT` query. Each takes a target table and returns a join builder; the returned builder's `.on()` takes the callback that produces the `ON` condition, built from filter expressions such as `eq()`.
+Use `.innerJoin()`, `.leftJoin()`, and `.crossJoin()` to combine rows in a `SELECT` query. Inner and left joins take a target table and return a join builder; the returned builder's `.on()` takes the callback that produces the `ON` condition, built from filter expressions such as `eq()`.
 
-A join is only added to the query once `.on()` supplies the condition, so the builder has no clause methods of its own and a join cannot be left half-written.
+An inner or left join is only added to the query once `.on()` supplies the condition, so the builder has no clause methods of its own and a join cannot be left half-written. A cross join has no condition and returns the query builder directly.
 
 ## Join methods
 
@@ -14,7 +14,8 @@ A join is only added to the query once `.on()` supplies the condition, so the bu
 | ------------------- | ------------------------------------------------------------------------------------------------------ |
 | `.innerJoin(table)` | Start an inner join — returns only rows where the join condition matches                               |
 | `.leftJoin(table)`  | Start a left join — returns every row from the left table, with `null` on the right for unmatched rows |
-| `.on(callback)`     | Supplies the `ON` condition via `() => condition` and commits the join, returning the query builder    |
+| `.crossJoin(table)` | Return every combination of rows from both tables                                                      |
+| `.on(callback)`     | Supplies the `ON` condition via `() => condition` and commits an inner or left join                    |
 
 ## Inner joins
 
@@ -49,9 +50,25 @@ const authorsAndPosts = await db
   }));
 ```
 
+## Cross joins
+
+Use `.crossJoin()` when every row from one table should be combined with every row from another. It emits `CROSS JOIN` without an `ON` condition, and columns from the cross-joined table keep their declared nullability.
+
+```typescript
+const userPosts = await db
+  .from(Users)
+  .crossJoin(Posts)
+  .select(() => ({
+    username: Users.username,
+    title: Posts.title,
+  }));
+```
+
+A cross join returns the Cartesian product, so the result can grow quickly. Use `.where()`, `.limit()`, or a single-row CTE when you only need a specific combination or lookup value.
+
 ## Multiple joins
 
-Chain joins in the same query to traverse more than one relationship. Each `.on()` hands back the query builder, so the next join follows it directly:
+Chain joins in the same query to traverse more than one relationship. For inner and left joins, each `.on()` hands back the query builder, so the next join follows it directly. A `.crossJoin()` also returns the query builder directly:
 
 ```typescript
 const data = await db
