@@ -370,6 +370,42 @@ await db
 
 Use `websearchToTsquery` for untrusted input, and `toTsquery` when you control the query syntax. See [Full-Text Search Functions](./functions#full-text-search-functions) for ranking, highlighting, and vector utilities.
 
+### Trigram Similarity
+
+These predicates use PostgreSQL's `pg_trgm` operators. Each compares two text expressions; a nullable argument makes the result nullable, and a `null` argument yields SQL `NULL`.
+
+| Predicate                       | SQL             | Description                                 |
+| ------------------------------- | --------------- | ------------------------------------------- |
+| `similar(left, right)`          | `left % right`  | Whole-string similarity above the threshold |
+| `wordSimilar(term, text)`       | `term <% text`  | A word extent of `text` matches `term`      |
+| `strictWordSimilar(term, text)` | `term <<% text` | A whole word of `text` matches `term`       |
+
+The thresholds come from the session settings `pg_trgm.similarity_threshold`, `pg_trgm.word_similarity_threshold`, and `pg_trgm.strict_word_similarity_threshold`.
+
+```typescript
+import { similar, strictWordSimilar, wordSimilar } from "durcno";
+
+// Whole strings above the similarity threshold
+await db
+  .from(Articles)
+  .select("*")
+  .where(() => similar(Articles.title, "postgres"));
+
+// A word extent of the title matches the term
+await db
+  .from(Articles)
+  .select("*")
+  .where(() => wordSimilar("postgres", Articles.title));
+
+// A whole word of the title matches the term
+await db
+  .from(Articles)
+  .select("*")
+  .where(() => strictWordSimilar("postgres", Articles.title));
+```
+
+Scores for ordering are available as [Trigram Similarity Functions](./functions#trigram-similarity-functions-pg_trgm). Enable the extension and index setup as described in [pg_trgm](../Extensions/pg_trgm).
+
 ## Logical Operators
 
 Both `and()` and `or()` accept `null`, which renders as SQL `NULL` and follows PostgreSQL's three-valued logic. They require at least one condition and do not accept `undefined`. Omit an optional `where` clause entirely when no filter is needed.

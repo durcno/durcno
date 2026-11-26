@@ -8,6 +8,7 @@ import {
   concat,
   concatWs,
   count,
+  desc,
   div,
   floor,
   geography,
@@ -34,8 +35,11 @@ import {
   right,
   round,
   setweight,
+  showTrgm,
+  similarity,
   sql,
   stDistance,
+  strictWordSimilarity,
   strip,
   sub,
   sum,
@@ -52,6 +56,7 @@ import {
   tsvector,
   upper,
   websearchToTsquery,
+  wordSimilarity,
 } from "durcno";
 import { db, Events, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
@@ -438,3 +443,50 @@ tsRank(SearchDocs.body, searchQuery);
 
 // @ts-expect-error - tsHeadline requires a tsquery
 tsHeadline(SearchDocs.body, SearchDocs.body);
+
+// -----------------------------------------------------------------------------
+// Trigram similarity (pg_trgm)
+// -----------------------------------------------------------------------------
+
+const score = similarity(SearchDocs.body, "cat");
+const optionalScore = similarity(SearchDocs.optionalBody, "cat");
+const nullScore = similarity(null, "cat");
+const wordScore = wordSimilarity(SearchDocs.body, "cat");
+const strictWordScore = strictWordSimilarity(SearchDocs.body, "cat");
+
+Expect<Equal<TsType<typeof score>, number>>();
+Expect<Equal<TsType<typeof optionalScore>, number | null>>();
+Expect<Equal<TsType<typeof nullScore>, null>>();
+Expect<Equal<TsType<typeof wordScore>, number>>();
+Expect<Equal<TsType<typeof strictWordScore>, number>>();
+
+const argScore = similarity(SearchDocs.body.arg(), "cat");
+const argTermScore = similarity(
+  SearchDocs.body,
+  new Arg<string>((value) => value),
+);
+Expect<Equal<(typeof argScore)["$"]["HasArg"], true>>();
+Expect<Equal<(typeof argTermScore)["$"]["HasArg"], true>>();
+
+const trigrams = showTrgm(SearchDocs.body);
+const optionalTrigrams = showTrgm(SearchDocs.optionalBody);
+const nullTrigrams = showTrgm(null);
+Expect<Equal<TsType<typeof trigrams>, string[]>>();
+Expect<Equal<TsType<typeof optionalTrigrams>, string[] | null>>();
+Expect<Equal<TsType<typeof nullTrigrams>, null>>();
+
+db.from(SearchDocs)
+  .select(() => ({ score: similarity(SearchDocs.body, "cat") }))
+  .orderBy(() => [desc(similarity(SearchDocs.body, "cat"))]);
+
+const ranked = greatest(
+  tsRankCd(toTsvector(SearchDocs.body), toTsquery("cat")),
+  similarity(SearchDocs.body, "cat"),
+);
+Expect<Equal<TsType<typeof ranked>, number>>();
+
+// @ts-expect-error - a tsvector is not text
+similarity(SearchDocs.vector, "cat");
+
+// @ts-expect-error - showTrgm requires a text expression
+showTrgm(SearchDocs.vector);

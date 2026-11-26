@@ -521,6 +521,68 @@ const result = await db
 
 ---
 
+## Trigram Similarity Functions (pg_trgm)
+
+PostgreSQL's `pg_trgm` extension measures how similar two text values are by comparing their trigrams. Durcno exposes the similarity scores as typed expressions; the boolean predicates live in [Filters](./filters#trigram-similarity).
+
+Enable the extension once in a migration before using these functions:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```
+
+| Function                           | SQL                           | Returns    | Description                                           |
+| ---------------------------------- | ----------------------------- | ---------- | ----------------------------------------------------- |
+| `similarity(left, right)`          | `similarity(...)`             | `number`   | Whole-string trigram similarity                       |
+| `wordSimilarity(term, text)`       | `word_similarity(...)`        | `number`   | First value against a contiguous extent of the second |
+| `strictWordSimilarity(term, text)` | `strict_word_similarity(...)` | `number`   | Like `wordSimilarity`, with whole-word extents        |
+| `showTrgm(text)`                   | `show_trgm(...)`              | `string[]` | Trigrams extracted from a text value                  |
+
+All four accept text columns, string literals, parameters, raw SQL, and scalar subqueries. Results are nullable when an argument is nullable, and `null` when an argument is `null`.
+
+### Ranking with a trigram fallback
+
+`similarity()` is a first-class `SqlFn`, so it composes with full-text ranking and with `asc()` / `desc()`:
+
+```typescript
+import {
+  desc,
+  greatest,
+  similarity,
+  tsRankCd,
+  websearchToTsquery,
+} from "durcno";
+
+const term = "postgres full text";
+
+const results = await db
+  .from(Articles)
+  .select(() => ({
+    id: Articles.id,
+    score: greatest(
+      tsRankCd(Articles.search, websearchToTsquery(term)),
+      similarity(Articles.body, term),
+    ),
+  }))
+  .orderBy(() => desc(similarity(Articles.body, term)));
+```
+
+### Inspecting trigrams
+
+```typescript
+import { showTrgm } from "durcno";
+
+const [row] = await db
+  .from(Articles)
+  .select(() => ({ trigrams: showTrgm(Articles.title) }));
+
+console.log(row.trigrams); // string[]
+```
+
+Trigram operators can use a GIN index with the `gin_trgm_ops` operator class. See [pg_trgm](../Extensions/pg_trgm) for the schema setup.
+
+---
+
 ## Mathematical Functions
 
 Mathematical functions accept any numeric column (`integer`, `bigint`, `numeric`, `smallint`, etc.) or the result of another numeric-producing function.

@@ -15,7 +15,10 @@ import {
   notIn,
   or,
   prepare,
+  similar,
   sql,
+  strictWordSimilar,
+  wordSimilar,
 } from "durcno";
 import { db, Posts, Users } from "./schema";
 import { type Equal, Expect } from "./utils";
@@ -395,3 +398,38 @@ db.from(Users)
   .select("*")
   // @ts-expect-error - a prepared subquery cannot be used in an unprepared query
   .where(() => exists(preparedSubquery));
+
+// -----------------------------------------------------------------------------
+// Trigram predicates
+// -----------------------------------------------------------------------------
+
+const trigramQuery = db
+  .from(Users)
+  .select("*")
+  .where(() =>
+    and(
+      similar(Users.username, "john"),
+      wordSimilar("john", Users.username),
+      strictWordSimilar(Users.username, "john"),
+    ),
+  );
+type TrigramResult = Awaited<typeof trigramQuery>;
+Expect<Equal<TrigramResult, UserRows>>();
+
+const plainTrigram = similar(Users.username, "john");
+Expect<Equal<(typeof plainTrigram.$)["HasArg"], false>>();
+const argTrigram = similar(Users.username, new Arg<string>((value) => value));
+Expect<Equal<(typeof argTrigram.$)["HasArg"], true>>();
+
+db.from(Users)
+  .select("*")
+  // @ts-expect-error - a direct Arg requires a prepared query
+  .where(() => similar(Users.username, new Arg<string>((value) => value)));
+
+db.prepare()
+  .from(Users)
+  .select("*")
+  .where(() => similar(Users.username, new Arg<string>((value) => value)));
+
+// @ts-expect-error - trigram predicates require text operands
+similar(Users.id, "john");

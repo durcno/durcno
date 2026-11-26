@@ -70,6 +70,11 @@ export {
   or,
 } from "./filters/index";
 export {
+  similar,
+  strictWordSimilar,
+  wordSimilar,
+} from "./filters/pgtrgm";
+export {
   stContains,
   stDWithin,
   stIntersects,
@@ -127,6 +132,12 @@ export {
   round,
   trunc,
 } from "./functions/mathematical";
+export {
+  showTrgm,
+  similarity,
+  strictWordSimilarity,
+  wordSimilarity,
+} from "./functions/pgtrgm";
 export {
   cosineDistance,
   hammingDistance,
