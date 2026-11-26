@@ -25,11 +25,11 @@ Durcno provides a set of type-safe filter operators for building WHERE and CHECK
 | `startsWith(col, val)`        | Starts with (`starts_with()`, case-sensitive) | `startsWith(Users.username, "admin")`        |
 | `endsWith(col, val)`          | Ends with (case-sensitive)                    | `endsWith(Users.email, "@test.com")`         |
 | `contains(col, val)`          | Contains (case-sensitive)                     | `contains(Users.bio, "typescript")`          |
-| `like(col, pattern)`          | Case-sensitive LIKE pattern                   | `like(Users.code, "US%")`                    |
-| `ilike(col, pattern)`         | Case-insensitive ILIKE pattern                | `ilike(Users.code, "us%")`                   |
+| `like(col, pattern)`          | Case-sensitive LIKE; chain `.escape(ch)`      | `like(Users.code, "US%")`                    |
+| `ilike(col, pattern)`         | Case-insensitive ILIKE; chain `.escape(ch)`   | `ilike(Users.code, "us%")`                   |
 | `tsMatch(vector, query)`      | Full-text match (`@@`)                        | `tsMatch(Articles.search, term)`             |
-| `and(...conditions)`          | AND logic; accepts booleans, ignores nullish  | `and(eq(...), gte(...))`                     |
-| `or(...conditions)`           | OR logic; accepts booleans, ignores nullish   | `or(eq(...), eq(...))`                       |
+| `and(...conditions)`          | AND logic; `null` renders as SQL `NULL`       | `and(eq(...), gte(...))`                     |
+| `or(...conditions)`           | OR logic; `null` renders as SQL `NULL`        | `or(eq(...), eq(...))`                       |
 | `arrayContains(col, values)`  | Array contains all values (`@>`)              | `arrayContains(Posts.tags, ["ts", "pg"])`    |
 | `arrayContainedBy(col, vals)` | Array subset of values (`<@`)                 | `arrayContainedBy(Posts.tags, ["ts", "pg"])` |
 | `arrayOverlaps(col, values)`  | Array overlaps values (`&&`)                  | `arrayOverlaps(Posts.tags, ["ts"])`          |
@@ -75,6 +75,8 @@ await db
 ```
 
 A single-column `SelectQuery` is accepted wherever a comparison operand is expected; the value is typed `T | null`.
+
+Column comparisons also accept `null`. It renders as SQL `NULL`, so `eq(Users.email, null)` produces `"email" = NULL` and matches no rows. Use `isNull(Users.email)` to match null values.
 
 ### Not Equal (`ne`)
 
@@ -344,6 +346,40 @@ await db
 
 :::
 
+### Custom escape character (`.escape()`)
+
+`%` and `_` are wildcards in `LIKE` and `ILIKE` patterns. When the pattern needs to match one of those characters literally, chain `.escape()` to choose an escape character:
+
+```typescript
+import { like } from "durcno";
+
+// Match codes that start with the literal text "100%"
+await db
+  .from(Products)
+  .select("*")
+  .where(() => like(Products.code, "100!%%").escape("!"));
+```
+
+`escape()` returns a new condition and leaves the original predicate unchanged. It accepts a string literal or an `Arg<string>`; an `Arg` requires a prepared query:
+
+```typescript
+import { Arg, like, prepare } from "durcno";
+
+const search = prepare(
+  { escape: new Arg<string>((value) => value) },
+  (args) =>
+    db
+      .prepare()
+      .from(Products)
+      .select("*")
+      .where(() => like(Products.code, "100!%%").escape(args.escape)),
+);
+
+const rows = await search.run(db, { escape: "!" });
+```
+
+Without `escape()`, PostgreSQL's default escape character is the backslash. Use `.escape("")` to disable escaping. PostgreSQL requires the escape character to be a single character (or empty).
+
 ### Full-Text Search (`tsMatch`)
 
 `tsMatch(vector, query)` renders the PostgreSQL `@@` operator. It accepts a `tsvector` expression on the left and a `tsquery` expression on the right, so a document vector cannot be compared against another vector by mistake.
@@ -368,9 +404,59 @@ await db
 
 Use `websearchToTsquery` for untrusted input, and `toTsquery` when you control the query syntax. See [Full-Text Search Functions](./functions#full-text-search-functions) for ranking, highlighting, and vector utilities.
 
+### Trigram Similarity
+
+These predicates use PostgreSQL's `pg_trgm` operators. Each compares two text expressions; a nullable argument makes the result nullable, and a `null` argument yields SQL `NULL`.
+
+| Predicate                       | SQL             | Description                                 |
+| ------------------------------- | --------------- | ------------------------------------------- |
+| `similar(left, right)`          | `left % right`  | Whole-string similarity above the threshold |
+| `wordSimilar(term, text)`       | `term <% text`  | A word extent of `text` matches `term`      |
+| `strictWordSimilar(term, text)` | `term <<% text` | A whole word of `text` matches `term`       |
+
+The thresholds come from the session settings `pg_trgm.similarity_threshold`, `pg_trgm.word_similarity_threshold`, and `pg_trgm.strict_word_similarity_threshold`.
+
+```typescript
+import { similar, strictWordSimilar, wordSimilar } from "durcno";
+
+// Whole strings above the similarity threshold
+await db
+  .from(Articles)
+  .select("*")
+  .where(() => similar(Articles.title, "postgres"));
+
+// A word extent of the title matches the term
+await db
+  .from(Articles)
+  .select("*")
+  .where(() => wordSimilar("postgres", Articles.title));
+
+// A whole word of the title matches the term
+await db
+  .from(Articles)
+  .select("*")
+  .where(() => strictWordSimilar("postgres", Articles.title));
+```
+
+Scores for ordering are available as [Trigram Similarity Functions](./functions#trigram-similarity-functions-pg_trgm). Enable the extension and index setup as described in [pg_trgm](../Extensions/pg_trgm).
+
 ## Logical Operators
 
-Both `and()` and `or()` ignore `null` and `undefined` entries, so you can pass optional filters without generating invalid SQL.
+Both `and()` and `or()` accept `null`, which renders as SQL `NULL` and follows PostgreSQL's three-valued logic. They require at least one condition and do not accept `undefined`. Omit an optional `where` clause entirely when no filter is needed.
+
+Use `true` as the neutral condition for `and()` and `false` as the neutral condition for `or()`:
+
+```typescript
+const result = await db
+  .from(Users)
+  .select("*")
+  .where(() =>
+    and(
+      eq(Users.type, "admin"),
+      status ? eq(Users.status, "active") : true,
+    )
+  );
+```
 
 ### AND (`and`)
 

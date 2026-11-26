@@ -12,6 +12,7 @@ Durcno provides built-in support for popular PostgreSQL extensions through dedic
 | ---------------------- | -------------------------------- | --------------------------------------------------------------------------- |
 | [PostGIS](./postgis)   | Spatial and geographic data      | `geography.point`, `geography.linestring`, `geography.polygon`, and more    |
 | [pgvector](./pgvector) | Vector similarity and embeddings | `pgvector.vector`, `pgvector.halfvec`, `pgvector.sparsevec`, `pgvector.bit` |
+| [pg_trgm](./pg_trgm)   | Trigram text similarity          | Uses built-in `text` and `varchar` columns                                  |
 
 ## Using Extensions
 

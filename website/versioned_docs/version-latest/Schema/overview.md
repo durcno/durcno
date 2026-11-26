@@ -398,20 +398,6 @@ export const Posts = table(
 
 ## Common Patterns
 
-### User Authentication
-
-```typescript
-export const UserRole = enumtype("public", "userRole", ["admin", "user"]);
-
-export const Users = table("public", "users", {
-  id: pk(),
-  email: varchar({ length: 255, unique, notNull }),
-  passwordHash: varchar({ length: 255, notNull }),
-  role: UserRole.enumed({ notNull }).default("user"),
-  createdAt: timestamptz({ notNull }).default(now()),
-});
-```
-
 ### Soft Deletes
 
 ```typescript

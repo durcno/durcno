@@ -14,13 +14,14 @@ Use `db.from()` to build SELECT queries. The query builder provides a fluent API
 | ----------------------- | ------------------------------------------------ |
 | `.innerJoin(table)`     | Start an inner join, returning a join builder    |
 | `.leftJoin(table)`      | Start a left join, returning a join builder      |
+| `.crossJoin(table)`     | Return the Cartesian product of both tables      |
 | `.distinctOn(callback)` | Apply DISTINCT ON via `() => col` or `[...cols]` |
 | `.select("*")`          | Select all columns                               |
 | `.select(callback)`     | Select specific columns via `() => ({ ... })`    |
 
 ### Join builder methods (JoinBuilder)
 
-Returned by `.innerJoin(table)` / `.leftJoin(table)`. The join is committed once `.on()` supplies its condition, which is what makes a half-written join unrepresentable.
+Returned by `.innerJoin(table)` / `.leftJoin(table)`. The join is committed once `.on()` supplies its condition, which is what makes a half-written join unrepresentable. `.crossJoin(table)` has no condition and returns `SelectBuilder` directly.
 
 | Method          | Description                                  |
 | --------------- | -------------------------------------------- |
@@ -49,6 +50,20 @@ import { Users } from "./db/schema.ts";
 // Select all columns from Users table
 const users = await db.from(Users).select("*");
 // Type: { id: bigint; username: string; email: string | null; type: "admin" | "user"; createdAt: Date }[]
+```
+
+With joins, `select("*")` includes columns from every table, but omits any field name shared by two or more tables. Those names are ambiguous, so they are removed from both the inferred type and the returned rows. Select them explicitly when you need one:
+
+```typescript
+const rows = await db
+  .from(Users)
+  .innerJoin(Posts)
+  .on(() => eq(Users.id, Posts.userId))
+  .select(() => ({
+    id: Users.id,
+    username: Users.username,
+    title: Posts.title,
+  }));
 ```
 
 ### Select Specific Columns
