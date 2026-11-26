@@ -91,14 +91,7 @@ export async function setup() {
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   try {
-    runDurcno(["generate", "--config", configPath], {
-      ...process.env,
-      DB_PORT: containerInfo.port.toString(),
-      DB_NAME: containerInfo.dbName,
-      MIGRATIONS_DIR: `./${migrationsDirName}`,
-    });
-
-    runDurcno(["migrate", "--config", configPath], {
+    runDurcno(["push", "--config", configPath], {
       ...process.env,
       DB_PORT: containerInfo.port.toString(),
       DB_NAME: containerInfo.dbName,

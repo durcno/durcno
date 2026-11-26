@@ -43,8 +43,7 @@ describe("check constraints — insert acceptance and rejection", () => {
       fs.rmSync(migrationsDir, { recursive: true, force: true });
     }
 
-    runDurcnoCli("generate", containerInfo);
-    runDurcnoCli("migrate", containerInfo);
+    runDurcnoCli("push", containerInfo);
 
     db = database(
       schema,

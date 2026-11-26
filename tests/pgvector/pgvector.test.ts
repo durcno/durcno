@@ -35,10 +35,6 @@ describe("pgvector", () => {
       fs.rmSync(migrationsDir, { recursive: true, force: true });
     }
 
-    execSync(`durcno generate --config ${configPath}`, {
-      stdio: ["ignore", "ignore", "pipe"],
-    });
-
     containerInfo = await startPostgresContainer({
       image: "pgvector/pgvector:pg16",
       user: "testuser",
@@ -52,7 +48,7 @@ describe("pgvector", () => {
     await pgClient.query("CREATE EXTENSION IF NOT EXISTS vector;");
     await pgClient.end();
 
-    execSync(`durcno migrate --config ${configPath}`, {
+    execSync(`durcno push --config ${configPath}`, {
       stdio: ["ignore", "ignore", "pipe"],
       cwd: __dirname,
       env: {

@@ -47,8 +47,7 @@ describe("SELECT with INNER JOIN", () => {
       fs.rmSync(migrationsDir, { recursive: true, force: true });
     }
 
-    runDurcnoCli("generate", configPath, containerInfo, migrationsDirName);
-    runDurcnoCli("migrate", configPath, containerInfo, migrationsDirName);
+    runDurcnoCli("push", configPath, containerInfo, migrationsDirName);
     db = database(
       schema,
       defineConfig({
@@ -634,8 +633,7 @@ describe("SELECT with LEFT JOIN", () => {
       fs.rmSync(migrationsDir, { recursive: true, force: true });
     }
 
-    runDurcnoCli("generate", configPath, containerInfo, migrationsDirName);
-    runDurcnoCli("migrate", configPath, containerInfo, migrationsDirName);
+    runDurcnoCli("push", configPath, containerInfo, migrationsDirName);
     db = database(
       schema,
       defineConfig({
@@ -998,8 +996,7 @@ describe("SELECT with CROSS JOIN", () => {
       fs.rmSync(migrationsDir, { recursive: true, force: true });
     }
 
-    runDurcnoCli("generate", configPath, containerInfo, migrationsDirName);
-    runDurcnoCli("migrate", configPath, containerInfo, migrationsDirName);
+    runDurcnoCli("push", configPath, containerInfo, migrationsDirName);
     db = database(
       schema,
       defineConfig({

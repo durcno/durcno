@@ -64,8 +64,7 @@ describe("Filters", () => {
       fs.rmSync(migrationsDir, { recursive: true, force: true });
     }
 
-    runDurcnoCli("generate", configPath, containerInfo, migrationsDirName);
-    runDurcnoCli("migrate", configPath, containerInfo, migrationsDirName);
+    runDurcnoCli("push", configPath, containerInfo, migrationsDirName);
 
     db = database(
       schema,
